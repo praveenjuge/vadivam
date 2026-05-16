@@ -3,6 +3,7 @@ import { icons } from "vadivam";
 import CodeBlock from "../components/CodeBlock.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
+const githubUrl = "https://github.com/praveenjuge/vadivam";
 const reactImport = 'import { Activity } from "vadivam-react";';
 const installSnippet = "bun add vadivam vadivam-react\nnpm install vadivam vadivam-react\npnpm add vadivam vadivam-react";
 const svgImport = 'import activity from "vadivam/icons/activity.svg";';
@@ -14,12 +15,16 @@ const dynamicImport = 'import { DynamicIcon, dynamicIconImports } from "vadivam-
     <header class="page-header">
       <div class="brand-row">
         <a class="brand" href="/">Vadivam</a>
-        <span class="muted">{icons.length} icons</span>
+        <div class="header-actions">
+          <a class="icon-button" href={githubUrl} aria-label="Vadivam on GitHub" title="GitHub">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.04c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.21.09 1.85 1.24 1.85 1.24 1.07 1.84 2.82 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.53.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.29-1.23 3.29-1.23.66 1.65.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.49 5.93.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58A12 12 0 0 0 12 .5Z" />
+            </svg>
+          </a>
+        </div>
       </div>
       <h1>Vadivam icons</h1>
-      <p class="lede">
-        24px outline SVGs and React components generated from one optimized source.
-      </p>
+      <p class="lede">24px outline SVGs and React components generated from one optimized source.</p>
     </header>
 
     <section class="docs" aria-label="Install and import snippets">
@@ -38,17 +43,10 @@ const dynamicImport = 'import { DynamicIcon, dynamicIconImports } from "vadivam-
       {
         icons.map((icon) => (
           <li class="icon-item" data-name={`${icon.name} ${icon.componentName}`}>
-            <a class="icon-link" href={`/icons/${icon.name}/`}>
+            <a class="icon-link" href={`/icons/${icon.name}/`} aria-label={icon.componentName} title={icon.componentName}>
               <span class="icon-preview" set:html={icon.svg}></span>
-              <span class="icon-name">
-                <strong>{icon.componentName}</strong>
-                <code>{icon.name}</code>
-              </span>
+              <span class="icon-name">{icon.componentName}</span>
             </a>
-            <span class="actions">
-              <button type="button" data-copy-url={`/icons/${icon.fileName}`}>Copy SVG</button>
-              <button type="button" data-copy={`import { ${icon.componentName} } from "vadivam-react";`}>Copy React</button>
-            </span>
           </li>
         ))
       }
@@ -72,18 +70,5 @@ const dynamicImport = 'import { DynamicIcon, dynamicIconImports } from "vadivam-
       if (count) count.textContent = `${visible} results`;
     });
 
-    document.addEventListener("click", async (event) => {
-      const button = event.target instanceof HTMLElement ? event.target.closest("button") : null;
-      if (!button) return;
-      const url = button.dataset.copyUrl;
-      const text = url ? await fetch(url).then((response) => response.text()) : button.dataset.copy;
-      if (!text) return;
-      await navigator.clipboard.writeText(text);
-      const original = button.textContent;
-      button.textContent = "Copied";
-      window.setTimeout(() => {
-        button.textContent = original;
-      }, 1200);
-    });
   </script>
 </BaseLayout>
