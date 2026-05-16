@@ -1,0 +1,93 @@
+---
+import { icons } from "vadivam";
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const reactImport = 'import { Activity } from "vadivam-react";';
+---
+
+<BaseLayout title="Vadivam Icons">
+  <main class="shell">
+    <header class="page-header">
+      <div class="brand-row">
+        <a class="brand" href="/">Vadivam</a>
+        <span class="muted">{icons.length} icons</span>
+      </div>
+      <h1>Outline icons with a clear 24px rhythm.</h1>
+      <p class="lede">
+        Search, inspect, and copy icons from the same optimized source that powers the npm packages.
+      </p>
+    </header>
+
+    <section class="docs" aria-label="Install and import snippets">
+      <div class="snippet">
+        <span>Install</span>
+        <pre><code>bun add vadivam vadivam-react</code></pre>
+      </div>
+      <div class="snippet">
+        <span>React</span>
+        <pre><code>{reactImport}</code></pre>
+      </div>
+      <div class="snippet">
+        <span>Raw SVG</span>
+        <pre><code>import activity from "vadivam/icons/activity.svg";</code></pre>
+      </div>
+    </section>
+
+    <div class="toolbar">
+      <input class="search" id="iconSearch" type="search" placeholder="Search icons" aria-label="Search icons" />
+      <span class="muted" id="resultCount">{icons.length} results</span>
+    </div>
+
+    <ul class="icon-grid" id="iconGrid">
+      {
+        icons.map((icon) => (
+          <li class="icon-item" data-name={`${icon.name} ${icon.componentName}`}>
+            <a class="icon-link" href={`/icons/${icon.name}/`}>
+              <span class="icon-preview" set:html={icon.svg}></span>
+              <span class="icon-name">
+                <strong>{icon.componentName}</strong>
+                <code>{icon.name}</code>
+              </span>
+            </a>
+            <span class="actions">
+              <button type="button" data-copy-url={`/icons/${icon.fileName}`}>Copy SVG</button>
+              <button type="button" data-copy={`import { ${icon.componentName} } from "vadivam-react";`}>Copy React</button>
+            </span>
+          </li>
+        ))
+      }
+    </ul>
+  </main>
+
+  <script>
+    const search = document.querySelector("#iconSearch");
+    const items = Array.from(document.querySelectorAll(".icon-item")).filter((item) => item instanceof HTMLElement);
+    const count = document.querySelector("#resultCount");
+
+    search?.addEventListener("input", () => {
+      if (!(search instanceof HTMLInputElement)) return;
+      const query = search.value.trim().toLowerCase();
+      let visible = 0;
+      for (const item of items) {
+        const match = item.dataset.name?.toLowerCase().includes(query);
+        item.hidden = !match;
+        if (match) visible += 1;
+      }
+      if (count) count.textContent = `${visible} results`;
+    });
+
+    document.addEventListener("click", async (event) => {
+      const button = event.target instanceof HTMLElement ? event.target.closest("button") : null;
+      if (!button) return;
+      const url = button.dataset.copyUrl;
+      const text = url ? await fetch(url).then((response) => response.text()) : button.dataset.copy;
+      if (!text) return;
+      await navigator.clipboard.writeText(text);
+      const original = button.textContent;
+      button.textContent = "Copied";
+      window.setTimeout(() => {
+        button.textContent = original;
+      }, 1200);
+    });
+  </script>
+</BaseLayout>

@@ -1,0 +1,38 @@
+{
+  "name": "vadivam-monorepo",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.14",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run icons:build && bun run --cwd apps/web build",
+    "dev": "bun run icons:build && bun run --cwd apps/web dev",
+    "icons:optimize": "bun scripts/icons.mjs optimize",
+    "icons:check": "bun scripts/icons.mjs check",
+    "icons:build": "bun scripts/icons.mjs build",
+    "icons:test": "bun scripts/icons.mjs test",
+    "packages:check": "publint packages/vadivam && publint packages/vadivam-react && bun scripts/verify-exports.mjs",
+    "deploy": "bun run build && wrangler deploy",
+    "deploy:worker": "wrangler deploy",
+    "test": "bun run icons:test && bun run icons:build && bun run packages:check && bun run --cwd apps/web build"
+  },
+  "dependencies": {
+    "vadivam": "workspace:*",
+    "vadivam-react": "workspace:*"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@types/react": "^19.2.7",
+    "astro": "^6.3.3",
+    "fast-xml-parser": "^5.3.3",
+    "publint": "^0.3.21",
+    "react": "^19.2.1",
+    "svgo": "^4.0.1",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.92.0"
+  }
+}

@@ -1,0 +1,282 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = "A clean outline icon set by Praveen Juge." } = Astro.props;
+const favicon =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 12h16M12 4v16' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="icon" href={favicon} />
+    <title>{title}</title>
+    <style is:global>
+      :root {
+        color-scheme: light;
+        --bg: #fbfaf8;
+        --ink: #171717;
+        --muted: #66615a;
+        --line: #ded8cf;
+        --soft: #f1ece4;
+        --accent: #0d766e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: 0;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        color: var(--ink);
+        cursor: pointer;
+        padding: 0.55rem 0.7rem;
+      }
+
+      button:hover,
+      button:focus-visible,
+      a:focus-visible {
+        border-color: var(--accent);
+        outline: 2px solid color-mix(in srgb, var(--accent), transparent 72%);
+        outline-offset: 2px;
+      }
+
+      code,
+      pre {
+        font-family: "SF Mono", "Roboto Mono", ui-monospace, monospace;
+      }
+
+      .shell {
+        width: min(1120px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 44px 0 72px;
+      }
+
+      .page-header {
+        display: grid;
+        gap: 18px;
+        padding-bottom: 28px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .brand-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .brand {
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      h1 {
+        max-width: 760px;
+        margin: 0;
+        font-size: clamp(2.4rem, 6vw, 5rem);
+        line-height: 0.94;
+        letter-spacing: 0;
+      }
+
+      .lede {
+        max-width: 680px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 1.05rem;
+        line-height: 1.7;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin: 28px 0;
+      }
+
+      .search {
+        width: min(100%, 420px);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--ink);
+        padding: 0.75rem 0.9rem;
+      }
+
+      .docs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin: 30px 0 10px;
+      }
+
+      .snippet {
+        min-width: 0;
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+      }
+
+      .snippet span {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      pre {
+        overflow: auto;
+        margin: 0;
+        border-radius: 8px;
+        background: var(--soft);
+        padding: 14px;
+        font-size: 0.84rem;
+        line-height: 1.55;
+      }
+
+      .icon-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(174px, 1fr));
+        gap: 1px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        border: 1px solid var(--line);
+        background: var(--line);
+      }
+
+      .icon-item {
+        display: grid;
+        gap: 12px;
+        background: var(--bg);
+        padding: 14px;
+      }
+
+      .icon-link {
+        display: grid;
+        gap: 12px;
+      }
+
+      .icon-preview {
+        display: grid;
+        width: 48px;
+        height: 48px;
+        place-items: center;
+        color: var(--ink);
+      }
+
+      .icon-preview svg {
+        width: 32px;
+        height: 32px;
+      }
+
+      .icon-name {
+        display: grid;
+        gap: 3px;
+        min-width: 0;
+      }
+
+      .icon-name strong,
+      .icon-name code {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .icon-name code {
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .actions button {
+        padding: 0.45rem 0.55rem;
+        font-size: 0.78rem;
+      }
+
+      .detail {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 28px;
+        margin-top: 32px;
+      }
+
+      .detail-preview {
+        display: grid;
+        aspect-ratio: 1;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .detail-preview svg {
+        width: 96px;
+        height: 96px;
+      }
+
+      .detail-content {
+        display: grid;
+        align-content: start;
+        gap: 18px;
+      }
+
+      @media (max-width: 720px) {
+        .shell {
+          width: min(100vw - 24px, 1120px);
+          padding-top: 28px;
+        }
+
+        .brand-row,
+        .toolbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .docs,
+        .detail {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

@@ -1,0 +1,68 @@
+---
+import { icons, iconsByName } from "vadivam";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+export function getStaticPaths() {
+  return icons.map((icon) => ({
+    params: { name: icon.name },
+    props: { icon }
+  }));
+}
+
+const { icon } = Astro.props;
+const importSnippet = `import { ${icon.componentName} } from "vadivam-react";`;
+const subpathSnippet = `import ${icon.componentName} from "vadivam-react/${icon.name}";`;
+const svgSnippet = `import icon from "vadivam/icons/${icon.fileName}";`;
+---
+
+<BaseLayout title={`${icon.componentName} - Vadivam`}>
+  <main class="shell">
+    <header class="page-header">
+      <div class="brand-row">
+        <a class="brand" href="/">Vadivam</a>
+        <a class="muted" href="/">Back to all icons</a>
+      </div>
+      <h1>{icon.componentName}</h1>
+      <p class="lede">{icon.name}.svg is generated into both the raw SVG package and the React package.</p>
+    </header>
+
+    <section class="detail">
+      <div class="detail-preview" set:html={iconsByName[icon.name].svg}></div>
+      <div class="detail-content">
+        <div class="actions">
+          <button type="button" data-copy-url={`/icons/${icon.fileName}`}>Copy SVG</button>
+          <button type="button" data-copy={importSnippet}>Copy React import</button>
+          <button type="button" data-copy={subpathSnippet}>Copy subpath import</button>
+        </div>
+        <div class="snippet">
+          <span>Named import</span>
+          <pre><code>{importSnippet}</code></pre>
+        </div>
+        <div class="snippet">
+          <span>Per-icon import</span>
+          <pre><code>{subpathSnippet}</code></pre>
+        </div>
+        <div class="snippet">
+          <span>Raw SVG</span>
+          <pre><code>{svgSnippet}</code></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    document.addEventListener("click", async (event) => {
+      const button = event.target instanceof HTMLElement ? event.target.closest("button") : null;
+      if (!button) return;
+      const url = button.dataset.copyUrl;
+      const text = url ? await fetch(url).then((response) => response.text()) : button.dataset.copy;
+      if (!text) return;
+      await navigator.clipboard.writeText(text);
+      const original = button.textContent;
+      button.textContent = "Copied";
+      window.setTimeout(() => {
+        button.textContent = original;
+      }, 1200);
+    });
+  </script>
+</BaseLayout>

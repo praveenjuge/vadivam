@@ -1,0 +1,10 @@
+node_modules
+dist
+.DS_Store
+*.tgz
+.playwright-mcp
+
+packages/*/dist
+apps/web/dist
+apps/web/.astro
+apps/web/public/icons
