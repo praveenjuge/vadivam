@@ -3,6 +3,22 @@
   "version": "0.0.1",
   "description": "Optimized SVG icons from the Vadivam icon set.",
   "license": "MIT",
+  "author": "Praveen Juge",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/praveenjuge/vadivam.git",
+    "directory": "packages/vadivam"
+  },
+  "homepage": "https://vadivam.praveenjuge.com",
+  "bugs": {
+    "url": "https://github.com/praveenjuge/vadivam/issues"
+  },
+  "keywords": [
+    "icons",
+    "svg",
+    "icon-pack",
+    "vadivam"
+  ],
   "type": "module",
   "sideEffects": false,
   "files": [

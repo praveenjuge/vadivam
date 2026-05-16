@@ -3,6 +3,23 @@
   "version": "0.0.1",
   "description": "Lucide-style React components for the Vadivam icon set.",
   "license": "MIT",
+  "author": "Praveen Juge",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/praveenjuge/vadivam.git",
+    "directory": "packages/vadivam-react"
+  },
+  "homepage": "https://vadivam.praveenjuge.com",
+  "bugs": {
+    "url": "https://github.com/praveenjuge/vadivam/issues"
+  },
+  "keywords": [
+    "icons",
+    "react",
+    "svg",
+    "icon-pack",
+    "vadivam"
+  ],
   "type": "module",
   "sideEffects": false,
   "files": [
