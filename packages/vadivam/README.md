@@ -1,6 +1,6 @@
 # vadivam
 
-Optimized SVG assets for the Vadivam icon set.
+Pixel-perfect, open-source, gorgeous SVG icons for refined interfaces.
 
 ```sh
 bun add vadivam

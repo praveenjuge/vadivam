@@ -1,7 +1,7 @@
 {
   "name": "vadivam-react",
-  "version": "0.0.3",
-  "description": "Lucide-style React components for the Vadivam icon set.",
+  "version": "0.0.4",
+  "description": "Pixel-perfect, open-source, gorgeous React icons for refined interfaces.",
   "license": "MIT",
   "author": "Praveen Juge",
   "repository": {
@@ -18,6 +18,7 @@
     "react",
     "svg",
     "icon-pack",
+    "open-source",
     "vadivam"
   ],
   "type": "module",

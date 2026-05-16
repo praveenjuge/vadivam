@@ -1,6 +1,6 @@
 # Vadivam
 
-24px outline icons, published as raw SVGs and React components.
+Pixel-perfect, open-source, gorgeous icons for refined interfaces.
 
 ```sh
 bun install

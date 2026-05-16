@@ -1,7 +1,7 @@
 {
   "name": "vadivam",
-  "version": "0.0.3",
-  "description": "Optimized SVG icons from the Vadivam icon set.",
+  "version": "0.0.4",
+  "description": "Pixel-perfect, open-source, gorgeous SVG icons for refined interfaces.",
   "license": "MIT",
   "author": "Praveen Juge",
   "repository": {
@@ -17,6 +17,7 @@
     "icons",
     "svg",
     "icon-pack",
+    "open-source",
     "vadivam"
   ],
   "type": "module",

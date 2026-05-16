@@ -1,6 +1,6 @@
 # vadivam-react
 
-React components for the Vadivam icon set.
+Pixel-perfect, open-source, gorgeous React icons for refined interfaces.
 
 ```sh
 bun add vadivam-react
