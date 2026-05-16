@@ -45,7 +45,7 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 
 - Keep the root package, `packages/vadivam`, and `packages/vadivam-react` versions in sync.
 - Release by committing the version bump and pushing a matching tag such as `v0.0.3`.
-- The `Release` workflow publishes both npm packages through npm Trusted Publishing.
+- The `Release` workflow publishes both npm packages through npm Trusted Publishing, then creates the matching GitHub Release.
 - Do not publish manually unless the user explicitly asks.
 
 ## Security Notes
