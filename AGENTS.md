@@ -16,6 +16,8 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - Start the website locally: `bun run dev`
 - Build packages and website: `bun run build`
 - Run all checks: `bun run test`
+- Test the raw SVG package: `bun run test:vadivam`
+- Test the React package: `bun run test:vadivam-react`
 - Deploy the static Workers site: `bun run deploy`
 
 ## Icon Workflow
@@ -37,6 +39,7 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 ## Testing Instructions
 
 - Run `bun run test` before committing.
+- Package tests live in `tests/` and use `bun test`.
 - For icon-only changes, run `bun run icons:optimize` and `bun run icons:check` first.
 - For website UI changes, verify the rendered page in a browser at desktop and mobile widths.
 - If GitHub Actions fails, inspect logs with `gh run view --log-failed` before changing workflow files.

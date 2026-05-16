@@ -84,7 +84,7 @@ function asArray(value) {
   return Array.isArray(value) ? value : [value];
 }
 
-function validateSvgContent(svg, file = "inline.svg") {
+export function validateSvgContent(svg, file = "inline.svg") {
   const node = parseSvg(svg, file);
   for (const [attr, value] of Object.entries(rootAttrs)) {
     assert(node[attr] === value, `${file}: expected ${attr.slice(2)}="${value}"`);
@@ -135,7 +135,7 @@ function iconNodeFromSvg(svg, file) {
   return iconNode;
 }
 
-function normalizeSvg(svg, file) {
+export function normalizeSvg(svg, file) {
   const result = optimize(svg, {
     path: file,
     multipass: true,
@@ -164,7 +164,7 @@ function normalizeSvg(svg, file) {
   return normalized;
 }
 
-async function readIcons() {
+export async function readIcons() {
   const files = await svgFiles();
   const icons = [];
   for (const fileName of files) {
@@ -185,7 +185,7 @@ async function readIcons() {
   return icons;
 }
 
-async function optimizeIcons() {
+export async function optimizeIcons() {
   const files = await svgFiles();
   for (const fileName of files) {
     const filePath = path.join(iconsDir, fileName);
@@ -195,7 +195,7 @@ async function optimizeIcons() {
   console.log(`Optimized ${files.length} icons.`);
 }
 
-async function checkIcons() {
+export async function checkIcons() {
   const files = await svgFiles();
   for (const fileName of files) {
     validateSvgContent(await readFile(path.join(iconsDir, fileName), "utf8"), fileName);
@@ -268,7 +268,7 @@ async function buildWebAssets(icons) {
   }
 }
 
-async function build() {
+export async function build() {
   const icons = await readIcons();
   await buildRawPackage(icons);
   await buildReactPackage(icons);
@@ -276,37 +276,13 @@ async function build() {
   console.log(`Built packages and web assets for ${icons.length} icons.`);
 }
 
-function testFixtures() {
-  const valid = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></svg>`;
-  validateSvgContent(valid, "valid-fixture.svg");
-  const cases = [
-    ["wrong viewBox", valid.replace("0 0 24 24", "0 0 32 32")],
-    ["black stroke", valid.replace("currentColor", "black")],
-    ["filled path", valid.replace("<path", '<path fill="red"')],
-    ["square caps", valid.replace("round", "square")],
-    ["wrong stroke width", valid.replace('stroke-width="2"', 'stroke-width="1.5"')],
-    ["unsafe markup", valid.replace("<path", "<script/><path")]
-  ];
-  for (const [name, svg] of cases) {
-    let failed = false;
-    try {
-      validateSvgContent(svg, `${name}.svg`);
-    } catch {
-      failed = true;
-    }
-    assert(failed, `fixture should fail: ${name}`);
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const command = process.argv[2];
+  if (command === "optimize") await optimizeIcons();
+  else if (command === "check") await checkIcons();
+  else if (command === "build") await build();
+  else {
+    console.error("Usage: bun scripts/icons.mjs <optimize|check|build>");
+    process.exit(1);
   }
-  console.log("Fixture validation passed.");
-}
-
-const command = process.argv[2];
-if (command === "optimize") await optimizeIcons();
-else if (command === "check") await checkIcons();
-else if (command === "build") await build();
-else if (command === "test") {
-  testFixtures();
-  await checkIcons();
-} else {
-  console.error("Usage: bun scripts/icons.mjs <optimize|check|build|test>");
-  process.exit(1);
 }

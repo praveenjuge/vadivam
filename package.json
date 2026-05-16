@@ -14,11 +14,13 @@
     "icons:optimize": "bun scripts/icons.mjs optimize",
     "icons:check": "bun scripts/icons.mjs check",
     "icons:build": "bun scripts/icons.mjs build",
-    "icons:test": "bun scripts/icons.mjs test",
-    "packages:check": "publint packages/vadivam && publint packages/vadivam-react && bun scripts/verify-exports.mjs",
+    "icons:test": "bun test tests/icons.test.mjs",
+    "test:vadivam": "bun run icons:build && publint packages/vadivam && bun test tests/vadivam.test.mjs",
+    "test:vadivam-react": "bun run icons:build && publint packages/vadivam-react && bun test tests/vadivam-react.test.mjs",
+    "packages:check": "bun run test:vadivam && bun run test:vadivam-react",
     "deploy": "bun run build && wrangler deploy",
     "deploy:worker": "wrangler deploy",
-    "test": "bun run icons:test && bun run icons:build && bun run packages:check && bun run --cwd apps/web build"
+    "test": "bun run icons:test && bun run packages:check && bun run --cwd apps/web build"
   },
   "dependencies": {
     "vadivam": "workspace:*",
