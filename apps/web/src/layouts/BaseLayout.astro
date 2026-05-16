@@ -23,8 +23,8 @@ const favicon =
         --bg: #fff;
         --ink: #111;
         --muted: #737373;
-        --line: #e5e5e5;
-        --soft: #f7f7f7;
+        --line: #e8e8e8;
+        --soft: #f6f6f6;
         --accent: #111;
         --code-keyword: #8a3b12;
         --code-string: #25633f;
@@ -37,8 +37,8 @@ const favicon =
           --bg: #0c0c0c;
           --ink: #f4f4f4;
           --muted: #a3a3a3;
-          --line: #262626;
-          --soft: #171717;
+          --line: #242424;
+          --soft: #161616;
           --accent: #f4f4f4;
           --code-keyword: #d89b72;
           --code-string: #88c9a4;
@@ -101,7 +101,6 @@ const favicon =
         display: grid;
         gap: 10px;
         padding-bottom: 14px;
-        border-bottom: 1px solid var(--line);
       }
 
       .brand-row {
@@ -164,30 +163,32 @@ const favicon =
       .toolbar {
         display: grid;
         gap: 8px;
-        margin: 14px 0;
+        margin: 18px 0;
       }
 
       .search {
         width: 100%;
-        border: 0;
-        border-bottom: 1px solid var(--line);
-        border-radius: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
         background: transparent;
         color: var(--ink);
-        padding: 0.45rem 0;
+        padding: 0.78rem 0.9rem;
+      }
+
+      .search:focus {
+        border-color: var(--accent);
+        outline: 2px solid color-mix(in srgb, var(--accent), transparent 86%);
       }
 
       .docs {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 12px;
-        margin: 18px 0 8px;
+        margin: 18px 0;
       }
 
       .snippet {
         min-width: 0;
-        border-top: 1px solid var(--line);
-        padding-top: 8px;
       }
 
       .snippet > span {
@@ -200,8 +201,9 @@ const favicon =
       pre {
         overflow: auto;
         margin: 0;
-        background: transparent;
-        padding: 0;
+        border-radius: 8px;
+        background: var(--soft);
+        padding: 0.75rem;
         font-size: 0.76rem;
         line-height: 1.5;
         white-space: pre-wrap;
@@ -230,29 +232,32 @@ const favicon =
 
       .icon-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-        gap: 0;
+        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+        gap: 8px;
         margin: 0;
         padding: 0;
         list-style: none;
-        border-top: 1px solid var(--line);
-        border-left: 1px solid var(--line);
       }
 
       .icon-item {
         display: grid;
-        min-height: 112px;
-        padding: 10px;
-        border-right: 1px solid var(--line);
-        border-bottom: 1px solid var(--line);
+        min-height: 72px;
+      }
+
+      .icon-item[hidden] {
+        display: none;
       }
 
       .icon-link {
         display: grid;
-        gap: 8px;
         place-items: center;
         align-content: center;
-        min-height: 92px;
+        min-height: 72px;
+        border-radius: 8px;
+      }
+
+      .icon-link:hover {
+        background: var(--soft);
       }
 
       .icon-preview {
@@ -264,16 +269,8 @@ const favicon =
       }
 
       .icon-preview svg {
-        width: 24px;
-        height: 24px;
-      }
-
-      .icon-name {
-        max-width: 100%;
-        color: var(--muted);
-        font-size: 0.74rem;
-        overflow-wrap: anywhere;
-        text-align: center;
+        width: 34px;
+        height: 34px;
       }
 
       .actions {
@@ -316,7 +313,7 @@ const favicon =
 
       @media (max-width: 720px) {
         .shell {
-          width: min(100vw - 24px, 1040px);
+          width: min(100vw - 40px, 1040px);
           padding-top: 24px;
         }
 
