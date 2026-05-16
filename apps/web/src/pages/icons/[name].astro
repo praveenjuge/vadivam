@@ -1,5 +1,6 @@
 ---
 import { icons, iconsByName } from "vadivam";
+import CodeBlock from "../../components/CodeBlock.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
 export function getStaticPaths() {
@@ -23,7 +24,7 @@ const svgSnippet = `import icon from "vadivam/icons/${icon.fileName}";`;
         <a class="muted" href="/">Back to all icons</a>
       </div>
       <h1>{icon.componentName}</h1>
-      <p class="lede">{icon.name}.svg is generated into both the raw SVG package and the React package.</p>
+      <p class="lede">{icon.name}.svg ships as raw SVG and a generated React component.</p>
     </header>
 
     <section class="detail">
@@ -34,18 +35,9 @@ const svgSnippet = `import icon from "vadivam/icons/${icon.fileName}";`;
           <button type="button" data-copy={importSnippet}>Copy React import</button>
           <button type="button" data-copy={subpathSnippet}>Copy subpath import</button>
         </div>
-        <div class="snippet">
-          <span>Named import</span>
-          <pre><code>{importSnippet}</code></pre>
-        </div>
-        <div class="snippet">
-          <span>Per-icon import</span>
-          <pre><code>{subpathSnippet}</code></pre>
-        </div>
-        <div class="snippet">
-          <span>Raw SVG</span>
-          <pre><code>{svgSnippet}</code></pre>
-        </div>
+        <CodeBlock label="Named import" code={importSnippet} />
+        <CodeBlock label="Per-icon import" code={subpathSnippet} />
+        <CodeBlock label="Raw SVG" code={svgSnippet} />
       </div>
     </section>
   </main>

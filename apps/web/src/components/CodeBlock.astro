@@ -1,0 +1,46 @@
+---
+interface Props {
+  label: string;
+  code: string;
+  language?: "sh" | "ts";
+}
+
+const { label, code, language = "ts" } = Astro.props;
+
+const escapeHtml = (value: string) =>
+  value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
+const tokenPatterns: Array<[string, RegExp]> = [
+  ["string", /"[^"]*"|'[^']*'/y],
+  ["keyword", /\b(import|from|export|const|default|await|bun|npm|pnpm|add|install)\b/y],
+  ["package", /\bvadivam(?:-react)?(?:\/[a-z0-9-./]+)?\b/y],
+  ["component", /\b[A-Z][A-Za-z0-9_]*\b/y],
+  ["operator", /[{}[\]();,]/y]
+];
+
+function highlight(value: string) {
+  let html = "";
+  let index = 0;
+
+  while (index < value.length) {
+    let matched = false;
+    for (const [type, pattern] of tokenPatterns) {
+      pattern.lastIndex = index;
+      const token = pattern.exec(value);
+      if (!token) continue;
+      html += `<span class="tok-${type}">${escapeHtml(token[0])}</span>`;
+      index = pattern.lastIndex;
+      matched = true;
+      break;
+    }
+    if (!matched) html += escapeHtml(value[index++]);
+  }
+
+  return html;
+}
+---
+
+<div class="snippet">
+  <span>{label}</span>
+  <pre data-language={language}><code set:html={highlight(code)} /></pre>
+</div>

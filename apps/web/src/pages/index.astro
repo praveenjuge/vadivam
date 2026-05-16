@@ -1,8 +1,12 @@
 ---
 import { icons } from "vadivam";
+import CodeBlock from "../components/CodeBlock.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
 const reactImport = 'import { Activity } from "vadivam-react";';
+const installSnippet = "bun add vadivam vadivam-react\nnpm install vadivam vadivam-react\npnpm add vadivam vadivam-react";
+const svgImport = 'import activity from "vadivam/icons/activity.svg";';
+const dynamicImport = 'import { DynamicIcon, dynamicIconImports } from "vadivam-react";';
 ---
 
 <BaseLayout title="Vadivam Icons">
@@ -12,25 +16,17 @@ const reactImport = 'import { Activity } from "vadivam-react";';
         <a class="brand" href="/">Vadivam</a>
         <span class="muted">{icons.length} icons</span>
       </div>
-      <h1>Outline icons with a clear 24px rhythm.</h1>
+      <h1>Vadivam icons</h1>
       <p class="lede">
-        Search, inspect, and copy icons from the same optimized source that powers the npm packages.
+        24px outline SVGs and React components generated from one optimized source.
       </p>
     </header>
 
     <section class="docs" aria-label="Install and import snippets">
-      <div class="snippet">
-        <span>Install</span>
-        <pre><code>bun add vadivam vadivam-react</code></pre>
-      </div>
-      <div class="snippet">
-        <span>React</span>
-        <pre><code>{reactImport}</code></pre>
-      </div>
-      <div class="snippet">
-        <span>Raw SVG</span>
-        <pre><code>import activity from "vadivam/icons/activity.svg";</code></pre>
-      </div>
+      <CodeBlock label="Install" code={installSnippet} language="sh" />
+      <CodeBlock label="React" code={reactImport} />
+      <CodeBlock label="Raw SVG" code={svgImport} />
+      <CodeBlock label="Dynamic" code={dynamicImport} />
     </section>
 
     <div class="toolbar">

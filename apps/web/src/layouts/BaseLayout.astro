@@ -20,12 +20,16 @@ const favicon =
     <style is:global>
       :root {
         color-scheme: light;
-        --bg: #fbfaf8;
-        --ink: #171717;
-        --muted: #66615a;
-        --line: #ded8cf;
-        --soft: #f1ece4;
-        --accent: #0d766e;
+        --bg: #f8f8f5;
+        --ink: #111;
+        --muted: #6d6a63;
+        --line: #d9d6ce;
+        --soft: #efede7;
+        --accent: #006f5f;
+        --code-keyword: #8f3f00;
+        --code-string: #116143;
+        --code-package: #075985;
+        --code-component: #7c2d12;
       }
 
       * {
@@ -37,7 +41,7 @@ const favicon =
         min-width: 320px;
         background: var(--bg);
         color: var(--ink);
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         letter-spacing: 0;
       }
 
@@ -53,11 +57,11 @@ const favicon =
 
       button {
         border: 1px solid var(--line);
-        border-radius: 6px;
-        background: #fff;
+        border-radius: 0;
+        background: transparent;
         color: var(--ink);
         cursor: pointer;
-        padding: 0.55rem 0.7rem;
+        padding: 0.48rem 0.62rem;
       }
 
       button:hover,
@@ -74,15 +78,15 @@ const favicon =
       }
 
       .shell {
-        width: min(1120px, calc(100vw - 32px));
+        width: min(1080px, calc(100vw - 32px));
         margin: 0 auto;
-        padding: 44px 0 72px;
+        padding: 32px 0 64px;
       }
 
       .page-header {
         display: grid;
-        gap: 18px;
-        padding-bottom: 28px;
+        gap: 12px;
+        padding-bottom: 20px;
         border-bottom: 1px solid var(--line);
       }
 
@@ -94,15 +98,16 @@ const favicon =
       }
 
       .brand {
-        font-size: 0.9rem;
+        font-size: 0.86rem;
+        font-weight: 650;
         color: var(--muted);
       }
 
       h1 {
         max-width: 760px;
         margin: 0;
-        font-size: clamp(2.4rem, 6vw, 5rem);
-        line-height: 0.94;
+        font-size: clamp(1.8rem, 3.2vw, 3.2rem);
+        line-height: 1;
         letter-spacing: 0;
       }
 
@@ -110,8 +115,8 @@ const favicon =
         max-width: 680px;
         margin: 0;
         color: var(--muted);
-        font-size: 1.05rem;
-        line-height: 1.7;
+        font-size: 0.96rem;
+        line-height: 1.6;
       }
 
       .muted {
@@ -123,23 +128,23 @@ const favicon =
         align-items: center;
         justify-content: space-between;
         gap: 16px;
-        margin: 28px 0;
+        margin: 22px 0;
       }
 
       .search {
         width: min(100%, 420px);
         border: 1px solid var(--line);
-        border-radius: 8px;
-        background: #fff;
+        border-radius: 0;
+        background: transparent;
         color: var(--ink);
-        padding: 0.75rem 0.9rem;
+        padding: 0.68rem 0.78rem;
       }
 
       .docs {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 12px;
-        margin: 30px 0 10px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin: 24px 0 8px;
       }
 
       .snippet {
@@ -148,7 +153,7 @@ const favicon =
         padding-top: 12px;
       }
 
-      .snippet span {
+      .snippet > span {
         display: block;
         margin-bottom: 8px;
         color: var(--muted);
@@ -158,16 +163,35 @@ const favicon =
       pre {
         overflow: auto;
         margin: 0;
-        border-radius: 8px;
         background: var(--soft);
-        padding: 14px;
-        font-size: 0.84rem;
+        padding: 12px;
+        font-size: 0.82rem;
         line-height: 1.55;
+      }
+
+      .tok-keyword {
+        color: var(--code-keyword);
+      }
+
+      .tok-string {
+        color: var(--code-string);
+      }
+
+      .tok-package {
+        color: var(--code-package);
+      }
+
+      .tok-component {
+        color: var(--code-component);
+      }
+
+      .tok-operator {
+        color: var(--muted);
       }
 
       .icon-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(174px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
         gap: 1px;
         margin: 0;
         padding: 0;
@@ -178,9 +202,9 @@ const favicon =
 
       .icon-item {
         display: grid;
-        gap: 12px;
+        gap: 10px;
         background: var(--bg);
-        padding: 14px;
+        padding: 12px;
       }
 
       .icon-link {
@@ -190,15 +214,15 @@ const favicon =
 
       .icon-preview {
         display: grid;
-        width: 48px;
-        height: 48px;
+        width: 40px;
+        height: 40px;
         place-items: center;
         color: var(--ink);
       }
 
       .icon-preview svg {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
       }
 
       .icon-name {
@@ -222,7 +246,7 @@ const favicon =
       .actions {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 6px;
       }
 
       .actions button {
@@ -232,9 +256,9 @@ const favicon =
 
       .detail {
         display: grid;
-        grid-template-columns: 220px minmax(0, 1fr);
-        gap: 28px;
-        margin-top: 32px;
+        grid-template-columns: 180px minmax(0, 1fr);
+        gap: 24px;
+        margin-top: 24px;
       }
 
       .detail-preview {
@@ -242,13 +266,12 @@ const favicon =
         aspect-ratio: 1;
         place-items: center;
         border: 1px solid var(--line);
-        border-radius: 8px;
-        background: #fff;
+        background: transparent;
       }
 
       .detail-preview svg {
-        width: 96px;
-        height: 96px;
+        width: 88px;
+        height: 88px;
       }
 
       .detail-content {
