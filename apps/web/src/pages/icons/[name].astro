@@ -1,6 +1,5 @@
 ---
 import { icons, iconsByName } from "vadivam";
-import Brand from "../../components/Brand.astro";
 import CodeBlock from "../../components/CodeBlock.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
@@ -19,9 +18,22 @@ const pnpmInstall = "pnpm add vadivam vadivam-react";
 const namedImport = `import { ${icon.componentName} } from "vadivam-react";`;
 const subpathImport = `import ${icon.componentName} from "vadivam-react/${icon.name}";`;
 const svgImport = `import icon from "vadivam/icons/${icon.fileName}";`;
+
+const pageTitle = `${icon.componentName} icon - Vadivam`;
+const pageDescription = `${icon.componentName} is a free, open-source 24px outline icon from Vadivam. Available as raw SVG (${icon.fileName}) and a React component.`;
+const pageKeywords = [
+  icon.name,
+  icon.componentName,
+  `${icon.name} icon`,
+  `${icon.name} svg`,
+  `${icon.name} react icon`,
+  "vadivam",
+  "outline icon",
+  "24px icon"
+];
 ---
 
-<BaseLayout title={`${icon.componentName} - Vadivam`}>
+<BaseLayout title={pageTitle} description={pageDescription} keywords={pageKeywords}>
   
   <section class="detail">
     <div class="detail-preview" set:html={rawSvg}></div>

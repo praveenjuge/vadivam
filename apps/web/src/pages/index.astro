@@ -1,6 +1,5 @@
 ---
 import { icons } from "vadivam";
-import Brand from "../components/Brand.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
 const npmIcon = `<svg viewBox="0 0 2500 2500" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path fill="#c00" d="M0 0h2500v2500H0z"/><path fill="#fff" d="M1241.5 268.5h-973v1962.9h972.9V763.5h495v1467.9h495V268.5z"/></svg>`;
@@ -33,7 +32,11 @@ const links = [
 ];
 ---
 
-<BaseLayout title="Vadivam Icons">
+<BaseLayout
+  title="Vadivam - Free, open-source 24px outline SVG and React icons"
+  description="Vadivam is a free, open-source icon set. Browse hundreds of pixel-perfect 24px outline icons. Available as raw SVG and React components via npm."
+  keywords={["icons", "svg icons", "react icons", "outline icons", "24px icons", "open source icons", "vadivam", "free icons"]}
+>
   <nav class="links" aria-label="Project links">
     {
       links.map((link) => (
@@ -46,7 +49,7 @@ const links = [
   </nav>
 
   <div class="toolbar">
-    <input class="search" id="iconSearch" type="search" placeholder="Search icons" aria-label="Search icons" />
+    <input class="search" id="iconSearch" type="search" placeholder="Search Icons..." aria-label="Search Icons..." />
   </div>
 
   <ul class="icon-grid" id="iconGrid">

@@ -4,9 +4,34 @@ import Brand from '../components/Brand.astro';
 interface Props {
   title: string;
   description?: string;
+  ogType?: "website" | "article";
+  keywords?: string[];
 }
 
-const { title, description = "Pixel-perfect, open-source, gorgeous icons for refined interfaces." } = Astro.props;
+const defaultDescription = "Pixel-perfect, open-source, gorgeous 24px outline icons for refined interfaces. Free SVG and React icons.";
+const {
+  title,
+  description = defaultDescription,
+  ogType = "website",
+  keywords = ["icons", "svg icons", "react icons", "outline icons", "open source icons", "vadivam"]
+} = Astro.props;
+
+const siteName = "Vadivam";
+const canonicalURL = new URL(Astro.url.pathname, Astro.site).toString();
+const ogImage = new URL("/favicon.svg", Astro.site).toString();
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: siteName,
+  url: Astro.site?.toString(),
+  description: defaultDescription,
+  potentialAction: {
+    "@type": "SearchAction",
+    target: `${Astro.site?.toString()}?q={search_term_string}`,
+    "query-input": "required name=search_term_string"
+  }
+};
 ---
 
 <!doctype html>
@@ -14,12 +39,33 @@ const { title, description = "Pixel-perfect, open-source, gorgeous icons for ref
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
     <meta name="description" content={description} />
+    <meta name="keywords" content={keywords.join(", ")} />
+    <meta name="author" content="Praveen Juge" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href={canonicalURL} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0c0c0c" media="(prefers-color-scheme: dark)" />
-    <title>{title}</title>
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:locale" content="en_US" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
     <style is:global>
       :root {
         color-scheme: light dark;
@@ -199,7 +245,7 @@ const { title, description = "Pixel-perfect, open-source, gorgeous icons for ref
 
       .search:focus {
         border-color: var(--accent);
-        outline: 2px solid color-mix(in srgb, var(--accent), transparent 86%);
+        outline: 1px solid var(--accent);
       }
 
       .docs {
