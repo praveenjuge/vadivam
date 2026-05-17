@@ -2,7 +2,7 @@
 interface Props {
   label: string;
   code: string;
-  language?: "sh" | "ts";
+  language?: "sh" | "ts" | "svg";
 }
 
 const { label, code, language = "ts" } = Astro.props;
@@ -41,6 +41,9 @@ function highlight(value: string) {
 ---
 
 <div class="snippet">
-  <span>{label}</span>
+  <div class="snippet-head">
+    <span>{label}</span>
+    <button type="button" class="snippet-copy" data-copy={code} aria-label={`Copy ${label}`}>Copy</button>
+  </div>
   <pre data-language={language}><code set:html={highlight(code)} /></pre>
 </div>

@@ -12,40 +12,36 @@ export function getStaticPaths() {
 }
 
 const { icon } = Astro.props;
-const importSnippet = `import { ${icon.componentName} } from "vadivam-react";`;
-const subpathSnippet = `import ${icon.componentName} from "vadivam-react/${icon.name}";`;
-const svgSnippet = `import icon from "vadivam/icons/${icon.fileName}";`;
+const rawSvg = iconsByName[icon.name].svg;
+const bunInstall = "bun add vadivam vadivam-react";
+const npmInstall = "npm install vadivam vadivam-react";
+const pnpmInstall = "pnpm add vadivam vadivam-react";
+const namedImport = `import { ${icon.componentName} } from "vadivam-react";`;
+const subpathImport = `import ${icon.componentName} from "vadivam-react/${icon.name}";`;
+const svgImport = `import icon from "vadivam/icons/${icon.fileName}";`;
 ---
 
 <BaseLayout title={`${icon.componentName} - Vadivam`}>
-  <main class="shell">
-    <header class="page-header">
-      <Brand />
+  
+  <section class="detail">
+    <div class="detail-preview" set:html={rawSvg}></div>
+    <div class="detail-content">
       <h1>{icon.componentName}</h1>
-      <p class="lede">Pixel-perfect, open-source, gorgeous icons for refined interfaces.</p>
-    </header>
-
-    <section class="detail">
-      <div class="detail-preview" set:html={iconsByName[icon.name].svg}></div>
-      <div class="detail-content">
-        <div class="actions">
-          <button type="button" data-copy-url={`/icons/${icon.fileName}`}>Copy SVG</button>
-          <button type="button" data-copy={importSnippet}>Copy React import</button>
-          <button type="button" data-copy={subpathSnippet}>Copy subpath import</button>
-        </div>
-        <CodeBlock label="Named import" code={importSnippet} />
-        <CodeBlock label="Per-icon import" code={subpathSnippet} />
-        <CodeBlock label="Raw SVG" code={svgSnippet} />
-      </div>
-    </section>
-  </main>
+      <CodeBlock label="Install with bun" code={bunInstall} language="sh" />
+      <CodeBlock label="Install with npm" code={npmInstall} language="sh" />
+      <CodeBlock label="Install with pnpm" code={pnpmInstall} language="sh" />
+      <CodeBlock label="Named import" code={namedImport} />
+      <CodeBlock label="Per-icon import" code={subpathImport} />
+      <CodeBlock label="Raw SVG path" code={svgImport} />
+      <CodeBlock label="SVG markup" code={rawSvg} language="svg" />
+    </div>
+  </section>
 
   <script>
     document.addEventListener("click", async (event) => {
-      const button = event.target instanceof HTMLElement ? event.target.closest("button") : null;
-      if (!button) return;
-      const url = button.dataset.copyUrl;
-      const text = url ? await fetch(url).then((response) => response.text()) : button.dataset.copy;
+      const button = event.target instanceof HTMLElement ? event.target.closest("button.snippet-copy") : null;
+      if (!(button instanceof HTMLButtonElement)) return;
+      const text = button.dataset.copy;
       if (!text) return;
       await navigator.clipboard.writeText(text);
       const original = button.textContent;

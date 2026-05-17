@@ -1,4 +1,6 @@
 ---
+import Brand from '../components/Brand.astro';
+
 interface Props {
   title: string;
   description?: string;
@@ -100,8 +102,8 @@ const { title, description = "Pixel-perfect, open-source, gorgeous icons for ref
 
       .page-header {
         display: grid;
-        gap: 10px;
-        padding-bottom: 14px;
+        gap: 8px;
+        padding-bottom: 10px;
       }
 
       .brand-row {
@@ -189,8 +191,8 @@ const { title, description = "Pixel-perfect, open-source, gorgeous icons for ref
       .search {
         width: 100%;
         border: 1px solid var(--line);
-        border-radius: 8px;
         background: transparent;
+        border-radius: 8px;
         color: var(--ink);
         padding: 0.78rem 0.9rem;
       }
@@ -207,15 +209,74 @@ const { title, description = "Pixel-perfect, open-source, gorgeous icons for ref
         margin: 18px 0;
       }
 
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 18px 0;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--ink);
+        font-size: 0.85rem;
+        line-height: 1;
+        white-space: nowrap;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
+      }
+
+      .btn:hover {
+        background: var(--soft);
+        border-color: var(--ink);
+      }
+
+      .btn-icon {
+        display: inline-grid;
+        width: 16px;
+        height: 16px;
+        place-items: center;
+      }
+
+      .btn-icon svg {
+        width: 16px;
+        height: 16px;
+        fill: currentColor;
+      }
+
       .snippet {
         min-width: 0;
       }
 
-      .snippet > span {
-        display: block;
+      .snippet > .snippet-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
         margin-bottom: 6px;
+      }
+
+      .snippet-head > span {
         color: var(--muted);
         font-size: 0.74rem;
+      }
+
+      .snippet-copy {
+        color: var(--muted);
+        font-size: 0.72rem;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+
+      .snippet-copy:hover,
+      .snippet-copy:focus-visible {
+        color: var(--ink);
       }
 
       pre {
@@ -293,19 +354,6 @@ const { title, description = "Pixel-perfect, open-source, gorgeous icons for ref
         height: 34px;
       }
 
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-
-      .actions button {
-        color: var(--muted);
-        font-size: 0.72rem;
-        text-decoration: underline;
-        text-underline-offset: 2px;
-      }
-
       .detail {
         display: grid;
         grid-template-columns: 132px minmax(0, 1fr);
@@ -352,6 +400,13 @@ const { title, description = "Pixel-perfect, open-source, gorgeous icons for ref
     </style>
   </head>
   <body>
-    <slot />
+    <main class="shell">
+      <header class="page-header">
+        <Brand />
+        <p class="lede">Pixel-perfect, open-source, gorgeous icons for refined interfaces.</p>
+      </header>
+
+      <slot />
+    </main>
   </body>
 </html>
