@@ -74,7 +74,6 @@ const jsonLd = {
         --muted: #737373;
         --line: #e8e8e8;
         --soft: #f6f6f6;
-        --accent: #111;
         --code-keyword: #8a3b12;
         --code-string: #25633f;
         --code-package: #295f8f;
@@ -88,7 +87,6 @@ const jsonLd = {
           --muted: #a3a3a3;
           --line: #242424;
           --soft: #161616;
-          --accent: #f4f4f4;
           --code-keyword: #d89b72;
           --code-string: #88c9a4;
           --code-package: #8dbce8;
@@ -106,7 +104,6 @@ const jsonLd = {
         background: var(--bg);
         color: var(--ink);
         font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        letter-spacing: 0;
       }
 
       a {
@@ -114,24 +111,18 @@ const jsonLd = {
         text-decoration: none;
       }
 
-      button,
-      input {
-        font: inherit;
-      }
-
       button {
+        font: inherit;
         border: 0;
-        border-radius: 0;
         background: transparent;
-        color: var(--ink);
+        color: inherit;
         cursor: pointer;
         padding: 0;
       }
 
-      button:hover,
       button:focus-visible,
       a:focus-visible {
-        outline: 1px solid var(--accent);
+        outline: 1px solid var(--ink);
         outline-offset: 2px;
       }
 
@@ -147,33 +138,21 @@ const jsonLd = {
       }
 
       .page-header {
-        display: grid;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
         gap: 8px;
         padding-bottom: 10px;
       }
 
-      .brand-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-      }
-
-      .header-actions {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
       .brand {
-        display: inline-flex;
+        display: inline;
         align-items: center;
-        color: var(--ink);
+
       }
 
       .brand-logo {
         display: block;
-        width: auto;
         height: 22px;
         fill: currentColor;
       }
@@ -190,30 +169,11 @@ const jsonLd = {
         border: 0;
       }
 
-      .icon-button {
-        display: grid;
-        width: 28px;
-        height: 28px;
-        place-items: center;
-        color: var(--muted);
-      }
-
-      .icon-button:hover {
-        color: var(--ink);
-      }
-
-      .icon-button svg {
-        width: 18px;
-        height: 18px;
-        fill: currentColor;
-      }
-
       h1 {
         max-width: 760px;
         margin: 0;
         font-size: clamp(1.45rem, 2.4vw, 2.25rem);
         line-height: 1.08;
-        letter-spacing: 0;
       }
 
       .lede {
@@ -224,42 +184,27 @@ const jsonLd = {
         line-height: 1.5;
       }
 
-      .muted {
-        color: var(--muted);
-      }
-
-      .toolbar {
-        display: grid;
-        gap: 8px;
-        margin: 18px 0;
-      }
-
       .search {
         width: 100%;
+        margin: 10px 0;
         border: 1px solid var(--line);
         background: transparent;
         border-radius: 8px;
-        color: var(--ink);
+        color: inherit;
+        font: inherit;
         padding: 0.78rem 0.9rem;
       }
 
       .search:focus {
-        border-color: var(--accent);
-        outline: 1px solid var(--accent);
-      }
-
-      .docs {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 12px;
-        margin: 18px 0;
+        border-color: var(--ink);
+        outline: 1px solid var(--ink);
       }
 
       .links {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
-        margin: 18px 0;
+        margin: 10px 0;
       }
 
       .btn {
@@ -270,8 +215,6 @@ const jsonLd = {
         padding: 0 10px;
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: var(--bg);
-        color: var(--ink);
         font-size: 0.85rem;
         line-height: 1;
         white-space: nowrap;
@@ -283,16 +226,18 @@ const jsonLd = {
         border-color: var(--ink);
       }
 
-      .btn-icon {
-        display: inline-grid;
+      .btn-icon,
+      .btn-icon svg {
         width: 16px;
         height: 16px;
+      }
+
+      .btn-icon {
+        display: inline-grid;
         place-items: center;
       }
 
       .btn-icon svg {
-        width: 16px;
-        height: 16px;
         fill: currentColor;
       }
 
@@ -300,21 +245,18 @@ const jsonLd = {
         min-width: 0;
       }
 
-      .snippet > .snippet-head {
+      .snippet-head {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 8px;
         margin-bottom: 6px;
-      }
-
-      .snippet-head > span {
         color: var(--muted);
         font-size: 0.74rem;
       }
 
       .snippet-copy {
-        color: var(--muted);
+        color: inherit;
         font-size: 0.72rem;
         text-decoration: underline;
         text-underline-offset: 2px;
@@ -337,25 +279,11 @@ const jsonLd = {
         overflow-wrap: anywhere;
       }
 
-      .tok-keyword {
-        color: var(--code-keyword);
-      }
-
-      .tok-string {
-        color: var(--code-string);
-      }
-
-      .tok-package {
-        color: var(--code-package);
-      }
-
-      .tok-component {
-        color: var(--code-component);
-      }
-
-      .tok-operator {
-        color: var(--muted);
-      }
+      .tok-keyword { color: var(--code-keyword); }
+      .tok-string { color: var(--code-string); }
+      .tok-package { color: var(--code-package); }
+      .tok-component { color: var(--code-component); }
+      .tok-operator { color: var(--muted); }
 
       .icon-grid {
         display: grid;
@@ -366,19 +294,14 @@ const jsonLd = {
         list-style: none;
       }
 
-      .icon-item {
-        display: grid;
-        min-height: 72px;
-      }
-
       .icon-item[hidden] {
         display: none;
       }
 
       .icon-link {
-        display: grid;
-        place-items: center;
-        align-content: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         min-height: 72px;
         border-radius: 8px;
       }
@@ -387,15 +310,7 @@ const jsonLd = {
         background: var(--soft);
       }
 
-      .icon-preview {
-        display: grid;
-        width: 32px;
-        height: 32px;
-        place-items: center;
-        color: var(--ink);
-      }
-
-      .icon-preview svg {
+      .icon-link svg {
         width: 34px;
         height: 34px;
       }
@@ -411,7 +326,6 @@ const jsonLd = {
         display: grid;
         aspect-ratio: 1;
         place-items: center;
-        background: transparent;
       }
 
       .detail-preview svg {
@@ -428,11 +342,6 @@ const jsonLd = {
       @media (max-width: 720px) {
         .shell {
           width: min(100vw - 40px, 1040px);
-          padding-top: 24px;
-        }
-
-        .docs {
-          grid-template-columns: 1fr;
         }
 
         .detail {

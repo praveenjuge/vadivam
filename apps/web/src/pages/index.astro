@@ -23,11 +23,13 @@ const links = [
   },
   {
     href: "https://github.com/praveenjuge/vadivam/issues",
-    label: "Issues"
+    label: "Issues",
+    icon: githubIcon
   },
   {
     href: "https://github.com/praveenjuge/vadivam/releases",
-    label: "Download"
+    label: "Download",
+    icon: githubIcon
   }
 ];
 ---
@@ -48,16 +50,14 @@ const links = [
     }
   </nav>
 
-  <div class="toolbar">
-    <input class="search" id="iconSearch" type="search" placeholder="Search Icons..." aria-label="Search Icons..." />
-  </div>
+  <input class="search" id="iconSearch" type="search" placeholder="Search Icons..." aria-label="Search Icons..." />
 
   <ul class="icon-grid" id="iconGrid">
     {
       icons.map((icon) => (
         <li class="icon-item" data-name={`${icon.name} ${icon.componentName}`}>
           <a class="icon-link" href={`/icons/${icon.name}/`} aria-label={icon.componentName} title={icon.componentName}>
-            <span class="icon-preview" set:html={icon.svg}></span>
+            <span set:html={icon.svg}></span>
           </a>
         </li>
       ))
