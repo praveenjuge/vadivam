@@ -72,11 +72,10 @@ const jsonLd = {
       :root {
         color-scheme: light dark;
         --bg: #fff;
-        --ink: #111;
-        --muted: #737373;
-        --line: #e8e8e8;
-        --soft: #f6f6f6;
-        --surface: light-dark(#fff, #161616);
+        --ink: #1a1a1a;
+        --muted: #6b6b6b;
+        --line: #e5e5e5;
+        --soft: #f5f5f5;
         --code-keyword: #8a3b12;
         --code-string: #25633f;
         --code-package: #295f8f;
@@ -86,10 +85,10 @@ const jsonLd = {
       @media (prefers-color-scheme: dark) {
         :root {
           --bg: #0c0c0c;
-          --ink: #f4f4f4;
-          --muted: #a3a3a3;
-          --line: #242424;
-          --soft: #161616;
+          --ink: #ededed;
+          --muted: #9a9a9a;
+          --line: #2a2a2a;
+          --soft: #1c1c1c;
           --code-keyword: #d89b72;
           --code-string: #88c9a4;
           --code-package: #8dbce8;
@@ -159,7 +158,7 @@ const jsonLd = {
       }
 
       ::selection {
-        background: var(--ink);
+        background: color-mix(in srgb, var(--ink) 85%, transparent);
         color: var(--bg);
       }
 
@@ -183,7 +182,7 @@ const jsonLd = {
 
       button:focus-visible,
       a:focus-visible {
-        outline: 1px solid var(--ink);
+        outline: 1.5px solid var(--muted);
         outline-offset: 2px;
       }
 
@@ -253,7 +252,7 @@ const jsonLd = {
         margin: 10px 0;
         border: none;
         outline: 1px solid var(--line);
-        background: var(--surface);
+        background: var(--bg);
         border-radius: 8px;
         color: inherit;
         font: inherit;
@@ -263,7 +262,7 @@ const jsonLd = {
       }
 
       .search:focus {
-        outline: 2px solid var(--ink);
+        outline: 1.5px solid var(--muted);
       }
 
       .links {
@@ -286,13 +285,13 @@ const jsonLd = {
         line-height: 1;
         white-space: nowrap;
         font-weight: 500;
-        background: var(--surface);
+        background: var(--bg);
         transition: background-color 0.15s ease, outline-color 0.15s ease;
       }
 
       .btn:hover {
         background: var(--soft);
-        outline-color: var(--ink);
+        outline-color: var(--muted);
       }
 
       .btn-icon,
@@ -431,7 +430,7 @@ const jsonLd = {
 
       .icon-item-active .icon-link {
         background: var(--soft);
-        outline: 1px solid var(--ink);
+        outline: 1px solid var(--muted);
         border-radius: 6px;
       }
 
@@ -511,7 +510,7 @@ const jsonLd = {
 
       .panel-header-btn:hover {
         background: var(--soft);
-        outline-color: var(--ink);
+        outline-color: var(--muted);
       }
 
       .panel-name {
@@ -557,7 +556,7 @@ const jsonLd = {
 
       .panel-tab.active {
         color: var(--ink);
-        border-bottom-color: var(--ink);
+        border-bottom-color: var(--muted);
       }
 
       .panel-tab:hover {
@@ -600,7 +599,7 @@ const jsonLd = {
 
       .panel-copy-btn:hover {
         background: var(--soft);
-        outline-color: var(--ink);
+        outline-color: var(--muted);
       }
 
 
