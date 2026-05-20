@@ -76,6 +76,7 @@ const jsonLd = {
         --muted: #737373;
         --line: #e8e8e8;
         --soft: #f6f6f6;
+        --surface: light-dark(#fff, #161616);
         --code-keyword: #8a3b12;
         --code-string: #25633f;
         --code-package: #295f8f;
@@ -124,7 +125,15 @@ const jsonLd = {
       body {
         margin: 0;
         min-width: 320px;
-        background: var(--bg);
+        background:
+          repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(0, 0, 0, 0.03) 2px,
+            rgba(0, 0, 0, 0.03) 4px
+          ),
+          var(--bg);
         color: var(--ink);
         font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         font-synthesis: none;
@@ -133,6 +142,20 @@ const jsonLd = {
         text-rendering: optimizeLegibility;
         font-feature-settings: "kern", "liga", "calt", "ss01";
         -webkit-tap-highlight-color: transparent;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          background:
+            repeating-linear-gradient(
+              0deg,
+              transparent,
+              transparent 2px,
+              rgba(255, 255, 255, 0.06) 2px,
+              rgba(255, 255, 255, 0.06) 4px
+            ),
+            var(--bg);
+        }
       }
 
       ::selection {
@@ -228,8 +251,9 @@ const jsonLd = {
       .search {
         width: 100%;
         margin: 10px 0;
-        border: 1px solid var(--line);
-        background: transparent;
+        border: none;
+        outline: 1px solid var(--line);
+        background: var(--surface);
         border-radius: 8px;
         color: inherit;
         font: inherit;
@@ -239,8 +263,7 @@ const jsonLd = {
       }
 
       .search:focus {
-        border-color: var(--ink);
-        outline: 1px solid var(--ink);
+        outline: 2px solid var(--ink);
       }
 
       .links {
@@ -256,18 +279,20 @@ const jsonLd = {
         gap: 8px;
         height: 32px;
         padding: 0 10px;
-        border: 1px solid var(--line);
+        border: none;
+        outline: 1px solid var(--line);
         border-radius: 8px;
         font-size: 0.85rem;
         line-height: 1;
         white-space: nowrap;
         font-weight: 500;
-        transition: background-color 0.15s ease, border-color 0.15s ease;
+        background: var(--surface);
+        transition: background-color 0.15s ease, outline-color 0.15s ease;
       }
 
       .btn:hover {
         background: var(--soft);
-        border-color: var(--ink);
+        outline-color: var(--ink);
       }
 
       .btn-icon,
@@ -366,7 +391,8 @@ const jsonLd = {
         min-width: 160px;
         padding: 4px;
         background: var(--bg);
-        border: 1px solid var(--line);
+        outline: 1px solid var(--line);
+        border: none;
         border-radius: 8px;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
         list-style: none;
@@ -417,10 +443,11 @@ const jsonLd = {
         width: min(960px, calc(100vw - 32px));
         z-index: 900;
         background: var(--bg);
-        border: 1px solid var(--line);
-        border-bottom: none;
+        border: none;
+        outline: 1px solid var(--line);
+        outline-offset: -1px;
         border-radius: 12px 12px 0 0;
-        box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
         padding: 16px 20px 20px;
         animation: slideUp 0.15s ease;
       }
@@ -475,7 +502,8 @@ const jsonLd = {
         font-size: 0.75rem;
         font-weight: 500;
         padding: 5px 10px;
-        border: 1px solid var(--line);
+        border: none;
+        outline: 1px solid var(--line);
         border-radius: 6px;
         white-space: nowrap;
         cursor: pointer;
@@ -483,7 +511,7 @@ const jsonLd = {
 
       .panel-header-btn:hover {
         background: var(--soft);
-        border-color: var(--ink);
+        outline-color: var(--ink);
       }
 
       .panel-name {
@@ -564,14 +592,15 @@ const jsonLd = {
         flex-shrink: 0;
         font-size: 0.72rem;
         padding: 4px 10px;
-        border: 1px solid var(--line);
+        border: none;
+        outline: 1px solid var(--line);
         border-radius: 4px;
         white-space: nowrap;
       }
 
       .panel-copy-btn:hover {
         background: var(--soft);
-        border-color: var(--ink);
+        outline-color: var(--ink);
       }
 
 
