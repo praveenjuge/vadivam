@@ -61,7 +61,7 @@ const links = [
   <ul class="icon-grid" id="iconGrid">
     {
       icons.map((icon) => (
-        <li class="icon-item" data-name={`${icon.name} ${icon.componentName}`}>
+        <li class="icon-item" data-name={`${icon.name} ${icon.componentName}`} data-svg={icon.svg} data-component={icon.componentName}>
           <a class="icon-link" href={`/icons/${icon.name}/`} aria-label={icon.componentName} title={icon.componentName}>
             <span set:html={icon.svg}></span>
           </a>
@@ -69,6 +69,17 @@ const links = [
       ))
     }
   </ul>
+
+  <ul class="ctx-menu" id="ctxMenu" hidden role="menu" aria-label="Icon actions">
+    <li role="none"><button role="menuitem" data-action="open-detail">Open Detail Page</button></li>
+    <li role="none"><button role="menuitem" data-action="download-svg">Download SVG</button></li>
+    <li class="ctx-menu-sep" role="separator"></li>
+    <li role="none"><button role="menuitem" data-action="copy-svg">Copy SVG</button></li>
+    <li role="none"><button role="menuitem" data-action="copy-name">Copy Name</button></li>
+    <li role="none"><button role="menuitem" data-action="copy-component">Copy Component Name</button></li>
+    <li role="none"><button role="menuitem" data-action="copy-import">Copy React Import</button></li>
+  </ul>
+
   <script>
     const search = document.querySelector("#iconSearch");
     const items = Array.from(document.querySelectorAll(".icon-item")).filter((item) => item instanceof HTMLElement);
@@ -80,6 +91,75 @@ const links = [
         const match = item.dataset.name?.toLowerCase().includes(query);
         item.hidden = !match;
       }
+    });
+
+    // Context menu
+    const ctxMenu = document.getElementById("ctxMenu") as HTMLElement;
+    let activeItem: HTMLElement | null = null;
+
+    function hideMenu() {
+      ctxMenu.hidden = true;
+      activeItem = null;
+    }
+
+    document.addEventListener("click", hideMenu);
+    document.addEventListener("scroll", hideMenu);
+    window.addEventListener("resize", hideMenu);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") hideMenu();
+    });
+
+    document.getElementById("iconGrid")?.addEventListener("contextmenu", (e) => {
+      const item = (e.target as HTMLElement).closest(".icon-item") as HTMLElement | null;
+      if (!item) return;
+      e.preventDefault();
+      activeItem = item;
+
+      const x = Math.min(e.clientX, window.innerWidth - 180);
+      const y = Math.min(e.clientY, window.innerHeight - 240);
+      ctxMenu.style.left = `${x}px`;
+      ctxMenu.style.top = `${y}px`;
+      ctxMenu.hidden = false;
+    });
+
+    ctxMenu.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement).closest("button");
+      if (!btn || !activeItem) return;
+
+      const action = btn.dataset.action;
+      const svg = activeItem.dataset.svg || "";
+      const name = (activeItem.dataset.name || "").split(" ")[0];
+      const component = activeItem.dataset.component || "";
+
+      switch (action) {
+        case "copy-svg":
+          navigator.clipboard.writeText(svg);
+          break;
+        case "copy-name":
+          navigator.clipboard.writeText(name);
+          break;
+        case "copy-component":
+          navigator.clipboard.writeText(component);
+          break;
+        case "copy-import":
+          navigator.clipboard.writeText(`import { ${component} } from "vadivam-react";`);
+          break;
+        case "download-svg": {
+          const blob = new Blob([svg], { type: "image/svg+xml" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${name}.svg`;
+          a.click();
+          URL.revokeObjectURL(url);
+          break;
+        }
+        case "open-detail":
+          window.location.href = `/icons/${name}/`;
+          break;
+      }
+
+      hideMenu();
     });
   </script>
 </BaseLayout>

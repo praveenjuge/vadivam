@@ -331,8 +331,8 @@ const jsonLd = {
 
       .icon-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-        gap: 8px;
+        grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+        gap: 4px;
         margin: 0;
         padding: 0;
         list-style: none;
@@ -346,8 +346,8 @@ const jsonLd = {
         display: flex;
         align-items: center;
         justify-content: center;
-        min-height: 72px;
-        border-radius: 8px;
+        min-height: 48px;
+        border-radius: 6px;
       }
 
       .icon-link:hover {
@@ -355,8 +355,51 @@ const jsonLd = {
       }
 
       .icon-link svg {
-        width: 34px;
-        height: 34px;
+        width: 24px;
+        height: 24px;
+      }
+
+      .ctx-menu {
+        position: fixed;
+        z-index: 1000;
+        min-width: 160px;
+        padding: 4px;
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        list-style: none;
+        margin: 0;
+        font-size: 0.8rem;
+      }
+
+      .ctx-menu[hidden] {
+        display: none;
+      }
+
+      .ctx-menu li {
+        display: block;
+      }
+
+      .ctx-menu button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 6px 10px;
+        border-radius: 4px;
+        text-align: left;
+        font-size: 0.8rem;
+      }
+
+      .ctx-menu button:hover {
+        background: var(--soft);
+      }
+
+      .ctx-menu-sep {
+        height: 1px;
+        background: var(--line);
+        margin: 4px 0;
       }
 
       .detail {
