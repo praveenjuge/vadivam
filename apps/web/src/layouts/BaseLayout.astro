@@ -328,6 +328,7 @@ const jsonLd = {
       .tok-package { color: var(--code-package); }
       .tok-component { color: var(--code-component); }
       .tok-operator { color: var(--muted); }
+      .tok-comment { color: var(--muted); font-style: italic; }
 
       .icon-grid {
         display: grid;
@@ -401,6 +402,179 @@ const jsonLd = {
         background: var(--line);
         margin: 4px 0;
       }
+
+      .icon-item-active .icon-link {
+        background: var(--soft);
+        outline: 1px solid var(--ink);
+        border-radius: 6px;
+      }
+
+      .bottom-panel {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(960px, calc(100vw - 32px));
+        z-index: 900;
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-bottom: none;
+        border-radius: 12px 12px 0 0;
+        box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08);
+        padding: 16px 20px 20px;
+        animation: slideUp 0.15s ease;
+      }
+
+      .bottom-panel[hidden] {
+        display: none;
+      }
+
+      @keyframes slideUp {
+        from { transform: translateX(-50%) translateY(100%); }
+        to { transform: translateX(-50%) translateY(0); }
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .panel-icon {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: var(--soft);
+        flex-shrink: 0;
+      }
+
+      .panel-icon svg {
+        width: 24px;
+        height: 24px;
+      }
+
+      .panel-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        flex: 1;
+      }
+
+      .panel-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .panel-header-btn {
+        font-size: 0.75rem;
+        font-weight: 500;
+        padding: 5px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .panel-header-btn:hover {
+        background: var(--soft);
+        border-color: var(--ink);
+      }
+
+      .panel-name {
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+
+      .panel-component {
+        font-size: 0.75rem;
+        color: var(--muted);
+        font-family: "SF Mono", "Roboto Mono", ui-monospace, monospace;
+      }
+
+      .panel-close {
+        font-size: 1.4rem;
+        line-height: 1;
+        color: var(--muted);
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+
+      .panel-close:hover {
+        background: var(--soft);
+        color: var(--ink);
+      }
+
+      .panel-tabs {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 12px;
+      }
+
+      .panel-tab {
+        padding: 6px 14px;
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: var(--muted);
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        border-radius: 0;
+      }
+
+      .panel-tab.active {
+        color: var(--ink);
+        border-bottom-color: var(--ink);
+      }
+
+      .panel-tab:hover {
+        color: var(--ink);
+      }
+
+      .panel-content pre {
+        font-size: 0.72rem;
+        margin: 0;
+      }
+
+      .panel-code-wrap {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+
+      .panel-code-wrap pre {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .panel-code-btns {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+
+      .panel-copy-btn {
+        flex-shrink: 0;
+        font-size: 0.72rem;
+        padding: 4px 10px;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        white-space: nowrap;
+      }
+
+      .panel-copy-btn:hover {
+        background: var(--soft);
+        border-color: var(--ink);
+      }
+
+
 
       .detail {
         display: grid;

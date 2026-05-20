@@ -80,6 +80,25 @@ const links = [
     <li role="none"><button role="menuitem" data-action="copy-import">Copy React Import</button></li>
   </ul>
 
+  <div class="bottom-panel" id="bottomPanel" hidden>
+    <div class="panel-header">
+      <div class="panel-icon" id="panelIcon"></div>
+      <div class="panel-info">
+        <span class="panel-name" id="panelName"></span>
+        <span class="panel-component" id="panelComponent"></span>
+      </div>
+      <div class="panel-header-actions">
+        <a class="panel-header-btn" id="panelDetailLink" href="#">More Details</a>
+        <button class="panel-close" id="panelClose" aria-label="Close panel">&times;</button>
+      </div>
+    </div>
+    <div class="panel-tabs" role="tablist">
+      <button class="panel-tab active" role="tab" data-tab="svg" aria-selected="true">SVG</button>
+      <button class="panel-tab" role="tab" data-tab="react" aria-selected="false">React</button>
+    </div>
+    <div class="panel-content" id="panelContent"></div>
+  </div>
+
   <script>
     const search = document.querySelector("#iconSearch");
     const items = Array.from(document.querySelectorAll(".icon-item")).filter((item) => item instanceof HTMLElement);
@@ -102,11 +121,17 @@ const links = [
       activeItem = null;
     }
 
-    document.addEventListener("click", hideMenu);
     document.addEventListener("scroll", hideMenu);
     window.addEventListener("resize", hideMenu);
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") hideMenu();
+      if (e.key === "Escape") {
+        hideMenu();
+        hidePanel();
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!(e.target as HTMLElement).closest("#ctxMenu")) hideMenu();
     });
 
     document.getElementById("iconGrid")?.addEventListener("contextmenu", (e) => {
@@ -160,6 +185,197 @@ const links = [
       }
 
       hideMenu();
+    });
+
+    // Bottom panel
+    const panel = document.getElementById("bottomPanel") as HTMLElement;
+    const panelIcon = document.getElementById("panelIcon") as HTMLElement;
+    const panelName = document.getElementById("panelName") as HTMLElement;
+    const panelComponent = document.getElementById("panelComponent") as HTMLElement;
+    const panelContent = document.getElementById("panelContent") as HTMLElement;
+    const panelClose = document.getElementById("panelClose") as HTMLElement;
+    const panelTabs = panel.querySelectorAll(".panel-tab");
+
+    let panelSvg = "";
+    let panelIconName = "";
+    let panelComponentName = "";
+    let currentTab = "svg";
+
+    function showPanel(item: HTMLElement) {
+      panelSvg = item.dataset.svg || "";
+      panelIconName = (item.dataset.name || "").split(" ")[0];
+      panelComponentName = item.dataset.component || "";
+
+      panelIcon.innerHTML = panelSvg;
+      panelName.textContent = panelIconName;
+      panelComponent.textContent = panelComponentName;
+
+      const detailLink = document.getElementById("panelDetailLink") as HTMLAnchorElement;
+      detailLink.href = `/icons/${panelIconName}/`;
+
+      setActiveTab("svg");
+      panel.hidden = false;
+
+      // highlight selected icon
+      items.forEach((i) => i.classList.remove("icon-item-active"));
+      item.classList.add("icon-item-active");
+    }
+
+    function hidePanel() {
+      panel.hidden = true;
+      items.forEach((i) => i.classList.remove("icon-item-active"));
+    }
+
+    function setActiveTab(tab: string) {
+      currentTab = tab;
+      panelTabs.forEach((t) => {
+        const isActive = t.getAttribute("data-tab") === tab;
+        t.classList.toggle("active", isActive);
+        t.setAttribute("aria-selected", String(isActive));
+      });
+      renderTabContent();
+    }
+
+    function renderTabContent() {
+      switch (currentTab) {
+        case "svg":
+          panelContent.innerHTML = `
+            <div class="panel-code-wrap">
+              <pre><code>${highlightSvg(panelSvg)}</code></pre>
+              <div class="panel-code-btns">
+                <button class="panel-copy-btn" data-copy="svg">Copy</button>
+                <button class="panel-copy-btn" data-download="svg">Download</button>
+              </div>
+            </div>`;
+          break;
+        case "react":
+          const importStr = `import { ${panelComponentName} } from "vadivam-react";`;
+          const usageStr = `<${panelComponentName} />`;
+          panelContent.innerHTML = `
+            <div class="panel-code-wrap">
+              <pre><code><span class="tok-keyword">import</span> { <span class="tok-component">${panelComponentName}</span> } <span class="tok-keyword">from</span> <span class="tok-string">"vadivam-react"</span>;</code></pre>
+              <button class="panel-copy-btn" data-copy="import">Copy Import</button>
+            </div>
+            <div class="panel-code-wrap">
+              <pre><code>&lt;<span class="tok-component">${panelComponentName}</span> /&gt;</code></pre>
+              <button class="panel-copy-btn" data-copy="usage">Copy Usage</button>
+            </div>`;
+          break;
+      }
+    }
+
+    function escapeHtml(str: string) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function highlightSvg(svg: string) {
+      // Work on raw SVG, build highlighted HTML directly
+      let html = "";
+      let i = 0;
+      while (i < svg.length) {
+        if (svg[i] === "<") {
+          // Find end of tag
+          const end = svg.indexOf(">", i);
+          if (end === -1) {
+            html += escapeHtml(svg.slice(i));
+            break;
+          }
+          const tag = svg.slice(i, end + 1);
+          html += highlightTag(tag);
+          i = end + 1;
+        } else {
+          // Text content between tags
+          const next = svg.indexOf("<", i);
+          const text = next === -1 ? svg.slice(i) : svg.slice(i, next);
+          html += escapeHtml(text);
+          i = next === -1 ? svg.length : next;
+        }
+      }
+      return html;
+    }
+
+    function highlightTag(tag: string) {
+      // Match opening/closing tag name
+      const tagMatch = tag.match(/^<(\/?)\s*([a-zA-Z][a-zA-Z0-9-]*)/);
+      if (!tagMatch) return escapeHtml(tag);
+
+      const slash = tagMatch[1];
+      const name = tagMatch[2];
+      let rest = tag.slice(tagMatch[0].length);
+      const selfClose = rest.endsWith("/>");
+      if (selfClose) rest = rest.slice(0, -2);
+      else rest = rest.slice(0, -1); // remove >
+
+      let result = `&lt;${slash}<span class="tok-keyword">${name}</span>`;
+
+      // Highlight attributes
+      const attrRegex = /([a-zA-Z][a-zA-Z0-9-:]*)\s*=\s*"([^"]*)"/g;
+      let attrMatch;
+      let lastIndex = 0;
+      while ((attrMatch = attrRegex.exec(rest)) !== null) {
+        // Add any whitespace before this attr
+        if (attrMatch.index > lastIndex) {
+          result += escapeHtml(rest.slice(lastIndex, attrMatch.index));
+        }
+        result += `<span class="tok-package">${escapeHtml(attrMatch[1])}</span>=<span class="tok-string">&quot;${escapeHtml(attrMatch[2])}&quot;</span>`;
+        lastIndex = attrMatch.index + attrMatch[0].length;
+      }
+      if (lastIndex < rest.length) {
+        result += escapeHtml(rest.slice(lastIndex));
+      }
+
+      result += selfClose ? "/&gt;" : "&gt;";
+      return result;
+    }
+
+    // Click on icon opens panel
+    document.getElementById("iconGrid")?.addEventListener("click", (e) => {
+      const link = (e.target as HTMLElement).closest(".icon-link") as HTMLElement | null;
+      if (!link) return;
+      e.preventDefault();
+      const item = link.closest(".icon-item") as HTMLElement | null;
+      if (item) showPanel(item);
+    });
+
+    panelClose.addEventListener("click", hidePanel);
+
+    // Tab switching
+    panel.querySelector(".panel-tabs")?.addEventListener("click", (e) => {
+      const tab = (e.target as HTMLElement).closest(".panel-tab");
+      if (!tab) return;
+      const tabName = tab.getAttribute("data-tab");
+      if (tabName) setActiveTab(tabName);
+    });
+
+    // Copy actions inside panel
+    panelContent.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement).closest("button") as HTMLElement | null;
+      if (!btn) return;
+
+      const copyType = btn.dataset.copy;
+      const downloadType = btn.dataset.download;
+
+      if (copyType === "svg") {
+        navigator.clipboard.writeText(panelSvg);
+        btn.textContent = "Copied!";
+        setTimeout(() => { btn.textContent = "Copy"; }, 1500);
+      } else if (copyType === "import") {
+        navigator.clipboard.writeText(`import { ${panelComponentName} } from "vadivam-react";`);
+        btn.textContent = "Copied!";
+        setTimeout(() => { btn.textContent = "Copy Import"; }, 1500);
+      } else if (copyType === "usage") {
+        navigator.clipboard.writeText(`<${panelComponentName} />`);
+        btn.textContent = "Copied!";
+        setTimeout(() => { btn.textContent = "Copy Usage"; }, 1500);
+      } else if (downloadType === "svg") {
+        const blob = new Blob([panelSvg], { type: "image/svg+xml" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${panelIconName}.svg`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     });
   </script>
 </BaseLayout>
