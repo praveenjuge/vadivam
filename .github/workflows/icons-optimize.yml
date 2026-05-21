@@ -94,7 +94,7 @@ jobs:
         run: |
           version=$(bun scripts/bump-version.mjs)
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          git add package.json packages/vadivam/package.json packages/vadivam-react/package.json
+          git add package.json packages/vadivam/package.json packages/vadivam-react/package.json README.md packages/vadivam/README.md packages/vadivam-react/README.md
           git commit -m "chore(release): v$version"
           git tag -a "v$version" -m "v$version"
 
