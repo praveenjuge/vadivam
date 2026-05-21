@@ -52,6 +52,9 @@ jobs:
       - name: Render preview
         run: bun run icons:preview
 
+      - name: Render OG image
+        run: bun run icons:og
+
       - name: Test
         run: bun run test
 
@@ -63,8 +66,8 @@ jobs:
       - name: Commit normalized icons
         id: normalize
         run: |
-          if [ -n "$(git status --porcelain icons apps/web/public/preview.png)" ]; then
-            git add icons apps/web/public/preview.png
+          if [ -n "$(git status --porcelain icons apps/web/public/preview.png apps/web/public/og.png)" ]; then
+            git add icons apps/web/public/preview.png apps/web/public/og.png
             git commit -m "chore(icons): normalize via icons:optimize"
             echo "committed=true" >> "$GITHUB_OUTPUT"
           else

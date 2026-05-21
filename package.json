@@ -15,6 +15,7 @@
     "icons:check": "bun scripts/icons.mjs check",
     "icons:build": "bun scripts/icons.mjs build",
     "icons:preview": "bun scripts/icons.mjs preview",
+    "icons:og": "bun scripts/icons.mjs og",
     "icons:test": "bun test tests/icons.test.mjs",
     "test:vadivam": "bun run icons:build && publint packages/vadivam && bun test tests/vadivam.test.mjs",
     "test:vadivam-react": "bun run icons:build && publint packages/vadivam-react && bun test tests/vadivam-react.test.mjs",

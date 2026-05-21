@@ -18,6 +18,7 @@ const rawDist = path.join(root, "packages/vadivam/dist");
 const reactDist = path.join(root, "packages/vadivam-react/dist");
 const webIconsDir = path.join(root, "apps/web/public/icons");
 const previewPath = path.join(root, "apps/web/public/preview.png");
+const ogPath = path.join(root, "apps/web/public/og.png");
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
@@ -391,6 +392,86 @@ export async function buildPreview() {
   );
 }
 
+
+function fnv1aHash(value) {
+  let hash = 2166136261 >>> 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = Math.imul(hash ^ value.charCodeAt(i), 16777619);
+  }
+  return hash >>> 0;
+}
+
+function mulberry32(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export async function buildOg() {
+  const icons = await readIcons();
+  if (icons.length === 0) throw new Error("buildOg: no icons available");
+
+  const width = 1200;
+  const height = 630;
+  const iconSize = 40;
+  const gap = 24;
+  const step = iconSize + gap;
+  const angle = -22;
+
+  const innerSvgs = icons.map((icon) =>
+    icon.svg
+      .replace(/^[\s\S]*?<svg\b[^>]*>/, "")
+      .replace(/<\/svg>\s*$/, "")
+      .trim(),
+  );
+
+  const seed = fnv1aHash(icons.map((icon) => icon.name).join(","));
+  const random = mulberry32(seed);
+
+  // Build a regular grid that is large enough to fully cover the canvas after
+  // rotation. Cells stay axis-aligned in their own coordinate space, so once
+  // we rotate the whole group around the canvas center the icons line up
+  // cleanly along the diagonal axes.
+  const diagonal = Math.ceil(Math.hypot(width, height)) + step * 2;
+  const cells = Math.ceil(diagonal / step);
+  const span = cells * step;
+  const offset = -span / 2;
+  const scale = iconSize / 24;
+  const tiles = [];
+  for (let row = 0; row < cells; row++) {
+    for (let col = 0; col < cells; col++) {
+      const x = offset + col * step;
+      const y = offset + row * step;
+      const inner = innerSvgs[Math.floor(random() * innerSvgs.length)];
+      tiles.push(
+        `<g transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${scale.toFixed(4)})">${inner}</g>`,
+      );
+    }
+  }
+
+  const composite = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<rect width="${width}" height="${height}" fill="#ffffff"/>
+<g transform="translate(${width / 2} ${height / 2}) rotate(${angle})" stroke="#111111" stroke-width="1.5">${tiles.join("")}</g>
+</svg>`;
+
+  const png = new Resvg(composite, {
+    fitTo: { mode: "width", value: width },
+    background: "#ffffff",
+  })
+    .render()
+    .asPng();
+  await mkdir(path.dirname(ogPath), { recursive: true });
+  await writeFile(ogPath, png);
+  console.log(
+    `Wrote ${path.relative(root, ogPath)} (${icons.length} unique icons, ${tiles.length} tiles, ${width}x${height}).`,
+  );
+}
+
 export async function build() {
   const icons = await readIcons();
   await buildRawPackage(icons);
@@ -405,9 +486,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   else if (command === "check") await checkIcons();
   else if (command === "build") await build();
   else if (command === "preview") await buildPreview();
+  else if (command === "og") await buildOg();
   else {
     console.error(
-      "Usage: bun scripts/icons.mjs <optimize|check|build|preview>",
+      "Usage: bun scripts/icons.mjs <optimize|check|build|preview|og>",
     );
     process.exit(1);
   }
