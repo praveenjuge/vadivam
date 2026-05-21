@@ -239,9 +239,10 @@ const links = [
     function renderTabContent() {
       switch (currentTab) {
         case "svg":
+          const singleLineSvg = panelSvg.replace(/\n\s*/g, "");
           panelContent.innerHTML = `
             <div class="panel-code-wrap">
-              <pre><code>${highlightSvg(panelSvg)}</code></pre>
+              <pre><code>${highlightSvg(singleLineSvg)}</code></pre>
               <div class="panel-code-btns">
                 <button class="panel-copy-btn" data-copy="svg">Copy</button>
                 <button class="panel-copy-btn" data-download="svg">Download</button>

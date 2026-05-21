@@ -570,7 +570,7 @@ const jsonLd = {
 
       .panel-code-wrap {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         gap: 10px;
         margin-bottom: 8px;
       }
@@ -578,11 +578,13 @@ const jsonLd = {
       .panel-code-wrap pre {
         flex: 1;
         min-width: 0;
+        overflow-x: auto;
+        white-space: nowrap;
       }
 
       .panel-code-btns {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         gap: 4px;
         flex-shrink: 0;
       }
