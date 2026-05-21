@@ -14,6 +14,7 @@
     "icons:optimize": "bun scripts/icons.mjs optimize",
     "icons:check": "bun scripts/icons.mjs check",
     "icons:build": "bun scripts/icons.mjs build",
+    "icons:preview": "bun scripts/icons.mjs preview",
     "icons:test": "bun test tests/icons.test.mjs",
     "test:vadivam": "bun run icons:build && publint packages/vadivam && bun test tests/vadivam.test.mjs",
     "test:vadivam-react": "bun run icons:build && publint packages/vadivam-react && bun test tests/vadivam-react.test.mjs",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/react": "^19.2.7",
     "astro": "^6.3.3",
     "fast-xml-parser": "^5.3.3",
