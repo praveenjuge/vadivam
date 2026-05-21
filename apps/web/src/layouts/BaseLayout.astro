@@ -360,19 +360,19 @@ const jsonLd = {
         gap: 4px;
         margin: 0;
         padding: 0;
-        list-style: none;
-      }
-
-      .icon-item[hidden] {
-        display: none;
       }
 
       .icon-link {
+        position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
         min-height: 48px;
         border-radius: 6px;
+      }
+
+      .icon-link[hidden] {
+        display: none;
       }
 
       .icon-link:hover {
@@ -382,6 +382,30 @@ const jsonLd = {
       .icon-link svg {
         width: 24px;
         height: 24px;
+        pointer-events: none;
+      }
+
+      .icon-link::after {
+        content: attr(data-name);
+        position: absolute;
+        bottom: calc(100% + 4px);
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 3px 6px;
+        border-radius: 4px;
+        background: var(--ink);
+        color: var(--bg);
+        font-size: 0.7rem;
+        line-height: 1;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        z-index: 10;
+      }
+
+      .icon-link:hover::after,
+      .icon-link:focus-visible::after {
+        opacity: 1;
       }
 
       .ctx-menu {
@@ -428,7 +452,7 @@ const jsonLd = {
         margin: 4px 0;
       }
 
-      .icon-item-active .icon-link {
+      .icon-link-active {
         background: var(--soft);
         outline: 1px solid var(--muted);
         border-radius: 6px;

@@ -58,17 +58,21 @@ const links = [
 
   <input class="search" id="iconSearch" type="search" placeholder="Search Icons..." aria-label="Search Icons..." />
 
-  <ul class="icon-grid" id="iconGrid">
+  <div class="icon-grid" id="iconGrid">
     {
       icons.map((icon) => (
-        <li class="icon-item" data-name={`${icon.name} ${icon.componentName}`} data-svg={icon.svg} data-component={icon.componentName}>
-          <a class="icon-link" href={`/icons/${icon.name}/`} aria-label={icon.componentName} title={icon.componentName}>
-            <span set:html={icon.svg}></span>
-          </a>
-        </li>
+        <a
+          class="icon-link"
+          href={`/icons/${icon.name}/`}
+          aria-label={icon.componentName}
+          data-name={icon.name}
+          data-svg={icon.svg}
+          data-component={icon.componentName}
+          set:html={icon.svg}
+        />
       ))
     }
-  </ul>
+  </div>
 
   <ul class="ctx-menu" id="ctxMenu" hidden role="menu" aria-label="Icon actions">
     <li role="none"><button role="menuitem" data-action="open-detail">Open Detail Page</button></li>
@@ -101,14 +105,15 @@ const links = [
 
   <script>
     const search = document.querySelector("#iconSearch");
-    const items = Array.from(document.querySelectorAll(".icon-item")).filter((item) => item instanceof HTMLElement);
+    const items = Array.from(document.querySelectorAll(".icon-link")).filter((item) => item instanceof HTMLElement);
 
     search?.addEventListener("input", () => {
       if (!(search instanceof HTMLInputElement)) return;
       const query = search.value.trim().toLowerCase();
       for (const item of items) {
-        const match = item.dataset.name?.toLowerCase().includes(query);
-        item.hidden = !match;
+        const name = item.dataset.name?.toLowerCase() ?? "";
+        const component = item.dataset.component?.toLowerCase() ?? "";
+        item.hidden = !(name.includes(query) || component.includes(query));
       }
     });
 
@@ -135,7 +140,7 @@ const links = [
     });
 
     document.getElementById("iconGrid")?.addEventListener("contextmenu", (e) => {
-      const item = (e.target as HTMLElement).closest(".icon-item") as HTMLElement | null;
+      const item = (e.target as HTMLElement).closest(".icon-link") as HTMLElement | null;
       if (!item) return;
       e.preventDefault();
       activeItem = item;
@@ -153,7 +158,7 @@ const links = [
 
       const action = btn.dataset.action;
       const svg = activeItem.dataset.svg || "";
-      const name = (activeItem.dataset.name || "").split(" ")[0];
+      const name = activeItem.dataset.name || "";
       const component = activeItem.dataset.component || "";
 
       switch (action) {
@@ -203,7 +208,7 @@ const links = [
 
     function showPanel(item: HTMLElement) {
       panelSvg = item.dataset.svg || "";
-      panelIconName = (item.dataset.name || "").split(" ")[0];
+      panelIconName = item.dataset.name || "";
       panelComponentName = item.dataset.component || "";
 
       panelIcon.innerHTML = panelSvg;
@@ -217,13 +222,13 @@ const links = [
       panel.hidden = false;
 
       // highlight selected icon
-      items.forEach((i) => i.classList.remove("icon-item-active"));
-      item.classList.add("icon-item-active");
+      items.forEach((i) => i.classList.remove("icon-link-active"));
+      item.classList.add("icon-link-active");
     }
 
     function hidePanel() {
       panel.hidden = true;
-      items.forEach((i) => i.classList.remove("icon-item-active"));
+      items.forEach((i) => i.classList.remove("icon-link-active"));
     }
 
     function setActiveTab(tab: string) {
@@ -334,8 +339,7 @@ const links = [
       const link = (e.target as HTMLElement).closest(".icon-link") as HTMLElement | null;
       if (!link) return;
       e.preventDefault();
-      const item = link.closest(".icon-item") as HTMLElement | null;
-      if (item) showPanel(item);
+      showPanel(link);
     });
 
     panelClose.addEventListener("click", hidePanel);
