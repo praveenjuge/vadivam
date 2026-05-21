@@ -2,7 +2,7 @@
 
 Pixel-perfect, open-source, gorgeous icons for refined interfaces.
 
-![All Vadivam icons](./apps/web/public/preview.png?v=0.0.12)
+![All Vadivam icons](./apps/web/public/preview.png?v=0.0.13)
 
 ```sh
 bun install
