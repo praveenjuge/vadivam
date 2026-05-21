@@ -356,18 +356,18 @@ async function buildWebAssets(icons) {
 
 export async function buildPreview() {
   const icons = await readIcons();
-  const columns = 16;
-  const cell = 32;
-  const padding = 32;
+  const rows = 8;
+  const cell = 24;
+  const padding = 24;
   const gap = 24;
   const scale = 2;
-  const rows = Math.ceil(icons.length / columns);
+  const columns = Math.max(1, Math.ceil(icons.length / rows));
   const width = padding * 2 + columns * cell + (columns - 1) * gap;
   const height = padding * 2 + rows * cell + (rows - 1) * gap;
   const tiles = icons
     .map((icon, i) => {
-      const col = i % columns;
-      const row = Math.floor(i / columns);
+      const col = Math.floor(i / rows);
+      const row = i % rows;
       const x = padding + col * (cell + gap);
       const y = padding + row * (cell + gap);
       const inner = icon.svg
