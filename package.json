@@ -18,11 +18,13 @@
     "icons:og": "bun scripts/icons.mjs og",
     "icons:test": "bun test tests/icons.test.mjs",
     "test:vadivam": "bun run icons:build && publint packages/vadivam && bun test tests/vadivam.test.mjs",
-    "test:vadivam-react": "bun run icons:build && publint packages/vadivam-react && bun test tests/vadivam-react.test.mjs",
+    "test:react:unit": "bun run icons:build && bun test --preload ./tests/setup/happydom.ts tests/vadivam-react/*.client.test.mjs && bun test tests/vadivam-react/*.ssr.test.mjs tests/vadivam-react/exports.test.mjs",
+    "test:vadivam-react": "bun run icons:build && publint packages/vadivam-react && bun run test:react:unit",
+    "test:integration": "bun run icons:build && bun scripts/integration.mjs",
     "packages:check": "bun run test:vadivam && bun run test:vadivam-react",
     "deploy": "bun run build && wrangler deploy",
     "deploy:worker": "wrangler deploy",
-    "test": "bun run icons:test && bun run packages:check && bun run --cwd apps/web build"
+    "test": "bun run icons:test && bun run packages:check && bun run --cwd apps/web build && bun run test:integration"
   },
   "dependencies": {
     "vadivam": "workspace:*",
@@ -30,12 +32,18 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
+    "@happy-dom/global-registrator": "^20.9.0",
     "@resvg/resvg-js": "^2.6.2",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
     "astro": "^6.3.3",
     "fast-xml-parser": "^5.3.3",
+    "happy-dom": "^20.9.0",
     "publint": "^0.3.21",
-    "react": "^19.2.1",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
     "svgo": "^4.0.1",
     "typescript": "^6.0.3",
     "wrangler": "^4.92.0"
