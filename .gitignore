@@ -8,3 +8,15 @@ packages/*/dist
 apps/web/dist
 apps/web/.astro
 apps/web/public/icons
+
+# Integration test apps (build artifacts; per-app bun.lock IS tracked)
+tests/integration/*/node_modules
+tests/integration/*/.next
+tests/integration/*/dist
+tests/integration/*/.output
+tests/integration/*/.tanstack
+tests/integration/*/.nitro
+tests/integration/*/.vite
+tests/integration/*/.vinxi
+tests/integration/*/next-env.d.ts
+tests/integration/tanstack-start/src/routeTree.gen.ts

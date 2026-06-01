@@ -1,0 +1,19 @@
+{
+  "name": "vadivam-integration-nextjs",
+  "private": true,
+  "scripts": {
+    "build": "next build"
+  },
+  "dependencies": {
+    "next": "^16.2.7",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "vadivam-react": "file:../../../packages/vadivam-react"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^6.0.3"
+  }
+}

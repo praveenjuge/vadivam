@@ -43,6 +43,16 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Cache integration app dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            tests/integration/*/node_modules
+            tests/integration/nextjs/.next/cache
+          key: integration-${{ runner.os }}-${{ hashFiles('tests/integration/*/bun.lock') }}
+          restore-keys: |
+            integration-${{ runner.os }}-
+
       - name: Optimize icons
         run: bun run icons:optimize
 

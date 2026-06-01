@@ -18,6 +18,8 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - Run all checks: `bun run test`
 - Test the raw SVG package: `bun run test:vadivam`
 - Test the React package: `bun run test:vadivam-react`
+- Run the React render/SSR/exports unit suite only: `bun run test:react:unit`
+- Build the framework integration apps (Next.js, TanStack Start, Vite + React): `bun run test:integration`
 - Deploy the static Workers site: `bun run deploy`
 
 ## Icon Workflow
@@ -40,6 +42,8 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 
 - Run `bun run test` before committing.
 - Package tests live in `tests/` and use `bun test`.
+- React render tests (`tests/vadivam-react/*.client.test.mjs`) run against happy-dom via the `tests/setup/happydom.ts` preload; SSR and export-coverage tests run with no DOM. Keep these two groups separate so SSR tests stay in a true server environment.
+- Framework compatibility is verified by building real apps under `tests/integration/` (Next.js App Router, TanStack Start, Vite + React). Each consumes the locally built `vadivam-react` via a `file:` dependency; a successful `build` is the test. Their build artifacts are gitignored but per-app `bun.lock` files are committed for reproducible CI installs.
 - For icon-only changes, run `bun run icons:optimize` and `bun run icons:check` first.
 - For website UI changes, verify the rendered page in a browser at desktop and mobile widths.
 - If GitHub Actions fails, inspect logs with `gh run view --log-failed` before changing workflow files.
