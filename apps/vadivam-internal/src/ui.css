@@ -1,0 +1,303 @@
+:root {
+  color-scheme: light dark;
+  font-family: "Avenir Next", Avenir, ui-sans-serif, sans-serif;
+  font-size: 11px;
+  color: var(--figma-color-text);
+  background: var(--figma-color-bg);
+  --rule: var(--figma-color-border);
+  --muted: var(--figma-color-text-secondary);
+  --faint: var(--figma-color-text-tertiary);
+  --surface: var(--figma-color-bg-secondary);
+  --hover: var(--figma-color-bg-hover);
+  --brand: var(--figma-color-bg-brand);
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; }
+
+main {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  height: 100vh;
+  overflow: hidden;
+}
+
+button,
+input { font: inherit; }
+
+button {
+  color: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.topbar {
+  display: grid;
+  grid-template-columns: 20px 1fr 26px;
+  align-items: center;
+  min-height: 42px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.monogram {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  color: var(--figma-color-text-onbrand);
+  background: var(--brand);
+  border-radius: 3px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+h1 {
+  margin: 0 0 0 7px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+h1 span {
+  color: var(--faint);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.icon-button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.icon-button:hover { background: var(--hover); }
+
+.workspace {
+  padding: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.summary {
+  min-height: 15px;
+  margin: 0 0 8px;
+  overflow: hidden;
+  color: var(--muted);
+  line-height: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.generation {
+  display: grid;
+  grid-template-columns: auto 48px 1fr;
+  align-items: center;
+  gap: 6px;
+}
+
+.generation label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+input,
+.primary,
+.maintenance button {
+  height: 28px;
+  border-radius: 4px;
+}
+
+input {
+  width: 48px;
+  padding: 0 7px;
+  color: var(--figma-color-text);
+  background: transparent;
+  border: 1px solid var(--figma-color-border-strong);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+input:focus {
+  border-color: var(--figma-color-border-selected);
+  outline: 1px solid var(--figma-color-border-selected);
+}
+
+.primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 9px 0 10px;
+  color: var(--figma-color-text-onbrand);
+  background: var(--brand);
+  border: 0;
+  font-weight: 650;
+}
+
+.primary:not(:disabled):hover { background: var(--figma-color-bg-brand-hover); }
+
+.primary span { font-size: 14px; }
+
+.maintenance {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.maintenance button {
+  padding: 0 8px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid transparent;
+  font-weight: 550;
+  text-align: left;
+}
+
+.maintenance button span {
+  display: inline-block;
+  width: 25px;
+  color: var(--figma-color-text);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 9px;
+}
+
+.maintenance button:hover {
+  color: var(--figma-color-text);
+  background: var(--hover);
+  border-color: var(--figma-color-border-strong);
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 31px;
+  padding: 3px 6px 3px 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+#status {
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-button {
+  height: 24px;
+  padding: 0 6px;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.text-button:not(:disabled):hover {
+  color: var(--figma-color-text);
+  background: var(--hover);
+}
+
+ol {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+li {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 29px;
+  padding: 0 10px 0 4px;
+  border-bottom: 1px solid var(--rule);
+}
+
+li:hover { background: var(--hover); }
+
+.rank,
+.usage {
+  color: var(--faint);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rank { text-align: right; }
+
+.name {
+  overflow: hidden;
+  padding-left: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty {
+  display: grid;
+  min-height: 96px;
+  padding: 16px;
+  place-items: center;
+  color: var(--muted);
+  line-height: 1.45;
+  text-align: center;
+}
+
+.success { color: var(--figma-color-text-success); }
+
+.issue {
+  display: block;
+  min-height: 0;
+  padding: 8px 10px;
+  border-left: 2px solid var(--figma-color-border-danger);
+}
+
+.issue-name {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.violations {
+  display: block;
+  color: var(--figma-color-text-danger);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  li { animation: reveal 120ms ease-out both; }
+  li:nth-child(n + 8) { animation: none; }
+}
+
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}

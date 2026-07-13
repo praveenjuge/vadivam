@@ -1,0 +1,19 @@
+{
+  "name": "@vadivam/internal-figma-plugin",
+  "version": "0.0.13",
+  "private": true,
+  "type": "module",
+  "description": "Internal Figma workflow for generating the next ranked Vadivam icon frames.",
+  "scripts": {
+    "build": "bun scripts/build.mjs",
+    "dev": "bun scripts/build.mjs --watch",
+    "test": "bun run build && bun test && bun run typecheck",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.130.0",
+    "@types/bun": "^1.3.14",
+    "esbuild": "^0.28.1",
+    "typescript": "^6.0.3"
+  }
+}

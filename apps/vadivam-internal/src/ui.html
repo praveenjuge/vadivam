@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vadivam Internal</title>
+    <style>/* INJECT_UI_STYLES */</style>
+  </head>
+  <body>
+    <main>
+      <header class="topbar">
+        <span class="monogram" aria-hidden="true">V</span>
+        <h1>Vadivam <span>/ internal</span></h1>
+        <button id="refresh" class="icon-button" type="button" aria-label="Refresh icon queue" title="Refresh">↻</button>
+      </header>
+
+      <section class="workspace" aria-label="Icon tools">
+        <p id="summary" class="summary">Reading this file and the local icon index…</p>
+        <div class="generation">
+          <label for="count">Next</label>
+          <input id="count" type="number" min="1" max="100" step="1" value="20" />
+          <button id="generate" class="primary" type="button" disabled>Make frames <span aria-hidden="true">→</span></button>
+        </div>
+        <div class="maintenance" aria-label="Maintenance actions">
+          <button id="arrange" type="button"><span aria-hidden="true">A→Z</span> Arrange / 20</button>
+          <button id="audit" type="button"><span aria-hidden="true">✓</span> Audit icons</button>
+        </div>
+      </section>
+
+      <section class="toolbar" aria-label="Candidate actions">
+        <p id="status" role="status">Loading ranked icons…</p>
+        <button id="copy" class="text-button" type="button" disabled>Copy names</button>
+      </section>
+
+      <ol id="results" aria-label="Plugin results"></ol>
+    </main>
+    <script>/* INJECT_UI_SCRIPT */</script>
+  </body>
+</html>

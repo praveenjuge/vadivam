@@ -9,7 +9,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "bun run icons:build && bun run --cwd apps/web build",
+    "build": "bun run icons:build && bun run --cwd apps/vadivam-internal build && bun run --cwd apps/web build",
     "dev": "bun run icons:build && bun run --cwd apps/web dev",
     "icons:optimize": "bun scripts/icons.mjs optimize",
     "icons:check": "bun scripts/icons.mjs check",
@@ -17,6 +17,9 @@
     "icons:preview": "bun scripts/icons.mjs preview",
     "icons:og": "bun scripts/icons.mjs og",
     "icons:test": "bun test tests/icons.test.mjs",
+    "plugin:build": "bun run --cwd apps/vadivam-internal build",
+    "plugin:dev": "bun run --cwd apps/vadivam-internal dev",
+    "test:vadivam-internal": "bun run --cwd apps/vadivam-internal test",
     "test:vadivam": "bun run icons:build && publint packages/vadivam && bun test tests/vadivam.test.mjs",
     "test:react:unit": "bun run icons:build && bun test --preload ./tests/setup/happydom.ts tests/vadivam-react/*.client.test.mjs && bun test tests/vadivam-react/*.ssr.test.mjs tests/vadivam-react/exports.test.mjs",
     "test:vadivam-react": "bun run icons:build && publint packages/vadivam-react && bun run test:react:unit",
@@ -24,7 +27,7 @@
     "packages:check": "bun run test:vadivam && bun run test:vadivam-react",
     "deploy": "bun run build && wrangler deploy",
     "deploy:worker": "wrangler deploy",
-    "test": "bun run icons:test && bun run packages:check && bun run --cwd apps/web build && bun run test:integration"
+    "test": "bun run icons:test && bun run test:vadivam-internal && bun run packages:check && bun run --cwd apps/web build && bun run test:integration"
   },
   "dependencies": {
     "vadivam": "workspace:*",
