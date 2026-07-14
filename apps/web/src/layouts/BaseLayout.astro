@@ -80,6 +80,7 @@ const jsonLd = {
         --code-string: #25633f;
         --code-package: #295f8f;
         --code-component: #6f3a1d;
+        --bottom-panel-clearance: 0px;
       }
 
       @media (prefers-color-scheme: dark) {
@@ -194,7 +195,7 @@ const jsonLd = {
       .shell {
         width: min(960px, calc(100vw - 32px));
         margin: 0 auto;
-        padding: 24px 0 48px;
+        padding: 24px 0 calc(48px + var(--bottom-panel-clearance));
       }
 
       .page-header {

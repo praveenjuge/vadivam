@@ -200,11 +200,25 @@ const links = [
     const panelContent = document.getElementById("panelContent") as HTMLElement;
     const panelClose = document.getElementById("panelClose") as HTMLElement;
     const panelTabs = panel.querySelectorAll(".panel-tab");
+    const root = document.documentElement;
 
     let panelSvg = "";
     let panelIconName = "";
     let panelComponentName = "";
     let currentTab = "svg";
+
+    function syncPanelClearance() {
+      const clearance = panel.hidden ? 0 : Math.ceil(panel.getBoundingClientRect().height + 16);
+      root.style.setProperty("--bottom-panel-clearance", `${clearance}px`);
+    }
+
+    function revealSelectedIcon(item: HTMLElement) {
+      const panelTop = window.innerHeight - panel.offsetHeight;
+      const overlap = item.getBoundingClientRect().bottom - panelTop + 12;
+      if (overlap > 0) window.scrollBy({ top: overlap });
+    }
+
+    new ResizeObserver(syncPanelClearance).observe(panel);
 
     function showPanel(item: HTMLElement) {
       panelSvg = item.dataset.svg || "";
@@ -220,14 +234,21 @@ const links = [
 
       setActiveTab("svg");
       panel.hidden = false;
+      syncPanelClearance();
 
       // highlight selected icon
       items.forEach((i) => i.classList.remove("icon-link-active"));
       item.classList.add("icon-link-active");
+
+      requestAnimationFrame(() => {
+        syncPanelClearance();
+        revealSelectedIcon(item);
+      });
     }
 
     function hidePanel() {
       panel.hidden = true;
+      syncPanelClearance();
       items.forEach((i) => i.classList.remove("icon-link-active"));
     }
 
