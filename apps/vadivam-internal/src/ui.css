@@ -1,7 +1,7 @@
 :root {
   color-scheme: light dark;
   font-family: "Avenir Next", Avenir, ui-sans-serif, sans-serif;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--figma-color-text);
   background: var(--figma-color-bg);
   --rule: var(--figma-color-border);
@@ -18,7 +18,7 @@ body { margin: 0; }
 
 main {
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: 40px 30px auto 32px minmax(0, 1fr);
   height: 100vh;
   overflow: hidden;
 }
@@ -38,10 +38,9 @@ button:disabled {
 
 .topbar {
   display: grid;
-  grid-template-columns: 20px 1fr 26px;
+  grid-template-columns: 20px 1fr auto;
   align-items: center;
-  min-height: 42px;
-  padding: 7px 10px;
+  padding: 0 10px;
   border-bottom: 1px solid var(--rule);
 }
 
@@ -54,7 +53,7 @@ button:disabled {
   background: var(--brand);
   border-radius: 3px;
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 750;
 }
 
@@ -65,68 +64,66 @@ h1 {
   letter-spacing: -0.01em;
 }
 
-h1 span {
+.internal {
   color: var(--faint);
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  font-size: 10px;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-.icon-button {
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  color: var(--muted);
-  background: transparent;
-  border: 0;
-  border-radius: 4px;
-  font-size: 15px;
-  line-height: 1;
-}
-
-.icon-button:hover { background: var(--hover); }
-
-.workspace {
-  padding: 10px;
-  border-bottom: 1px solid var(--rule);
-}
-
 .summary {
-  min-height: 15px;
-  margin: 0 0 8px;
+  margin: 0;
+  padding: 0 10px;
   overflow: hidden;
   color: var(--muted);
-  line-height: 15px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 11px;
+  line-height: 29px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.generation {
+.toolkit { border-bottom: 1px solid var(--rule); }
+
+.tool-row {
   display: grid;
-  grid-template-columns: auto 48px 1fr;
+  grid-template-columns: minmax(0, 1fr) 88px 60px;
   align-items: center;
   gap: 6px;
+  min-height: 36px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--rule);
 }
 
-.generation label {
-  color: var(--muted);
-  font-size: 10px;
+.tool-row:last-child { border-bottom: 0; }
+
+.tool-row label,
+.tool-name {
+  overflow: hidden;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-meta {
+  overflow: hidden;
+  color: var(--muted);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 10px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 input,
-.primary,
-.maintenance button {
-  height: 28px;
+.tool-row button {
+  height: 27px;
   border-radius: 4px;
 }
 
 input {
-  width: 48px;
+  width: 88px;
   padding: 0 7px;
   color: var(--figma-color-text);
   background: transparent;
@@ -140,57 +137,23 @@ input:focus {
   outline: 1px solid var(--figma-color-border-selected);
 }
 
-.primary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 9px 0 10px;
-  color: var(--figma-color-text-onbrand);
-  background: var(--brand);
-  border: 0;
-  font-weight: 650;
-}
-
-.primary:not(:disabled):hover { background: var(--figma-color-bg-brand-hover); }
-
-.primary span { font-size: 14px; }
-
-.maintenance {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.maintenance button {
-  padding: 0 8px;
-  color: var(--muted);
+.tool-row button {
+  width: 60px;
+  padding: 0 6px;
   background: var(--surface);
-  border: 1px solid transparent;
-  font-weight: 550;
-  text-align: left;
+  border: 1px solid var(--figma-color-border-strong);
+  font-weight: 600;
 }
 
-.maintenance button span {
-  display: inline-block;
-  width: 25px;
-  color: var(--figma-color-text);
-  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
-  font-size: 9px;
-}
-
-.maintenance button:hover {
-  color: var(--figma-color-text);
+.tool-row button:not(:disabled):hover {
   background: var(--hover);
-  border-color: var(--figma-color-border-strong);
+  border-color: var(--figma-color-border-selected);
 }
 
 .toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  min-height: 31px;
-  padding: 3px 6px 3px 10px;
+  padding: 0 10px;
   border-bottom: 1px solid var(--rule);
 }
 
@@ -199,25 +162,9 @@ input:focus {
   overflow: hidden;
   color: var(--muted);
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
-  font-size: 9px;
+  font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.text-button {
-  height: 24px;
-  padding: 0 6px;
-  color: var(--muted);
-  background: transparent;
-  border: 0;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.text-button:not(:disabled):hover {
-  color: var(--figma-color-text);
-  background: var(--hover);
 }
 
 ol {
@@ -231,9 +178,9 @@ ol {
 
 li {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
-  min-height: 29px;
+  min-height: 30px;
   padding: 0 10px 0 4px;
   border-bottom: 1px solid var(--rule);
 }
@@ -244,7 +191,7 @@ li:hover { background: var(--hover); }
 .usage {
   color: var(--faint);
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
-  font-size: 9px;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -253,7 +200,7 @@ li:hover { background: var(--hover); }
 .name {
   overflow: hidden;
   padding-left: 9px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -281,15 +228,15 @@ li:hover { background: var(--hover); }
 .issue-name {
   display: block;
   margin-bottom: 2px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
 }
 
 .violations {
   display: block;
   color: var(--figma-color-text-danger);
-  font-size: 10px;
-  line-height: 1.35;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 @media (prefers-reduced-motion: no-preference) {

@@ -15,7 +15,6 @@ const summary = element<HTMLParagraphElement>("#summary");
 const status = element<HTMLParagraphElement>("#status");
 const countInput = element<HTMLInputElement>("#count");
 const generateButton = element<HTMLButtonElement>("#generate");
-const copyButton = element<HTMLButtonElement>("#copy");
 const refreshButton = element<HTMLButtonElement>("#refresh");
 const arrangeButton = element<HTMLButtonElement>("#arrange");
 const auditButton = element<HTMLButtonElement>("#audit");
@@ -38,7 +37,6 @@ function formatNumber(value: number): string {
 }
 
 function renderCandidates(): void {
-  copyButton.hidden = false;
   resultList.replaceChildren();
   if (candidates.length === 0) {
     const empty = document.createElement("li");
@@ -67,7 +65,6 @@ function renderCandidates(): void {
 }
 
 function renderAudit(issues: IconAuditIssue[]): void {
-  copyButton.hidden = true;
   resultList.replaceChildren();
   if (issues.length === 0) {
     const success = document.createElement("li");
@@ -110,17 +107,8 @@ arrangeButton.addEventListener("click", () => {
   send({ type: "arrange" });
 });
 auditButton.addEventListener("click", () => {
-  status.textContent = "Checking icon geometry and names…";
+  status.textContent = "Checking icons and renaming stroked layers…";
   send({ type: "audit" });
-});
-
-copyButton.addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(candidates.map((icon) => icon.slug).join("\n"));
-    status.textContent = `Copied ${candidates.length} icon names`;
-  } catch {
-    status.textContent = "Clipboard permission was denied";
-  }
 });
 
 window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) => {
@@ -130,7 +118,6 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
   if (message.type === "loading") {
     status.textContent = "Comparing this file with the ranked feed…";
     generateButton.disabled = true;
-    copyButton.disabled = true;
     refreshButton.disabled = true;
     return;
   }
@@ -139,14 +126,13 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
   if (message.type === "error") {
     status.textContent = message.message;
     generateButton.disabled = candidates.length === 0;
-    copyButton.disabled = candidates.length === 0;
   } else if (message.type === "generated") {
     status.textContent = `Created ${message.names.length} frames on this page`;
   } else if (message.type === "arranged") {
     status.textContent = `Arranged ${message.count} icons A–Z · 20 per row`;
   } else if (message.type === "audit") {
     summary.textContent = `${message.summary.checked} icons checked on this page`;
-    status.textContent = `${message.summary.passed} passed · ${message.summary.failed} need attention`;
+    status.textContent = `${message.summary.passed} passed · ${message.summary.failed} issues · ${message.summary.renamed} renamed · ${message.summary.rounded} caps fixed`;
     renderAudit(message.issues);
   } else if (message.type === "catalog") {
     candidates = message.candidates;
@@ -154,7 +140,6 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
     summary.textContent = `${catalog.existingCount} in file · ${catalog.matchedCount} matched · ${catalog.remainingCount} queued`;
     status.textContent = `${candidates.length} next / ${catalog.currentPage}`;
     generateButton.disabled = candidates.length === 0;
-    copyButton.disabled = candidates.length === 0;
     renderCandidates();
   }
 };

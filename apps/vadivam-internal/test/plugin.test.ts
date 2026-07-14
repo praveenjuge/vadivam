@@ -58,6 +58,7 @@ describe("compiled Figma plugin", () => {
     });
     const existing = ["x", "check", "chevron-right"].map((name, index) => {
       const artwork = validArtwork();
+      if (name === "x") artwork.strokeCap = "NONE";
       if (name === "check") {
         Object.assign(artwork, {
           fills: [{ type: "SOLID", visible: true, opacity: 1 }],
@@ -166,10 +167,32 @@ describe("compiled Figma plugin", () => {
     const audit = messages.find(
       (message) => (message as { type?: string }).type === "audit",
     ) as {
-      summary: { checked: number; passed: number; failed: number };
+      summary: {
+        checked: number;
+        passed: number;
+        failed: number;
+        renamed: number;
+        rounded: number;
+      };
       issues: Array<{ name: string; violations: string[] }>;
     };
-    expect(audit.summary).toEqual({ checked: 3, passed: 2, failed: 1 });
+    expect(audit.summary).toEqual({
+      checked: 3,
+      passed: 2,
+      failed: 1,
+      renamed: 2,
+      rounded: 1,
+    });
+    expect(existing.map((frame) => frame.children[0]?.name)).toEqual([
+      "Vector",
+      "Path",
+      "Vector",
+    ]);
+    expect(existing.map((frame) => frame.children[0]?.strokeCap)).toEqual([
+      "ROUND",
+      "NONE",
+      "ROUND",
+    ]);
     expect(audit.issues[0]?.name).toBe("check");
     expect(audit.issues[0]?.violations).toContain("Frame must have no background fill");
     expect(audit.issues[0]?.violations).toContain("Frame must have no layout guides");

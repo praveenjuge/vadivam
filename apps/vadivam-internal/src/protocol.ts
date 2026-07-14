@@ -18,6 +18,8 @@ export interface IconAuditSummary {
   checked: number;
   passed: number;
   failed: number;
+  renamed: number;
+  rounded: number;
 }
 
 export type PluginToUiMessage =

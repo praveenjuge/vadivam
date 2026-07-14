@@ -11,4 +11,4 @@ Private Figma workflow for turning the live Lucide popularity ranking into the n
 
 The popularity catalog and canonical Lucide icon-name list are stored locally under `src/data/` and bundled into the plugin, so Figma does not depend on cross-origin network access. The plugin scans every page for named top-level `24×24` nodes. It creates missing ranked icons on the current page with the canonical white fill, visible red `2 px` grid, SVG export settings, `40 px` column step, and `72 px` row step.
 
-It can also arrange recognized icons alphabetically in a 20-column grid and audit every icon frame for Lucide naming, `24×24` size, no background fill or layout guides, stroke-only artwork, zero corner radius, `2 px` stroke weight, round caps and joins, and zero rotation.
+It can also arrange recognized icons alphabetically in a 20-column grid and audit every icon frame for Lucide naming, `24×24` size, no background fill or layout guides, stroke-only artwork, zero corner radius, `2 px` stroke weight, round caps and joins, and zero rotation. Auditing also normalizes every stroked artwork layer name to `Vector` and automatically makes its stroke endpoints round.

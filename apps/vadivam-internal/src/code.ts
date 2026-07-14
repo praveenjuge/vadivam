@@ -186,8 +186,16 @@ function addViolation(violations: Set<string>, condition: boolean, message: stri
   if (condition) violations.add(message);
 }
 
-function auditIcon(icon: FrameNode | ComponentNode | InstanceNode): IconAuditIssue | null {
+interface IconAuditResult {
+  issue: IconAuditIssue | null;
+  renamed: number;
+  rounded: number;
+}
+
+function auditIcon(icon: FrameNode | ComponentNode | InstanceNode): IconAuditResult {
   const violations = new Set<string>();
+  let renamed = 0;
+  let rounded = 0;
   const slug = resolveLucideIconName(icon.name);
   addViolation(violations, !slug || !allowedIconNames.has(slug), "Name is not in Lucide");
   addViolation(
@@ -239,27 +247,41 @@ function auditIcon(icon: FrameNode | ComponentNode | InstanceNode): IconAuditIss
   }
 
   for (const node of artwork) {
+    const hasStroke = hasVisiblePaint(node.strokes);
+    if (hasStroke && node.name !== "Vector") {
+      node.name = "Vector";
+      renamed += 1;
+    }
+    if (hasStroke && node.strokeCap !== "ROUND") {
+      node.strokeCap = "ROUND";
+      rounded += 1;
+    }
     addViolation(violations, hasVisiblePaint(node.fills), "Artwork must have no fill");
-    addViolation(violations, !hasVisiblePaint(node.strokes), "Artwork must use strokes");
+    addViolation(violations, !hasStroke, "Artwork must use strokes");
     addViolation(
       violations,
       node.strokeWeight === figma.mixed || Math.abs(node.strokeWeight - 2) >= 0.01,
       "Stroke weight must be 2 px",
     );
-    addViolation(violations, node.strokeCap !== "ROUND", "Stroke endpoints must be round");
     addViolation(violations, node.strokeJoin !== "ROUND", "Stroke joins must be round");
   }
 
-  return violations.size > 0
-    ? { name: icon.name, violations: [...violations] }
-    : null;
+  return {
+    issue:
+      violations.size > 0
+        ? { name: icon.name, violations: [...violations] }
+        : null,
+    renamed,
+    rounded,
+  };
 }
 
 function auditIcons(): void {
   const icons = figma.currentPage.children.filter(isIconContainer);
   if (icons.length === 0) throw new Error("No icon frames on this page");
-  const issues = icons
-    .map(auditIcon)
+  const results = icons.map(auditIcon);
+  const issues = results
+    .map((result) => result.issue)
     .filter((issue): issue is IconAuditIssue => issue !== null)
     .sort((left, right) => left.name.localeCompare(right.name));
   post({
@@ -268,6 +290,8 @@ function auditIcons(): void {
       checked: icons.length,
       passed: icons.length - issues.length,
       failed: issues.length,
+      renamed: results.reduce((total, result) => total + result.renamed, 0),
+      rounded: results.reduce((total, result) => total + result.rounded, 0),
     },
     issues,
   });

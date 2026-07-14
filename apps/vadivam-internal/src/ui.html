@@ -10,26 +10,37 @@
     <main>
       <header class="topbar">
         <span class="monogram" aria-hidden="true">V</span>
-        <h1>Vadivam <span>/ internal</span></h1>
-        <button id="refresh" class="icon-button" type="button" aria-label="Refresh icon queue" title="Refresh">↻</button>
+        <h1>Vadivam utilities</h1>
+        <span class="internal">Internal</span>
       </header>
 
-      <section class="workspace" aria-label="Icon tools">
-        <p id="summary" class="summary">Reading this file and the local icon index…</p>
-        <div class="generation">
-          <label for="count">Next</label>
+      <p id="summary" class="summary">Reading this file and the local icon index…</p>
+
+      <section class="toolkit" aria-label="Icon utilities">
+        <div class="tool-row">
+          <label for="count">Create frames</label>
           <input id="count" type="number" min="1" max="100" step="1" value="20" />
-          <button id="generate" class="primary" type="button" disabled>Make frames <span aria-hidden="true">→</span></button>
+          <button id="generate" type="button" disabled>Create</button>
         </div>
-        <div class="maintenance" aria-label="Maintenance actions">
-          <button id="arrange" type="button"><span aria-hidden="true">A→Z</span> Arrange / 20</button>
-          <button id="audit" type="button"><span aria-hidden="true">✓</span> Audit icons</button>
+        <div class="tool-row">
+          <span class="tool-name">Arrange icons</span>
+          <span class="tool-meta">A–Z · 20/row</span>
+          <button id="arrange" type="button">Arrange</button>
+        </div>
+        <div class="tool-row">
+          <span class="tool-name">Audit icons</span>
+          <span class="tool-meta">Check + rename</span>
+          <button id="audit" type="button">Audit</button>
+        </div>
+        <div class="tool-row">
+          <span class="tool-name">Refresh queue</span>
+          <span class="tool-meta">Scan file</span>
+          <button id="refresh" type="button">Refresh</button>
         </div>
       </section>
 
-      <section class="toolbar" aria-label="Candidate actions">
+      <section class="toolbar" aria-label="Utility status">
         <p id="status" role="status">Loading ranked icons…</p>
-        <button id="copy" class="text-button" type="button" disabled>Copy names</button>
       </section>
 
       <ol id="results" aria-label="Plugin results"></ol>
