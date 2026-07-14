@@ -2,7 +2,7 @@
 
 Pixel-perfect, open-source, gorgeous React icons for refined interfaces.
 
-![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/web/public/preview.png?v=0.0.15)
+![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/web/public/preview.png?v=0.0.16)
 
 ```sh
 bun add vadivam-react
