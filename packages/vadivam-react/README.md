@@ -12,13 +12,42 @@ bun add vadivam-react
 import { Activity } from "vadivam-react";
 
 export function Example() {
-  return <Activity size={20} color="currentColor" />;
+  return <Activity size={20} color="currentColor" strokeWidth={2} />;
 }
 ```
 
-Per-icon and dynamic imports are generated during build:
+Icons accept SVG properties, `size`, `color`, `strokeWidth`,
+`absoluteStrokeWidth`, `title`, refs, and SVG children. Use `fill` for filled
+icons, or nest icons and SVG elements to combine them.
+
+Apply shared defaults with the provider or target the generated `vadivam` and
+`vadivam-{name}` classes in CSS:
 
 ```tsx
-import Activity from "vadivam-react/activity";
-import { DynamicIcon } from "vadivam-react/dynamic";
+import { Activity, VadivamProvider } from "vadivam-react";
+
+<VadivamProvider size={20} color="navy" strokeWidth={1.5}>
+  <Activity />
+</VadivamProvider>;
 ```
+
+Every icon has normal, suffixed, and prefixed aliases:
+
+```tsx
+import { Activity, ActivityIcon, VadivamActivity } from "vadivam-react";
+```
+
+Per-icon, generic-node, and dynamic APIs are generated during build:
+
+```tsx
+import Activity, { __iconNode } from "vadivam-react/activity";
+import { Icon } from "vadivam-react";
+import { DynamicIcon, iconNames } from "vadivam-react/dynamic";
+
+<Icon iconNode={__iconNode} />;
+<DynamicIcon name="activity" />;
+```
+
+Prefer static icon imports when the icon name is known. `DynamicIcon` is
+intended for names stored in external data and creates a separate lazy module
+for every icon.

@@ -20,7 +20,7 @@
     "plugin:build": "bun run --cwd apps/vadivam-internal build",
     "plugin:dev": "bun run --cwd apps/vadivam-internal dev",
     "test:vadivam-internal": "bun run --cwd apps/vadivam-internal test",
-    "test:vadivam": "bun run icons:build && publint packages/vadivam && bun test tests/vadivam.test.mjs",
+    "test:vadivam": "bun run icons:build && publint packages/vadivam && bun test --preload ./tests/setup/happydom.ts tests/vadivam.client.test.mjs && bun test tests/vadivam.test.mjs",
     "test:react:unit": "bun run icons:build && bun test --preload ./tests/setup/happydom.ts tests/vadivam-react/*.client.test.mjs && bun test tests/vadivam-react/*.ssr.test.mjs tests/vadivam-react/exports.test.mjs",
     "test:vadivam-react": "bun run icons:build && publint packages/vadivam-react && bun run test:react:unit",
     "test:integration": "bun run icons:build && bun scripts/integration.mjs",

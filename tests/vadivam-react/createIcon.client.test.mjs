@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { createElement, createRef } from "react";
 import { render } from "@testing-library/react";
-import { Activity, createIcon } from "vadivam-react";
+import {
+  Activity,
+  Icon,
+  VadivamProvider,
+  createIcon,
+  createVadivamIcon,
+} from "vadivam-react";
 
 // Render an icon and return its root <svg> element.
 function renderIcon(props, children) {
@@ -78,14 +84,14 @@ describe("createIcon rendering (client)", () => {
   test("aria-label labels without rendering a <title>", () => {
     const { svg } = renderIcon({ "aria-label": "Open" });
     expect(svg.querySelector("title")).toBeNull();
-    expect(svg.getAttribute("role")).toBe("img");
+    expect(svg.getAttribute("role")).toBeNull();
     expect(svg.getAttribute("aria-hidden")).toBeNull();
     expect(svg.getAttribute("aria-label")).toBe("Open");
   });
 
   test("className and data-* attributes pass through", () => {
     const { svg } = renderIcon({ className: "icon-x", "data-foo": "bar" });
-    expect(svg.getAttribute("class")).toBe("icon-x");
+    expect(svg.getAttribute("class")).toBe("vadivam vadivam-activity icon-x");
     expect(svg.getAttribute("data-foo")).toBe("bar");
   });
 
@@ -104,6 +110,7 @@ describe("createIcon rendering (client)", () => {
   test("renders children inside the svg", () => {
     const { svg } = renderIcon({}, createElement("circle", { cx: 12, cy: 12, r: 4, key: "c" }));
     expect(svg.querySelector("circle")).not.toBeNull();
+    expect(svg.getAttribute("aria-hidden")).toBeNull();
   });
 
   test("createIcon builds a working component", () => {
@@ -113,5 +120,46 @@ describe("createIcon rendering (client)", () => {
     const path = container.querySelector("svg path");
     expect(path).not.toBeNull();
     expect(path.getAttribute("d")).toBe("M4 12h16");
+  });
+
+  test("createVadivamIcon is the canonical createIcon alias", () => {
+    expect(createVadivamIcon).toBe(createIcon);
+  });
+
+  test("Icon renders an icon node directly", () => {
+    const { container } = render(
+      createElement(Icon, {
+        iconNode: [["line", { x1: "2", y1: "12", x2: "22", y2: "12", key: "line" }]],
+      })
+    );
+    expect(container.querySelector("svg line")).not.toBeNull();
+  });
+
+  test("VadivamProvider applies global defaults and merges classes", () => {
+    const { container } = render(
+      createElement(
+        VadivamProvider,
+        { size: 40, color: "purple", strokeWidth: 1.5, className: "app-icons" },
+        createElement(Activity, { className: "local-icon" })
+      )
+    );
+    const svg = container.querySelector("svg");
+    expect(svg.getAttribute("width")).toBe("40");
+    expect(svg.getAttribute("stroke")).toBe("purple");
+    expect(svg.getAttribute("stroke-width")).toBe("1.5");
+    expect(svg.getAttribute("class")).toBe("vadivam app-icons vadivam-activity local-icon");
+  });
+
+  test("local props override provider defaults", () => {
+    const { container } = render(
+      createElement(
+        VadivamProvider,
+        { size: 40, color: "purple" },
+        createElement(Activity, { size: 18, color: "green" })
+      )
+    );
+    const svg = container.querySelector("svg");
+    expect(svg.getAttribute("width")).toBe("18");
+    expect(svg.getAttribute("stroke")).toBe("green");
   });
 });

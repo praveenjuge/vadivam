@@ -39,6 +39,11 @@
       "default": "./dist/manifest.js"
     },
     "./icons/*.svg": "./dist/icons/*.svg",
+    "./icons/*": {
+      "types": "./dist/icons/*.d.ts",
+      "import": "./dist/icons/*.js",
+      "default": "./dist/icons/*.js"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
