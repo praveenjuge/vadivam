@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { readIcons, validateSvgContent } from "../scripts/icons.mjs";
+import {
+  readIcons,
+  shuffleUnique,
+  validateSvgContent,
+} from "../scripts/icons.mjs";
 
 const validSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></svg>`;
 
@@ -26,5 +30,16 @@ describe("icon validation", () => {
       expect(icon.svgPath).toBe(`icons/${icon.fileName}`);
       expect(icon.componentName).toMatch(/^[A-Z][A-Za-z0-9]*$/);
     }
+  });
+});
+
+describe("OG icon selection", () => {
+  test("shuffles every icon without repeating any", () => {
+    const icons = ["one", "two", "three", "four"];
+    const shuffled = shuffleUnique(icons, () => 0.25);
+
+    expect(shuffled).not.toBe(icons);
+    expect(shuffled).toHaveLength(icons.length);
+    expect(new Set(shuffled)).toEqual(new Set(icons));
   });
 });

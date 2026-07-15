@@ -362,6 +362,7 @@ export async function buildPreview() {
   const padding = 32;
   const gap = 24;
   const scale = 2;
+  const strokeWidth = 2.25;
   const columns = Math.max(1, Math.ceil(icons.length / rows));
   const width = padding * 2 + columns * cell + (columns - 1) * gap;
   const height = padding * 2 + rows * cell + (rows - 1) * gap;
@@ -378,7 +379,7 @@ export async function buildPreview() {
       return `<g transform="translate(${x} ${y}) scale(${cell / 24})">${inner}</g>`;
     })
     .join("");
-  const composite = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" stroke="#000000" stroke-width="${(2 * 24) / cell}" stroke-linecap="round" stroke-linejoin="round"><rect width="${width}" height="${height}" fill="#ffffff" stroke="none"/>${tiles}</svg>`;
+  const composite = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" stroke="#000000" stroke-width="${(strokeWidth * 24) / cell}" stroke-linecap="round" stroke-linejoin="round"><rect width="${width}" height="${height}" fill="#ffffff" stroke="none"/>${tiles}</svg>`;
   const png = new Resvg(composite, {
     fitTo: { mode: "width", value: width * scale },
     background: "#ffffff",
@@ -412,15 +413,24 @@ function mulberry32(seed) {
   };
 }
 
+export function shuffleUnique(items, random) {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 export async function buildOg() {
   const icons = await readIcons();
   if (icons.length === 0) throw new Error("buildOg: no icons available");
 
   const width = 1200;
   const height = 630;
-  const iconSize = 40;
-  const gap = 24;
-  const step = iconSize + gap;
+  const targetIconSize = 40;
+  const targetGap = 24;
+  const targetStep = targetIconSize + targetGap;
   const angle = -22;
 
   const innerSvgs = icons.map((icon) =>
@@ -433,26 +443,50 @@ export async function buildOg() {
   const seed = fnv1aHash(icons.map((icon) => icon.name).join(","));
   const random = mulberry32(seed);
 
-  // Build a regular grid that is large enough to fully cover the canvas after
-  // rotation. Cells stay axis-aligned in their own coordinate space, so once
-  // we rotate the whole group around the canvas center the icons line up
-  // cleanly along the diagonal axes.
-  const diagonal = Math.ceil(Math.hypot(width, height)) + step * 2;
-  const cells = Math.ceil(diagonal / step);
-  const span = cells * step;
-  const offset = -span / 2;
+  // Match the grid to the rotated canvas bounds so more unique icons remain
+  // visible instead of being cropped out by an oversized square grid.
+  const radians = (Math.abs(angle) * Math.PI) / 180;
+  const coverWidth =
+    Math.ceil(width * Math.cos(radians) + height * Math.sin(radians)) +
+    targetStep * 2;
+  const coverHeight =
+    Math.ceil(width * Math.sin(radians) + height * Math.cos(radians)) +
+    targetStep * 2;
+  const aspect = coverWidth / coverHeight;
+  const rows = Math.max(1, Math.ceil(Math.sqrt(icons.length / aspect)));
+  const columns = Math.ceil(icons.length / rows);
+  const stepX = coverWidth / columns;
+  const stepY = coverHeight / rows;
+  const iconSize = Math.min(stepX, stepY) * (targetIconSize / targetStep);
+  const offsetX = -coverWidth / 2;
+  const offsetY = -coverHeight / 2;
   const scale = iconSize / 24;
-  const tiles = [];
-  for (let row = 0; row < cells; row++) {
-    for (let col = 0; col < cells; col++) {
-      const x = offset + col * step;
-      const y = offset + row * step;
-      const inner = innerSvgs[Math.floor(random() * innerSvgs.length)];
-      tiles.push(
-        `<g transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${scale.toFixed(4)})">${inner}</g>`,
-      );
-    }
-  }
+  const positions = Array.from({ length: rows * columns }, (_, index) => {
+    const row = Math.floor(index / columns);
+    const col = index % columns;
+    return {
+      index,
+      x: offsetX + col * stepX,
+      y: offsetY + row * stepY,
+      distance: Math.hypot(
+        col - (columns - 1) / 2,
+        row - (rows - 1) / 2,
+      ),
+    };
+  });
+  const skippedPositions = new Set(
+    [...positions]
+      .sort((a, b) => b.distance - a.distance || b.index - a.index)
+      .slice(0, positions.length - icons.length)
+      .map((position) => position.index),
+  );
+  const visiblePositions = positions.filter(
+    (position) => !skippedPositions.has(position.index),
+  );
+  const uniqueSvgs = shuffleUnique(innerSvgs, random);
+  const tiles = visiblePositions.map(({ x, y }, index) =>
+    `<g transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${scale.toFixed(4)})">${uniqueSvgs[index]}</g>`,
+  );
 
   const composite = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" stroke-linecap="round" stroke-linejoin="round">
 <rect width="${width}" height="${height}" fill="#ffffff"/>
