@@ -1,6 +1,6 @@
 {
   "name": "vadivam-astro",
-  "version": "0.0.21",
+  "version": "0.0.22",
   "description": "Pixel-perfect 24px outline icon components for Astro with tree-shakeable imports.",
   "license": "MIT",
   "author": "Praveen Juge",

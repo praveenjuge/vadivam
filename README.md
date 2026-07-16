@@ -6,7 +6,7 @@ Pixel-perfect 24px outline icons for refined interfaces.
 [![downloads](https://img.shields.io/npm/dw/vadivam?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam)
 [![license](https://img.shields.io/npm/l/vadivam?style=flat-square&color=111)](./LICENSE)
 
-![All Vadivam icons](./apps/web/public/preview.png?v=0.0.21)
+![All Vadivam icons](./apps/web/public/preview.png?v=0.0.22)
 
 [Browse all icons](https://vadivam.praveenjuge.com) and copy SVG or framework-ready components.
 
