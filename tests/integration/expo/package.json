@@ -1,0 +1,23 @@
+{
+  "name": "vadivam-react-native-expo-integration",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build:android": "expo export --platform android --output-dir dist/android",
+    "build:ios": "expo export --platform ios --output-dir dist/ios",
+    "build": "bun run typecheck && bun run build:android && bun run build:ios"
+  },
+  "dependencies": {
+    "expo": "57.0.6",
+    "react": "19.2.3",
+    "react-native": "0.86.0",
+    "react-native-svg": "15.15.5",
+    "vadivam-react-native": "file:../../../packages/vadivam-react-native"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "6.0.3"
+  }
+}

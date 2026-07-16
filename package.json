@@ -23,15 +23,18 @@
     "test:vadivam": "bun run icons:build && publint packages/vadivam && bun test --preload ./tests/setup/happydom.ts tests/vadivam.client.test.mjs && bun test tests/vadivam.test.mjs",
     "test:react:unit": "bun run icons:build && bun test --preload ./tests/setup/happydom.ts tests/vadivam-react/*.client.test.mjs && bun test tests/vadivam-react/*.ssr.test.mjs tests/vadivam-react/exports.test.mjs",
     "test:vadivam-react": "bun run icons:build && publint packages/vadivam-react && bun run test:react:unit",
+    "test:react-native:unit": "bun run icons:build && bun test --preload ./tests/setup/happydom.ts tests/vadivam-react-native/*.client.test.mjs && bun test tests/vadivam-react-native/exports.test.mjs",
+    "test:vadivam-react-native": "bun run icons:build && publint packages/vadivam-react-native && bun run test:react-native:unit",
     "test:integration": "bun run icons:build && bun scripts/integration.mjs",
-    "packages:check": "bun run test:vadivam && bun run test:vadivam-react",
+    "packages:check": "bun run test:vadivam && bun run test:vadivam-react && bun run test:vadivam-react-native",
     "deploy": "bun run build && wrangler deploy",
     "deploy:worker": "wrangler deploy",
     "test": "bun run icons:test && bun run test:vadivam-internal && bun run packages:check && bun run --cwd apps/web build && bun run test:integration"
   },
   "dependencies": {
     "vadivam": "workspace:*",
-    "vadivam-react": "workspace:*"
+    "vadivam-react": "workspace:*",
+    "vadivam-react-native": "workspace:*"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
@@ -47,6 +50,8 @@
     "publint": "^0.3.21",
     "react": "19.2.7",
     "react-dom": "19.2.7",
+    "react-native": "0.86.0",
+    "react-native-svg": "15.15.5",
     "svgo": "^4.0.1",
     "typescript": "^6.0.3",
     "wrangler": "^4.92.0"

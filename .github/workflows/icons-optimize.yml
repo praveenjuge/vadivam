@@ -84,7 +84,7 @@ jobs:
             echo "committed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Detect icon changes since last release
+      - name: Detect releasable changes since last release
         id: changes
         run: |
           last_tag=$(git describe --tags --abbrev=0 --match 'v*.*.*' 2>/dev/null || echo "")
@@ -93,11 +93,11 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if [ -n "$(git diff --name-only "$last_tag" HEAD -- icons)" ]; then
-            echo "Icons changed since $last_tag."
+          if [ -n "$(git diff --name-only "$last_tag" HEAD -- icons packages scripts/icons.mjs package.json bun.lock)" ]; then
+            echo "Icons or packages changed since $last_tag."
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "No icon changes since $last_tag; skipping release."
+            echo "No releasable changes since $last_tag; skipping release."
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -107,7 +107,7 @@ jobs:
         run: |
           version=$(bun scripts/bump-version.mjs)
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          git add package.json packages/vadivam/package.json packages/vadivam-react/package.json README.md packages/vadivam/README.md packages/vadivam-react/README.md
+          git add package.json packages/vadivam/package.json packages/vadivam-react/package.json packages/vadivam-react-native/package.json README.md packages/vadivam/README.md packages/vadivam-react/README.md packages/vadivam-react-native/README.md
           git commit -m "chore(release): v$version"
           git tag -a "v$version" -m "v$version"
 

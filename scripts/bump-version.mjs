@@ -4,12 +4,14 @@ const files = [
   "package.json",
   "packages/vadivam/package.json",
   "packages/vadivam-react/package.json",
+  "packages/vadivam-react-native/package.json",
 ];
 
 const readmes = [
   "README.md",
   "packages/vadivam/README.md",
   "packages/vadivam-react/README.md",
+  "packages/vadivam-react-native/README.md",
 ];
 
 const root = JSON.parse(await readFile(files[0], "utf8"));

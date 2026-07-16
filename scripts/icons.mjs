@@ -16,6 +16,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const iconsDir = path.join(root, "icons");
 const rawDist = path.join(root, "packages/vadivam/dist");
 const reactDist = path.join(root, "packages/vadivam-react/dist");
+const reactNativeDist = path.join(root, "packages/vadivam-react-native/dist");
 const webIconsDir = path.join(root, "apps/web/public/icons");
 const previewPath = path.join(root, "apps/web/public/preview.png");
 const ogPath = path.join(root, "apps/web/public/og.png");
@@ -488,6 +489,80 @@ async function buildReactPackage(icons) {
   );
 }
 
+async function buildReactNativePackage(icons) {
+  await rm(reactNativeDist, { recursive: true, force: true });
+  await mkdir(path.join(reactNativeDist, "icons"), { recursive: true });
+  const iconNameType = icons.map((icon) => JSON.stringify(icon.name)).join(" | ");
+
+  await writeFile(
+    path.join(reactNativeDist, "types.d.ts"),
+    `import type * as React from "react";\nimport type { Svg, SvgProps } from "react-native-svg";\nexport type SVGElementType = "circle" | "ellipse" | "line" | "path" | "polygon" | "polyline" | "rect";\nexport type IconNode = readonly [tag: SVGElementType, attrs: Record<string, string>][];\nexport interface VadivamProps extends SvgProps {\n  size?: string | number;\n  absoluteStrokeWidth?: boolean;\n  "data-testid"?: string;\n}\nexport type VadivamIcon = React.ForwardRefExoticComponent<VadivamProps & React.RefAttributes<Svg>>;\nexport type IconName = ${iconNameType};\n`,
+  );
+  await writeFile(
+    path.join(reactNativeDist, "defaultAttributes.js"),
+    `const defaultAttributes = { xmlns: "http://www.w3.org/2000/svg", width: 24, height: 24, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" };\nexport const childDefaultAttributes = { fill: defaultAttributes.fill, stroke: defaultAttributes.stroke, strokeWidth: defaultAttributes.strokeWidth, strokeLinecap: defaultAttributes.strokeLinecap, strokeLinejoin: defaultAttributes.strokeLinejoin };\nexport default defaultAttributes;\n`,
+  );
+  await writeFile(
+    path.join(reactNativeDist, "context.js"),
+    `import React from "react";\n\nconst VadivamContext = React.createContext({ size: 24, color: "currentColor", strokeWidth: 2, absoluteStrokeWidth: false });\nexport function VadivamProvider({ children, size, color, strokeWidth, absoluteStrokeWidth }) {\n  const value = React.useMemo(() => ({ size, color, strokeWidth, absoluteStrokeWidth }), [size, color, strokeWidth, absoluteStrokeWidth]);\n  return React.createElement(VadivamContext.Provider, { value }, children);\n}\nexport function useVadivamContext() {\n  return React.useContext(VadivamContext);\n}\n`,
+  );
+  await writeFile(
+    path.join(reactNativeDist, "context.d.ts"),
+    `import type * as React from "react";\nimport type { VadivamProps } from "./types.js";\nexport interface VadivamProviderProps extends Pick<VadivamProps, "size" | "color" | "strokeWidth" | "absoluteStrokeWidth"> { children: React.ReactNode; }\nexport declare function VadivamProvider(props: VadivamProviderProps): React.ReactElement;\nexport declare function useVadivamContext(): Partial<VadivamProps>;\n`,
+  );
+  await writeFile(
+    path.join(reactNativeDist, "Icon.js"),
+    `import React, { forwardRef } from "react";\nimport * as NativeSvg from "react-native-svg";\nimport defaultAttributes, { childDefaultAttributes } from "./defaultAttributes.js";\nimport { useVadivamContext } from "./context.js";\n\nconst primitives = { circle: NativeSvg.Circle, ellipse: NativeSvg.Ellipse, line: NativeSvg.Line, path: NativeSvg.Path, polygon: NativeSvg.Polygon, polyline: NativeSvg.Polyline, rect: NativeSvg.Rect };\nfunction renderNode([tag, attrs], customAttrs) {\n  return React.createElement(primitives[tag], { ...childDefaultAttributes, ...customAttrs, ...attrs });\n}\n\nexport const Icon = forwardRef(({ color, size, strokeWidth, absoluteStrokeWidth, children, iconNode, className, testID, ...rest }, ref) => {\n  const context = useVadivamContext() ?? {};\n  const resolvedSize = size ?? context.size ?? defaultAttributes.width;\n  const resolvedStrokeWidth = strokeWidth ?? context.strokeWidth ?? defaultAttributes.strokeWidth;\n  const numericSize = Number(resolvedSize);\n  const numericStrokeWidth = Number(resolvedStrokeWidth);\n  const useAbsoluteStrokeWidth = absoluteStrokeWidth ?? context.absoluteStrokeWidth ?? false;\n  const calculatedStrokeWidth = useAbsoluteStrokeWidth && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStrokeWidth)\n    ? numericStrokeWidth * 24 / numericSize\n    : resolvedStrokeWidth;\n  const customAttrs = { stroke: color ?? context.color ?? defaultAttributes.stroke, strokeWidth: calculatedStrokeWidth, ...rest };\n  return React.createElement(\n    NativeSvg.Svg,\n    { ref, ...defaultAttributes, width: resolvedSize, height: resolvedSize, testID, "data-testid": testID, className, ...customAttrs },\n    ...iconNode.map((node) => renderNode(node, customAttrs)),\n    ...React.Children.toArray(children),\n  );\n});\nIcon.displayName = "Icon";\nexport default Icon;\n`,
+  );
+  await writeFile(
+    path.join(reactNativeDist, "Icon.d.ts"),
+    `import type * as React from "react";\nimport type { Svg } from "react-native-svg";\nimport type { IconNode, VadivamProps } from "./types.js";\nexport interface IconProps extends VadivamProps { iconNode: IconNode; }\nexport declare const Icon: React.ForwardRefExoticComponent<IconProps & React.RefAttributes<Svg>>;\nexport default Icon;\n`,
+  );
+  await writeFile(
+    path.join(reactNativeDist, "createVadivamIcon.js"),
+    `import React, { forwardRef } from "react";\nimport Icon from "./Icon.js";\n\nfunction toPascalCase(value) {\n  return value.split(/[-_ ]+/).filter(Boolean).map((part) => part[0].toUpperCase() + part.slice(1)).join("");\n}\nexport function createVadivamIcon(iconName, iconNode) {\n  const Component = forwardRef((props, ref) => React.createElement(Icon, { ref, iconNode, ...props }));\n  Component.displayName = toPascalCase(iconName);\n  return Component;\n}\nexport default createVadivamIcon;\n`,
+  );
+  await writeFile(
+    path.join(reactNativeDist, "createVadivamIcon.d.ts"),
+    `import type { IconNode, VadivamIcon } from "./types.js";\nexport declare function createVadivamIcon(iconName: string, iconNode: IconNode): VadivamIcon;\nexport default createVadivamIcon;\n`,
+  );
+
+  for (const icon of icons) {
+    await writeFile(
+      path.join(reactNativeDist, "icons", `${icon.name}.js`),
+      `import { createVadivamIcon } from "../createVadivamIcon.js";\nexport const __iconNode = ${JSON.stringify(icon.iconNode)};\nconst ${icon.componentName} = createVadivamIcon("${icon.name}", __iconNode);\nexport default ${icon.componentName};\n`,
+    );
+    await writeFile(
+      path.join(reactNativeDist, "icons", `${icon.name}.d.ts`),
+      `import type { IconNode, VadivamIcon } from "../types.js";\nexport declare const __iconNode: IconNode;\n/** @component\n * @name ${icon.componentName}\n * @description Vadivam React Native SVG icon component.\n * @see https://vadivam.praveenjuge.com/icons/${icon.name}\n */\ndeclare const ${icon.componentName}: VadivamIcon;\nexport default ${icon.componentName};\n`,
+    );
+  }
+
+  const namedExports = icons
+    .map(
+      (icon) =>
+        `export { default as ${icon.componentName}, default as ${icon.componentName}Icon, default as Vadivam${icon.componentName} } from "./${icon.name}.js";`,
+    )
+    .join("\n");
+  await writeFile(
+    path.join(reactNativeDist, "icons", "index.js"),
+    `${namedExports}\n`,
+  );
+  await writeFile(
+    path.join(reactNativeDist, "icons", "index.d.ts"),
+    `${namedExports}\n`,
+  );
+  const rootExports = namedExports.replaceAll('from "./', 'from "./icons/');
+  await writeFile(
+    path.join(reactNativeDist, "index.js"),
+    `${rootExports}\nexport { Icon } from "./Icon.js";\nexport { createVadivamIcon } from "./createVadivamIcon.js";\nexport { VadivamProvider, useVadivamContext } from "./context.js";\n`,
+  );
+  await writeFile(
+    path.join(reactNativeDist, "index.d.ts"),
+    `${rootExports}\nexport { Icon } from "./Icon.js";\nexport type { IconProps } from "./Icon.js";\nexport { createVadivamIcon } from "./createVadivamIcon.js";\nexport { VadivamProvider, useVadivamContext } from "./context.js";\nexport type { VadivamProviderProps } from "./context.js";\nexport type { IconName, IconNode, SVGElementType, VadivamIcon, VadivamProps } from "./types.js";\n`,
+  );
+}
+
 async function buildWebAssets(icons) {
   await rm(webIconsDir, { recursive: true, force: true });
   await mkdir(webIconsDir, { recursive: true });
@@ -654,6 +729,7 @@ export async function build() {
   const icons = await readIcons();
   await buildRawPackage(icons);
   await buildReactPackage(icons);
+  await buildReactNativePackage(icons);
   await buildWebAssets(icons);
   console.log(`Built packages and web assets for ${icons.length} icons.`);
 }

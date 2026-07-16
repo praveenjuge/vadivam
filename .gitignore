@@ -18,5 +18,6 @@ tests/integration/*/.tanstack
 tests/integration/*/.nitro
 tests/integration/*/.vite
 tests/integration/*/.vinxi
+tests/integration/*/.expo
 tests/integration/*/next-env.d.ts
 tests/integration/tanstack-start/src/routeTree.gen.ts

@@ -16,4 +16,5 @@ bun run dev
 - `icons/` is the canonical Figma export folder.
 - `packages/vadivam` publishes optimized SVGs and metadata.
 - `packages/vadivam-react` publishes generated React components.
+- `packages/vadivam-react-native` publishes generated React Native components.
 - `apps/web` is the Astro icon explorer.

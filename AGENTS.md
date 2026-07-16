@@ -7,6 +7,7 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - `icons/` is the canonical source exported from Figma.
 - `packages/vadivam` publishes optimized raw SVGs and metadata.
 - `packages/vadivam-react` publishes generated React components.
+- `packages/vadivam-react-native` publishes generated React Native components.
 - `apps/web` is the native Astro explorer and docs site.
 - Generated package/web assets come from `bun run icons:build`; do not edit generated output by hand.
 
@@ -18,8 +19,10 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - Run all checks: `bun run test`
 - Test the raw SVG package: `bun run test:vadivam`
 - Test the React package: `bun run test:vadivam-react`
+- Test the React Native package: `bun run test:vadivam-react-native`
 - Run the React render/SSR/exports unit suite only: `bun run test:react:unit`
 - Build the framework integration apps (Next.js, TanStack Start, Vite + React): `bun run test:integration`
+- React Native compatibility is verified by the minimal Expo integration app for Android and iOS.
 - Deploy the static Workers site: `bun run deploy`
 
 ## Icon Workflow
@@ -50,9 +53,9 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 
 ## Release Instructions
 
-- Keep the root package, `packages/vadivam`, and `packages/vadivam-react` versions in sync.
+- Keep the root package, `packages/vadivam`, `packages/vadivam-react`, and `packages/vadivam-react-native` versions in sync.
 - Release by committing the version bump and pushing a matching tag such as `v0.0.3`.
-- The `Release` workflow publishes both npm packages through npm Trusted Publishing, then creates the matching GitHub Release.
+- The `Release` workflow publishes all three npm packages through npm Trusted Publishing, then creates the matching GitHub Release.
 - Do not publish manually unless the user explicitly asks.
 
 ## Security Notes

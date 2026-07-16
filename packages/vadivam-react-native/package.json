@@ -1,0 +1,72 @@
+{
+  "name": "vadivam-react-native",
+  "version": "0.0.17",
+  "description": "Pixel-perfect, open-source React Native icons for refined interfaces.",
+  "license": "MIT",
+  "author": "Praveen Juge",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/praveenjuge/vadivam.git",
+    "directory": "packages/vadivam-react-native"
+  },
+  "homepage": "https://vadivam.praveenjuge.com",
+  "bugs": {
+    "url": "https://github.com/praveenjuge/vadivam/issues"
+  },
+  "keywords": [
+    "icons",
+    "react-native",
+    "react-native-svg",
+    "expo",
+    "svg",
+    "icon-pack",
+    "open-source",
+    "vadivam"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "react-native": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "react-native": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./icons": {
+      "types": "./dist/icons/index.d.ts",
+      "react-native": "./dist/icons/index.js",
+      "import": "./dist/icons/index.js",
+      "default": "./dist/icons/index.js"
+    },
+    "./icons/*": {
+      "types": "./dist/icons/*.d.ts",
+      "react-native": "./dist/icons/*.js",
+      "import": "./dist/icons/*.js",
+      "default": "./dist/icons/*.js"
+    },
+    "./*": {
+      "types": "./dist/icons/*.d.ts",
+      "react-native": "./dist/icons/*.js",
+      "import": "./dist/icons/*.js",
+      "default": "./dist/icons/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "react": ">=18 <20",
+    "react-native": ">=0.71",
+    "react-native-svg": ">=12 <16"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
