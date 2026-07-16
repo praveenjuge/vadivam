@@ -34,6 +34,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Install Chromium
+        run: bunx playwright install --with-deps chromium
+
       - name: Cache integration app dependencies
         uses: actions/cache@v4
         with:
@@ -47,38 +50,13 @@ jobs:
       - name: Validate release version
         env:
           TAG_NAME: ${{ github.ref_name }}
-        run: |
-          node - <<'NODE'
-          const fs = require("node:fs");
-          const tag = process.env.TAG_NAME.replace(/^v/, "");
-          const files = [
-            "package.json",
-            "packages/vadivam/package.json",
-            "packages/vadivam-react/package.json",
-            "packages/vadivam-react-native/package.json"
-          ];
-          for (const file of files) {
-            const pkg = JSON.parse(fs.readFileSync(file, "utf8"));
-            if (pkg.version !== tag) {
-              throw new Error(`${file} version ${pkg.version} does not match tag ${process.env.TAG_NAME}`);
-            }
-          }
-          NODE
+        run: bun run release:validate "$TAG_NAME"
 
       - name: Test
         run: bun run test
 
-      - name: Publish vadivam
-        working-directory: packages/vadivam
-        run: npm publish --access public
-
-      - name: Publish vadivam-react
-        working-directory: packages/vadivam-react
-        run: npm publish --access public
-
-      - name: Publish vadivam-react-native
-        working-directory: packages/vadivam-react-native
-        run: npm publish --access public
+      - name: Publish and verify packages
+        run: bun run release:publish
 
       - name: Create GitHub release
         env:

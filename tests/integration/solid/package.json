@@ -1,0 +1,8 @@
+{
+  "name": "vadivam-integration-solid",
+  "private": true,
+  "type": "module",
+  "scripts": { "typecheck": "tsc --noEmit", "build": "vite build" },
+  "dependencies": { "solid-js": "1.9.14", "vadivam-solid": "file:../../../packages/vadivam-solid" },
+  "devDependencies": { "typescript": "6.0.3", "vite": "8.1.5", "vite-plugin-solid": "2.11.12" }
+}

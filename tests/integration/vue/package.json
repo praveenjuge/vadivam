@@ -1,0 +1,8 @@
+{
+  "name": "vadivam-integration-vue",
+  "private": true,
+  "type": "module",
+  "scripts": { "typecheck": "vue-tsc --noEmit", "build": "vite build" },
+  "dependencies": { "vadivam-vue": "file:../../../packages/vadivam-vue", "vue": "3.5.40" },
+  "devDependencies": { "@vitejs/plugin-vue": "6.0.8", "typescript": "6.0.3", "vite": "8.1.5", "vue-tsc": "^3.1.0" }
+}

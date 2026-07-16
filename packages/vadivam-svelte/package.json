@@ -1,0 +1,60 @@
+{
+  "name": "vadivam-svelte",
+  "version": "0.0.19",
+  "description": "Pixel-perfect Vadivam icons for Svelte.",
+  "license": "MIT",
+  "author": "Praveen Juge",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/praveenjuge/vadivam.git",
+    "directory": "packages/vadivam-svelte"
+  },
+  "homepage": "https://vadivam.praveenjuge.com",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "svelte": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./dynamic": {
+      "types": "./dist/DynamicIcon.svelte.d.ts",
+      "svelte": "./dist/DynamicIcon.svelte",
+      "default": "./dist/DynamicIcon.svelte"
+    },
+    "./dynamicIconImports": {
+      "types": "./dist/dynamicIconImports.d.ts",
+      "svelte": "./dist/dynamicIconImports.js",
+      "default": "./dist/dynamicIconImports.js"
+    },
+    "./icons": {
+      "types": "./dist/icons/index.d.ts",
+      "svelte": "./dist/icons/index.js",
+      "default": "./dist/icons/index.js"
+    },
+    "./icons/*": {
+      "types": "./dist/icons/*.d.ts",
+      "svelte": "./dist/icons/*.js",
+      "default": "./dist/icons/*.js"
+    },
+    "./*": {
+      "types": "./dist/icons/*.d.ts",
+      "svelte": "./dist/icons/*.js",
+      "default": "./dist/icons/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "svelte": ">=5.56 <6"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

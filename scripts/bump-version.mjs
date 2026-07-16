@@ -1,18 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { packageDirectories } from "./packages.mjs";
 
-const files = [
-  "package.json",
-  "packages/vadivam/package.json",
-  "packages/vadivam-react/package.json",
-  "packages/vadivam-react-native/package.json",
-];
+const files = ["package.json", ...packageDirectories.map((directory) => `${directory}/package.json`)];
 
-const readmes = [
-  "README.md",
-  "packages/vadivam/README.md",
-  "packages/vadivam-react/README.md",
-  "packages/vadivam-react-native/README.md",
-];
+const readmes = ["README.md", ...packageDirectories.map((directory) => `${directory}/README.md`)];
 
 const root = JSON.parse(await readFile(files[0], "utf8"));
 const parts = root.version.split(".").map(Number);

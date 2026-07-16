@@ -8,6 +8,7 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - `packages/vadivam` publishes optimized raw SVGs and metadata.
 - `packages/vadivam-react` publishes generated React components.
 - `packages/vadivam-react-native` publishes generated React Native components.
+- `packages/vadivam-{vue,svelte,solid,angular,astro,preact}` publish generated native framework components.
 - `apps/web` is the native Astro explorer and docs site.
 - Generated package/web assets come from `bun run icons:build`; do not edit generated output by hand.
 
@@ -21,7 +22,7 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - Test the React package: `bun run test:vadivam-react`
 - Test the React Native package: `bun run test:vadivam-react-native`
 - Run the React render/SSR/exports unit suite only: `bun run test:react:unit`
-- Build the framework integration apps (Next.js, TanStack Start, Vite + React): `bun run test:integration`
+- Build and browser-test all framework integration apps: `bun run test:integration`
 - React Native compatibility is verified by the minimal Expo integration app for Android and iOS.
 - Deploy the static Workers site: `bun run deploy`
 
@@ -46,16 +47,16 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - Run `bun run test` before committing.
 - Package tests live in `tests/` and use `bun test`.
 - React render tests (`tests/vadivam-react/*.client.test.mjs`) run against happy-dom via the `tests/setup/happydom.ts` preload; SSR and export-coverage tests run with no DOM. Keep these two groups separate so SSR tests stay in a true server environment.
-- Framework compatibility is verified by building real apps under `tests/integration/` (Next.js App Router, TanStack Start, Vite + React). Each consumes the locally built `vadivam-react` via a `file:` dependency; a successful `build` is the test. Their build artifacts are gitignored but per-app `bun.lock` files are committed for reproducible CI installs.
+- Framework compatibility is verified with real apps under `tests/integration/`. Each consumes a freshly generated local package through a `file:` dependency, uses a committed lockfile, produces a production build, and—where browser rendering applies—is served and asserted in Chromium.
 - For icon-only changes, run `bun run icons:optimize` and `bun run icons:check` first.
 - For website UI changes, verify the rendered page in a browser at desktop and mobile widths.
 - If GitHub Actions fails, inspect logs with `gh run view --log-failed` before changing workflow files.
 
 ## Release Instructions
 
-- Keep the root package, `packages/vadivam`, `packages/vadivam-react`, and `packages/vadivam-react-native` versions in sync.
+- Keep the root package and every entry in `scripts/packages.mjs` on one synchronized version.
 - Release by committing the version bump and pushing a matching tag such as `v0.0.3`.
-- The `Release` workflow publishes all three npm packages through npm Trusted Publishing, then creates the matching GitHub Release.
+- The `Release` workflow tests, packs, publishes, and verifies all nine npm packages through npm Trusted Publishing, then creates the matching GitHub Release.
 - Do not publish manually unless the user explicitly asks.
 
 ## Security Notes

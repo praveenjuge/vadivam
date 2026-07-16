@@ -72,6 +72,16 @@ describe("createIcon rendering (client)", () => {
     expect(svg.getAttribute("stroke-width")).toBe("3");
   });
 
+  test("absoluteStrokeWidth safely falls back for zero size", () => {
+    const { svg } = renderIcon({ absoluteStrokeWidth: true, size: 0, strokeWidth: 3 });
+    expect(svg.getAttribute("stroke-width")).toBe("3");
+  });
+
+  test("absoluteStrokeWidth safely falls back for an invalid stroke", () => {
+    const { svg } = renderIcon({ absoluteStrokeWidth: true, size: 48, strokeWidth: "invalid" });
+    expect(svg.getAttribute("stroke-width")).toBe("invalid");
+  });
+
   test("title renders a <title> and labels the icon", () => {
     const { svg } = renderIcon({ title: "Open" });
     const title = svg.querySelector("title");
@@ -110,7 +120,7 @@ describe("createIcon rendering (client)", () => {
   test("renders children inside the svg", () => {
     const { svg } = renderIcon({}, createElement("circle", { cx: 12, cy: 12, r: 4, key: "c" }));
     expect(svg.querySelector("circle")).not.toBeNull();
-    expect(svg.getAttribute("aria-hidden")).toBeNull();
+    expect(svg.getAttribute("aria-hidden")).toBe("true");
   });
 
   test("createIcon builds a working component", () => {

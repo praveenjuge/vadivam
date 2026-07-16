@@ -2,11 +2,14 @@
 
 Pixel-perfect, open-source React Native icons for refined interfaces.
 
-![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/web/public/preview.png?v=0.0.18)
+![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/web/public/preview.png?v=0.0.19)
 
 ```sh
 bun add vadivam-react-native react-native-svg
 ```
+
+For data-driven icon names, import `DynamicIcon` from
+`vadivam-react-native/dynamic`.
 
 ```tsx
 import { Activity } from "vadivam-react-native";
@@ -53,5 +56,5 @@ const Custom = createVadivamIcon("custom", node);
 <Custom />;
 ```
 
-For data-driven names, `import * as icons from "vadivam-react-native/icons"`.
-That imports every icon, so prefer static or direct imports whenever possible.
+The `dynamicIconImports` and `iconNames` exports support typed custom lookup
+flows without eagerly importing the complete icon registry.

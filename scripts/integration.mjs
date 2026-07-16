@@ -1,32 +1,41 @@
-// Installs and builds the framework integration apps under tests/integration.
-// Each app consumes a locally built package via a `file:` dependency, so
-// `bun run icons:build` must run before this script. A successful build for
-// every app is the integration test.
-import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, rmSync } from "node:fs";
+// Builds real framework applications against materialized local packages and
+// verifies the six browser packages from their production output.
+import { spawn, spawnSync } from "node:child_process";
+import { cpSync, existsSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { chromium } from "playwright";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const integrationDir = path.join(root, "tests", "integration");
-const apps = [
+const allApps = [
   { name: "nextjs", packages: ["vadivam-react"] },
   { name: "tanstack-start", packages: ["vadivam-react"] },
   { name: "vite-react", packages: ["vadivam-react"] },
   { name: "expo", packages: ["vadivam-react-native"] },
+  { name: "vue", packages: ["vadivam-vue"], output: "dist" },
+  { name: "svelte", packages: ["vadivam-svelte"], output: "build" },
+  { name: "solid", packages: ["vadivam-solid"], output: "dist" },
+  { name: "angular", packages: ["vadivam-angular"], output: "dist/vadivam-integration-angular/browser" },
+  { name: "astro", packages: ["vadivam-astro"], output: "dist" },
+  { name: "preact", packages: ["vadivam-preact"], output: "dist" },
 ];
+const requestedApps = new Set(process.argv.slice(2));
+const apps = requestedApps.size
+  ? allApps.filter(({ name }) => requestedApps.has(name))
+  : allApps;
+if (requestedApps.size && apps.length !== requestedApps.size) {
+  throw new Error(`Unknown integration app: ${[...requestedApps].filter((name) => !apps.some((app) => app.name === name)).join(", ")}`);
+}
 
-function run(cmd, args, cwd) {
-  console.log(`\n$ ${cmd} ${args.join(" ")}  (cwd: ${path.relative(root, cwd)})`);
-  const result = spawnSync(cmd, args, { cwd, stdio: "inherit" });
+function run(command, args, cwd) {
+  console.log(`\n$ ${command} ${args.join(" ")}  (cwd: ${path.relative(root, cwd)})`);
+  const result = spawnSync(command, args, { cwd, stdio: "inherit" });
   if (result.status !== 0) {
-    throw new Error(`\`${cmd} ${args.join(" ")}\` failed in ${cwd} (exit ${result.status})`);
+    throw new Error(`${command} ${args.join(" ")} failed in ${cwd}`);
   }
 }
 
-// Replace the `file:` symlink tree bun creates with real files. Turbopack (and
-// some other bundlers) cannot follow bun's per-file symlinks for a local
-// dependency, so we copy the freshly built package in as plain files.
 function materializePackage(cwd, packageName) {
   const src = path.join(root, "packages", packageName);
   const dest = path.join(cwd, "node_modules", packageName);
@@ -34,19 +43,93 @@ function materializePackage(cwd, packageName) {
   cpSync(src, dest, {
     recursive: true,
     dereference: true,
-    filter: (src) => !src.includes(`${path.sep}node_modules${path.sep}`),
+    filter: (source) => !source.includes(`${path.sep}node_modules${path.sep}`),
   });
 }
 
-for (const app of apps) {
-  const cwd = path.join(integrationDir, app.name);
-  if (!existsSync(cwd)) {
-    throw new Error(`integration app missing: ${cwd}`);
+async function waitForServer(url) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    try {
+      if ((await fetch(url)).ok) return;
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  // Use the committed per-app lockfile for reproducible installs.
-  run("bun", ["install", "--frozen-lockfile"], cwd);
-  for (const packageName of app.packages) materializePackage(cwd, packageName);
-  run("bun", ["run", "build"], cwd);
+  throw new Error(`Timed out waiting for ${url}`);
 }
 
-console.log(`\nIntegration builds passed for: ${apps.map((app) => app.name).join(", ")}`);
+async function verifyBrowser(app, cwd, index) {
+  const port = 4310 + index;
+  const url = `http://127.0.0.1:${port}`;
+  const server = spawn(
+    "bun",
+    [path.join(root, "scripts/serve-dist.mjs"), path.join(cwd, app.output), String(port)],
+    { cwd: root, stdio: "pipe" },
+  );
+  let browser;
+  try {
+    await waitForServer(url);
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const errors = [];
+    page.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text());
+    });
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.goto(url, { waitUntil: "networkidle" });
+    await page.waitForFunction(() =>
+      ["static", "direct", "dynamic", "factory"].every(
+        (id) => document.querySelector(`#${id}`)?.children.length,
+      ),
+    );
+    const result = await page.evaluate(() => {
+      const read = (id) => {
+        const svg = document.querySelector(`#${id}`);
+        return {
+          tag: svg?.tagName,
+          width: svg?.getAttribute("width"),
+          height: svg?.getAttribute("height"),
+          stroke: svg?.getAttribute("stroke"),
+          strokeWidth: svg?.getAttribute("stroke-width"),
+          className: svg?.getAttribute("class"),
+          ariaHidden: svg?.getAttribute("aria-hidden"),
+          role: svg?.getAttribute("role"),
+          custom: svg?.getAttribute("data-custom"),
+          paths: svg?.querySelectorAll("path, circle, line, polyline, polygon, rect, ellipse").length ?? 0,
+        };
+      };
+      return {
+        staticIcon: read("static"),
+        direct: read("direct"),
+        dynamic: read("dynamic"),
+        factory: read("factory"),
+        title: document.querySelector("#static title")?.textContent,
+      };
+    });
+    if (errors.length) throw new Error(`${app.name}: ${errors.join(" | ")}`);
+    const icon = result.staticIcon;
+    const classNames = icon.className?.split(/\s+/) ?? [];
+    if (icon.tag?.toLowerCase() !== "svg" || icon.width !== "48" || icon.height !== "48" || icon.stroke !== "navy" || icon.strokeWidth !== "1" || icon.paths === 0 || result.title !== "Activity chart" || icon.role !== "img" || icon.ariaHidden !== null || icon.custom !== "yes" || !classNames.includes("vadivam") || !classNames.includes("vadivam-activity") || !classNames.includes("context-icon") || !classNames.includes("consumer-icon") || classNames.length !== new Set(classNames).size) {
+      throw new Error(`${app.name}: invalid static icon ${JSON.stringify(result)}`);
+    }
+    if (result.direct.paths === 0 || result.dynamic.paths === 0 || result.factory.paths === 0 || result.direct.ariaHidden !== "true" || result.dynamic.ariaHidden !== "true" || result.factory.ariaHidden !== "true" || !result.factory.className?.split(/\s+/).includes("vadivam-factory")) {
+      throw new Error(`${app.name}: direct, dynamic, or factory icon did not render`);
+    }
+    console.log(`Browser smoke passed for ${app.name}.`);
+  } finally {
+    await browser?.close();
+    server.kill("SIGTERM");
+  }
+}
+
+for (const [index, app] of apps.entries()) {
+  const cwd = path.join(integrationDir, app.name);
+  if (!existsSync(cwd)) throw new Error(`integration app missing: ${cwd}`);
+  run("bun", ["install", "--frozen-lockfile"], cwd);
+  for (const packageName of app.packages) materializePackage(cwd, packageName);
+  const manifest = JSON.parse(readFileSync(path.join(cwd, "package.json"), "utf8"));
+  if (manifest.scripts?.typecheck) run("bun", ["run", "typecheck"], cwd);
+  run("bun", ["run", "build"], cwd);
+  if (app.output) await verifyBrowser(app, cwd, index);
+}
+
+console.log(`\nIntegration builds passed for: ${apps.map(({ name }) => name).join(", ")}`);

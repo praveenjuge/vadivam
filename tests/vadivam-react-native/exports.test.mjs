@@ -10,6 +10,8 @@ const NON_ICON_EXPORTS = new Set([
   "Icon",
   "VadivamProvider",
   "createVadivamIcon",
+  "dynamicIconImports",
+  "iconNames",
   "useVadivamContext",
 ]);
 

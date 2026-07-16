@@ -1,0 +1,53 @@
+{
+  "name": "vadivam-astro",
+  "version": "0.0.19",
+  "description": "Pixel-perfect Vadivam icons for Astro.",
+  "license": "MIT",
+  "author": "Praveen Juge",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/praveenjuge/vadivam.git",
+    "directory": "packages/vadivam-astro"
+  },
+  "homepage": "https://vadivam.praveenjuge.com",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./dynamic": {
+      "types": "./dist/DynamicIcon.astro.d.ts",
+      "import": "./dist/DynamicIcon.astro"
+    },
+    "./dynamicIconImports": {
+      "types": "./dist/dynamicIconImports.d.ts",
+      "import": "./dist/dynamicIconImports.js"
+    },
+    "./icons": {
+      "types": "./dist/icons/index.d.ts",
+      "import": "./dist/icons/index.js"
+    },
+    "./icons/*": {
+      "types": "./dist/icons/*.astro.d.ts",
+      "import": "./dist/icons/*.astro"
+    },
+    "./*": {
+      "types": "./dist/icons/*.astro.d.ts",
+      "import": "./dist/icons/*.astro"
+    },
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "astro": ">=7 <8"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

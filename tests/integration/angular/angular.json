@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "projects": {
+    "vadivam-integration-angular": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": { "browser": "src/main.ts", "tsConfig": "tsconfig.app.json", "index": "src/index.html", "outputPath": "dist/vadivam-integration-angular" },
+          "configurations": { "production": { "optimization": true, "outputHashing": "all" }, "development": { "optimization": false, "sourceMap": true } },
+          "defaultConfiguration": "production"
+        }
+      }
+    }
+  }
+}

@@ -5,6 +5,7 @@ dist
 .playwright-mcp
 
 packages/*/dist
+packages/vadivam-angular/.generated
 apps/web/dist
 apps/web/.astro
 apps/web/public/icons
@@ -12,7 +13,10 @@ apps/web/public/icons
 # Integration test apps (build artifacts; per-app bun.lock IS tracked)
 tests/integration/*/node_modules
 tests/integration/*/.next
+tests/integration/*/.angular
+tests/integration/*/.astro
 tests/integration/*/dist
+tests/integration/*/build
 tests/integration/*/.output
 tests/integration/*/.tanstack
 tests/integration/*/.nitro
@@ -20,4 +24,5 @@ tests/integration/*/.vite
 tests/integration/*/.vinxi
 tests/integration/*/.expo
 tests/integration/*/next-env.d.ts
+tests/integration/svelte/.svelte-kit
 tests/integration/tanstack-start/src/routeTree.gen.ts

@@ -1,0 +1,16 @@
+{
+  "name": "vadivam-integration-angular",
+  "private": true,
+  "scripts": { "typecheck": "ng build --configuration development", "build": "ng build --configuration production" },
+  "dependencies": {
+    "@angular/common": "22.0.7",
+    "@angular/compiler": "22.0.7",
+    "@angular/core": "22.0.7",
+    "@angular/platform-browser": "22.0.7",
+    "rxjs": "7.8.2",
+    "tslib": "2.8.1",
+    "vadivam-angular": "file:../../../packages/vadivam-angular",
+    "zone.js": "0.16.0"
+  },
+  "devDependencies": { "@angular/build": "22.0.7", "@angular/cli": "22.0.7", "@angular/compiler-cli": "22.0.7", "typescript": "6.0.3" }
+}

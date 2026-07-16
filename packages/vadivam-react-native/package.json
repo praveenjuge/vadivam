@@ -1,6 +1,6 @@
 {
   "name": "vadivam-react-native",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "description": "Pixel-perfect, open-source React Native icons for refined interfaces.",
   "license": "MIT",
   "author": "Praveen Juge",
@@ -46,6 +46,18 @@
       "react-native": "./dist/icons/index.js",
       "import": "./dist/icons/index.js",
       "default": "./dist/icons/index.js"
+    },
+    "./dynamic": {
+      "types": "./dist/dynamic.d.ts",
+      "react-native": "./dist/dynamic.js",
+      "import": "./dist/dynamic.js",
+      "default": "./dist/dynamic.js"
+    },
+    "./dynamicIconImports": {
+      "types": "./dist/dynamicIconImports.d.ts",
+      "react-native": "./dist/dynamicIconImports.js",
+      "import": "./dist/dynamicIconImports.js",
+      "default": "./dist/dynamicIconImports.js"
     },
     "./icons/*": {
       "types": "./dist/icons/*.d.ts",

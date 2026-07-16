@@ -1,0 +1,58 @@
+{
+  "name": "vadivam-angular",
+  "version": "0.0.19",
+  "description": "Pixel-perfect Vadivam icons for Angular.",
+  "license": "MIT",
+  "author": "Praveen Juge",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/praveenjuge/vadivam.git",
+    "directory": "packages/vadivam-angular"
+  },
+  "homepage": "https://vadivam.praveenjuge.com",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/types/vadivam-angular.d.ts",
+      "import": "./dist/fesm2022/vadivam-angular.mjs",
+      "default": "./dist/fesm2022/vadivam-angular.mjs"
+    },
+    "./dynamic": {
+      "types": "./dist/types/vadivam-angular.d.ts",
+      "import": "./dist/fesm2022/vadivam-angular.mjs",
+      "default": "./dist/fesm2022/vadivam-angular.mjs"
+    },
+    "./dynamicIconImports": {
+      "types": "./dist/types/vadivam-angular.d.ts",
+      "import": "./dist/fesm2022/vadivam-angular.mjs",
+      "default": "./dist/fesm2022/vadivam-angular.mjs"
+    },
+    "./icons/*": {
+      "types": "./dist/icons/*.d.ts",
+      "import": "./dist/icons/*.js",
+      "default": "./dist/icons/*.js"
+    },
+    "./*": {
+      "types": "./dist/icons/*.d.ts",
+      "import": "./dist/icons/*.js",
+      "default": "./dist/icons/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "@angular/common": ">=22 <23",
+    "@angular/core": ">=22 <23"
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

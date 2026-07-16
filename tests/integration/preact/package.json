@@ -1,0 +1,8 @@
+{
+  "name": "vadivam-integration-preact",
+  "private": true,
+  "type": "module",
+  "scripts": { "typecheck": "tsc --noEmit", "build": "vite build" },
+  "dependencies": { "preact": "10.29.7", "vadivam-preact": "file:../../../packages/vadivam-preact" },
+  "devDependencies": { "@preact/preset-vite": "2.10.5", "typescript": "6.0.3", "vite": "8.1.5" }
+}

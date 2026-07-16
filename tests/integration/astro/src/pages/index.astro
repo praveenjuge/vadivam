@@ -1,0 +1,10 @@
+---
+import { Activity, Icon, createVadivamIcon } from "vadivam-astro";
+import AArrowDown from "vadivam-astro/a-arrow-down";
+import DynamicIcon from "vadivam-astro/dynamic";
+const factory = createVadivamIcon("factory", [["line", { x1: "2", y1: "12", x2: "22", y2: "12" }]]);
+---
+<Activity id="static" size={48} color="navy" strokeWidth={2} absoluteStrokeWidth title="Activity chart" class="context-icon consumer-icon context-icon" data-custom="yes" />
+<AArrowDown id="direct" size={48} color="navy" />
+<DynamicIcon id="dynamic" name="airplay" size={48} color="navy" />
+<Icon id="factory" {...factory} size={48} color="navy" />
