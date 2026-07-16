@@ -1,0 +1,33 @@
+name: Vadivam issue
+description: Report a bug, request an icon, or suggest an improvement.
+title: ""
+labels: []
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options:
+        - Bug
+        - Icon request
+        - Package improvement
+        - Website improvement
+    validations:
+      required: true
+  - type: input
+    id: package
+    attributes:
+      label: Package or surface
+      placeholder: vadivam-react, website, Figma plugin, or icon name
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Explain the current behavior and what you expected or would like changed.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction or reference
+      description: Add a small code sample, screenshot, or visual reference when useful.

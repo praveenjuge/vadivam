@@ -1,21 +1,27 @@
 # vadivam-solid
 
-Pixel-perfect, open-source Vadivam icons for Solid.
+Pixel-perfect 24px outline icon components for Solid with tree-shakeable imports.
+
+[![npm version](https://img.shields.io/npm/v/vadivam-solid?style=flat-square&color=111)](https://www.npmjs.com/package/vadivam-solid)
+[![downloads](https://img.shields.io/npm/dw/vadivam-solid?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam-solid)
+[![license](https://img.shields.io/npm/l/vadivam-solid?style=flat-square&color=111)](https://github.com/praveenjuge/vadivam/blob/main/LICENSE)
 
 ![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/web/public/preview.png?v=0.0.21)
 
 ```sh
-bun add vadivam-solid
+npm install vadivam-solid
 ```
 
 ```tsx
 import { Activity, VadivamProvider } from "vadivam-solid";
 
-<VadivamProvider size={20} color="navy"><Activity /></VadivamProvider>
+<VadivamProvider size={20} color="navy">
+  <Activity />
+</VadivamProvider>
 ```
 
-Icons accept native SVG attributes plus `size`, `color`, `strokeWidth`,
-`absoluteStrokeWidth`, and `title`. Static named and per-icon imports are
-tree-shakeable. For data-driven names, use `DynamicIcon` from
-`vadivam-solid/dynamic` and `dynamicIconImports` from
-`vadivam-solid/dynamicIconImports`.
+- Native SVG attributes plus size, color, stroke width, and accessible titles
+- Tree-shakeable named and per-icon imports
+- Provider and typed dynamic icon APIs
+
+[Browse icons](https://vadivam.praveenjuge.com) · [GitHub](https://github.com/praveenjuge/vadivam) · [Issues](https://github.com/praveenjuge/vadivam/issues)

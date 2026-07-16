@@ -1,15 +1,16 @@
 # vadivam-react-native
 
-Pixel-perfect, open-source React Native icons for refined interfaces.
+Pixel-perfect 24px outline icons for React Native and Expo, powered by react-native-svg.
+
+[![npm version](https://img.shields.io/npm/v/vadivam-react-native?style=flat-square&color=111)](https://www.npmjs.com/package/vadivam-react-native)
+[![downloads](https://img.shields.io/npm/dw/vadivam-react-native?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam-react-native)
+[![license](https://img.shields.io/npm/l/vadivam-react-native?style=flat-square&color=111)](https://github.com/praveenjuge/vadivam/blob/main/LICENSE)
 
 ![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/web/public/preview.png?v=0.0.21)
 
 ```sh
-bun add vadivam-react-native react-native-svg
+npm install vadivam-react-native react-native-svg
 ```
-
-For data-driven icon names, import `DynamicIcon` from
-`vadivam-react-native/dynamic`.
 
 ```tsx
 import { Activity } from "vadivam-react-native";
@@ -18,9 +19,6 @@ export function Example() {
   return <Activity size={20} color="navy" strokeWidth={2} />;
 }
 ```
-
-Icons accept every `react-native-svg` `SvgProps` property, plus `size` and
-`absoluteStrokeWidth`. Native refs and SVG children are forwarded.
 
 Apply shared defaults with the provider:
 
@@ -32,29 +30,16 @@ import { Activity, VadivamProvider } from "vadivam-react-native";
 </VadivamProvider>;
 ```
 
-Every icon has normal, suffixed, and prefixed aliases:
+For data-driven names, use the dynamic entry point:
 
 ```tsx
-import { Activity, ActivityIcon, VadivamActivity } from "vadivam-react-native";
+import { DynamicIcon } from "vadivam-react-native/dynamic";
+
+<DynamicIcon name="activity" />;
 ```
 
-Use direct imports when the icon is known for the smallest dependency graph:
+- Native `react-native-svg` properties, refs, and children
+- Tree-shakeable named, aliased, and per-icon imports
+- Provider, custom-node, and typed dynamic APIs
 
-```tsx
-import Activity, { __iconNode } from "vadivam-react-native/icons/activity";
-```
-
-Custom icon nodes use the same native renderer:
-
-```tsx
-import { Icon, createVadivamIcon } from "vadivam-react-native";
-
-const node = [["path", { d: "M4 12h16", key: "line" }]] as const;
-const Custom = createVadivamIcon("custom", node);
-
-<Icon iconNode={node} />;
-<Custom />;
-```
-
-The `dynamicIconImports` and `iconNames` exports support typed custom lookup
-flows without eagerly importing the complete icon registry.
+[Browse icons](https://vadivam.praveenjuge.com) · [GitHub](https://github.com/praveenjuge/vadivam) · [Issues](https://github.com/praveenjuge/vadivam/issues)

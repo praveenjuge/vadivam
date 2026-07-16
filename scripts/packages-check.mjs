@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import { publishablePackages } from "./packages.mjs";
+import { packageMetadata, publishablePackages } from "./packages.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rootVersion = JSON.parse(
@@ -32,12 +32,30 @@ function getPackResult(packed, packageName) {
   return result;
 }
 
-for (const { name, directory } of publishablePackages) {
+for (const { name, directory, description, keywords } of publishablePackages) {
   const cwd = path.join(root, directory);
   const manifest = JSON.parse(readFileSync(path.join(cwd, "package.json"), "utf8"));
   if (manifest.name !== name) throw new Error(`${directory}: expected name ${name}`);
   if (manifest.version !== rootVersion) {
     throw new Error(`${name}: version ${manifest.version} does not match ${rootVersion}`);
+  }
+  const expectedMetadata = {
+    author: packageMetadata.author,
+    bugs: packageMetadata.bugs,
+    description,
+    homepage: packageMetadata.homepage,
+    keywords: [...packageMetadata.sharedKeywords, ...keywords],
+    license: packageMetadata.license,
+    repository: {
+      type: "git",
+      url: packageMetadata.repositoryUrl,
+      directory,
+    },
+  };
+  for (const [field, expected] of Object.entries(expectedMetadata)) {
+    if (JSON.stringify(manifest[field]) !== JSON.stringify(expected)) {
+      throw new Error(`${name}: ${field} metadata is out of sync`);
+    }
   }
   if (!existsSync(path.join(cwd, "dist"))) throw new Error(`${name}: missing dist`);
   run("bun", ["x", "publint", "."], cwd);

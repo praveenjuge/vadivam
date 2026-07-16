@@ -8,7 +8,7 @@ interface Props {
   keywords?: string[];
 }
 
-const defaultDescription = "Pixel-perfect, open-source, gorgeous 24px outline icons for refined interfaces. Free SVG and React icons.";
+const defaultDescription = "Pixel-perfect, open-source 24px outline icons for refined interfaces. Available for SVG, React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.";
 const {
   title,
   description = defaultDescription,
@@ -106,6 +106,7 @@ const jsonLd = {
         text-size-adjust: 100%;
         scroll-behavior: smooth;
         tab-size: 2;
+        overflow-x: clip;
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -125,6 +126,7 @@ const jsonLd = {
       body {
         margin: 0;
         min-width: 320px;
+        overflow-x: clip;
         background:
           repeating-linear-gradient(
             0deg,
@@ -268,21 +270,35 @@ const jsonLd = {
 
       .links {
         display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
+        flex-wrap: nowrap;
+        gap: 5px;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
         margin: 10px 0;
+        padding: 1px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-inline: contain;
+        contain: inline-size;
+        scrollbar-width: none;
+      }
+
+      .links::-webkit-scrollbar {
+        display: none;
       }
 
       .btn {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        height: 32px;
-        padding: 0 10px;
+        flex: 0 0 auto;
+        gap: 5px;
+        height: 28px;
+        padding: 0 8px;
         border: none;
         outline: 1px solid var(--line);
         border-radius: 8px;
-        font-size: 0.85rem;
+        font-size: 0.74rem;
         line-height: 1;
         white-space: nowrap;
         font-weight: 500;
@@ -297,8 +313,8 @@ const jsonLd = {
 
       .btn-icon,
       .btn-icon svg {
-        width: 16px;
-        height: 16px;
+        width: 14px;
+        height: 14px;
       }
 
       .btn-icon {
@@ -674,7 +690,7 @@ const jsonLd = {
     <main class="shell">
       <header class="page-header">
         <Brand />
-        <p class="lede">Pixel-perfect, open-source, gorgeous icons for refined interfaces.</p>
+        <p class="lede">Pixel-perfect, open-source 24px outline icons for refined interfaces.</p>
       </header>
 
       <slot />

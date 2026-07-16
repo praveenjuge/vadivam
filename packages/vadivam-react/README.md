@@ -1,11 +1,15 @@
 # vadivam-react
 
-Pixel-perfect, open-source, gorgeous React icons for refined interfaces.
+Pixel-perfect 24px outline icon components for React with tree-shakeable imports.
+
+[![npm version](https://img.shields.io/npm/v/vadivam-react?style=flat-square&color=111)](https://www.npmjs.com/package/vadivam-react)
+[![downloads](https://img.shields.io/npm/dw/vadivam-react?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam-react)
+[![license](https://img.shields.io/npm/l/vadivam-react?style=flat-square&color=111)](https://github.com/praveenjuge/vadivam/blob/main/LICENSE)
 
 ![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/web/public/preview.png?v=0.0.21)
 
 ```sh
-bun add vadivam-react
+npm install vadivam-react
 ```
 
 ```tsx
@@ -16,12 +20,7 @@ export function Example() {
 }
 ```
 
-Icons accept SVG properties, `size`, `color`, `strokeWidth`,
-`absoluteStrokeWidth`, `title`, refs, and SVG children. Use `fill` for filled
-icons, or nest icons and SVG elements to combine them.
-
-Apply shared defaults with the provider or target the generated `vadivam` and
-`vadivam-{name}` classes in CSS:
+Apply shared defaults with the provider:
 
 ```tsx
 import { Activity, VadivamProvider } from "vadivam-react";
@@ -31,23 +30,16 @@ import { Activity, VadivamProvider } from "vadivam-react";
 </VadivamProvider>;
 ```
 
-Every icon has normal, suffixed, and prefixed aliases:
+Use the dynamic API only for names stored in external data:
 
 ```tsx
-import { Activity, ActivityIcon, VadivamActivity } from "vadivam-react";
-```
-
-Per-icon, generic-node, and dynamic APIs are generated during build:
-
-```tsx
-import Activity, { __iconNode } from "vadivam-react/activity";
-import { Icon } from "vadivam-react";
 import { DynamicIcon, iconNames } from "vadivam-react/dynamic";
 
-<Icon iconNode={__iconNode} />;
 <DynamicIcon name="activity" />;
 ```
 
-Prefer static icon imports when the icon name is known. `DynamicIcon` is
-intended for names stored in external data and creates a separate lazy module
-for every icon.
+- Native SVG properties, accessible titles, refs, and children
+- Tree-shakeable named, aliased, and per-icon imports
+- Provider, generic-node, and typed dynamic APIs
+
+[Browse icons](https://vadivam.praveenjuge.com) · [GitHub](https://github.com/praveenjuge/vadivam) · [Issues](https://github.com/praveenjuge/vadivam/issues)

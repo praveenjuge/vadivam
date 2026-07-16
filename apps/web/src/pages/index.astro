@@ -10,45 +10,69 @@ const links = [
   {
     href: "https://www.npmjs.com/package/vadivam",
     label: "vadivam",
-    icon: npmIcon
+    title: "vadivam — SVG and JavaScript",
+    icon: npmIcon,
   },
   {
     href: "https://www.npmjs.com/package/vadivam-react",
-    label: "vadivam-react",
-    icon: npmIcon
+    label: "React",
+    title: "vadivam-react",
+    icon: npmIcon,
+  },
+  {
+    href: "https://www.npmjs.com/package/vadivam-react-native",
+    label: "React Native",
+    title: "vadivam-react-native",
+    icon: npmIcon,
+  },
+  {
+    href: "https://www.npmjs.com/package/vadivam-vue",
+    label: "Vue",
+    title: "vadivam-vue",
+    icon: npmIcon,
+  },
+  {
+    href: "https://www.npmjs.com/package/vadivam-svelte",
+    label: "Svelte",
+    title: "vadivam-svelte",
+    icon: npmIcon,
   },
   {
     href: "https://github.com/praveenjuge/vadivam",
     label: "GitHub",
-    icon: githubIcon
+    title: "GitHub repository",
+    icon: githubIcon,
   },
   {
     href: "https://github.com/praveenjuge/vadivam/issues",
     label: "Issues",
-    icon: githubIcon
+    title: "Issues",
+    icon: githubIcon,
   },
   {
     href: "https://github.com/praveenjuge/vadivam/releases",
-    label: "Download",
-    icon: githubIcon
+    label: "Releases",
+    title: "Releases and downloads",
+    icon: githubIcon,
   },
   {
     href: "https://twitter.com/praveenjuge",
     label: "Twitter",
-    icon: twitterIcon
-  }
+    title: "Praveen Juge on Twitter",
+    icon: twitterIcon,
+  },
 ];
 ---
 
 <BaseLayout
-  title="Vadivam - Free, open-source 24px outline SVG and React icons"
-  description="Vadivam is a free, open-source icon set. Browse hundreds of pixel-perfect 24px outline icons. Available as raw SVG and React components via npm."
-  keywords={["icons", "svg icons", "react icons", "outline icons", "24px icons", "open source icons", "vadivam", "free icons"]}
+  title="Vadivam - Free 24px outline icons for SVG and modern frameworks"
+  description="Browse pixel-perfect, open-source 24px outline icons for SVG, React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact."
+  keywords={["icons", "svg icons", "react icons", "outline icons", "24px icons", "open source icons", "icon library", "vadivam"]}
 >
   <nav class="links" aria-label="Project links">
     {
       links.map((link) => (
-        <a class="btn" href={link.href} target="_blank" rel="noreferrer">
+        <a class="btn" href={link.href} target="_blank" rel="noreferrer" title={link.title}>
           {link.icon && <span class="btn-icon" set:html={link.icon} />}
           <span>{link.label}</span>
         </a>

@@ -62,4 +62,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ github.ref_name }}
-        run: gh release create "$TAG_NAME" --title "$TAG_NAME" --generate-notes --verify-tag
+        run: |
+          icon_count=$(find icons -type f -name '*.svg' | wc -l | tr -d ' ')
+          notes="Ships ${icon_count} Vadivam icons across [SVG](https://www.npmjs.com/package/vadivam), [React](https://www.npmjs.com/package/vadivam-react), [React Native](https://www.npmjs.com/package/vadivam-react-native), [Vue](https://www.npmjs.com/package/vadivam-vue), [Svelte](https://www.npmjs.com/package/vadivam-svelte), [Solid](https://www.npmjs.com/package/vadivam-solid), [Angular](https://www.npmjs.com/package/vadivam-angular), [Astro](https://www.npmjs.com/package/vadivam-astro), and [Preact](https://www.npmjs.com/package/vadivam-preact)."
+          gh release create "$TAG_NAME" --title "$TAG_NAME" --notes "$notes" --generate-notes --verify-tag

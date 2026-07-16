@@ -1,7 +1,7 @@
 {
   "name": "vadivam-astro",
   "version": "0.0.21",
-  "description": "Pixel-perfect Vadivam icons for Astro.",
+  "description": "Pixel-perfect 24px outline icon components for Astro with tree-shakeable imports.",
   "license": "MIT",
   "author": "Praveen Juge",
   "repository": {
@@ -9,6 +9,23 @@
     "url": "git+https://github.com/praveenjuge/vadivam.git",
     "directory": "packages/vadivam-astro"
   },
+  "bugs": {
+    "url": "https://github.com/praveenjuge/vadivam/issues"
+  },
+  "keywords": [
+    "icons",
+    "svg",
+    "outline-icons",
+    "icon-library",
+    "icon-pack",
+    "24px",
+    "tree-shakeable",
+    "open-source",
+    "vadivam",
+    "astro",
+    "astro-icons",
+    "astro-components"
+  ],
   "homepage": "https://vadivam.praveenjuge.com",
   "type": "module",
   "sideEffects": false,

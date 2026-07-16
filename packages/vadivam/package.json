@@ -1,7 +1,7 @@
 {
   "name": "vadivam",
   "version": "0.0.21",
-  "description": "Pixel-perfect, open-source, gorgeous SVG icons for refined interfaces.",
+  "description": "Pixel-perfect 24px outline SVG icons with tree-shakeable ESM imports and metadata.",
   "license": "MIT",
   "author": "Praveen Juge",
   "repository": {
@@ -16,9 +16,14 @@
   "keywords": [
     "icons",
     "svg",
+    "outline-icons",
+    "icon-library",
     "icon-pack",
+    "24px",
+    "tree-shakeable",
     "open-source",
-    "vadivam"
+    "vadivam",
+    "javascript"
   ],
   "type": "module",
   "sideEffects": false,

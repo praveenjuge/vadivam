@@ -1,7 +1,7 @@
 {
   "name": "vadivam-react-native",
   "version": "0.0.21",
-  "description": "Pixel-perfect, open-source React Native icons for refined interfaces.",
+  "description": "Pixel-perfect 24px outline icons for React Native and Expo, powered by react-native-svg.",
   "license": "MIT",
   "author": "Praveen Juge",
   "repository": {
@@ -15,13 +15,17 @@
   },
   "keywords": [
     "icons",
+    "svg",
+    "outline-icons",
+    "icon-library",
+    "icon-pack",
+    "24px",
+    "tree-shakeable",
+    "open-source",
+    "vadivam",
     "react-native",
     "react-native-svg",
-    "expo",
-    "svg",
-    "icon-pack",
-    "open-source",
-    "vadivam"
+    "expo"
   ],
   "type": "module",
   "sideEffects": false,

@@ -1,26 +1,43 @@
 # Vadivam
 
-Pixel-perfect, open-source, gorgeous icons for refined interfaces.
+Pixel-perfect 24px outline icons for refined interfaces.
+
+[![npm version](https://img.shields.io/npm/v/vadivam?style=flat-square&color=111)](https://www.npmjs.com/package/vadivam)
+[![downloads](https://img.shields.io/npm/dw/vadivam?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam)
+[![license](https://img.shields.io/npm/l/vadivam?style=flat-square&color=111)](./LICENSE)
 
 ![All Vadivam icons](./apps/web/public/preview.png?v=0.0.21)
 
+[Browse all icons](https://vadivam.praveenjuge.com) and copy SVG or framework-ready components.
+
+## Packages
+
+| Package | Target |
+| --- | --- |
+| [`vadivam`](https://www.npmjs.com/package/vadivam) | SVG and JavaScript |
+| [`vadivam-react`](https://www.npmjs.com/package/vadivam-react) | React |
+| [`vadivam-react-native`](https://www.npmjs.com/package/vadivam-react-native) | React Native and Expo |
+| [`vadivam-vue`](https://www.npmjs.com/package/vadivam-vue) | Vue |
+| [`vadivam-svelte`](https://www.npmjs.com/package/vadivam-svelte) | Svelte |
+| [`vadivam-solid`](https://www.npmjs.com/package/vadivam-solid) | Solid |
+| [`vadivam-angular`](https://www.npmjs.com/package/vadivam-angular) | Angular |
+| [`vadivam-astro`](https://www.npmjs.com/package/vadivam-astro) | Astro |
+| [`vadivam-preact`](https://www.npmjs.com/package/vadivam-preact) | Preact |
+
+## Quick start
+
 ```sh
-bun install
-bun run icons:optimize
-bun run test
-bun run dev
+npm install vadivam-react
 ```
 
-## Workspaces
+```tsx
+import { Activity } from "vadivam-react";
 
-- `icons/` is the canonical Figma export folder.
-- `packages/vadivam` publishes optimized SVGs and metadata.
-- `packages/vadivam-react` publishes generated React components.
-- `packages/vadivam-react-native` publishes generated React Native components.
-- `packages/vadivam-vue` publishes generated Vue components.
-- `packages/vadivam-svelte` publishes generated Svelte components.
-- `packages/vadivam-solid` publishes generated Solid components.
-- `packages/vadivam-angular` publishes generated Angular directives.
-- `packages/vadivam-astro` publishes generated Astro components.
-- `packages/vadivam-preact` publishes generated Preact components.
-- `apps/web` is the Astro icon explorer.
+export function Example() {
+  return <Activity size={20} aria-label="Activity" />;
+}
+```
+
+Every package supports tree-shakeable named and per-icon imports. Framework packages also provide dynamic icon APIs for data-driven names.
+
+[Contributing](./CONTRIBUTING.md) · [Issues](https://github.com/praveenjuge/vadivam/issues) · [Releases](https://github.com/praveenjuge/vadivam/releases) · [MIT License](./LICENSE)
