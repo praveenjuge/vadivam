@@ -2,7 +2,7 @@
 
 Pixel-perfect, open-source React Native icons for refined interfaces.
 
-![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/web/public/preview.png?v=0.0.17)
+![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/web/public/preview.png?v=0.0.18)
 
 ```sh
 bun add vadivam-react-native react-native-svg
