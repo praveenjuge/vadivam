@@ -11,8 +11,8 @@ function npm(args, cwd = root) {
 }
 
 function publishedVersion(name, version) {
-  const result = npm(["view", `${name}@${version}`, "version", "--json"]);
-  if (result.status === 0) return JSON.parse(result.stdout.trim());
+  const result = npm(["view", `${name}@${version}`, "version", "--prefer-online"]);
+  if (result.status === 0) return result.stdout.trim();
   if (/\bE404\b|404 Not Found/.test(result.stderr)) return null;
   throw new Error(`Could not query ${name}@${version}: ${result.stderr.trim()}`);
 }

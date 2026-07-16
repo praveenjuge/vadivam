@@ -2,7 +2,7 @@
 
 Pixel-perfect, open-source Vadivam icons for Solid.
 
-![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/web/public/preview.png?v=0.0.20)
+![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/web/public/preview.png?v=0.0.21)
 
 ```sh
 bun add vadivam-solid
