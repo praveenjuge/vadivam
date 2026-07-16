@@ -21,6 +21,17 @@ function run(command, args, cwd, capture = false) {
   }
   return result.stdout;
 }
+
+function getPackResult(packed, packageName) {
+  const result = Array.isArray(packed)
+    ? packed[0]
+    : packed?.[packageName] ?? Object.values(packed ?? {})[0];
+  if (!result || result.name !== packageName || !Array.isArray(result.files)) {
+    throw new Error(`${packageName}: unexpected npm pack --json output`);
+  }
+  return result;
+}
+
 for (const { name, directory } of publishablePackages) {
   const cwd = path.join(root, directory);
   const manifest = JSON.parse(readFileSync(path.join(cwd, "package.json"), "utf8"));
@@ -31,7 +42,11 @@ for (const { name, directory } of publishablePackages) {
   if (!existsSync(path.join(cwd, "dist"))) throw new Error(`${name}: missing dist`);
   run("bun", ["x", "publint", "."], cwd);
   const packed = JSON.parse(run("npm", ["pack", "--dry-run", "--json"], cwd, true));
-  const files = packed[0]?.files?.map(({ path: file }) => file) ?? [];
+  const packResult = getPackResult(packed, name);
+  if (packResult.version !== rootVersion) {
+    throw new Error(`${name}: tarball version ${packResult.version} does not match ${rootVersion}`);
+  }
+  const files = packResult.files.map(({ path: file }) => file);
   if (!files.some((file) => file.startsWith("dist/"))) {
     throw new Error(`${name}: npm tarball contains no dist files`);
   }

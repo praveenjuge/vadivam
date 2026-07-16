@@ -2,7 +2,7 @@
 
 Pixel-perfect, open-source Vadivam icons for Astro.
 
-![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/web/public/preview.png?v=0.0.19)
+![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/web/public/preview.png?v=0.0.20)
 
 ```sh
 bun add vadivam-astro
