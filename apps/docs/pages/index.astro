@@ -1,0 +1,431 @@
+---
+import PageLayout from "blume/components/layout/PageLayout.astro";
+import Icon from "blume/components/Icon.astro";
+import Badge from "blume/components/content/Badge.astro";
+import GithubInfo from "blume/components/content/GithubInfo.astro";
+import data from "blume:data";
+import { icons } from "vadivam/manifest";
+
+const { config } = data;
+const description =
+  "Browse pixel-perfect, open-source 24px outline icons for SVG, React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.";
+
+const npmIcon = `<svg viewBox="0 0 2500 2500" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path fill="#c00" d="M0 0h2500v2500H0z"/><path fill="#fff" d="M1241.5 268.5h-973v1962.9h972.9V763.5h495v1467.9h495V268.5z"/></svg>`;
+const githubIcon = `<svg viewBox="0 0 1024 1024" fill="none" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M512 0C229.12 0 0 229.12 0 512c0 226.56 146.56 417.92 350.08 485.76 25.6 4.48 35.2-10.88 35.2-24.32 0-12.16-.64-52.48-.64-95.36-128.64 23.68-161.92-31.36-172.16-60.16-5.76-14.72-30.72-60.16-52.48-72.32-17.92-9.6-43.52-33.28-.64-33.92 40.32-.64 69.12 37.12 78.72 52.48 46.08 77.44 119.68 55.68 149.12 42.24 4.48-33.28 17.92-55.68 32.64-68.48-113.92-12.8-232.96-56.96-232.96-252.8 0-55.68 19.84-101.76 52.48-137.6-5.12-12.8-23.04-65.28 5.12-135.68 0 0 42.88-13.44 140.8 52.48 40.96-11.52 84.48-17.28 128-17.28s87.04 5.76 128 17.28c97.92-66.56 140.8-52.48 140.8-52.48 28.16 70.4 10.24 122.88 5.12 135.68 32.64 35.84 52.48 81.28 52.48 137.6 0 196.48-119.68 240-233.6 252.8 18.56 16 34.56 46.72 34.56 94.72 0 68.48-.64 123.52-.64 140.8 0 13.44 9.6 29.44 35.2 24.32C877.44 929.92 1024 737.92 1024 512 1024 229.12 794.88 0 512 0" clip-rule="evenodd"/></svg>`;
+const twitterIcon = `<svg viewBox="0 0 256 209" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid" aria-hidden="true" focusable="false"><path fill="#55acee" d="M256 25.45c-9.42 4.177-19.542 7-30.166 8.27 10.845-6.5 19.172-16.793 23.093-29.057a105.183 105.183 0 0 1-33.351 12.745C205.995 7.201 192.346.822 177.239.822c-29.006 0-52.523 23.516-52.523 52.52 0 4.117.465 8.125 1.36 11.97-43.65-2.191-82.35-23.1-108.255-54.876-4.52 7.757-7.11 16.78-7.11 26.404 0 18.222 9.273 34.297 23.365 43.716a52.312 52.312 0 0 1-23.79-6.57c-.003.22-.003.44-.003.661 0 25.447 18.104 46.675 42.13 51.5a52.592 52.592 0 0 1-23.718.9c6.683 20.866 26.08 36.05 49.062 36.475-17.975 14.086-40.622 22.483-65.228 22.483-4.24 0-8.42-.249-12.529-.734 23.243 14.902 50.85 23.597 80.51 23.597 96.607 0 149.434-80.031 149.434-149.435 0-2.278-.05-4.543-.152-6.795A106.748 106.748 0 0 0 256 25.45"/></svg>`;
+
+const links = [
+  { href: "https://www.npmjs.com/package/vadivam", label: "vadivam", title: "vadivam — SVG and JavaScript", icon: npmIcon },
+  { href: "https://www.npmjs.com/package/vadivam-react", label: "React", title: "vadivam-react", icon: npmIcon },
+  { href: "https://www.npmjs.com/package/vadivam-react-native", label: "React Native", title: "vadivam-react-native", icon: npmIcon },
+  { href: "https://www.npmjs.com/package/vadivam-vue", label: "Vue", title: "vadivam-vue", icon: npmIcon },
+  { href: "https://www.npmjs.com/package/vadivam-svelte", label: "Svelte", title: "vadivam-svelte", icon: npmIcon },
+  { href: "https://github.com/praveenjuge/vadivam", label: "GitHub", title: "GitHub repository", icon: githubIcon },
+  { href: "https://github.com/praveenjuge/vadivam/issues", label: "Issues", title: "Issues", icon: githubIcon },
+  { href: "https://github.com/praveenjuge/vadivam/releases", label: "Releases", title: "Releases and downloads", icon: githubIcon },
+  { href: "https://twitter.com/praveenjuge", label: "Twitter", title: "Praveen Juge on Twitter", icon: twitterIcon },
+];
+
+const codeTabs = [
+  { id: "react", label: "React" },
+  { id: "vue", label: "Vue" },
+  { id: "svelte", label: "Svelte" },
+  { id: "solid", label: "Solid" },
+  { id: "preact", label: "Preact" },
+  { id: "astro", label: "Astro" },
+  { id: "angular", label: "Angular" },
+  { id: "svg", label: "SVG" },
+];
+
+const chipClass =
+  "inline-flex flex-none items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-foreground no-underline transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+
+// PageLayout (unlike RootLayout) emits no structured data, so declare the site
+// identity here. The SearchAction is backed by the real `/?q=` deep-link the
+// client script implements below.
+const site = config.site?.replace(/\/$/, "");
+const structuredData = site
+  ? {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": `${site}#website`,
+          name: config.title,
+          url: `${site}/`,
+          description: config.description,
+          potentialAction: {
+            "@type": "SearchAction",
+            target: {
+              "@type": "EntryPoint",
+              urlTemplate: `${site}/?q={search_term_string}`,
+            },
+            "query-input": "required name=search_term_string",
+          },
+        },
+      ],
+    }
+  : null;
+---
+
+<PageLayout
+  site={{ title: config.title, description: config.description }}
+  logo={config.logo}
+  banner={config.banner}
+  analytics={config.analytics}
+  navigation={data.navigation}
+  favicon={config.favicon}
+  appleIcon={config.appleIcon}
+  fontCssVars={data.fontCssVars}
+  themeMode={config.theme.mode}
+  searchEnabled={config.search.enabled}
+  siteUrl={config.site}
+  ogEnabled={config.og.enabled}
+  page={{ title: "Vadivam — 24px outline icons", description }}
+>
+  <main id="iconExplorer" class="w-full px-4 pt-3 pb-8 md:px-6">
+    <header class="pb-4">
+      <h1 class="m-0 text-[clamp(1.5rem,2.5vw,2rem)] font-semibold leading-none tracking-[-0.03em]">
+        Icons shaped for interfaces.
+      </h1>
+    </header>
+
+    <nav class="flex flex-wrap gap-1.5 pb-4" aria-label="Project links">
+      <a class={chipClass} href="/docs/">
+        <Icon icon="book-open" size={14} />
+        <span>Documentation</span>
+      </a>
+      {
+        links.map((link) => (
+          <a class={chipClass} href={link.href} target="_blank" rel="noreferrer" title={link.title}>
+            <span class="inline-flex size-3.5 items-center justify-center [&>svg]:size-3.5" set:html={link.icon} />
+            <span>{link.label}</span>
+          </a>
+        ))
+      }
+    </nav>
+
+    <section aria-label="Icon library">
+      <div class="pb-3">
+        <input
+          class="w-full rounded-md border border-border bg-transparent px-2.5 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-accent focus-visible:outline-none"
+          id="iconSearch"
+          type="search"
+          placeholder="Search icons…"
+          aria-label="Search icons"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(4.25rem,1fr))]" id="iconGrid">
+        {
+          icons.map((icon) => (
+            <a
+              class="icon-card group relative grid aspect-square min-w-0 cursor-pointer place-items-center rounded-md text-foreground no-underline hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-[current=true]:bg-accent/10 aria-[current=true]:text-accent aria-[current=true]:ring-1 aria-[current=true]:ring-accent"
+              href={`/icons/${icon.name}/`}
+              data-name={icon.name}
+              data-component={icon.componentName}
+              data-svg={icon.svg}
+              aria-label={`View ${icon.componentName} icon`}
+            >
+              <span class="grid place-items-center [&>svg]:size-6" aria-hidden="true" set:html={icon.svg} />
+              <span
+                class="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-1.5 py-0.5 text-[0.68rem] text-background group-hover:block"
+                aria-hidden="true"
+              >{icon.name}</span>
+            </a>
+          ))
+        }
+      </div>
+
+      <p class="py-12 text-center text-sm text-muted-foreground" id="emptyState" hidden>No icons match that search.</p>
+    </section>
+  </main>
+
+  <aside
+    class="fixed inset-x-0 bottom-0 z-40 translate-y-full border-t border-border bg-background/95 text-foreground shadow-[0_-12px_40px_rgb(0_0_0/0.1)] backdrop-blur-lg transition-transform duration-200 ease-out data-[open]:translate-y-0 motion-reduce:transition-none"
+    id="iconDrawer"
+    aria-labelledby="drawerName"
+    aria-hidden="true"
+  >
+    <div class="flex max-h-[70dvh] w-full flex-col gap-2.5 overflow-y-auto px-4 py-2.5 md:px-6">
+      <div class="flex items-center gap-3">
+        <div class="grid size-9 flex-none place-items-center rounded-md bg-accent/10 text-accent [&>svg]:size-5" id="drawerPreview" aria-hidden="true"></div>
+        <div class="mr-auto grid min-w-0 gap-0.5">
+          <div class="flex items-center gap-1">
+            <h2 class="m-0 truncate text-sm font-semibold leading-tight" id="drawerName"></h2>
+            <button
+              class="grid size-5 flex-none place-items-center rounded border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              type="button"
+              data-action="copy-name"
+              aria-label="Copy icon name"
+            ><Icon icon="copy" size={13} /></button>
+            <Badge size="sm" variant="accent" class="ml-1">24px outline</Badge>
+          </div>
+          <div class="flex items-center gap-1">
+            <p class="m-0 truncate font-mono text-xs text-muted-foreground" id="drawerComponent"></p>
+            <button
+              class="grid size-5 flex-none place-items-center rounded border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              type="button"
+              data-action="copy-component"
+              aria-label="Copy component name"
+            ><Icon icon="copy" size={13} /></button>
+          </div>
+        </div>
+        <button
+          class="grid size-7 flex-none place-items-center rounded-md border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          id="drawerClose"
+          type="button"
+          aria-label="Close"
+        ><Icon icon="x" size={18} /></button>
+      </div>
+
+      <div class="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Framework snippet">
+        {
+          codeTabs.map((tab, index) => (
+            <button
+              class="flex-none rounded-md border border-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-selected:border-accent aria-selected:bg-accent aria-selected:text-accent-foreground"
+              type="button"
+              role="tab"
+              data-tab={tab.id}
+              aria-selected={index === 0 ? "true" : "false"}
+            >
+              {tab.label}
+            </button>
+          ))
+        }
+      </div>
+
+      <div class="relative min-w-0">
+        <pre class="m-0 max-h-32 min-h-[4.5rem] overflow-auto rounded-md bg-muted px-3 py-2 text-[0.72rem] leading-relaxed [scrollbar-width:thin]"><code id="drawerCode" class="font-mono"></code></pre>
+        <button
+          class="absolute end-1.5 top-1.5 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[0.68rem] transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          type="button"
+          data-action="copy-code"
+          id="drawerCopyCode"
+        ><Icon icon="copy" size={12} /><span>Copy</span></button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button
+          class="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          type="button"
+          data-action="download"
+        ><Icon icon="download" size={14} /><span>Download SVG</span></button>
+        <button
+          class="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          type="button"
+          data-action="copy-svg"
+        ><Icon icon="code" size={14} /><span>Copy SVG</span></button>
+        <a
+          class="ml-auto inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-foreground no-underline transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          id="drawerOpenPage"
+          href="#"
+        ><span>Open page</span><Icon icon="arrow-up-right" size={14} /></a>
+      </div>
+      <p class="sr-only" id="drawerStatus" aria-live="polite"></p>
+    </div>
+  </aside>
+
+  <footer slot="footer" class="mx-auto w-full max-w-2xl px-4 pb-10 md:px-6">
+    <GithubInfo />
+  </footer>
+
+  {structuredData && <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />}
+
+  <script>
+    const explorer = document.querySelector<HTMLElement>("#iconExplorer");
+    const search = document.querySelector<HTMLInputElement>("#iconSearch");
+    const grid = document.querySelector<HTMLElement>("#iconGrid");
+    const cards = Array.from(document.querySelectorAll<HTMLAnchorElement>(".icon-card"));
+    const emptyState = document.querySelector<HTMLElement>("#emptyState");
+    const drawer = document.querySelector<HTMLElement>("#iconDrawer");
+    const drawerPreview = document.querySelector<HTMLElement>("#drawerPreview");
+    const drawerName = document.querySelector<HTMLElement>("#drawerName");
+    const drawerComponent = document.querySelector<HTMLElement>("#drawerComponent");
+    const drawerStatus = document.querySelector<HTMLElement>("#drawerStatus");
+    const drawerClose = document.querySelector<HTMLButtonElement>("#drawerClose");
+    const drawerCode = document.querySelector<HTMLElement>("#drawerCode");
+    const drawerOpenPage = document.querySelector<HTMLAnchorElement>("#drawerOpenPage");
+    const tabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+
+    let selected: HTMLAnchorElement | null = null;
+    let activeTab = "react";
+    let statusTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const getData = () => ({
+      name: selected?.dataset.name ?? "",
+      component: selected?.dataset.component ?? "",
+      svg: selected?.dataset.svg ?? "",
+    });
+
+    const snippet = (tab: string, name: string, component: string, svg: string) => {
+      switch (tab) {
+        case "react":
+          return `import { ${component} } from "vadivam-react";\n\n<${component} />`;
+        case "solid":
+          return `import { ${component} } from "vadivam-solid";\n\n<${component} />`;
+        case "preact":
+          return `import { ${component} } from "vadivam-preact";\n\n<${component} />`;
+        case "vue":
+          return `<script setup>\nimport { ${component} } from "vadivam-vue";\n<\/script>\n\n<template>\n  <${component} />\n</template>`;
+        case "svelte":
+          return `<script>\n  import { ${component} } from "vadivam-svelte";\n<\/script>\n\n<${component} />`;
+        case "astro":
+          return `---\nimport { ${component} } from "vadivam-astro";\n---\n\n<${component} />`;
+        case "angular":
+          return `import { ${component} } from "vadivam-angular";\n\n<svg vadivam${component}></svg>`;
+        default:
+          return svg;
+      }
+    };
+
+    const setStatus = (message: string) => {
+      if (!drawerStatus) return;
+      drawerStatus.textContent = message;
+      clearTimeout(statusTimer);
+      statusTimer = setTimeout(() => {
+        if (drawerStatus) drawerStatus.textContent = "";
+      }, 2000);
+    };
+
+    const copy = (value: string, message: string) => {
+      navigator.clipboard.writeText(value).then(() => setStatus(message));
+    };
+
+    const renderCode = () => {
+      if (!drawerCode || !selected) return;
+      const { name, component, svg } = getData();
+      drawerCode.textContent = snippet(activeTab, name, component, svg);
+    };
+
+    const syncClearance = () => {
+      if (!drawer) return;
+      const open = drawer.hasAttribute("data-open");
+      const height = open ? drawer.getBoundingClientRect().height : 0;
+      explorer?.style.setProperty("padding-bottom", open ? `${height + 24}px` : "");
+    };
+
+    const openDrawer = (card: HTMLAnchorElement) => {
+      if (!drawer) return;
+
+      for (const item of cards) item.setAttribute("aria-current", String(item === card));
+      selected = card;
+
+      const { name, component, svg } = getData();
+      if (drawerPreview) drawerPreview.innerHTML = svg;
+      if (drawerName) drawerName.textContent = name;
+      if (drawerComponent) drawerComponent.textContent = component;
+      if (drawerOpenPage) drawerOpenPage.href = `/icons/${name}/`;
+
+      renderCode();
+
+      drawer.hidden = false;
+      drawer.setAttribute("data-open", "");
+      drawer.setAttribute("aria-hidden", "false");
+      requestAnimationFrame(syncClearance);
+    };
+
+    const closeDrawer = () => {
+      if (!drawer) return;
+      drawer.removeAttribute("data-open");
+      drawer.setAttribute("aria-hidden", "true");
+      for (const item of cards) item.setAttribute("aria-current", "false");
+      selected = null;
+      syncClearance();
+    };
+
+    const applyFilter = (raw: string) => {
+      const query = raw.trim().toLowerCase();
+      for (const card of cards) {
+        const name = card.dataset.name?.toLowerCase() ?? "";
+        const component = card.dataset.component?.toLowerCase() ?? "";
+        card.hidden = !(name.includes(query) || component.includes(query));
+      }
+      if (emptyState) emptyState.hidden = cards.some((card) => !card.hidden);
+    };
+
+    search?.addEventListener("input", () => {
+      applyFilter(search.value);
+      const url = new URL(window.location.href);
+      const value = search.value.trim();
+      if (value) url.searchParams.set("q", value);
+      else url.searchParams.delete("q");
+      history.replaceState(null, "", url);
+    });
+
+    // Deep-link: `/?q=term` pre-fills and filters (also powers the JSON-LD
+    // SearchAction target).
+    const initialQuery = new URLSearchParams(window.location.search).get("q");
+    if (initialQuery && search) {
+      search.value = initialQuery;
+      applyFilter(initialQuery);
+    }
+
+    grid?.addEventListener("click", (event) => {
+      const mouse = event as MouseEvent;
+      // Let modified clicks (new tab/window) and non-primary buttons follow the
+      // real /icons/<name> link; only plain left-click opens the drawer.
+      if (mouse.metaKey || mouse.ctrlKey || mouse.shiftKey || mouse.altKey || mouse.button !== 0) {
+        return;
+      }
+      const card = (event.target as HTMLElement).closest<HTMLAnchorElement>(".icon-card");
+      if (!card) return;
+      event.preventDefault();
+      openDrawer(card);
+    });
+
+    for (const tab of tabButtons) {
+      tab.addEventListener("click", () => {
+        activeTab = tab.dataset.tab ?? "react";
+        for (const button of tabButtons) {
+          button.setAttribute("aria-selected", String(button === tab));
+        }
+        renderCode();
+        requestAnimationFrame(syncClearance);
+      });
+    }
+
+    drawerClose?.addEventListener("click", closeDrawer);
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeDrawer();
+    });
+
+    window.addEventListener("resize", syncClearance);
+
+    drawer?.addEventListener("click", (event) => {
+      const action = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-action]");
+      if (!action || !selected) return;
+
+      const { name, component, svg } = getData();
+
+      switch (action.dataset.action) {
+        case "download": {
+          const blob = new Blob([svg], { type: "image/svg+xml" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `${name}.svg`;
+          link.click();
+          URL.revokeObjectURL(url);
+          setStatus(`Downloaded ${name}.svg`);
+          break;
+        }
+        case "copy-code":
+          copy(snippet(activeTab, name, component, svg), "Snippet copied.");
+          break;
+        case "copy-svg":
+          copy(svg, "SVG copied.");
+          break;
+        case "copy-name":
+          copy(name, "Name copied.");
+          break;
+        case "copy-component":
+          copy(component, "Component name copied.");
+          break;
+      }
+    });
+  </script>
+</PageLayout>

@@ -6,23 +6,23 @@ Pixel-perfect 24px outline icons for refined interfaces.
 [![downloads](https://img.shields.io/npm/dw/vadivam?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam)
 [![license](https://img.shields.io/npm/l/vadivam?style=flat-square&color=111)](./LICENSE)
 
-![All Vadivam icons](./apps/web/public/preview.png?v=0.0.22)
+![All Vadivam icons](./apps/docs/public/preview.png?v=0.0.22)
 
 [Browse all icons](https://vadivam.praveenjuge.com) and copy SVG or framework-ready components.
 
 ## Packages
 
-| Package | Target |
-| --- | --- |
-| [`vadivam`](https://www.npmjs.com/package/vadivam) | SVG and JavaScript |
-| [`vadivam-react`](https://www.npmjs.com/package/vadivam-react) | React |
+| Package                                                                      | Target                |
+| ---------------------------------------------------------------------------- | --------------------- |
+| [`vadivam`](https://www.npmjs.com/package/vadivam)                           | SVG and JavaScript    |
+| [`vadivam-react`](https://www.npmjs.com/package/vadivam-react)               | React                 |
 | [`vadivam-react-native`](https://www.npmjs.com/package/vadivam-react-native) | React Native and Expo |
-| [`vadivam-vue`](https://www.npmjs.com/package/vadivam-vue) | Vue |
-| [`vadivam-svelte`](https://www.npmjs.com/package/vadivam-svelte) | Svelte |
-| [`vadivam-solid`](https://www.npmjs.com/package/vadivam-solid) | Solid |
-| [`vadivam-angular`](https://www.npmjs.com/package/vadivam-angular) | Angular |
-| [`vadivam-astro`](https://www.npmjs.com/package/vadivam-astro) | Astro |
-| [`vadivam-preact`](https://www.npmjs.com/package/vadivam-preact) | Preact |
+| [`vadivam-vue`](https://www.npmjs.com/package/vadivam-vue)                   | Vue                   |
+| [`vadivam-svelte`](https://www.npmjs.com/package/vadivam-svelte)             | Svelte                |
+| [`vadivam-solid`](https://www.npmjs.com/package/vadivam-solid)               | Solid                 |
+| [`vadivam-angular`](https://www.npmjs.com/package/vadivam-angular)           | Angular               |
+| [`vadivam-astro`](https://www.npmjs.com/package/vadivam-astro)               | Astro                 |
+| [`vadivam-preact`](https://www.npmjs.com/package/vadivam-preact)             | Preact                |
 
 ## Quick start
 

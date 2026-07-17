@@ -1,0 +1,39 @@
+{
+  "name": "docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "blume dev",
+    "build": "blume build",
+    "check": "blume check",
+    "validate": "blume validate",
+    "doctor": "blume doctor"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "7.0.3",
+    "@shikijs/twoslash": "4.3.1",
+    "@tailwindcss/typography": "0.5.20",
+    "@tailwindcss/vite": "4.3.3",
+    "blume": "1.0.4",
+    "tailwindcss": "4.3.3",
+    "vadivam": "workspace:*"
+  },
+  "optionalDependencies": {
+    "@bruits/satteri-darwin-arm64": "0.9.5",
+    "@bruits/satteri-darwin-x64": "0.9.5",
+    "@bruits/satteri-linux-arm64-gnu": "0.9.5",
+    "@bruits/satteri-linux-arm64-musl": "0.9.5",
+    "@bruits/satteri-linux-x64-gnu": "0.9.5",
+    "@bruits/satteri-linux-x64-musl": "0.9.5",
+    "@bruits/satteri-win32-arm64-msvc": "0.9.5",
+    "@bruits/satteri-win32-x64-msvc": "0.9.5",
+    "@takumi-rs/core-darwin-arm64": "1.8.7",
+    "@takumi-rs/core-darwin-x64": "1.8.7",
+    "@takumi-rs/core-linux-arm64-gnu": "1.8.7",
+    "@takumi-rs/core-linux-arm64-musl": "1.8.7",
+    "@takumi-rs/core-linux-x64-gnu": "1.8.7",
+    "@takumi-rs/core-linux-x64-musl": "1.8.7",
+    "@takumi-rs/core-win32-arm64-msvc": "1.8.7",
+    "@takumi-rs/core-win32-x64-msvc": "1.8.7"
+  }
+}

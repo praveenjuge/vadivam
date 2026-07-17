@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://vadivam.praveenjuge.com/sitemap-index.xml

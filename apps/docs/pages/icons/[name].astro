@@ -1,0 +1,219 @@
+---
+import PageLayout from "blume/components/layout/PageLayout.astro";
+import Breadcrumbs from "blume/components/layout/Breadcrumbs.astro";
+import CodeBlock from "blume/components/content/CodeBlock.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Callout from "blume/components/content/Callout.astro";
+import Tabs from "blume/components/content/Tabs.astro";
+import Tab from "blume/components/content/Tab.astro";
+import Card from "blume/components/content/Card.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+import Panel from "blume/components/content/Panel.astro";
+import Frame from "blume/components/content/Frame.astro";
+import Icon from "blume/components/Icon.astro";
+import data from "blume:data";
+import { icons, iconsByName } from "vadivam/manifest";
+
+export function getStaticPaths() {
+  return icons.map((icon) => ({ params: { name: icon.name }, props: { icon } }));
+}
+
+const { config } = data;
+const { icon } = Astro.props;
+const svg = iconsByName[icon.name].svg;
+const c = icon.componentName;
+
+const install = [
+  { title: "npm", lang: "sh", code: "npm install vadivam-react" },
+  { title: "pnpm", lang: "sh", code: "pnpm add vadivam-react" },
+  { title: "bun", lang: "sh", code: "bun add vadivam-react" },
+  { title: "yarn", lang: "sh", code: "yarn add vadivam-react" },
+];
+
+const usage = [
+  { title: "React", lang: "tsx", code: `import { ${c} } from "vadivam-react";\n\n<${c} />` },
+  { title: "Vue", lang: "vue", code: `<script setup>\nimport { ${c} } from "vadivam-vue";\n</script>\n\n<template>\n  <${c} />\n</template>` },
+  { title: "Svelte", lang: "svelte", code: `<script>\n  import { ${c} } from "vadivam-svelte";\n</script>\n\n<${c} />` },
+  { title: "Solid", lang: "tsx", code: `import { ${c} } from "vadivam-solid";\n\n<${c} />` },
+  { title: "Preact", lang: "tsx", code: `import { ${c} } from "vadivam-preact";\n\n<${c} />` },
+  { title: "Astro", lang: "astro", code: `---\nimport { ${c} } from "vadivam-astro";\n---\n\n<${c} />` },
+  { title: "Angular", lang: "ts", code: `import { ${c} } from "vadivam-angular";\n\n<svg vadivam${c}></svg>` },
+];
+
+const pageTitle = `${c} icon — Vadivam`;
+const pageDescription = `${c} is a free, open-source 24px outline icon from Vadivam, available as a raw SVG (${icon.fileName}) and a component for React and other frameworks.`;
+const sectionClass = "mt-10 text-xs font-semibold uppercase tracking-wide text-muted-foreground";
+
+// PageLayout emits no structured data, so describe the icon page and its
+// breadcrumb trail here (matches what RootLayout does for content pages).
+const site = config.site?.replace(/\/$/, "");
+const iconUrl = site ? `${site}/icons/${icon.name}` : `/icons/${icon.name}`;
+const structuredData = site
+  ? {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": `${site}#website`,
+          name: config.title,
+          url: `${site}/`,
+        },
+        {
+          "@type": "WebPage",
+          "@id": `${iconUrl}#page`,
+          name: pageTitle,
+          description: pageDescription,
+          url: iconUrl,
+          isPartOf: { "@id": `${site}#website` },
+          about: {
+            "@type": "CreativeWork",
+            name: `${c} icon`,
+            keywords: `${icon.name}, ${c}, vadivam, svg icon, outline icon, 24px icon`,
+          },
+        },
+        {
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Icons", item: `${site}/` },
+            { "@type": "ListItem", position: 2, name: c, item: iconUrl },
+          ],
+        },
+      ],
+    }
+  : null;
+---
+
+<PageLayout
+  site={{ title: config.title, description: config.description }}
+  logo={config.logo}
+  banner={config.banner}
+  analytics={config.analytics}
+  navigation={data.navigation}
+  favicon={config.favicon}
+  appleIcon={config.appleIcon}
+  fontCssVars={data.fontCssVars}
+  themeMode={config.theme.mode}
+  searchEnabled={config.search.enabled}
+  siteUrl={config.site}
+  ogEnabled={config.og.enabled}
+  page={{ title: pageTitle, description: pageDescription }}
+>
+  <main id="iconDetail" class="mx-auto w-full max-w-4xl px-4 pt-4 pb-16 md:px-6">
+    <Breadcrumbs crumbs={[{ label: "<- All Icons", route: "/" }, { label: c }]} wide />
+
+    <header class="flex flex-wrap items-center justify-between gap-5">
+      <div class="min-w-0">
+        <h1 class="m-0 text-2xl font-semibold tracking-[-0.02em]">{c}</h1>
+        <div class="mt-3 flex flex-wrap items-center gap-1.5">
+          <Badge size="sm" variant="accent">24 x 24</Badge>
+          <Badge size="sm">Outline</Badge>
+          <Badge size="sm">Stroke 2</Badge>
+        </div>
+      </div>
+      <div class="flex flex-none flex-wrap gap-1.5">
+        <button
+          class="snippet-copy inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          type="button"
+          data-copy={svg}
+        ><Icon icon="code" size={14} /><span>Copy SVG</span></button>
+        <button
+          class="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          id="downloadSvg"
+          type="button"
+        ><Icon icon="download" size={14} /><span>Download SVG</span></button>
+      </div>
+    </header>
+
+    <Frame>
+      <div class="grid place-items-center py-4 text-foreground [&>svg]:size-20" aria-hidden="true" set:html={svg} />
+    </Frame>
+
+    <h2 class={sectionClass}>Install</h2>
+    <Tabs>
+      {
+        install.map((item) => (
+          <Tab title={item.title}>
+              <CodeBlock lang={item.lang} code={item.code} icons={false} />
+          </Tab>
+        ))
+      }
+    </Tabs>
+
+    <h2 class={sectionClass}>Use it in your framework</h2>
+    <Tabs>
+      {
+        usage.map((item) => (
+          <Tab title={item.title}>
+              <CodeBlock lang={item.lang} code={item.code} icons={false} />
+          </Tab>
+        ))
+      }
+    </Tabs>
+
+    <h2 class={sectionClass}>Raw SVG & assets</h2>
+    <CodeBlock lang="html" code={svg} icons={false} />
+    <CodeBlock lang="ts" code={`import iconUrl from "vadivam/icons/${icon.fileName}";`} icons={false} />
+
+    <h2 class={sectionClass}>Keep exploring</h2>
+    <CardGroup cols={3}>
+      <Card title="Usage & styling" href="/docs/usage/" icon="palette">
+        Size, color, stroke width, and accessibility across every framework.
+      </Card>
+      <Card title="Dynamic icons" href="/docs/dynamic-icons/" icon="shuffle">
+        Load an icon by name when it comes from data at runtime.
+      </Card>
+      <Card title="Contributing" href="/docs/contributing/" icon="git-pull-request">
+        Add or refine icons and follow the outline guidelines.
+      </Card>
+    </CardGroup>
+  </main>
+
+  {structuredData && <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />}
+
+  <script is:inline define:vars={{ fileName: icon.fileName, svg }}>
+    const detail = document.getElementById("iconDetail");
+
+    document.getElementById("downloadSvg")?.addEventListener("click", () => {
+      const blob = new Blob([svg], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Header action + injected code-block buttons share one delegated handler.
+    document.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target.closest(".snippet-copy") : null;
+      if (!target) return;
+      const value = target.getAttribute("data-copy");
+      if (!value) return;
+      navigator.clipboard.writeText(value).then(() => {
+        const label = target.querySelector("span");
+        if (!label) return;
+        const original = label.textContent;
+        label.textContent = "Copied";
+        window.setTimeout(() => {
+          label.textContent = original;
+        }, 1200);
+      });
+    });
+
+    // PageLayout does not ship RootLayout's code-block copy island, so add a
+    // copy button to each rendered CodeBlock (including those inside tabs).
+    for (const pre of detail?.querySelectorAll(".prose pre") ?? []) {
+      const code = pre.querySelector("code");
+      if (!code || pre.querySelector(".snippet-copy")) continue;
+      pre.classList.add("group", "relative");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className =
+        "snippet-copy absolute end-2 top-2 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[0.68rem] opacity-0 transition-opacity hover:bg-muted focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent group-hover:opacity-100";
+      button.setAttribute("data-copy", code.textContent ?? "");
+      button.setAttribute("aria-label", "Copy code");
+      button.innerHTML = "<span>Copy</span>";
+      pre.appendChild(button);
+    }
+  </script>
+</PageLayout>
