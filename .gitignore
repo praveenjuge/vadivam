@@ -6,9 +6,7 @@ dist
 
 packages/*/dist
 packages/vadivam-angular/.generated
-apps/web/dist
-apps/web/.astro
-apps/web/public/icons
+apps/docs/public/icons
 
 # Integration test apps (build artifacts; per-app bun.lock IS tracked)
 tests/integration/*/node_modules

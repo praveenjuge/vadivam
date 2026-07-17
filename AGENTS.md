@@ -9,7 +9,6 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - `packages/vadivam-react` publishes generated React components.
 - `packages/vadivam-react-native` publishes generated React Native components.
 - `packages/vadivam-{vue,svelte,solid,angular,astro,preact}` publish generated native framework components.
-- `apps/web` is the native Astro explorer and docs site.
 - Generated package/web assets come from `bun run icons:build`; do not edit generated output by hand.
 
 ## Setup Commands
@@ -38,7 +37,6 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 
 - Prefer small, direct modules over abstraction layers.
 - Keep one canonical implementation path; remove dead or duplicate code when replacing behavior.
-- Keep Astro pages mostly native Astro and browser JavaScript. Do not add React to `apps/web`.
 - Keep the website minimal: compact type, simple ruled sections, no nested card layouts.
 - Keep package APIs ESM-only and generated from the canonical icon source.
 

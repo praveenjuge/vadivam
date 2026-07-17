@@ -79,8 +79,8 @@ jobs:
       - name: Commit normalized icons
         id: normalize
         run: |
-          if [ -n "$(git status --porcelain icons apps/web/public/preview.png apps/web/public/og.png)" ]; then
-            git add icons apps/web/public/preview.png apps/web/public/og.png
+          if [ -n "$(git status --porcelain icons apps/docs/public/preview.png apps/docs/public/og.png)" ]; then
+            git add icons apps/docs/public/preview.png apps/docs/public/og.png
             git commit -m "chore(icons): normalize via icons:optimize"
             echo "committed=true" >> "$GITHUB_OUTPUT"
           else

@@ -30,9 +30,9 @@ const solidDist = path.join(root, "packages/vadivam-solid/dist");
 const angularPackage = path.join(root, "packages/vadivam-angular");
 const astroDist = path.join(root, "packages/vadivam-astro/dist");
 const preactDist = path.join(root, "packages/vadivam-preact/dist");
-const webIconsDir = path.join(root, "apps/web/public/icons");
-const previewPath = path.join(root, "apps/web/public/preview.png");
-const ogPath = path.join(root, "apps/web/public/og.png");
+const webIconsDir = path.join(root, "apps/docs/public/icons");
+const previewPath = path.join(root, "apps/docs/public/preview.png");
+const ogPath = path.join(root, "apps/docs/public/og.png");
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
@@ -285,11 +285,12 @@ async function buildRawPackage(icons) {
       `import type { IconNode } from "../types.js";\n/** @name ${icon.name}\n * @description Vadivam SVG icon node.\n * @see https://vadivam.praveenjuge.com/icons/${icon.name}\n */\ndeclare const ${icon.componentName}: IconNode;\nexport default ${icon.componentName};\n`,
     );
   }
-  const iconNameType = icons.map((icon) => JSON.stringify(icon.name)).join(" | ");
+  const iconNameType = icons
+    .map((icon) => JSON.stringify(icon.name))
+    .join(" | ");
   const rawImports = icons
     .map(
-      (icon) =>
-        `import ${icon.componentName} from "./icons/${icon.name}.js";`,
+      (icon) => `import ${icon.componentName} from "./icons/${icon.name}.js";`,
     )
     .join("\n");
   const rawNamedExports = icons
@@ -396,7 +397,9 @@ export default createIcons;
 async function buildReactPackage(icons) {
   await rm(reactDist, { recursive: true, force: true });
   await mkdir(path.join(reactDist, "icons"), { recursive: true });
-  const iconNameType = icons.map((icon) => JSON.stringify(icon.name)).join(" | ");
+  const iconNameType = icons
+    .map((icon) => JSON.stringify(icon.name))
+    .join(" | ");
   await writeFile(
     path.join(reactDist, "types.d.ts"),
     `import type * as React from "react";\nexport type SVGElementType = "circle" | "ellipse" | "g" | "line" | "path" | "polygon" | "polyline" | "rect";\nexport type IconNode = readonly [tag: SVGElementType, attrs: Record<string, string>][];\nexport type SVGAttributes = Partial<React.SVGProps<SVGSVGElement>>;\nexport interface VadivamProps extends Omit<React.SVGProps<SVGSVGElement>, "color"> {\n  size?: string | number;\n  color?: string;\n  strokeWidth?: string | number;\n  absoluteStrokeWidth?: boolean;\n  title?: string;\n}\nexport type VadivamIcon = React.ForwardRefExoticComponent<Omit<VadivamProps, "ref"> & React.RefAttributes<SVGSVGElement>>;\nexport type IconName = ${iconNameType};\n`,
@@ -452,14 +455,12 @@ async function buildReactPackage(icons) {
     .join(",\n");
   const dynamicTypes = icons
     .map(
-      (icon) =>
-        `  readonly "${icon.name}": () => Promise<DynamicIconModule>;`,
+      (icon) => `  readonly "${icon.name}": () => Promise<DynamicIconModule>;`,
     )
     .join("\n");
   const reactImports = icons
     .map(
-      (icon) =>
-        `import ${icon.componentName} from "./icons/${icon.name}.js";`,
+      (icon) => `import ${icon.componentName} from "./icons/${icon.name}.js";`,
     )
     .join("\n");
   const reactIconEntries = icons
@@ -551,7 +552,6 @@ export async function buildPreview() {
   );
 }
 
-
 function fnv1aHash(value) {
   let hash = 2166136261 >>> 0;
   for (let i = 0; i < value.length; i++) {
@@ -626,10 +626,7 @@ export async function buildOg() {
       index,
       x: offsetX + col * stepX,
       y: offsetY + row * stepY,
-      distance: Math.hypot(
-        col - (columns - 1) / 2,
-        row - (rows - 1) / 2,
-      ),
+      distance: Math.hypot(col - (columns - 1) / 2, row - (rows - 1) / 2),
     };
   });
   const skippedPositions = new Set(
@@ -642,8 +639,9 @@ export async function buildOg() {
     (position) => !skippedPositions.has(position.index),
   );
   const uniqueSvgs = shuffleUnique(innerSvgs, random);
-  const tiles = visiblePositions.map(({ x, y }, index) =>
-    `<g transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${scale.toFixed(4)})">${uniqueSvgs[index]}</g>`,
+  const tiles = visiblePositions.map(
+    ({ x, y }, index) =>
+      `<g transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${scale.toFixed(4)})">${uniqueSvgs[index]}</g>`,
   );
 
   const composite = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" stroke-linecap="round" stroke-linejoin="round">
