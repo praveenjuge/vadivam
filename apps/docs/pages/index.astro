@@ -121,7 +121,7 @@ const structuredData = site
         {
           icons.map((icon) => (
             <a
-              class="icon-card group relative grid aspect-square min-w-0 cursor-pointer place-items-center rounded-md text-foreground no-underline hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-[current=true]:bg-accent/10 aria-[current=true]:text-accent aria-[current=true]:ring-1 aria-[current=true]:ring-accent"
+              class="icon-card group relative grid aspect-square min-w-0 cursor-pointer place-items-center rounded-md text-foreground no-underline hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&>span]:absolute [&>span]:inset-0 [&>span]:grid [&>span]:cursor-pointer [&>span]:place-items-center aria-[current=true]:bg-accent/10 aria-[current=true]:text-accent aria-[current=true]:ring-1 aria-[current=true]:ring-accent"
               href={`/icons/${icon.name}/`}
               data-name={icon.name}
               data-component={icon.componentName}
