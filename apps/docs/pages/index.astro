@@ -1,8 +1,8 @@
 ---
 import PageLayout from "blume/components/layout/PageLayout.astro";
 import Icon from "blume/components/Icon.astro";
-import Badge from "blume/components/content/Badge.astro";
 import GithubInfo from "blume/components/content/GithubInfo.astro";
+import Tooltip from "blume/components/content/Tooltip.astro";
 import data from "blume:data";
 import { icons } from "vadivam/manifest";
 
@@ -22,7 +22,6 @@ const links = [
   { href: "https://www.npmjs.com/package/vadivam-svelte", label: "Svelte", title: "vadivam-svelte", icon: npmIcon },
   { href: "https://github.com/praveenjuge/vadivam", label: "GitHub", title: "GitHub repository", icon: githubIcon },
   { href: "https://github.com/praveenjuge/vadivam/issues", label: "Issues", title: "Issues", icon: githubIcon },
-  { href: "https://github.com/praveenjuge/vadivam/releases", label: "Releases", title: "Releases and downloads", icon: githubIcon },
   { href: "https://twitter.com/praveenjuge", label: "Twitter", title: "Praveen Juge on Twitter", icon: twitterIcon },
 ];
 
@@ -129,11 +128,9 @@ const structuredData = site
               data-svg={icon.svg}
               aria-label={`View ${icon.componentName} icon`}
             >
-              <span class="grid place-items-center [&>svg]:size-6" aria-hidden="true" set:html={icon.svg} />
-              <span
-                class="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-1.5 py-0.5 text-[0.68rem] text-background group-hover:block"
-                aria-hidden="true"
-              >{icon.name}</span>
+              <Tooltip tip={icon.name}>
+                <span class="grid place-items-center [&>svg]:size-6" aria-hidden="true" set:html={icon.svg} />
+              </Tooltip>
             </a>
           ))
         }
@@ -161,7 +158,6 @@ const structuredData = site
               data-action="copy-name"
               aria-label="Copy icon name"
             ><Icon icon="copy" size={13} /></button>
-            <Badge size="sm" variant="accent" class="ml-1">24px outline</Badge>
           </div>
           <div class="flex items-center gap-1">
             <p class="m-0 truncate font-mono text-xs text-muted-foreground" id="drawerComponent"></p>

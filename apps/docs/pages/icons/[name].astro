@@ -2,13 +2,11 @@
 import PageLayout from "blume/components/layout/PageLayout.astro";
 import Breadcrumbs from "blume/components/layout/Breadcrumbs.astro";
 import CodeBlock from "blume/components/content/CodeBlock.astro";
-import Badge from "blume/components/content/Badge.astro";
-import Callout from "blume/components/content/Callout.astro";
-import Tabs from "blume/components/content/Tabs.astro";
+import CodeGroup from "blume/components/content/CodeGroup.astro";
+import Expandable from "blume/components/content/Expandable.astro";
 import Tab from "blume/components/content/Tab.astro";
 import Card from "blume/components/content/Card.astro";
 import CardGroup from "blume/components/content/CardGroup.astro";
-import Panel from "blume/components/content/Panel.astro";
 import Frame from "blume/components/content/Frame.astro";
 import Icon from "blume/components/Icon.astro";
 import data from "blume:data";
@@ -102,14 +100,7 @@ const structuredData = site
     <Breadcrumbs crumbs={[{ label: "<- All Icons", route: "/" }, { label: c }]} wide />
 
     <header class="flex flex-wrap items-center justify-between gap-5">
-      <div class="min-w-0">
-        <h1 class="m-0 text-2xl font-semibold tracking-[-0.02em]">{c}</h1>
-        <div class="mt-3 flex flex-wrap items-center gap-1.5">
-          <Badge size="sm" variant="accent">24 x 24</Badge>
-          <Badge size="sm">Outline</Badge>
-          <Badge size="sm">Stroke 2</Badge>
-        </div>
-      </div>
+      <h1 class="m-0 min-w-0 text-2xl font-semibold tracking-[-0.02em]">{c}</h1>
       <div class="flex flex-none flex-wrap gap-1.5">
         <button
           class="snippet-copy inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -129,7 +120,7 @@ const structuredData = site
     </Frame>
 
     <h2 class={sectionClass}>Install</h2>
-    <Tabs>
+    <CodeGroup>
       {
         install.map((item) => (
           <Tab title={item.title}>
@@ -137,10 +128,10 @@ const structuredData = site
           </Tab>
         ))
       }
-    </Tabs>
+    </CodeGroup>
 
     <h2 class={sectionClass}>Use it in your framework</h2>
-    <Tabs>
+    <CodeGroup>
       {
         usage.map((item) => (
           <Tab title={item.title}>
@@ -148,11 +139,19 @@ const structuredData = site
           </Tab>
         ))
       }
-    </Tabs>
+    </CodeGroup>
 
     <h2 class={sectionClass}>Raw SVG & assets</h2>
-    <CodeBlock lang="html" code={svg} icons={false} />
-    <CodeBlock lang="ts" code={`import iconUrl from "vadivam/icons/${icon.fileName}";`} icons={false} />
+    <CodeGroup>
+      <Tab title="Raw SVG">
+        <Expandable title="View raw SVG">
+          <CodeBlock lang="html" code={svg} icons={false} />
+        </Expandable>
+      </Tab>
+      <Tab title="Asset import">
+        <CodeBlock lang="ts" code={`import iconUrl from "vadivam/icons/${icon.fileName}";`} icons={false} />
+      </Tab>
+    </CodeGroup>
 
     <h2 class={sectionClass}>Keep exploring</h2>
     <CardGroup cols={3}>
