@@ -3,6 +3,7 @@ dist
 .DS_Store
 *.tgz
 .playwright-mcp
+.wrangler
 
 packages/*/dist
 packages/vadivam-angular/.generated
