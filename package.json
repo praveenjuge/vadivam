@@ -9,6 +9,8 @@
     "packages/*"
   ],
   "scripts": {
+    "prepare": "bun run hooks:install",
+    "hooks:install": "git config core.hooksPath .githooks",
     "build": "bun run icons:build && bun run --cwd apps/vadivam-internal build && bun run --cwd apps/docs build",
     "dev": "bun run icons:build && bun run --cwd apps/docs dev",
     "docs:build": "bun run icons:build && bun run --cwd apps/docs build",

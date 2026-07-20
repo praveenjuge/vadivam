@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+
+if ! bun run icons:check; then
+  echo "Icon validation failed. Run 'bun run icons:optimize', review the changes, and stage them again." >&2
+  exit 1
+fi
