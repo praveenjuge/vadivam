@@ -26,7 +26,9 @@
     "javascript"
   ],
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/font/vadivam.css"
+  ],
   "files": [
     "dist",
     "README.md",
@@ -49,6 +51,14 @@
       "import": "./dist/icons/*.js",
       "default": "./dist/icons/*.js"
     },
+    "./strings/*": {
+      "types": "./dist/strings/*.d.ts",
+      "import": "./dist/strings/*.js",
+      "default": "./dist/strings/*.js"
+    },
+    "./sprite.svg": "./dist/sprite.svg",
+    "./font/vadivam.css": "./dist/font/vadivam.css",
+    "./font/vadivam.woff2": "./dist/font/vadivam.woff2",
     "./package.json": "./package.json"
   },
   "publishConfig": {

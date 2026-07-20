@@ -90,5 +90,36 @@ for (const { name, directory, description, documentation, keywords, readmeSearch
   if (!files.includes("README.md") || !files.includes("LICENSE")) {
     throw new Error(`${name}: npm tarball is missing README.md or LICENSE`);
   }
+  if (name === "vadivam") {
+    if (
+      JSON.stringify(manifest.sideEffects) !==
+      JSON.stringify(["./dist/font/vadivam.css"])
+    ) {
+      throw new Error(`${name}: font CSS must be preserved as a side effect`);
+    }
+    const requiredStaticAssets = [
+      "dist/font/vadivam.css",
+      "dist/font/vadivam.woff2",
+      "dist/sprite.svg",
+      "dist/strings/activity.d.ts",
+      "dist/strings/activity.js",
+    ];
+    for (const asset of requiredStaticAssets) {
+      if (!files.includes(asset)) {
+        throw new Error(`${name}: npm tarball is missing ${asset}`);
+      }
+    }
+    const forbiddenStaticAsset = files.find((file) =>
+      /(?:^|\/)(?:\.cache|cache|preview|tmp|temp)(?:\/|\.|$)|\.(?:ttf|eot|woff|svgfont)$/i.test(
+        file,
+      ) ||
+      (file.startsWith("dist/font/") &&
+        file !== "dist/font/vadivam.css" &&
+        file !== "dist/font/vadivam.woff2"),
+    );
+    if (forbiddenStaticAsset) {
+      throw new Error(`${name}: npm tarball contains unexpected font asset ${forbiddenStaticAsset}`);
+    }
+  }
   console.log(`Validated ${name}@${rootVersion} (${files.length} files).`);
 }

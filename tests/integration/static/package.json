@@ -1,0 +1,14 @@
+{
+  "name": "vadivam-integration-static",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "vadivam": "file:../../../packages/vadivam"
+  },
+  "devDependencies": {
+    "vite": "8.1.5"
+  }
+}

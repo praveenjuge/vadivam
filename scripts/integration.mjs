@@ -1,6 +1,7 @@
 // Builds real framework applications against materialized local packages and
 // verifies the six browser packages from their production output.
 import { spawn, spawnSync } from "node:child_process";
+import { once } from "node:events";
 import { cpSync, existsSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,6 +12,7 @@ const integrationDir = path.join(root, "tests", "integration");
 const commandTimeoutMs = 5 * 60 * 1000;
 const browserLaunchTimeoutMs = 60 * 1000;
 const allApps = [
+  { name: "static", packages: ["vadivam"], output: "dist", verifier: "static-assets" },
   { name: "nextjs", packages: ["vadivam-react"] },
   { name: "tanstack-start", packages: ["vadivam-react"] },
   { name: "vite-react", packages: ["vadivam-react"] },
@@ -91,7 +93,7 @@ async function verifyBrowser(app, cwd, index) {
   const server = spawn(
     "bun",
     [path.join(root, "scripts/serve-dist.mjs"), path.join(cwd, app.output), String(port)],
-    { cwd: root, stdio: "pipe" },
+    { cwd: root, stdio: "inherit" },
   );
   let browser;
   try {
@@ -103,7 +105,57 @@ async function verifyBrowser(app, cwd, index) {
       if (message.type() === "error") errors.push(message.text());
     });
     page.on("pageerror", (error) => errors.push(error.message));
+    page.on("requestfailed", (request) =>
+      errors.push(`${request.url()}: ${request.failure()?.errorText ?? "request failed"}`),
+    );
     await page.goto(url, { waitUntil: "networkidle" });
+    if (app.verifier === "static-assets") {
+      await page.evaluate(() => document.fonts.ready);
+      await page.waitForFunction(() => {
+        const stringIcon = document.querySelector("#string");
+        const spriteIcon = document.querySelector("#sprite-use");
+        return (
+          document.fonts.check('24px "Vadivam Icons"') &&
+          stringIcon?.querySelector("path, circle, line, polyline, polygon, rect, ellipse") &&
+          spriteIcon?.getBBox().width > 0 &&
+          spriteIcon?.getBBox().height > 0
+        );
+      });
+      const result = await page.evaluate(() => {
+        const stringIcon = document.querySelector("#string");
+        const spriteIcon = document.querySelector("#sprite-use");
+        const fontIcon = document.querySelector("#font");
+        const fontStyle = getComputedStyle(fontIcon);
+        const pseudo = getComputedStyle(fontIcon, "::before").content.replace(/^['\"]|['\"]$/g, "");
+        return {
+          fontFamily: fontStyle.fontFamily,
+          fontGlyph: pseudo.codePointAt(0),
+          fontHeight: fontIcon.getBoundingClientRect().height,
+          fontLoaded: document.fonts.check('24px "Vadivam Icons"'),
+          fontWidth: fontIcon.getBoundingClientRect().width,
+          spriteHeight: spriteIcon.getBBox().height,
+          spriteWidth: spriteIcon.getBBox().width,
+          stringGeometry: stringIcon.querySelectorAll(
+            "path, circle, line, polyline, polygon, rect, ellipse",
+          ).length,
+        };
+      });
+      if (errors.length) throw new Error(`${app.name}: ${errors.join(" | ")}`);
+      if (
+        !result.fontLoaded ||
+        !result.fontFamily.includes("Vadivam Icons") ||
+        result.fontGlyph !== 0xe004 ||
+        result.fontWidth <= 0 ||
+        result.fontHeight <= 0 ||
+        result.spriteWidth <= 0 ||
+        result.spriteHeight <= 0 ||
+        result.stringGeometry <= 0
+      ) {
+        throw new Error(`${app.name}: invalid static assets ${JSON.stringify(result)}`);
+      }
+      console.log(`Browser smoke passed for ${app.name}.`);
+      return;
+    }
     await page.waitForFunction(() =>
       ["static", "direct", "dynamic", "factory"].every(
         (id) => document.querySelector(`#${id}`)?.children.length,
@@ -145,7 +197,11 @@ async function verifyBrowser(app, cwd, index) {
     console.log(`Browser smoke passed for ${app.name}.`);
   } finally {
     await browser?.close();
-    server.kill("SIGTERM");
+    if (server.exitCode === null && server.signalCode === null) {
+      const exited = once(server, "exit");
+      server.kill("SIGTERM");
+      await exited;
+    }
   }
 }
 
