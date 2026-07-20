@@ -91,6 +91,12 @@ for (const { name, directory, description, documentation, keywords, readmeSearch
     throw new Error(`${name}: npm tarball is missing README.md or LICENSE`);
   }
   if (name === "vadivam") {
+    if (
+      JSON.stringify(manifest.sideEffects) !==
+      JSON.stringify(["./dist/font/vadivam.css"])
+    ) {
+      throw new Error(`${name}: font CSS must be preserved as a side effect`);
+    }
     const requiredStaticAssets = [
       "dist/font/vadivam.css",
       "dist/font/vadivam.woff2",
