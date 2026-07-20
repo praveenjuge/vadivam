@@ -1,6 +1,7 @@
 // Builds real framework applications against materialized local packages and
 // verifies the six browser packages from their production output.
 import { spawn, spawnSync } from "node:child_process";
+import { once } from "node:events";
 import { cpSync, existsSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -92,7 +93,7 @@ async function verifyBrowser(app, cwd, index) {
   const server = spawn(
     "bun",
     [path.join(root, "scripts/serve-dist.mjs"), path.join(cwd, app.output), String(port)],
-    { cwd: root, stdio: "pipe" },
+    { cwd: root, stdio: "inherit" },
   );
   let browser;
   try {
@@ -196,7 +197,11 @@ async function verifyBrowser(app, cwd, index) {
     console.log(`Browser smoke passed for ${app.name}.`);
   } finally {
     await browser?.close();
-    server.kill("SIGTERM");
+    if (server.exitCode === null && server.signalCode === null) {
+      const exited = once(server, "exit");
+      server.kill("SIGTERM");
+      await exited;
+    }
   }
 }
 
