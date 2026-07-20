@@ -1,6 +1,8 @@
 ---
 title: React
-description: Render tree-shakeable Vadivam SVG icon components in React applications.
+description: Use free, open-source Vadivam SVG icon components with tree-shakeable imports in React applications.
+seo:
+  title: React Icons – 24px Outline Icon Components
 ---
 
 `vadivam-react` supports React 18 and newer and renders native `<svg>` elements.

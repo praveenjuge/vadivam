@@ -1,6 +1,8 @@
 # vadivam
 
-Pixel-perfect 24px outline SVG icons with tree-shakeable ESM imports and metadata.
+Tree-shakeable 24px outline SVG icons for JavaScript, with raw assets and metadata.
+
+[Browse icons](https://vadivam.praveenjuge.com) · [Core docs](https://vadivam.praveenjuge.com/docs/core) · [Source](https://github.com/praveenjuge/vadivam/tree/main/packages/vadivam) · [GitHub](https://github.com/praveenjuge/vadivam)
 
 [![npm version](https://img.shields.io/npm/v/vadivam?style=flat-square&color=111)](https://www.npmjs.com/package/vadivam)
 [![downloads](https://img.shields.io/npm/dw/vadivam?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam)
@@ -35,4 +37,6 @@ createIcons({ icons });
 - DOM replacement with configurable attributes, roots, and templates
 - Complete icon metadata from `vadivam/manifest`
 
-[Browse icons](https://vadivam.praveenjuge.com) · [GitHub](https://github.com/praveenjuge/vadivam) · [Issues](https://github.com/praveenjuge/vadivam/issues)
+Package family: [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact)
+
+[Issues](https://github.com/praveenjuge/vadivam/issues)

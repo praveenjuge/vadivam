@@ -1,6 +1,8 @@
 # vadivam-svelte
 
-Pixel-perfect 24px outline icon components for Svelte with tree-shakeable imports.
+Tree-shakeable 24px outline SVG icons for Svelte.
+
+[Browse icons](https://vadivam.praveenjuge.com) · [Svelte docs](https://vadivam.praveenjuge.com/docs/svelte) · [Source](https://github.com/praveenjuge/vadivam/tree/main/packages/vadivam-svelte) · [GitHub](https://github.com/praveenjuge/vadivam)
 
 [![npm version](https://img.shields.io/npm/v/vadivam-svelte?style=flat-square&color=111)](https://www.npmjs.com/package/vadivam-svelte)
 [![downloads](https://img.shields.io/npm/dw/vadivam-svelte?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam-svelte)
@@ -24,4 +26,6 @@ npm install vadivam-svelte
 - Tree-shakeable named and per-icon imports
 - Provider and typed dynamic icon APIs
 
-[Browse icons](https://vadivam.praveenjuge.com) · [GitHub](https://github.com/praveenjuge/vadivam) · [Issues](https://github.com/praveenjuge/vadivam/issues)
+Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact)
+
+[Issues](https://github.com/praveenjuge/vadivam/issues)

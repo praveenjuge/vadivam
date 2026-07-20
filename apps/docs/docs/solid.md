@@ -1,6 +1,8 @@
 ---
 title: Solid
-description: Render Vadivam SVG icon components and providers in Solid applications.
+description: Use free, open-source Vadivam SVG icon components and providers in Solid applications.
+seo:
+  title: Solid Icons – 24px Outline Icon Components
 ---
 
 `vadivam-solid` supports Solid 1.9 and publishes Solid-aware source conditions alongside standard ESM output.

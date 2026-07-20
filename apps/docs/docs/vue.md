@@ -1,6 +1,8 @@
 ---
 title: Vue
-description: Render Vadivam SVG components with shared defaults and dynamic names in Vue 3.
+description: Use free, open-source Vadivam SVG icon components with shared defaults and dynamic names in Vue 3.
+seo:
+  title: Vue Icons – 24px Outline Icon Components
 ---
 
 `vadivam-vue` supports Vue 3.5 and renders native SVG components.

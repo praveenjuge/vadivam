@@ -32,7 +32,7 @@ function getPackResult(packed, packageName) {
   return result;
 }
 
-for (const { name, directory, description, keywords } of publishablePackages) {
+for (const { name, directory, description, documentation, keywords, readmeSearchPhrase } of publishablePackages) {
   const cwd = path.join(root, directory);
   const manifest = JSON.parse(readFileSync(path.join(cwd, "package.json"), "utf8"));
   if (manifest.name !== name) throw new Error(`${directory}: expected name ${name}`);
@@ -58,6 +58,25 @@ for (const { name, directory, description, keywords } of publishablePackages) {
     }
   }
   if (!existsSync(path.join(cwd, "dist"))) throw new Error(`${name}: missing dist`);
+  const readme = readFileSync(path.join(cwd, "README.md"), "utf8");
+  const requiredReadmeContent = [
+    `# ${name}`,
+    readmeSearchPhrase,
+    packageMetadata.homepage,
+    `${packageMetadata.homepage}${documentation}`,
+    `https://github.com/praveenjuge/vadivam/tree/main/${directory}`,
+    "Package family:",
+  ];
+  for (const expected of requiredReadmeContent) {
+    if (!readme.includes(expected)) {
+      throw new Error(`${name}: README is missing ${expected}`);
+    }
+  }
+  for (const other of publishablePackages.filter((candidate) => candidate.name !== name)) {
+    if (!readme.includes(`https://www.npmjs.com/package/${other.name}`)) {
+      throw new Error(`${name}: README does not link package family member ${other.name}`);
+    }
+  }
   run("bun", ["x", "publint", "."], cwd);
   const packed = JSON.parse(run("npm", ["pack", "--dry-run", "--json"], cwd, true));
   const packResult = getPackResult(packed, name);

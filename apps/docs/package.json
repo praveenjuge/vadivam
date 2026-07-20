@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "blume dev",
-    "build": "blume build",
+    "build": "blume build && bun ../../scripts/complete-sitemap.mjs",
     "check": "blume check",
     "validate": "blume validate",
     "doctor": "blume doctor"

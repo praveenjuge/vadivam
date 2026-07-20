@@ -1,6 +1,8 @@
 # vadivam-astro
 
-Pixel-perfect 24px outline icon components for Astro with tree-shakeable imports.
+Tree-shakeable 24px outline SVG icons for Astro.
+
+[Browse icons](https://vadivam.praveenjuge.com) · [Astro docs](https://vadivam.praveenjuge.com/docs/astro) · [Source](https://github.com/praveenjuge/vadivam/tree/main/packages/vadivam-astro) · [GitHub](https://github.com/praveenjuge/vadivam)
 
 [![npm version](https://img.shields.io/npm/v/vadivam-astro?style=flat-square&color=111)](https://www.npmjs.com/package/vadivam-astro)
 [![downloads](https://img.shields.io/npm/dw/vadivam-astro?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam-astro)
@@ -23,4 +25,6 @@ import { Activity } from "vadivam-astro";
 - Tree-shakeable named and per-icon imports
 - Static components and typed dynamic icon APIs
 
-[Browse icons](https://vadivam.praveenjuge.com) · [GitHub](https://github.com/praveenjuge/vadivam) · [Issues](https://github.com/praveenjuge/vadivam/issues)
+Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Preact](https://www.npmjs.com/package/vadivam-preact)
+
+[Issues](https://github.com/praveenjuge/vadivam/issues)

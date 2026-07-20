@@ -1,6 +1,8 @@
 # vadivam-react-native
 
-Pixel-perfect 24px outline icons for React Native and Expo, powered by react-native-svg.
+Tree-shakeable 24px outline icons for React Native and Expo, powered by react-native-svg.
+
+[Browse icons](https://vadivam.praveenjuge.com) · [React Native docs](https://vadivam.praveenjuge.com/docs/react-native) · [Source](https://github.com/praveenjuge/vadivam/tree/main/packages/vadivam-react-native) · [GitHub](https://github.com/praveenjuge/vadivam)
 
 [![npm version](https://img.shields.io/npm/v/vadivam-react-native?style=flat-square&color=111)](https://www.npmjs.com/package/vadivam-react-native)
 [![downloads](https://img.shields.io/npm/dw/vadivam-react-native?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam-react-native)
@@ -42,4 +44,6 @@ import { DynamicIcon } from "vadivam-react-native/dynamic";
 - Tree-shakeable named, aliased, and per-icon imports
 - Provider, custom-node, and typed dynamic APIs
 
-[Browse icons](https://vadivam.praveenjuge.com) · [GitHub](https://github.com/praveenjuge/vadivam) · [Issues](https://github.com/praveenjuge/vadivam/issues)
+Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact)
+
+[Issues](https://github.com/praveenjuge/vadivam/issues)

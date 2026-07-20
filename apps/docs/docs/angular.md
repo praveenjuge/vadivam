@@ -1,6 +1,8 @@
 ---
 title: Angular
-description: Use Vadivam standalone SVG directives, configuration providers, and dynamic names in Angular.
+description: Use free, open-source Vadivam standalone SVG icon directives, configuration providers, and dynamic names in Angular.
+seo:
+  title: Angular Icons – 24px Outline Icon Directives
 ---
 
 `vadivam-angular` supports Angular 22. Unlike the component packages, each icon is a standalone directive applied to an `<svg>` element.

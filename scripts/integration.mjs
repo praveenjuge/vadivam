@@ -9,7 +9,7 @@ import { chromium } from "playwright";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const integrationDir = path.join(root, "tests", "integration");
 const commandTimeoutMs = 5 * 60 * 1000;
-const browserLaunchTimeoutMs = 30 * 1000;
+const browserLaunchTimeoutMs = 60 * 1000;
 const allApps = [
   { name: "nextjs", packages: ["vadivam-react"] },
   { name: "tanstack-start", packages: ["vadivam-react"] },

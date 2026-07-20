@@ -1,6 +1,6 @@
 # Vadivam
 
-Pixel-perfect 24px outline icons for refined interfaces.
+Vadivam is a free, open-source library of 240 pixel-perfect 24px outline SVG icons for React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.
 
 [![npm version](https://img.shields.io/npm/v/vadivam?style=flat-square&color=111)](https://www.npmjs.com/package/vadivam)
 [![downloads](https://img.shields.io/npm/dw/vadivam?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam)

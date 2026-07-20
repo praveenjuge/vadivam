@@ -1,6 +1,8 @@
 ---
 title: Astro
-description: Render static Vadivam SVG icon components in Astro 7 projects.
+description: Use free, open-source Vadivam static SVG icon components in Astro 7 projects.
+seo:
+  title: Astro Icons – 24px Outline Icon Components
 ---
 
 `vadivam-astro` supports Astro 7 and renders native SVG during Astro rendering. It does not require a client framework.

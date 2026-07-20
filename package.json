@@ -31,13 +31,14 @@
     "test:vadivam-react-native": "bun run icons:build && publint packages/vadivam-react-native && bun run test:react-native:unit",
     "test:integration": "bun run icons:build && bun scripts/integration.mjs",
     "test:frameworks:unit": "bun test tests/frameworks/*.test.mjs",
+    "test:seo": "bun run docs:build && bun test tests/seo.test.mjs tests/release-notes.test.mjs",
     "packages:validate": "bun scripts/packages-check.mjs",
     "release:validate": "bun scripts/validate-versions.mjs",
     "release:publish": "bun scripts/publish-packages.mjs",
     "packages:check": "bun run test:vadivam && bun run test:vadivam-react && bun run test:vadivam-react-native && bun run test:frameworks:unit && bun run packages:validate",
     "deploy": "bun run build && wrangler deploy",
     "deploy:worker": "wrangler deploy",
-    "test": "bun run icons:test && bun run test:vadivam-internal && bun run packages:check && bun run --cwd apps/docs check && bun run --cwd apps/docs validate && bun run --cwd apps/docs build && bun run test:integration"
+    "test": "bun run icons:test && bun run test:vadivam-internal && bun run packages:check && bun run --cwd apps/docs check && bun run --cwd apps/docs validate && bun run test:seo && bun run test:integration"
   },
   "dependencies": {
     "vadivam": "workspace:*",

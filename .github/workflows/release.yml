@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -64,6 +66,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          icon_count=$(find icons -type f -name '*.svg' | wc -l | tr -d ' ')
-          notes="Ships ${icon_count} Vadivam icons across [SVG](https://www.npmjs.com/package/vadivam), [React](https://www.npmjs.com/package/vadivam-react), [React Native](https://www.npmjs.com/package/vadivam-react-native), [Vue](https://www.npmjs.com/package/vadivam-vue), [Svelte](https://www.npmjs.com/package/vadivam-svelte), [Solid](https://www.npmjs.com/package/vadivam-solid), [Angular](https://www.npmjs.com/package/vadivam-angular), [Astro](https://www.npmjs.com/package/vadivam-astro), and [Preact](https://www.npmjs.com/package/vadivam-preact)."
-          gh release create "$TAG_NAME" --title "$TAG_NAME" --notes "$notes" --generate-notes --verify-tag
+          previous_tag=$(git describe --tags --abbrev=0 "$TAG_NAME^" 2>/dev/null || true)
+          bun scripts/release-notes.mjs "$previous_tag" "$TAG_NAME" > release-notes.md
+          gh release create "$TAG_NAME" --title "$TAG_NAME" --notes-file release-notes.md --generate-notes --verify-tag

@@ -1,6 +1,8 @@
 ---
 title: Preact
-description: Render Vadivam SVG icon components, providers, and runtime names in Preact.
+description: Use free, open-source Vadivam SVG icon components, providers, and runtime names in Preact.
+seo:
+  title: Preact Icons – 24px Outline Icon Components
 ---
 
 `vadivam-preact` supports Preact 10.29 and renders native SVG components.

@@ -94,7 +94,7 @@ const structuredData = site
   searchEnabled={config.search.enabled}
   siteUrl={config.site}
   ogEnabled={config.og.enabled}
-  page={{ title: pageTitle, description: pageDescription }}
+  page={{ title: pageTitle, description: pageDescription, route: `/icons/${icon.name}` }}
 >
   <main id="iconDetail" class="mx-auto w-full max-w-4xl px-4 pt-4 pb-16 md:px-6">
     <Breadcrumbs crumbs={[{ label: "<- All Icons", route: "/" }, { label: c }]} wide />
@@ -155,13 +155,13 @@ const structuredData = site
 
     <h2 class={sectionClass}>Keep exploring</h2>
     <CardGroup cols={3}>
-      <Card title="Usage & styling" href="/docs/usage/" icon="palette">
+      <Card title="Usage & styling" href="/docs/usage" icon="palette">
         Size, color, stroke width, and accessibility across every framework.
       </Card>
-      <Card title="Dynamic icons" href="/docs/dynamic-icons/" icon="shuffle">
+      <Card title="Dynamic icons" href="/docs/dynamic-icons" icon="shuffle">
         Load an icon by name when it comes from data at runtime.
       </Card>
-      <Card title="Contributing" href="/docs/contributing/" icon="git-pull-request">
+      <Card title="Contributing" href="/docs/contributing" icon="git-pull-request">
         Add or refine icons and follow the outline guidelines.
       </Card>
     </CardGroup>
