@@ -130,7 +130,7 @@ describe("font codepoints", () => {
     try {
       await writeFile(
         fixturePath,
-        `${JSON.stringify({ activity: privateUseStart, removed: privateUseStart + 1 })}\n`,
+        `${JSON.stringify({ activity: privateUseStart, removed: privateUseStart + 2 })}\n`,
       );
       await allocateFontCodepoints(
         [{ name: "activity" }, { name: "search" }],
@@ -139,8 +139,8 @@ describe("font codepoints", () => {
       const registry = await readFontCodepoints(fixturePath);
       expect(registry).toEqual({
         activity: privateUseStart,
-        removed: privateUseStart + 1,
-        search: privateUseStart + 2,
+        removed: privateUseStart + 2,
+        search: privateUseStart + 3,
       });
     } finally {
       await rm(directory, { recursive: true, force: true });
