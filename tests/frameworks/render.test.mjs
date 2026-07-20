@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { createRequire } from "node:module";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { h as preactH } from "preact";
-import renderPreact from "preact-render-to-string";
 import { createComponent as createSolidComponent } from "solid-js";
 import { renderToString as renderSolid } from "solid-js/web";
 import { createSSRApp, h as vueH } from "vue";
@@ -17,6 +19,18 @@ import {
   Activity as VueActivity,
   VadivamProvider as VueProvider,
 } from "../../packages/vadivam-vue/dist/index.js";
+
+const rootRequire = createRequire(import.meta.url);
+const preactRequire = createRequire(rootRequire.resolve("preact"));
+const preactRendererDirectory = path.resolve(
+  path.dirname(preactRequire.resolve("preact-render-to-string")),
+  "..",
+);
+const renderPreact = (
+  await import(
+    pathToFileURL(path.join(preactRendererDirectory, "dist/index.mjs"))
+  )
+).default;
 
 function assertMarkup(markup) {
   expect(markup).toContain("<svg");

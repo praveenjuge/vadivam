@@ -17,6 +17,7 @@ npm install vadivam
 ```js
 import { Activity, createElement } from "vadivam";
 import activitySvgUrl from "vadivam/icons/activity.svg";
+import activitySvg from "vadivam/strings/activity";
 
 const svg = createElement(Activity, { width: 20, height: 20 });
 ```
@@ -34,6 +35,7 @@ createIcons({ icons });
 ```
 
 - Tree-shakeable icon nodes and direct SVG asset imports
+- Per-icon SVG strings, a complete SVG sprite, and an optional WOFF2 icon font
 - DOM replacement with configurable attributes, roots, and templates
 - Complete icon metadata from `vadivam/manifest`
 

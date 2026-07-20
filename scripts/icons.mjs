@@ -18,6 +18,10 @@ import { buildReactNativePackage } from "./generators/react-native.mjs";
 import { buildSolidPackage } from "./generators/solid.mjs";
 import { buildSveltePackage } from "./generators/svelte.mjs";
 import { buildVuePackage } from "./generators/vue.mjs";
+import {
+  allocateFontCodepoints,
+  buildStaticAssets,
+} from "./generators/static.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const iconsDir = path.join(root, "icons");
@@ -33,6 +37,7 @@ const preactDist = path.join(root, "packages/vadivam-preact/dist");
 const webIconsDir = path.join(root, "apps/docs/public/icons");
 const previewPath = path.join(root, "apps/docs/public/preview.png");
 const ogPath = path.join(root, "apps/docs/public/og.png");
+const fontCodepointsPath = path.join(root, "scripts/font-codepoints.json");
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
@@ -103,6 +108,13 @@ function pascalCase(name) {
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+export function validateIconName(name, file = `${name}.svg`) {
+  assert(
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name),
+    `${file}: icon filename must use lowercase kebab-case`,
+  );
 }
 
 function parseSvg(svg, file = "inline.svg") {
@@ -225,6 +237,7 @@ export async function readIcons() {
   const icons = [];
   for (const fileName of files) {
     const name = fileName.replace(/\.svg$/, "");
+    validateIconName(name, fileName);
     const filePath = path.join(iconsDir, fileName);
     const svg = await readFile(filePath, "utf8");
     validateSvgContent(svg, fileName);
@@ -392,6 +405,12 @@ export default createIcons;
     path.join(rawDist, "index.d.ts"),
     `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\nexport { icons as manifest, iconNames, iconsByName } from "./manifest.js";\n${rawNamedExports}\nexport type { CreateIconsOptions } from "./createIcons.js";\nexport type { VadivamIconMetadata } from "./manifest.js";\nexport type { IconName, IconNode, Icons, SVGProps } from "./types.js";\n`,
   );
+  await buildStaticAssets(icons, {
+    iconsDirectory: iconsDir,
+    outputDirectory: rawDist,
+    registryPath: fontCodepointsPath,
+    root,
+  });
 }
 
 async function buildReactPackage(icons) {
@@ -677,16 +696,21 @@ export async function build() {
   console.log(`Built packages and web assets for ${icons.length} icons.`);
 }
 
+export async function allocateCodepoints() {
+  await allocateFontCodepoints(await readIcons(), fontCodepointsPath);
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const command = process.argv[2];
   if (command === "optimize") await optimizeIcons();
   else if (command === "check") await checkIcons();
   else if (command === "build") await build();
+  else if (command === "font-codepoints") await allocateCodepoints();
   else if (command === "preview") await buildPreview();
   else if (command === "og") await buildOg();
   else {
     console.error(
-      "Usage: bun scripts/icons.mjs <optimize|check|build|preview|og>",
+      "Usage: bun scripts/icons.mjs <optimize|check|build|font-codepoints|preview|og>",
     );
     process.exit(1);
   }

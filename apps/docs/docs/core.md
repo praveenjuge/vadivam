@@ -23,6 +23,78 @@ image.alt = "Activity";
 
 How an SVG asset import is represented depends on your bundler. In environments without SVG asset imports, copy or read the exported file using the tooling for that environment.
 
+## SVG strings
+
+Import one icon as complete SVG markup in Node.js, server rendering, static-site generation, or another trusted template:
+
+```js
+import activitySvg from "vadivam/strings/activity";
+
+const page = `<main>${activitySvg}</main>`;
+```
+
+Each subpath contains only its requested icon. The string is generated from the same validated SVG used by every Vadivam package. Do not concatenate untrusted attributes or content into the markup.
+
+## SVG sprite
+
+The complete sprite is available as an asset URL:
+
+```js
+import spriteUrl from "vadivam/sprite.svg";
+
+document.querySelector("#activity use").setAttribute(
+  "href",
+  `${spriteUrl}#vadivam-activity`,
+);
+```
+
+```html
+<svg
+  id="activity"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+>
+  <use></use>
+</svg>
+```
+
+Serve or copy `sprite.svg` from the same origin when using an external `<use>`. The sprite contains every icon, so prefer per-icon imports when download size matters.
+
+## Icon font
+
+Import the stylesheet through a bundler:
+
+```js
+import "vadivam/font/vadivam.css";
+```
+
+Or load the published stylesheet from a CDN:
+
+```html
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/vadivam@latest/dist/font/vadivam.css"
+/>
+```
+
+Then apply the base class and icon class together:
+
+```html
+<i
+  class="vadivam-icon vadivam-icon-activity"
+  aria-hidden="true"
+></i>
+```
+
+The font is WOFF2-only and contains the complete icon set. Icon fonts are best for CSS-based or legacy integrations; SVG imports provide better accessibility and load only the icons an application uses. Keep decorative font icons hidden from assistive technology. For a meaningful icon, provide an accessible name on its surrounding control or include equivalent visible text.
+
 ## Icon nodes
 
 Named exports are icon-node arrays, not DOM elements or SVG strings:
