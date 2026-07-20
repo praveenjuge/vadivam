@@ -69,6 +69,7 @@ jobs:
         run: bun run icons:og
 
       - name: Test
+        timeout-minutes: 15
         run: bun run test
 
       - name: Configure git

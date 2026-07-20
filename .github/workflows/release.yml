@@ -53,6 +53,7 @@ jobs:
         run: bun run release:validate "$TAG_NAME"
 
       - name: Test
+        timeout-minutes: 15
         run: bun run test
 
       - name: Publish and verify packages

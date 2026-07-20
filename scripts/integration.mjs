@@ -8,6 +8,8 @@ import { chromium } from "playwright";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const integrationDir = path.join(root, "tests", "integration");
+const commandTimeoutMs = 5 * 60 * 1000;
+const browserLaunchTimeoutMs = 30 * 1000;
 const allApps = [
   { name: "nextjs", packages: ["vadivam-react"] },
   { name: "tanstack-start", packages: ["vadivam-react"] },
@@ -30,10 +32,36 @@ if (requestedApps.size && apps.length !== requestedApps.size) {
 
 function run(command, args, cwd) {
   console.log(`\n$ ${command} ${args.join(" ")}  (cwd: ${path.relative(root, cwd)})`);
-  const result = spawnSync(command, args, { cwd, stdio: "inherit" });
+  const result = spawnSync(command, args, {
+    cwd,
+    stdio: "inherit",
+    timeout: commandTimeoutMs,
+    killSignal: "SIGTERM",
+  });
+  if (result.error) {
+    throw new Error(
+      `${command} ${args.join(" ")} failed in ${cwd}: ${result.error.message}`,
+    );
+  }
   if (result.status !== 0) {
     throw new Error(`${command} ${args.join(" ")} failed in ${cwd}`);
   }
+}
+
+async function launchBrowser() {
+  let lastError;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      return await chromium.launch({
+        headless: true,
+        timeout: browserLaunchTimeoutMs,
+      });
+    } catch (error) {
+      lastError = error;
+      console.warn(`Chromium launch attempt ${attempt} failed: ${error.message}`);
+    }
+  }
+  throw lastError;
 }
 
 function materializePackage(cwd, packageName) {
@@ -68,7 +96,7 @@ async function verifyBrowser(app, cwd, index) {
   let browser;
   try {
     await waitForServer(url);
-    browser = await chromium.launch({ headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     const errors = [];
     page.on("console", (message) => {
