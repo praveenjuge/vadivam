@@ -1,6 +1,6 @@
 {
   "name": "vadivam-solid",
-  "version": "0.0.24",
+  "version": "0.0.25",
   "description": "Pixel-perfect 24px outline icon components for Solid with tree-shakeable imports.",
   "license": "MIT",
   "author": "Praveen Juge",
