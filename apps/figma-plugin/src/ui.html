@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vadivam Icons</title>
+    <style>/* INJECT_UI_STYLES */</style>
+  </head>
+  <body>
+    <main>
+      <div class="search-wrap">
+        <input
+          id="search"
+          type="search"
+          placeholder="Search icons…"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Search Vadivam icons"
+        />
+      </div>
+      <div id="results" role="grid" aria-label="Vadivam icons"></div>
+    </main>
+    <dialog id="confirm">
+      <form method="dialog">
+        <p id="confirm-message"></p>
+        <button value="cancel">Cancel</button>
+        <button value="confirm" class="primary">Replace</button>
+      </form>
+    </dialog>
+    <script>/* INJECT_UI_SCRIPT */</script>
+  </body>
+</html>

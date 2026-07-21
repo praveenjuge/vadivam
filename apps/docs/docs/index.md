@@ -5,7 +5,11 @@ sidebar:
   label: Introduction
 ---
 
-Vadivam is an open-source set of pixel-perfect 24px outline icons. Use optimized SVG assets, browser JavaScript helpers, or native components for React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.
+<!-- vadivam-icon-count:start -->
+Vadivam is an open-source set of 260 pixel-perfect 24px outline icons. Use optimized SVG assets, browser JavaScript helpers, or native components for React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.
+<!-- vadivam-icon-count:end -->
+
+Designers can use the bundled, offline Figma plugin to search the same canonical catalog and place editable local components.
 
 ## Get started
 
@@ -40,6 +44,7 @@ Static named imports are tree-shakeable and are the best default when the icon i
 | Angular                    | `vadivam-angular`      | [Angular](/docs/angular)           |
 | Astro                      | `vadivam-astro`        | [Astro](/docs/astro)               |
 | Preact                     | `vadivam-preact`       | [Preact](/docs/preact)             |
+| Figma                      | Vadivam Icons plugin   | [Plugin source](https://github.com/praveenjuge/vadivam/tree/main/apps/figma-plugin) |
 
 All packages are ESM-only. Icon components accept native SVG attributes in addition to Vadivam's sizing and stroke props. See [installation](/docs/installation) for peer requirements and [usage](/docs/usage) for styling and accessibility guidance.
 

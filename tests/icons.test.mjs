@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   readIcons,
   shuffleUnique,
+  updateIconCountMarkers,
   validateSvgContent,
 } from "../scripts/icons.mjs";
 
@@ -30,6 +31,21 @@ describe("icon validation", () => {
       expect(icon.svgPath).toBe(`icons/${icon.fileName}`);
       expect(icon.componentName).toMatch(/^[A-Z][A-Za-z0-9]*$/);
     }
+  });
+
+  test("updates every marked icon count without changing unrelated numbers", () => {
+    const content = [
+      "<!-- vadivam-icon-count:start -->",
+      "Ships 240 icons at 24px.",
+      "<!-- vadivam-icon-count:end -->",
+      "Version 2 remains unchanged.",
+    ].join("\n");
+    expect(updateIconCountMarkers(content, 260)).toBe(
+      content.replace("Ships 240 icons", "Ships 260 icons"),
+    );
+    expect(() => updateIconCountMarkers("Ships 240 icons.", 260)).toThrow(
+      "missing vadivam icon count markers",
+    );
   });
 });
 

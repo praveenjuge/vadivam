@@ -1,7 +1,11 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { packageDirectories } from "./packages.mjs";
 
-const files = ["package.json", ...packageDirectories.map((directory) => `${directory}/package.json`)];
+const files = [
+  "package.json",
+  ...packageDirectories.map((directory) => `${directory}/package.json`),
+  "apps/figma-plugin/package.json",
+];
 
 const readmes = ["README.md", ...packageDirectories.map((directory) => `${directory}/README.md`)];
 
