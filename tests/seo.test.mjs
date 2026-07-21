@@ -64,10 +64,12 @@ describe("website SEO", () => {
     });
   }
 
-  test("root README icon count and Cloudflare canonical policy stay aligned", () => {
+  test("tracked icon counts and Cloudflare canonical policy stay aligned", () => {
     const readme = readFileSync(path.join(root, "README.md"), "utf8");
+    const docsIndex = readFileSync(path.join(root, "apps/docs/docs/index.md"), "utf8");
     const wrangler = readFileSync(path.join(root, "wrangler.jsonc"), "utf8");
     expect(readme).toContain(`library of ${icons.length} pixel-perfect 24px outline SVG icons`);
+    expect(docsIndex).toContain(`set of ${icons.length} pixel-perfect 24px outline icons`);
     expect(wrangler).toContain('"html_handling": "drop-trailing-slash"');
   });
 });

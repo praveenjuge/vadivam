@@ -1,0 +1,19 @@
+{
+  "name": "Vadivam Icons",
+  "id": "vadivam-icons-development",
+  "id": "1661323620355050204",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  },
+  "relaunchButtons": [
+    {
+      "command": "replace",
+      "name": "Replace icon"
+    }
+  ]
+}

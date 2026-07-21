@@ -10,6 +10,7 @@ describe("release notes", () => {
       "R100\ticons/old-name.svg\ticons/new-name.svg",
       "M\tpackages/vadivam-react/README.md",
       "M\tapps/docs/pages/index.astro",
+      "M\tapps/figma-plugin/src/code.ts",
       "M\tscripts/icons.mjs",
     ].join("\n"));
 
@@ -25,6 +26,7 @@ describe("release notes", () => {
     expect(notes).toContain("**Removed:** `archive`, `old-name`");
     expect(notes).toContain("[vadivam-react](https://www.npmjs.com/package/vadivam-react)");
     expect(notes).toContain("Documentation");
+    expect(notes).toContain("Figma plugin");
     expect(notes).toContain("Release and generation tooling");
   });
 

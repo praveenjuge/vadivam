@@ -4,7 +4,17 @@ set -eu
 
 cd "$(git rev-parse --show-toplevel)"
 
+if ! bun run icons:optimize; then
+  echo "Icon optimization failed. Review the errors before committing." >&2
+  exit 1
+fi
+
 if ! bun run icons:check; then
-  echo "Icon validation failed. Run 'bun run icons:optimize', review the changes, and stage them again." >&2
+  echo "Icon validation failed after optimization. Review the errors before committing." >&2
+  exit 1
+fi
+
+if ! git diff --quiet -- icons README.md apps/docs/docs/index.md; then
+  echo "Icon optimization changed icons or generated icon counts. Review and stage them, then commit again." >&2
   exit 1
 fi

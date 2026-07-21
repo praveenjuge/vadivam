@@ -11,6 +11,7 @@ if (!expected) throw new Error("Pass a release version or set TAG_NAME.");
 const manifests = [
   { name: "vadivam-monorepo", directory: "." },
   ...publishablePackages,
+  { name: "@vadivam/figma-plugin", directory: "apps/figma-plugin" },
 ];
 
 for (const { name, directory } of manifests) {
@@ -23,4 +24,4 @@ for (const { name, directory } of manifests) {
   }
 }
 
-console.log(`All ${publishablePackages.length} package versions match v${expected}.`);
+console.log(`All ${manifests.length} versioned projects match v${expected}.`);

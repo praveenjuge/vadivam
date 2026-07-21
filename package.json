@@ -11,7 +11,7 @@
   "scripts": {
     "prepare": "bun run hooks:install",
     "hooks:install": "git config core.hooksPath .githooks",
-    "build": "bun run icons:build && bun run --cwd apps/vadivam-internal build && bun run --cwd apps/docs build",
+    "build": "bun run icons:build && bun run --cwd apps/vadivam-internal build && bun run --cwd apps/figma-plugin build && bun run --cwd apps/docs build",
     "dev": "bun run icons:build && bun run --cwd apps/docs dev",
     "docs:build": "bun run icons:build && bun run --cwd apps/docs build",
     "docs:dev": "bun run icons:build && bun run --cwd apps/docs dev",
@@ -24,7 +24,10 @@
     "icons:test": "bun test tests/icons.test.mjs",
     "plugin:build": "bun run --cwd apps/vadivam-internal build",
     "plugin:dev": "bun run --cwd apps/vadivam-internal dev",
+    "figma-plugin:build": "bun run --cwd apps/figma-plugin build",
+    "figma-plugin:dev": "bun run --cwd apps/figma-plugin dev",
     "test:vadivam-internal": "bun run --cwd apps/vadivam-internal test",
+    "test:figma-plugin": "bun run --cwd apps/figma-plugin test",
     "test:vadivam": "bun run icons:build && publint packages/vadivam && bun test --preload ./tests/setup/happydom.ts tests/vadivam.client.test.mjs && bun test tests/vadivam.test.mjs tests/vadivam-static.test.mjs",
     "test:react:unit": "bun run icons:build && bun test --preload ./tests/setup/happydom.ts tests/vadivam-react/*.client.test.mjs && bun test tests/vadivam-react/*.ssr.test.mjs tests/vadivam-react/exports.test.mjs",
     "test:vadivam-react": "bun run icons:build && publint packages/vadivam-react && bun run test:react:unit",
@@ -39,7 +42,7 @@
     "packages:check": "bun run test:vadivam && bun run test:vadivam-react && bun run test:vadivam-react-native && bun run test:frameworks:unit && bun run packages:validate",
     "deploy": "bun run build && wrangler deploy",
     "deploy:worker": "wrangler deploy",
-    "test": "bun run icons:test && bun run test:vadivam-internal && bun run packages:check && bun run --cwd apps/docs check && bun run --cwd apps/docs validate && bun run test:seo && bun run test:integration"
+    "test": "bun run icons:test && bun run test:vadivam-internal && bun run test:figma-plugin && bun run packages:check && bun run --cwd apps/docs check && bun run --cwd apps/docs validate && bun run test:seo && bun run test:integration"
   },
   "dependencies": {
     "vadivam": "workspace:*",

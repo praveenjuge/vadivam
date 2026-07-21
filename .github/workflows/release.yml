@@ -61,6 +61,17 @@ jobs:
       - name: Publish and verify packages
         run: bun run release:publish
 
+      - name: Package Figma plugin
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          cd apps/figma-plugin
+          zip -q "../../vadivam-figma-${TAG_NAME}.zip" \
+            manifest.json \
+            dist/code.js \
+            dist/ui.html \
+            README.md
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -68,4 +79,4 @@ jobs:
         run: |
           previous_tag=$(git describe --tags --abbrev=0 "$TAG_NAME^" 2>/dev/null || true)
           bun scripts/release-notes.mjs "$previous_tag" "$TAG_NAME" > release-notes.md
-          gh release create "$TAG_NAME" --title "$TAG_NAME" --notes-file release-notes.md --generate-notes --verify-tag
+          gh release create "$TAG_NAME" "vadivam-figma-${TAG_NAME}.zip#Vadivam Icons for Figma" --title "$TAG_NAME" --notes-file release-notes.md --generate-notes --verify-tag

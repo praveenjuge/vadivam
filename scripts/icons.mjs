@@ -38,6 +38,11 @@ const webIconsDir = path.join(root, "apps/docs/public/icons");
 const previewPath = path.join(root, "apps/docs/public/preview.png");
 const ogPath = path.join(root, "apps/docs/public/og.png");
 const fontCodepointsPath = path.join(root, "scripts/font-codepoints.json");
+const iconCountFiles = [
+  path.join(root, "README.md"),
+  path.join(root, "apps/docs/docs/index.md"),
+];
+const iconCountPattern = /(<!-- vadivam-icon-count:start -->[\s\S]*?)(\d+)([\s\S]*?<!-- vadivam-icon-count:end -->)/g;
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
@@ -254,6 +259,27 @@ export async function readIcons() {
   return icons;
 }
 
+export function updateIconCountMarkers(content, count) {
+  let matches = 0;
+  const updated = content.replace(iconCountPattern, (_match, before, _current, after) => {
+    matches += 1;
+    return `${before}${count}${after}`;
+  });
+  assert(matches > 0, "missing vadivam icon count markers");
+  return updated;
+}
+
+async function synchronizeIconCounts(count, { check = false } = {}) {
+  for (const filePath of iconCountFiles) {
+    const original = await readFile(filePath, "utf8");
+    const updated = updateIconCountMarkers(original, count);
+    if (updated === original) continue;
+    const relativePath = path.relative(root, filePath);
+    assert(!check, `${relativePath}: icon count is stale; run bun run icons:optimize`);
+    await writeFile(filePath, updated);
+  }
+}
+
 export async function optimizeIcons() {
   const files = await svgFiles();
   for (const fileName of files) {
@@ -261,6 +287,7 @@ export async function optimizeIcons() {
     const svg = await readFile(filePath, "utf8");
     await writeFile(filePath, normalizeSvg(svg, fileName));
   }
+  await synchronizeIconCounts(files.length);
   console.log(`Optimized ${files.length} icons.`);
 }
 
@@ -272,6 +299,7 @@ export async function checkIcons() {
       fileName,
     );
   }
+  await synchronizeIconCounts(files.length, { check: true });
   console.log(`Checked ${files.length} icons.`);
 }
 
@@ -683,6 +711,7 @@ export async function buildOg() {
 
 export async function build() {
   const icons = await readIcons();
+  await synchronizeIconCounts(icons.length);
   await buildRawPackage(icons);
   await buildReactPackage(icons);
   await buildReactNativePackage(icons, reactNativeDist);
