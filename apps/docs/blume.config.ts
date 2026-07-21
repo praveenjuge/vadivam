@@ -2,7 +2,8 @@ import { defineConfig } from "blume";
 
 export default defineConfig({
   title: "Vadivam Icons",
-  description: "Open-source 24px outline icons for SVG and modern frameworks.",
+  description:
+    "Browse pixel-perfect, open-source 24px outline icons for SVG, React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.",
   basePath: "/docs",
   lastModified: true,
   logo: {
@@ -18,6 +19,16 @@ export default defineConfig({
     dir: "apps/docs",
   },
   seo: {
+    contentSignals: {
+      search: true,
+      aiInput: true,
+      aiTrain: true,
+    },
+    og: {
+      titles: {
+        "/": "Vadivam — 24px Outline Icons",
+      },
+    },
     x: { creator: "@praveenjuge", handle: "@praveenjuge" },
   },
   deployment: {

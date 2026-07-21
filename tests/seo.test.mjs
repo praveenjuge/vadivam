@@ -16,16 +16,38 @@ describe("website SEO", () => {
     const url = `${site}/icons/${name}`;
     expect(html).toContain(`<link href="${url}" rel="canonical">`);
     expect(html).toContain(`<meta content="${url}" property="og:url">`);
+    expect(html).toContain(`<meta content="${site}/og.png" property="og:image">`);
+    expect(html).toContain('<meta content="@praveenjuge" name="twitter:site">');
+    expect(html).toContain('<meta content="@praveenjuge" name="twitter:creator">');
     expect(html).toContain(`"url":"${url}"`);
     expect(html).not.toContain(`<link href="${site}" rel="canonical">`);
+    expect(html).not.toContain(`${site}/og/icons/${name}.png`);
   });
 
   test("homepage keeps WebSite identity without obsolete SearchAction markup", () => {
     const html = readDist("index.html");
     expect(html).toContain('"@type":"WebSite"');
     expect(html).not.toContain("SearchAction");
+    expect(html).toContain(
+      "Browse pixel-perfect, open-source 24px outline icons for SVG, React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact."
+    );
+    expect(html).toContain('<meta content="@praveenjuge" name="twitter:site">');
+    expect(html).toContain('<meta content="@praveenjuge" name="twitter:creator">');
     expect(html).toContain("A free, open-source icon set made for designers and developers building thoughtful digital experiences.");
     expect(html).toContain('href="/icons/activity"');
+  });
+
+  test("robots allows search, AI grounding, and AI training", () => {
+    expect(readDist("robots.txt")).toContain(
+      "Content-Signal: search=yes, ai-input=yes, ai-train=yes"
+    );
+  });
+
+  test("dynamic icon pages share a valid social image", () => {
+    const image = readFileSync(path.join(dist, "og.png"));
+    expect(image.subarray(1, 4).toString()).toBe("PNG");
+    expect(image.readUInt32BE(16)).toBe(1200);
+    expect(image.readUInt32BE(20)).toBe(630);
   });
 
   test("sitemap contains exactly the homepage, docs, and canonical icon routes", () => {
