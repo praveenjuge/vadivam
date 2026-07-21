@@ -2,10 +2,35 @@ import { build, context } from "esbuild";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readIcons } from "../../../scripts/icons.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = resolve(root, "dist");
+const iconsRoot = resolve(root, "../../icons");
 const watch = process.argv.includes("--watch");
+
+function createCatalogSource(icons) {
+  return `export default ${JSON.stringify(
+    icons
+      .map(({ name, svg }) => ({ name, svg }))
+      .sort((left, right) => left.name.localeCompare(right.name)),
+  )};`;
+}
+
+const catalogPlugin = {
+  name: "vadivam-icon-catalog",
+  setup(pluginBuild) {
+    pluginBuild.onResolve({ filter: /^vadivam:icon-catalog$/ }, () => ({
+      path: "icon-catalog",
+      namespace: "vadivam",
+    }));
+    pluginBuild.onLoad({ filter: /.*/, namespace: "vadivam" }, async () => ({
+      contents: createCatalogSource(await readIcons()),
+      loader: "js",
+      watchDirs: [iconsRoot],
+    }));
+  },
+};
 
 await mkdir(dist, { recursive: true });
 
@@ -16,6 +41,7 @@ const codeOptions = {
   platform: "browser",
   target: ["es2019"],
   format: "iife",
+  plugins: [catalogPlugin],
   logLevel: "info",
 };
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import vm from "node:vm";
 
 interface MockFrame {
@@ -87,7 +87,14 @@ describe("compiled Figma plugin", () => {
         resize() {},
       };
     });
-    const currentPage = { name: "Vadivam Icons", children: [...existing], selection: [] };
+    const currentPage = {
+      name: "Vadivam Icons",
+      children: [...existing],
+      selection: [],
+      findAll(predicate: (node: (typeof existing)[number]) => boolean) {
+        return this.children.filter(predicate);
+      },
+    };
     const ui: {
       onmessage?: (message: unknown) => Promise<void>;
       postMessage(message: unknown): void;
@@ -227,5 +234,222 @@ describe("compiled Figma plugin", () => {
         },
       ],
     });
+  });
+
+  test("creates and updates the documented canonical component library", async () => {
+    const messages: Array<Record<string, unknown>> = [];
+    const commits: number[] = [];
+    const page: any = {
+      type: "PAGE",
+      name: "Community Library",
+      children: [],
+      selection: [],
+      findAll(predicate: (node: any) => boolean) {
+        const matches: any[] = [];
+        const visit = (children: any[]) => {
+          for (const child of children) {
+            if (predicate(child)) matches.push(child);
+            if (child.children) visit(child.children);
+          }
+        };
+        visit(page.children);
+        return matches;
+      },
+    };
+
+    function detach(node: any): void {
+      const index = node.parent?.children.indexOf(node) ?? -1;
+      if (index >= 0) node.parent.children.splice(index, 1);
+    }
+
+    function register(node: any, parent: any = page): any {
+      node.parent = parent;
+      node.removed = false;
+      node.x ??= 0;
+      node.y ??= 0;
+      node.width ??= 24;
+      node.height ??= 24;
+      node.rotation ??= 0;
+      node._data = new Map<string, string>();
+      node.getPluginData = (key: string) => node._data.get(key) ?? "";
+      node.setPluginData = (key: string, value: string) => node._data.set(key, value);
+      node.setRelaunchData = (value: unknown) => {
+        node.relaunchData = value;
+      };
+      node.resize = (width: number, height: number) => {
+        node.width = width;
+        node.height = height;
+      };
+      node.resizeWithoutConstraints = node.resize;
+      node.remove = () => {
+        detach(node);
+        node.removed = true;
+      };
+      parent.children.push(node);
+      return node;
+    }
+
+    function vector(): any {
+      return {
+        type: "VECTOR",
+        name: "Vector",
+        parent: null,
+        remove() {
+          detach(this);
+        },
+      };
+    }
+
+    function svgFrame(): any {
+      const child = vector();
+      const frame = register({
+        type: "FRAME",
+        name: "SVG",
+        children: [child],
+        appendChild(next: any) {
+          detach(next);
+          next.parent = frame;
+          frame.children.push(next);
+        },
+        findAll() {
+          return [...frame.children];
+        },
+      });
+      child.parent = frame;
+      return frame;
+    }
+
+    function componentFromFrame(frame: any): any {
+      detach(frame);
+      frame.removed = true;
+      const component = register({
+        type: "COMPONENT",
+        name: "Component",
+        children: frame.children,
+        appendChild(child: any) {
+          detach(child);
+          child.parent = component;
+          component.children.push(child);
+        },
+        findAll() {
+          return [...component.children];
+        },
+      });
+      for (const child of component.children) child.parent = component;
+      return component;
+    }
+
+    const ui: any = {
+      onmessage: undefined,
+      postMessage(message: Record<string, unknown>) {
+        messages.push(message);
+      },
+    };
+    const figmaMock: any = {
+      showUI() {},
+      ui,
+      root: { children: [page] },
+      currentPage: page,
+      viewport: {
+        center: { x: 600, y: 400 },
+        scrollAndZoomIntoView() {},
+      },
+      async loadAllPagesAsync() {},
+      createNodeFromSvg: svgFrame,
+      createComponentFromNode: componentFromFrame,
+      combineAsVariants(components: any[]) {
+        for (const component of components) detach(component);
+        const componentSet = register({
+          type: "COMPONENT_SET",
+          name: "Component Set",
+          children: [...components],
+          appendChild(child: any) {
+            detach(child);
+            child.parent = componentSet;
+            componentSet.children.push(child);
+          },
+          insertChild(index: number, child: any) {
+            detach(child);
+            child.parent = componentSet;
+            componentSet.children.splice(index, 0, child);
+          },
+          findAll(predicate: (node: any) => boolean) {
+            return componentSet.children.filter(predicate);
+          },
+        });
+        for (const component of components) component.parent = componentSet;
+        return componentSet;
+      },
+      commitUndo() {
+        commits.push(commits.length + 1);
+      },
+    };
+    const bundle = readFileSync(new URL("../dist/code.js", import.meta.url), "utf8");
+    vm.runInNewContext(bundle, {
+      figma: figmaMock,
+      __html__: "<html></html>",
+      Set,
+      Map,
+      Promise,
+      JSON,
+      Math,
+      Number,
+      Error,
+      Intl,
+      encodeURIComponent,
+    });
+    await waitFor(() => messages.some((message) => message.type === "catalog"));
+
+    await ui.onmessage({ type: "sync-library" });
+    const componentSet = page.selection[0];
+    const sourceIconCount = readdirSync(new URL("../../../icons/", import.meta.url))
+      .filter((name) => name.endsWith(".svg")).length;
+    expect(componentSet).toMatchObject({
+      type: "COMPONENT_SET",
+      name: "Vadivam Icons",
+      width: 984,
+      layoutMode: "HORIZONTAL",
+      layoutWrap: "WRAP",
+      paddingTop: 24,
+      paddingRight: 24,
+      paddingBottom: 24,
+      paddingLeft: 24,
+      itemSpacing: 24,
+      counterAxisSpacing: 24,
+      fills: [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }],
+    });
+    expect(componentSet.children).toHaveLength(sourceIconCount);
+    expect(componentSet.descriptionMarkdown).toContain("## Maintain");
+    expect(componentSet.documentationLinks).toEqual([
+      { uri: "https://vadivam.praveenjuge.com" },
+    ]);
+
+    const firstComponent = componentSet.children[0];
+    const firstName = JSON.parse(firstComponent.getPluginData("vadivam-internal")).name;
+    expect(firstComponent.name).toBe(`Icon=${firstName}`);
+    expect(firstComponent.documentationLinks).toEqual([
+      { uri: `https://vadivam.praveenjuge.com/icons/${firstName}` },
+    ]);
+
+    page.selection = [componentSet];
+    await ui.onmessage({ type: "sync-library" });
+    expect(componentSet.children[0]).toBe(firstComponent);
+    expect(commits).toHaveLength(2);
+    expect(messages.filter((message) => message.type === "library-synced")).toEqual([
+      {
+        type: "library-synced",
+        count: sourceIconCount,
+        created: true,
+        added: sourceIconCount,
+        retained: 0,
+      },
+      {
+        type: "library-synced",
+        count: sourceIconCount,
+        created: false,
+        added: 0,
+        retained: 0,
+      },
+    ]);
   });
 });

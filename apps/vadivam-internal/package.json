@@ -3,7 +3,7 @@
   "version": "0.0.13",
   "private": true,
   "type": "module",
-  "description": "Internal Figma workflow for generating the next ranked Vadivam icon frames.",
+  "description": "Internal Figma workflow for source frames and the publishable Vadivam icon library.",
   "scripts": {
     "build": "bun scripts/build.mjs",
     "dev": "bun scripts/build.mjs --watch",

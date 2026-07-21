@@ -14,6 +14,8 @@ function element<T extends Element>(selector: string): T {
 const summary = element<HTMLParagraphElement>("#summary");
 const status = element<HTMLParagraphElement>("#status");
 const countInput = element<HTMLInputElement>("#count");
+const libraryMeta = element<HTMLSpanElement>("#library-meta");
+const syncLibraryButton = element<HTMLButtonElement>("#sync-library");
 const generateButton = element<HTMLButtonElement>("#generate");
 const refreshButton = element<HTMLButtonElement>("#refresh");
 const arrangeButton = element<HTMLButtonElement>("#arrange");
@@ -95,6 +97,12 @@ countInput.addEventListener("change", () => {
   send({ type: "set-count", count });
 });
 
+syncLibraryButton.addEventListener("click", () => {
+  syncLibraryButton.disabled = true;
+  status.textContent = "Creating or updating canonical icon components…";
+  send({ type: "sync-library" });
+});
+
 generateButton.addEventListener("click", () => {
   generateButton.disabled = true;
   status.textContent = "Creating canonical 24 px frames…";
@@ -122,12 +130,23 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
     return;
   }
 
+  if (message.type === "library-status") {
+    libraryMeta.textContent = `${message.count} icons · 20/row`;
+    syncLibraryButton.textContent = message.available ? "Update" : "Create";
+    syncLibraryButton.disabled = false;
+    return;
+  }
+
   refreshButton.disabled = false;
   if (message.type === "error") {
     status.textContent = message.message;
     generateButton.disabled = candidates.length === 0;
   } else if (message.type === "generated") {
     status.textContent = `Created ${message.names.length} frames on this page`;
+  } else if (message.type === "library-synced") {
+    const added = message.added > 0 ? ` · ${message.added} added` : "";
+    const retained = message.retained > 0 ? ` · ${message.retained} custom retained` : "";
+    status.textContent = `${message.created ? "Created" : "Updated"} ${message.count} component icons${added}${retained}`;
   } else if (message.type === "arranged") {
     status.textContent = `Arranged ${message.count} icons A–Z · 20 per row`;
   } else if (message.type === "audit") {

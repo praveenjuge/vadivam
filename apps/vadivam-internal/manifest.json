@@ -8,5 +8,11 @@
   "documentAccess": "dynamic-page",
   "networkAccess": {
     "allowedDomains": ["none"]
-  }
+  },
+  "relaunchButtons": [
+    {
+      "command": "sync-library",
+      "name": "Update icon library"
+    }
+  ]
 }
