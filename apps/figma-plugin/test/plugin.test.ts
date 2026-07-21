@@ -243,6 +243,7 @@ describe("compiled Figma plugin", () => {
       x: 228,
       y: 88,
     });
+    expect(harness.figmaMock.viewport.center).toEqual({ x: 240, y: 100 });
     expect(component.name).toBe("search");
     expect(harness.page.children.filter((node: NodeRecord) => node.type === "COMPONENT")).toHaveLength(2);
     expect(harness.commits).toHaveLength(2);

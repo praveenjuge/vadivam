@@ -182,6 +182,10 @@ function placeComponent(
     component.y = Math.round(figma.viewport.center.y - component.height / 2);
   }
   figma.currentPage.selection = [component];
+  figma.viewport.center = {
+    x: component.x + component.width / 2,
+    y: component.y + component.height / 2,
+  };
 }
 
 figma.on("selectionchange", () => {
