@@ -1,6 +1,6 @@
 ---
 title: Usage, styling, and accessibility
-description: Size, color, style, and label Vadivam icons consistently across supported frameworks.
+description: Size, color, style, and label Vadivam icons consistently across supported frameworks while preserving visual and accessible behavior.
 ---
 
 Vadivam icons use a `24 24` view box, no fill, `currentColor`, a default stroke width of `2`, and round line caps and joins. Framework packages expose the same visual controls while forwarding native SVG attributes.

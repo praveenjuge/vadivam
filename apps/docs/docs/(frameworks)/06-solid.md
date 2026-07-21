@@ -1,6 +1,6 @@
 ---
 title: Solid
-description: Use free, open-source Vadivam SVG icon components and providers in Solid applications.
+description: Use free, open-source Vadivam SVG icon components in Solid applications with shared defaults, per-icon imports, and runtime names.
 seo:
   title: Solid Icons – 24px Outline Icon Components
 ---

@@ -1,6 +1,6 @@
 ---
 title: Core SVG and JavaScript
-description: Use Vadivam as SVG assets, icon-node data, metadata, or browser DOM helpers.
+description: Use the core Vadivam package for optimized SVG assets, icon-node data, catalog metadata, sprites, and browser DOM helpers.
 ---
 
 The `vadivam` package contains optimized SVG files, serializable icon nodes, catalog metadata, and browser DOM helpers. It has no framework dependency.

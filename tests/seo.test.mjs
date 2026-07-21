@@ -43,6 +43,12 @@ describe("website SEO", () => {
     );
   });
 
+  test("llms index includes the custom icon catalog homepage", () => {
+    const llms = readDist("llms.txt");
+    expect(llms).toContain(`- [Browse all Vadivam icons](${site}/)`);
+    expect(llms.match(new RegExp(`\\]\\(${site.replaceAll(".", "\\.")}\\/\\)`, "g"))).toHaveLength(1);
+  });
+
   test("dynamic icon pages share a valid social image", () => {
     const image = readFileSync(path.join(dist, "og.png"));
     expect(image.subarray(1, 4).toString()).toBe("PNG");
@@ -73,7 +79,7 @@ describe("website SEO", () => {
     astro: "Astro Icons – 24px Outline Icon Components",
     preact: "Preact Icons – 24px Outline Icon Components",
     react: "React Icons – 24px Outline Icon Components",
-    "react-native": "React Native and Expo Icons – 24px Outline Components",
+    "react-native": "React Native Icons – 24px Outline Components",
     solid: "Solid Icons – 24px Outline Icon Components",
     svelte: "Svelte Icons – 24px Outline Icon Components",
     vue: "Vue Icons – 24px Outline Icon Components",

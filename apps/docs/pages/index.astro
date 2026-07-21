@@ -256,7 +256,7 @@ const structuredData = site
       svg: selected?.dataset.svg ?? "",
     });
 
-    const snippet = (tab: string, name: string, component: string, svg: string) => {
+    const snippet = (tab: string, component: string, svg: string) => {
       switch (tab) {
         case "react":
           return `import { ${component} } from "vadivam-react";\n\n<${component} />`;
@@ -292,8 +292,8 @@ const structuredData = site
 
     const renderCode = () => {
       if (!drawerCode || !selected) return;
-      const { name, component, svg } = getData();
-      drawerCode.textContent = snippet(activeTab, name, component, svg);
+      const { component, svg } = getData();
+      drawerCode.textContent = snippet(activeTab, component, svg);
     };
 
     const syncClearance = () => {
@@ -409,7 +409,7 @@ const structuredData = site
           break;
         }
         case "copy-code":
-          copy(snippet(activeTab, name, component, svg), "Snippet copied.");
+          copy(snippet(activeTab, component, svg), "Snippet copied.");
           break;
         case "copy-svg":
           copy(svg, "SVG copied.");

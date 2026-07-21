@@ -35,7 +35,7 @@
     "test:vadivam-react-native": "bun run icons:build && publint packages/vadivam-react-native && bun run test:react-native:unit",
     "test:integration": "bun run icons:build && bun scripts/integration.mjs",
     "test:frameworks:unit": "bun test tests/frameworks/*.test.mjs",
-    "test:seo": "bun run docs:build && bun test tests/seo.test.mjs tests/release-notes.test.mjs",
+    "test:seo": "bun run docs:build && bun run --cwd apps/docs audit && bun test tests/seo.test.mjs tests/release-notes.test.mjs",
     "packages:validate": "bun scripts/packages-check.mjs",
     "release:validate": "bun scripts/validate-versions.mjs",
     "release:publish": "bun scripts/publish-packages.mjs",

@@ -6,6 +6,7 @@ import { icons } from "../packages/vadivam/dist/manifest.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sitemapPath = path.join(root, "apps/docs/dist/sitemap.xml");
+const llmsPath = path.join(root, "apps/docs/dist/llms.txt");
 
 const xmlEscape = (value) =>
   value
@@ -65,9 +66,33 @@ export function completeSitemap(xml, iconNames) {
   return output;
 }
 
+export function completeLlmsIndex(markdown, site) {
+  if (!markdown.trimStart().startsWith("# ")) {
+    throw new Error("Generated llms.txt does not start with a title");
+  }
+
+  const homepage = `${new URL(site).origin}/`;
+  if (markdown.includes(`](${homepage})`)) return markdown;
+
+  return `${markdown.trimEnd()}\n\n## Icon catalog\n\n- [Browse all Vadivam icons](${homepage}): Search the complete icon catalog, copy SVG markup, and find framework components.\n`;
+}
+
 if (import.meta.main) {
-  const xml = await readFile(sitemapPath, "utf8");
-  const output = completeSitemap(xml, icons.map(({ name }) => name));
-  await writeFile(sitemapPath, output);
-  process.stdout.write(`Completed sitemap.xml with ${icons.length} icon URLs.\n`);
+  const [xml, llms] = await Promise.all([
+    readFile(sitemapPath, "utf8"),
+    readFile(llmsPath, "utf8"),
+  ]);
+  const sitemap = completeSitemap(xml, icons.map(({ name }) => name));
+  const parsed = new XMLParser().parse(sitemap);
+  const [firstEntry] = asArray(parsed?.urlset?.url);
+  if (!firstEntry?.loc) throw new Error("Completed sitemap contains no URLs");
+  const llmsIndex = completeLlmsIndex(llms, firstEntry.loc);
+
+  await Promise.all([
+    writeFile(sitemapPath, sitemap),
+    writeFile(llmsPath, llmsIndex),
+  ]);
+  process.stdout.write(
+    `Completed sitemap.xml with ${icons.length} icon URLs and added the icon catalog to llms.txt.\n`,
+  );
 }

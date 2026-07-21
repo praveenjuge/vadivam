@@ -1,6 +1,6 @@
 ---
 title: Preact
-description: Use free, open-source Vadivam SVG icon components, providers, and runtime names in Preact.
+description: Use free, open-source Vadivam SVG icon components in Preact with shared defaults, per-icon imports, and dynamic runtime names.
 seo:
   title: Preact Icons – 24px Outline Icon Components
 ---
