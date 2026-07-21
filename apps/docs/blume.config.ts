@@ -10,30 +10,7 @@ export default defineConfig({
     text: "",
   },
   navigation: {
-    sidebar: [
-      "index",
-      {
-        label: "Get started",
-        items: ["installation", "usage", "core", "dynamic-icons"],
-      },
-      {
-        label: "Frameworks",
-        items: [
-          "react",
-          "react-native",
-          "vue",
-          "svelte",
-          "solid",
-          "angular",
-          "astro",
-          "preact",
-        ],
-      },
-      {
-        label: "Advanced",
-        items: ["contributing"],
-      },
-    ],
+    tabs: [{ label: "Documentation", path: "/docs" }],
   },
   github: {
     owner: "praveenjuge",

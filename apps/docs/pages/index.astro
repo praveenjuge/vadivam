@@ -20,6 +20,10 @@ const links = [
   { href: "https://www.npmjs.com/package/vadivam-react-native", label: "React Native", title: "vadivam-react-native", icon: npmIcon },
   { href: "https://www.npmjs.com/package/vadivam-vue", label: "Vue", title: "vadivam-vue", icon: npmIcon },
   { href: "https://www.npmjs.com/package/vadivam-svelte", label: "Svelte", title: "vadivam-svelte", icon: npmIcon },
+  { href: "https://www.npmjs.com/package/vadivam-solid", label: "Solid", title: "vadivam-solid", icon: npmIcon },
+  { href: "https://www.npmjs.com/package/vadivam-angular", label: "Angular", title: "vadivam-angular", icon: npmIcon },
+  { href: "https://www.npmjs.com/package/vadivam-astro", label: "Astro", title: "vadivam-astro", icon: npmIcon },
+  { href: "https://www.npmjs.com/package/vadivam-preact", label: "Preact", title: "vadivam-preact", icon: npmIcon },
   { href: "https://github.com/praveenjuge/vadivam", label: "GitHub", title: "GitHub repository", icon: githubIcon },
   { href: "https://github.com/praveenjuge/vadivam/issues", label: "Issues", title: "Issues", icon: githubIcon },
   { href: "https://twitter.com/praveenjuge", label: "Twitter", title: "Praveen Juge on Twitter", icon: twitterIcon },
@@ -75,19 +79,15 @@ const structuredData = site
 >
   <main id="iconExplorer" class="w-full px-4 pt-3 pb-8 md:px-6">
     <header class="pb-4">
-      <h1 class="m-0 text-[clamp(1.5rem,2.5vw,2rem)] font-semibold leading-none tracking-[-0.03em]">
+      <h1 class="m-0 text-[clamp(1.375rem,2vw,1.75rem)] font-semibold leading-none tracking-[-0.03em]">
         Icons shaped for interfaces.
       </h1>
       <p class="mt-2 mb-0 text-sm text-muted-foreground">
-        {icons.length} free, open-source 24px outline SVG icons for React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.
+        A free, open-source icon set made for designers and developers building thoughtful digital experiences.
       </p>
     </header>
 
     <nav class="flex flex-wrap gap-1.5 pb-4" aria-label="Project links">
-      <a class={chipClass} href="/docs">
-        <Icon icon="book-open" size={14} />
-        <span>Documentation</span>
-      </a>
       {
         links.map((link) => (
           <a class={chipClass} href={link.href} target="_blank" rel="noreferrer" title={link.title}>

@@ -24,7 +24,7 @@ describe("website SEO", () => {
     const html = readDist("index.html");
     expect(html).toContain('"@type":"WebSite"');
     expect(html).not.toContain("SearchAction");
-    expect(html).toContain(`${icons.length} free, open-source 24px outline SVG icons`);
+    expect(html).toContain("A free, open-source icon set made for designers and developers building thoughtful digital experiences.");
     expect(html).toContain('href="/icons/activity"');
   });
 
@@ -34,9 +34,12 @@ describe("website SEO", () => {
     const parsed = new XMLParser().parse(xml);
     const entries = Array.isArray(parsed.urlset.url) ? parsed.urlset.url : [parsed.urlset.url];
     const locations = entries.map(({ loc }) => loc);
-    const docs = readdirSync(path.join(root, "apps/docs/docs"))
+    const docs = readdirSync(path.join(root, "apps/docs/docs"), { recursive: true })
       .filter((file) => file.endsWith(".md"))
-      .map((file) => (file === "index.md" ? `${site}/docs` : `${site}/docs/${path.basename(file, ".md")}`));
+      .map((file) => {
+        const slug = path.basename(file, ".md").replace(/^\d+-/, "");
+        return file === "index.md" ? `${site}/docs` : `${site}/docs/${slug}`;
+      });
     const expected = [site + "/", ...docs, ...icons.map(({ name }) => `${site}/icons/${name}`)].sort();
     expect(locations).toHaveLength(expected.length);
     expect(new Set(locations).size).toBe(locations.length);
