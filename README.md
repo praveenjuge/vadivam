@@ -8,7 +8,7 @@ Vadivam is a free, open-source library of 260 pixel-perfect 24px outline SVG ico
 [![downloads](https://img.shields.io/npm/dw/vadivam?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam)
 [![license](https://img.shields.io/npm/l/vadivam?style=flat-square&color=111)](./LICENSE)
 
-![All Vadivam icons](./apps/docs/public/preview.png?v=0.0.28)
+![All Vadivam icons](./apps/docs/public/preview.png?v=0.0.29)
 
 [Browse all icons](https://vadivam.praveenjuge.com), copy SVG or framework-ready components, or use the [Figma plugin](./apps/figma-plugin) to place editable local components.
 

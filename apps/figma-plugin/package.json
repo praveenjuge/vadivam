@@ -1,6 +1,6 @@
 {
   "name": "@vadivam/figma-plugin",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "private": true,
   "type": "module",
   "description": "Search and insert canonical Vadivam icon components in Figma.",

@@ -1,6 +1,6 @@
 {
   "name": "vadivam-preact",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "description": "Pixel-perfect 24px outline icon components for Preact with tree-shakeable imports.",
   "license": "MIT",
   "author": "Praveen Juge",
