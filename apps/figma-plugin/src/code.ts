@@ -331,4 +331,4 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
   }
 };
 
-post({ type: "catalog", icons: [...icons] });
+post({ type: "catalog", count: icons.length });

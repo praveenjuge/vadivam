@@ -1,7 +1,5 @@
-import type { CatalogIcon } from "./catalog";
-
 export type PluginToUiMessage =
-  | { type: "catalog"; icons: CatalogIcon[] }
+  | { type: "catalog"; count: number }
   | { type: "complete"; message: string }
   | {
       type: "confirm-replace";

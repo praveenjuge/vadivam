@@ -1,4 +1,19 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, mock, test } from "bun:test";
+
+mock.module("vadivam:catalog", () => ({
+  default: [
+    {
+      name: "search",
+      svg: "<svg />",
+      iconNode: [["circle", { cx: "12", cy: "12", r: "4", key: "circle-0" }]],
+    },
+    {
+      name: "trash-2",
+      svg: "<svg />",
+      iconNode: [["path", { d: "M3 6h18", key: "path-0" }]],
+    },
+  ],
+}));
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -20,16 +35,7 @@ test("renders an accessible glyph grid and sends one-click choices", async () =>
       data: {
         pluginMessage: {
           type: "catalog",
-          icons: [
-            {
-              name: "search",
-              svg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /></svg>',
-            },
-            {
-              name: "trash-2",
-              svg: '<svg viewBox="0 0 24 24"><path d="M3 6h18" /></svg>',
-            },
-          ],
+          count: 2,
         },
       },
     }),
@@ -39,6 +45,7 @@ test("renders an accessible glyph grid and sends one-click choices", async () =>
   expect(search.placeholder).toBe("Search icons…");
   expect(document.querySelector("#status")).toBeNull();
   expect(document.querySelectorAll(".icon-button")).toHaveLength(2);
+  expect(document.querySelector('[aria-label="search"] circle')?.getAttribute("r")).toBe("4");
   const trash = document.querySelector<HTMLButtonElement>('[aria-label="trash-2"]')!;
   expect(trash.title).toBe("trash-2");
   trash.click();

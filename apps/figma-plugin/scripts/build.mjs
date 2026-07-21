@@ -13,7 +13,7 @@ await mkdir(dist, { recursive: true });
 const sourceIcons = await readIcons();
 const catalogSource = `export default ${JSON.stringify(
   sourceIcons
-    .map(({ name, svg }) => ({ name, svg }))
+    .map(({ name, svg, iconNode }) => ({ name, svg, iconNode }))
     .sort((left, right) => left.name.localeCompare(right.name)),
 )};`;
 
@@ -51,6 +51,7 @@ const uiOptions = {
   target: ["es2020"],
   format: "iife",
   minify: !watch,
+  plugins: [catalogPlugin],
   logLevel: "info",
 };
 

@@ -14,7 +14,7 @@ Use `bun run figma-plugin:dev` while editing and `bun run test:figma-plugin` bef
 
 1. Build and test the release commit.
 2. Download the matching `vadivam-figma-vX.Y.Z.zip` GitHub Release asset.
-3. Replace the development manifest ID with the ID assigned by Figma when registering the plugin. Keep that ID for every later update.
+3. Keep the registered plugin ID `1661323620355050204` unchanged for every update.
 4. Import the manifest in Figma and complete the manual checks below.
 5. Publish the update with the prepared icon, cover, screenshots, support URL, privacy statement, and concise listing copy required by the current Community form.
 

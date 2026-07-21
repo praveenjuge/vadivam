@@ -2,10 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { searchIcons, type CatalogIcon } from "../src/catalog";
 
 const icons: CatalogIcon[] = [
-  { name: "arrow-down-0-1", svg: "<svg />" },
-  { name: "search", svg: "<svg />" },
-  { name: "settings", svg: "<svg />" },
-  { name: "trash-2", svg: "<svg />" },
+  { name: "arrow-down-0-1", svg: "<svg />", iconNode: [] },
+  { name: "search", svg: "<svg />", iconNode: [] },
+  { name: "settings", svg: "<svg />", iconNode: [] },
+  { name: "trash-2", svg: "<svg />", iconNode: [] },
 ];
 
 describe("searchIcons", () => {

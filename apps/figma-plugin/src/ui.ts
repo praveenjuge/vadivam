@@ -1,5 +1,8 @@
+import icons from "vadivam:catalog";
 import { searchIcons, type CatalogIcon } from "./catalog";
 import type { PluginToUiMessage, UiToPluginMessage } from "./protocol";
+
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
 function element<T extends Element>(selector: string): T {
   const match = document.querySelector<T>(selector);
@@ -12,7 +15,9 @@ const results = element<HTMLDivElement>("#results");
 const confirmDialog = element<HTMLDialogElement>("#confirm");
 const confirmMessage = element<HTMLParagraphElement>("#confirm-message");
 
-let catalog: CatalogIcon[] = [];
+const catalog: CatalogIcon[] = [...icons].sort((left, right) =>
+  left.name.localeCompare(right.name),
+);
 let visible: CatalogIcon[] = [];
 let pending = false;
 let confirmationId: string | null = null;
@@ -32,6 +37,26 @@ function choose(iconName: string): void {
   if (pending) return;
   setPending(true);
   send({ type: "choose", iconName });
+}
+
+function iconPreview(icon: CatalogIcon): SVGSVGElement {
+  const svg = document.createElementNS(SVG_NAMESPACE, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.setAttribute("aria-hidden", "true");
+
+  for (const [tag, attributes] of icon.iconNode) {
+    const geometry = document.createElementNS(SVG_NAMESPACE, tag);
+    for (const [name, value] of Object.entries(attributes)) {
+      if (name !== "key") geometry.setAttribute(name, value);
+    }
+    svg.append(geometry);
+  }
+  return svg;
 }
 
 function render(): void {
@@ -54,7 +79,7 @@ function render(): void {
     button.setAttribute("aria-label", icon.name);
     button.setAttribute("role", "gridcell");
     button.dataset.iconName = icon.name;
-    button.innerHTML = icon.svg;
+    button.append(iconPreview(icon));
     button.addEventListener("click", () => choose(icon.name));
     fragment.append(button);
   }
@@ -115,9 +140,6 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
   const message = event.data.pluginMessage;
   if (!message) return;
   if (message.type === "catalog") {
-    catalog = [...message.icons].sort((left, right) =>
-      left.name.localeCompare(right.name),
-    );
     search.placeholder = "Search icons…";
     render();
     search.focus();

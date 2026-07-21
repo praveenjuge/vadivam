@@ -211,15 +211,10 @@ describe("compiled Figma plugin", () => {
   test("inserts, replaces, confirms propagation, and isolates selected instances", async () => {
     const harness = createHarness();
     await runPlugin(harness);
-    const catalog = latest(harness, "catalog") as { icons: Array<{ name: string }> };
+    const catalog = latest(harness, "catalog") as { count: number };
     const sourceIconCount = readdirSync(new URL("../../../icons/", import.meta.url))
       .filter((name) => name.endsWith(".svg")).length;
-    expect(catalog.icons).toHaveLength(sourceIconCount);
-    expect(catalog.icons.map((icon) => icon.name)).toEqual(
-      [...catalog.icons.map((icon) => icon.name)].sort((left, right) =>
-        left.localeCompare(right),
-      ),
-    );
+    expect(catalog.count).toBe(sourceIconCount);
 
     await harness.ui.onmessage({ type: "choose", iconName: "search" });
     const component = harness.page.selection[0];
@@ -288,6 +283,12 @@ describe("compiled Figma plugin", () => {
     expect(component.name).toBe("star");
     expect(harness.nodes.has(instance.id)).toBe(false);
     expect(harness.commits).toHaveLength(5);
+  });
+
+  test("uses the single registered Figma plugin ID", () => {
+    const source = readFileSync(new URL("../manifest.json", import.meta.url), "utf8");
+    expect(source.match(/"id"\s*:/g)).toHaveLength(1);
+    expect(JSON.parse(source).id).toBe("1661323620355050204");
   });
 
   test("rejects unknown icon names without modifying the document", async () => {

@@ -1,6 +1,7 @@
 export interface CatalogIcon {
   name: string;
   svg: string;
+  iconNode: ReadonlyArray<readonly [string, Readonly<Record<string, string>>]>;
 }
 
 function normalize(value: string): string {
