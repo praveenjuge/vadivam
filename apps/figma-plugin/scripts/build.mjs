@@ -74,6 +74,7 @@ if (watch) {
   const uiContext = await context({
     ...uiOptions,
     plugins: [
+      ...uiOptions.plugins,
       {
         name: "rebuild-ui-html",
         setup(pluginBuild) {

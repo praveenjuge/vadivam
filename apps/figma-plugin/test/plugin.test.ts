@@ -1,6 +1,50 @@
 import { describe, expect, test } from "bun:test";
+import { spawn } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import vm from "node:vm";
+
+const pluginRoot = dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
+
+async function startWatchBuild() {
+  const child = spawn(process.execPath, ["scripts/build.mjs", "--watch"], {
+    cwd: pluginRoot,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let output = "";
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error(`Figma plugin watch build did not start within 10 seconds:\n${output}`));
+      }, 10_000);
+      const capture = (chunk: Buffer) => {
+        output += chunk.toString();
+        if (output.includes("[figma-plugin] watching for changes")) {
+          clearTimeout(timeout);
+          resolve();
+        }
+      };
+      child.stdout.on("data", capture);
+      child.stderr.on("data", capture);
+      child.once("error", (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
+      child.once("exit", (code) => {
+        if (!output.includes("[figma-plugin] watching for changes")) {
+          clearTimeout(timeout);
+          reject(new Error(`Figma plugin watch build exited with code ${code}:\n${output}`));
+        }
+      });
+    });
+  } finally {
+    child.kill("SIGTERM");
+  }
+
+  return output;
+}
 
 type NodeRecord = ReturnType<typeof createHarness>["nodes"] extends Map<string, infer T>
   ? T
@@ -208,6 +252,12 @@ function latest(harness: ReturnType<typeof createHarness>, type: string) {
 }
 
 describe("compiled Figma plugin", () => {
+  test("watch mode keeps the generated icon catalog plugin", async () => {
+    const output = await startWatchBuild();
+    expect(output).toContain("[figma-plugin] watching for changes");
+    expect(output).not.toContain("Could not resolve \"vadivam:catalog\"");
+  });
+
   test("inserts, replaces, confirms propagation, and isolates selected instances", async () => {
     const harness = createHarness();
     await runPlugin(harness);
