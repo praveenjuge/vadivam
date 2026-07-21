@@ -6,16 +6,20 @@ import { readIcons } from "../../../scripts/icons.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = resolve(root, "dist");
+const iconsRoot = resolve(root, "../../icons");
 const watch = process.argv.includes("--watch");
 
 await mkdir(dist, { recursive: true });
 
 const sourceIcons = await readIcons();
-const catalogSource = `export default ${JSON.stringify(
-  sourceIcons
+
+function createCatalogSource(icons) {
+  return `export default ${JSON.stringify(
+    icons
     .map(({ name, svg, iconNode }) => ({ name, svg, iconNode }))
     .sort((left, right) => left.name.localeCompare(right.name)),
-)};`;
+  )};`;
+}
 
 const catalogPlugin = {
   name: "vadivam-catalog",
@@ -24,9 +28,10 @@ const catalogPlugin = {
       path: "catalog",
       namespace: "vadivam",
     }));
-    pluginBuild.onLoad({ filter: /.*/, namespace: "vadivam" }, () => ({
-      contents: catalogSource,
+    pluginBuild.onLoad({ filter: /.*/, namespace: "vadivam" }, async () => ({
+      contents: createCatalogSource(await readIcons()),
       loader: "js",
+      watchDirs: [iconsRoot],
     }));
   },
 };
