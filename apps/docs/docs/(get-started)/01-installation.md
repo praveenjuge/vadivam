@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install the Vadivam package and peer dependencies for your application stack.
+description: Install the correct Vadivam icon package and required peer dependencies for React, React Native, Vue, Svelte, Solid, Angular, Astro, or Preact.
 ---
 
 Install only the package for the environment where the icons render. Every Vadivam package is ESM-only and publishes tree-shakeable named and per-icon exports.

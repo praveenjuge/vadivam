@@ -1,6 +1,6 @@
 ---
 title: Vue
-description: Use free, open-source Vadivam SVG icon components with shared defaults and dynamic names in Vue 3.
+description: Use free, open-source Vadivam SVG icon components in Vue 3 with shared defaults, per-icon imports, and runtime icon names.
 seo:
   title: Vue Icons – 24px Outline Icon Components
 ---

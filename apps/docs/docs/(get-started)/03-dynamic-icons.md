@@ -1,6 +1,6 @@
 ---
 title: Dynamic icons
-description: Load Vadivam icons safely when icon names come from runtime data.
+description: Load Vadivam icons safely from runtime names, validate untrusted values, and choose the appropriate dynamic API for each framework.
 ---
 
 Use a dynamic icon only when the icon name is data rather than source code—for example, a CMS field or navigation configuration. For known icons, prefer a static named import because it is simpler and directly tree-shakeable.
@@ -67,7 +67,7 @@ import { DynamicIcon } from "vadivam-angular/dynamic";
 export class StatusIcon {}
 ```
 
-See each [framework guide](/docs#choose-a-package) for complete syntax.
+See each [framework guide](/docs/#choose-a-package) for complete syntax.
 
 ## Import map API
 

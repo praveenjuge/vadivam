@@ -1,6 +1,6 @@
 ---
 title: Contributing and icon guidelines
-description: Set up the Vadivam monorepo and contribute safe, consistent 24px outline icons.
+description: Set up the Vadivam monorepo, contribute safe and consistent 24px outline icons, and validate package or documentation changes.
 ---
 
 Vadivam is a Bun monorepo. Source SVGs in the root `icons/` directory are canonical; package distributions and website assets are generated and must not be edited by hand.

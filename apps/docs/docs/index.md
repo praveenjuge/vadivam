@@ -1,6 +1,6 @@
 ---
 title: Vadivam
-description: Pixel-perfect 24px outline icons for SVG, JavaScript, and modern UI frameworks.
+description: Explore Vadivam’s pixel-perfect 24px outline icons and learn how to use them as SVG assets or components across modern UI frameworks.
 sidebar:
   label: Introduction
 ---
@@ -48,7 +48,7 @@ Static named imports are tree-shakeable and are the best default when the icon i
 
 All packages are ESM-only. Icon components accept native SVG attributes in addition to Vadivam's sizing and stroke props. See [installation](/docs/installation) for peer requirements and [usage](/docs/usage) for styling and accessibility guidance.
 
-Browse the icon catalog at [vadivam.praveenjuge.com](https://vadivam.praveenjuge.com). Icon names use kebab case in data APIs, such as `activity` and `arrow-right`, and PascalCase for component imports, such as `Activity` and `ArrowRight`.
+Browse the [icon catalog](/). Icon names use kebab case in data APIs, such as `activity` and `arrow-right`, and PascalCase for component imports, such as `Activity` and `ArrowRight`.
 
 ## Next steps
 
