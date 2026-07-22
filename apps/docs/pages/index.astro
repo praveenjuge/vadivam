@@ -114,11 +114,20 @@ const structuredData = site
                 <img
                   class:list={["size-3.5 object-contain", link.darkIconSrc && "dark:hidden"]}
                   src={link.iconSrc}
+                  width="14"
+                  height="14"
                   alt=""
                   aria-hidden="true"
                 />
                 {link.darkIconSrc && (
-                  <img class="hidden size-3.5 object-contain dark:block" src={link.darkIconSrc} alt="" aria-hidden="true" />
+                  <img
+                    class="hidden size-3.5 object-contain dark:block"
+                    src={link.darkIconSrc}
+                    width="14"
+                    height="14"
+                    alt=""
+                    aria-hidden="true"
+                  />
                 )}
               </span>
             )}
