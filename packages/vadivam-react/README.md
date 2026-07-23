@@ -8,7 +8,7 @@ Tree-shakeable 24px outline SVG icons for React.
 [![downloads](https://img.shields.io/npm/dw/vadivam-react?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam-react)
 [![license](https://img.shields.io/npm/l/vadivam-react?style=flat-square&color=111)](https://github.com/praveenjuge/vadivam/blob/main/LICENSE)
 
-![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/docs/public/preview.png?v=0.0.31)
+![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/docs/public/preview.png?v=0.0.32)
 
 ```sh
 npm install vadivam-react

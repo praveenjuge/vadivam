@@ -1,6 +1,6 @@
 {
   "name": "vadivam-svelte",
-  "version": "0.0.31",
+  "version": "0.0.32",
   "description": "Pixel-perfect 24px outline icon components for Svelte with tree-shakeable imports.",
   "license": "MIT",
   "author": "Praveen Juge",

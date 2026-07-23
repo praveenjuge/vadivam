@@ -1,6 +1,6 @@
 {
   "name": "vadivam-vue",
-  "version": "0.0.31",
+  "version": "0.0.32",
   "description": "Pixel-perfect 24px outline icon components for Vue with tree-shakeable imports.",
   "license": "MIT",
   "author": "Praveen Juge",
