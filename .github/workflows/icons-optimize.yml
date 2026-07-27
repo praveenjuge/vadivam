@@ -51,7 +51,7 @@ jobs:
         run: bunx playwright install --with-deps chromium
 
       - name: Cache integration app dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             tests/integration/*/node_modules
