@@ -577,15 +577,22 @@ const structuredData = site
 
   /* Compact the Shiki-highlighted drawer snippet. The ID selector outranks the
      shared `.prose` code rules for layout while leaving the theme's colors and
-     transparent background (set with !important) untouched. */
+     transparent background (set with !important) untouched. Blume keeps the code
+     block's horizontal padding on the inner `code` (so long lines scroll past a
+     static pre), so the pre carries only vertical padding — adding horizontal
+     padding here too would double the left inset. */
   #drawerCode.prose pre.astro-code {
     margin: 0;
     max-height: 8rem;
     min-height: 4.5rem;
-    overflow: auto;
-    padding: 0.5rem 0.75rem;
+    overflow-y: auto;
+    padding: 0.5rem 0;
     font-size: 0.72rem;
     line-height: 1.5;
     scrollbar-width: thin;
+  }
+
+  #drawerCode.prose pre.astro-code > code {
+    padding: 0 0.75rem;
   }
 </style>
