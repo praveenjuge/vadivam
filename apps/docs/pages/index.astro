@@ -4,7 +4,8 @@ import Icon from "blume/components/Icon.astro";
 import GithubInfo from "blume/components/content/GithubInfo.astro";
 import Tooltip from "blume/components/content/Tooltip.astro";
 import data from "blume:data";
-import { icons } from "vadivam/manifest";
+import { highlightCode } from "blume/markdown";
+import { icons, iconsByName } from "vadivam/manifest";
 
 const { config } = data;
 
@@ -56,7 +57,75 @@ const codeTabs = [
 ];
 
 const chipClass =
-  "inline-flex flex-none items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-foreground no-underline transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+  "inline-flex flex-none items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs text-foreground no-underline transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+
+// The vadivam "search" icon, used as the affordance at the start of the search
+// field. Its stroke follows `currentColor`, so the wrapper's text color styles it.
+const searchIconSvg = iconsByName.search?.svg ?? "";
+
+// Pre-highlight each framework snippet once, with a placeholder component name
+// the drawer swaps for the real one on the client. One highlighted template per
+// framework (instead of per icon) keeps the page light while the snippet picks
+// up the same Shiki theme as the icon detail pages.
+const SNIPPET_PLACEHOLDER = "VadivamIcon";
+const snippetTemplate = (tab: string, name: string): { lang: string; code: string } | null => {
+  switch (tab) {
+    case "react":
+      return { lang: "tsx", code: `import { ${name} } from "vadivam-react";\n\n<${name} />` };
+    case "solid":
+      return { lang: "tsx", code: `import { ${name} } from "vadivam-solid";\n\n<${name} />` };
+    case "preact":
+      return { lang: "tsx", code: `import { ${name} } from "vadivam-preact";\n\n<${name} />` };
+    case "vue":
+      return {
+        lang: "vue",
+        code: `<script setup>\nimport { ${name} } from "vadivam-vue";\n<\/script>\n\n<template>\n  <${name} />\n</template>`,
+      };
+    case "svelte":
+      return { lang: "svelte", code: `<script>\n  import { ${name} } from "vadivam-svelte";\n<\/script>\n\n<${name} />` };
+    case "astro":
+      return { lang: "astro", code: `---\nimport { ${name} } from "vadivam-astro";\n---\n\n<${name} />` };
+    case "angular":
+      return { lang: "ts", code: `import { ${name} } from "vadivam-angular";\n\n<svg vadivam${name}></svg>` };
+    default:
+      return null;
+  }
+};
+
+const highlightThemes = config.codeThemes;
+const tabSnippets: Record<string, string> = {};
+for (const tab of codeTabs) {
+  const template = snippetTemplate(tab.id, SNIPPET_PLACEHOLDER);
+  if (template) {
+    tabSnippets[tab.id] = await highlightCode(template.code, template.lang, {
+      icons: false,
+      themes: highlightThemes,
+    });
+  }
+}
+
+// The SVG tab shows raw markup. Every icon shares one normalized wrapper and only
+// its `<path d="…">` values differ, so highlight one shell per path-count and let
+// the client substitute the real path data.
+const svgPathCounts = [...new Set(icons.map((icon) => (icon.svg.match(/ d="/g) ?? []).length))]
+  .filter((count) => count > 0)
+  .sort((a, b) => a - b);
+const svgSnippets: Record<number, string> = {};
+for (const count of svgPathCounts) {
+  // Match the manifest's exact markup (all paths on one line, no indent) so the
+  // highlighted view is identical to what the "Copy SVG" action yields.
+  const paths = Array.from({ length: count }, (_, index) => `<path d="__D${index + 1}__"/>`).join("");
+  const shell = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n${paths}\n</svg>`;
+  svgSnippets[count] = await highlightCode(shell, "html", { icons: false, themes: highlightThemes });
+}
+
+// Serialize for the inline island. `</` is escaped so no substring can close the
+// surrounding <script> tag early; JSON's `\/` decodes back on parse.
+const highlightedSnippets = JSON.stringify({
+  placeholder: SNIPPET_PLACEHOLDER,
+  tabs: tabSnippets,
+  svg: svgSnippets,
+}).replaceAll("</", "<\\/");
 
 // PageLayout (unlike RootLayout) emits no structured data, so declare the site
 // identity here.
@@ -139,15 +208,22 @@ const structuredData = site
 
     <section aria-label="Icon library">
       <div class="pb-3">
-        <input
-          class="w-full rounded-md border border-border bg-transparent px-2.5 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-accent focus-visible:outline-none"
-          id="iconSearch"
-          type="search"
-          placeholder="Search icons…"
-          aria-label="Search icons"
-          autocomplete="off"
-          spellcheck="false"
-        />
+        <div class="relative">
+          <span
+            class="pointer-events-none absolute inset-y-0 start-0 grid w-10 place-items-center text-muted-foreground [&>svg]:size-4"
+            aria-hidden="true"
+            set:html={searchIconSvg}
+          />
+          <input
+            class="w-full rounded-full border border-border bg-transparent py-2 ps-10 pe-4 text-base text-foreground outline-none placeholder:text-muted-foreground focus:border-accent focus-visible:outline-none md:text-sm"
+            id="iconSearch"
+            type="search"
+            placeholder="Search icons…"
+            aria-label="Search icons"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
       </div>
 
       <div class="grid grid-cols-[repeat(auto-fill,minmax(4.25rem,1fr))]" id="iconGrid">
@@ -227,7 +303,7 @@ const structuredData = site
       </div>
 
       <div class="relative min-w-0">
-        <pre class="m-0 max-h-32 min-h-[4.5rem] overflow-auto rounded-md bg-muted px-3 py-2 text-[0.72rem] leading-relaxed [scrollbar-width:thin]"><code id="drawerCode" class="font-mono"></code></pre>
+        <div class="prose max-w-none" id="drawerCode"></div>
         <button
           class="absolute end-1.5 top-1.5 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[0.68rem] transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           type="button"
@@ -263,6 +339,8 @@ const structuredData = site
 
   {structuredData && <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />}
 
+  <script is:inline type="application/json" id="snippetHighlight" set:html={highlightedSnippets}></script>
+
   <script>
     const explorer = document.querySelector<HTMLElement>("#iconExplorer");
     const search = document.querySelector<HTMLInputElement>("#iconSearch");
@@ -289,6 +367,7 @@ const structuredData = site
       svg: selected?.dataset.svg ?? "",
     });
 
+    // Plain-text snippet, used for the copy-to-clipboard action.
     const snippet = (tab: string, component: string, svg: string) => {
       switch (tab) {
         case "react":
@@ -310,6 +389,38 @@ const structuredData = site
       }
     };
 
+    // Shiki-highlighted templates rendered at build time (see the page frontmatter).
+    // Framework tabs carry a placeholder component name; the SVG tab is keyed by
+    // path-count with `__Dn__` placeholders. Both are swapped for the selected
+    // icon's real values here so the markup stays a single lightweight template.
+    const highlightData: {
+      placeholder: string;
+      tabs: Record<string, string>;
+      svg: Record<string, string>;
+    } = (() => {
+      const raw = document.getElementById("snippetHighlight")?.textContent;
+      try {
+        return raw ? JSON.parse(raw) : { placeholder: "", tabs: {}, svg: {} };
+      } catch {
+        return { placeholder: "", tabs: {}, svg: {} };
+      }
+    })();
+
+    const escapeHtml = (value: string) =>
+      value.replace(/[&<>]/g, (char) => (char === "&" ? "&amp;" : char === "<" ? "&lt;" : "&gt;"));
+
+    const highlightedSnippet = (tab: string, component: string, svg: string) => {
+      if (tab === "svg") {
+        const paths = Array.from(svg.matchAll(/ d="([^"]*)"/g), (match) => match[1]);
+        const template = highlightData.svg[String(paths.length)];
+        if (!template) return `<pre class="astro-code"><code>${escapeHtml(svg)}</code></pre>`;
+        return paths.reduce((html, d, index) => html.split(`__D${index + 1}__`).join(d), template);
+      }
+      const template = highlightData.tabs[tab];
+      if (!template) return `<pre class="astro-code"><code>${escapeHtml(snippet(tab, component, svg))}</code></pre>`;
+      return template.split(highlightData.placeholder).join(component);
+    };
+
     const setStatus = (message: string) => {
       if (!drawerStatus) return;
       drawerStatus.textContent = message;
@@ -326,7 +437,7 @@ const structuredData = site
     const renderCode = () => {
       if (!drawerCode || !selected) return;
       const { component, svg } = getData();
-      drawerCode.textContent = snippet(activeTab, component, svg);
+      drawerCode.innerHTML = highlightedSnippet(activeTab, component, svg);
     };
 
     const syncClearance = () => {
@@ -462,5 +573,19 @@ const structuredData = site
   html,
   body {
     overflow-x: clip;
+  }
+
+  /* Compact the Shiki-highlighted drawer snippet. The ID selector outranks the
+     shared `.prose` code rules for layout while leaving the theme's colors and
+     transparent background (set with !important) untouched. */
+  #drawerCode.prose pre.astro-code {
+    margin: 0;
+    max-height: 8rem;
+    min-height: 4.5rem;
+    overflow: auto;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.72rem;
+    line-height: 1.5;
+    scrollbar-width: thin;
   }
 </style>
