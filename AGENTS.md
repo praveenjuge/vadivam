@@ -62,3 +62,11 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - Do not commit secrets, npm tokens, Cloudflare tokens, `.env` files, or local auth output.
 - Use GitHub Actions OIDC/npm Trusted Publishing for releases.
 - Treat SVG input as untrusted; keep validation strict before publishing or deploying.
+
+## Cursor Cloud specific instructions
+
+- **Bun 1.3.14** is required (`packageManager` in root `package.json`). If `bun` is missing, install with `curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.14"` and ensure `~/.bun/bin` is on `PATH`.
+- **Playwright Chromium** is required for `bun run test:integration` (one-time): `bunx playwright install --with-deps chromium`.
+- The docs dev server (`bun run dev`) listens on **port 4321**. Stop it before `bun run test` — `apps/docs check` (Blume) fails if a dev server is already bound to that port.
+- **Angular integration** needs Node **≥ 22.22.3** (or 24.x). Cloud VMs may expose Node 22.14.0 at `/exec-daemon/node` ahead of `nvm`; run `nvm install 24.15.0` and prepend `$HOME/.nvm/versions/node/v24.15.0/bin` to `PATH` when running `bun run test:integration` or full `bun run test`.
+- No Docker, database, or external API is needed for local development.
