@@ -46,7 +46,7 @@ describe("website SEO", () => {
   test("llms index includes the custom icon catalog homepage", () => {
     const llms = readDist("llms.txt");
     expect(llms).toContain(`- [Browse all Vadivam icons](${site}/)`);
-    expect(llms.match(new RegExp(`\\]\\(${site.replaceAll(".", "\\.")}\\/\\)`, "g"))).toHaveLength(1);
+    expect(llms.split(`](${site}/)`)).toHaveLength(2);
   });
 
   test("dynamic icon pages share a valid social image", () => {
