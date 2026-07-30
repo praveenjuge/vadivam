@@ -65,9 +65,10 @@ const codeTabs = [
 const chipClass =
   "inline-flex flex-none items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs text-foreground no-underline transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
-// The vadivam "search" icon, used as the affordance at the start of the search
-// field. Its stroke follows `currentColor`, so the wrapper's text color styles it.
+// The vadivam "search" and "x" icons used as affordances in the search field.
+// Their stroke follows `currentColor`, so the wrapper's text color styles them.
 const searchIconSvg = iconsByName.search?.svg ?? "";
+const clearIconSvg = iconsByName.x?.svg ?? "";
 
 // Pre-highlight each framework snippet once, with a placeholder component name
 // the drawer swaps for the real one on the client. One highlighted template per
@@ -221,13 +222,21 @@ const structuredData = site
             set:html={searchIconSvg}
           />
           <input
-            class="w-full rounded-full border border-border bg-transparent py-2 ps-10 pe-4 text-base text-foreground outline-none placeholder:text-muted-foreground focus:border-accent focus-visible:outline-none md:text-sm"
+            class="w-full rounded-full border border-border bg-transparent py-2 ps-10 pe-10 text-base text-foreground outline-none placeholder:text-muted-foreground focus:border-accent focus-visible:outline-none md:text-sm [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
             id="iconSearch"
             type="search"
             placeholder="Search icons…"
             aria-label="Search icons"
             autocomplete="off"
             spellcheck="false"
+          />
+          <button
+            class="absolute inset-y-0 end-0 grid w-10 place-items-center rounded-full border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset [&>svg]:size-4"
+            id="iconSearchClear"
+            type="button"
+            aria-label="Clear search"
+            hidden
+            set:html={clearIconSvg}
           />
         </div>
       </div>
@@ -350,6 +359,7 @@ const structuredData = site
   <script>
     const explorer = document.querySelector<HTMLElement>("#iconExplorer");
     const search = document.querySelector<HTMLInputElement>("#iconSearch");
+    const searchClear = document.querySelector<HTMLButtonElement>("#iconSearchClear");
     const grid = document.querySelector<HTMLElement>("#iconGrid");
     const cards = Array.from(document.querySelectorAll<HTMLAnchorElement>(".icon-card"));
     const emptyState = document.querySelector<HTMLElement>("#emptyState");
@@ -492,13 +502,32 @@ const structuredData = site
       if (emptyState) emptyState.hidden = cards.some((card) => !card.hidden);
     };
 
-    search?.addEventListener("input", () => {
-      applyFilter(search.value);
+    const syncSearchUrl = (value: string) => {
       const url = new URL(window.location.href);
-      const value = search.value.trim();
-      if (value) url.searchParams.set("q", value);
+      const trimmed = value.trim();
+      if (trimmed) url.searchParams.set("q", trimmed);
       else url.searchParams.delete("q");
       history.replaceState(null, "", url);
+    };
+
+    const syncClearButton = () => {
+      if (!searchClear || !search) return;
+      searchClear.hidden = search.value.length === 0;
+    };
+
+    search?.addEventListener("input", () => {
+      applyFilter(search.value);
+      syncSearchUrl(search.value);
+      syncClearButton();
+    });
+
+    searchClear?.addEventListener("click", () => {
+      if (!search) return;
+      search.value = "";
+      applyFilter("");
+      syncSearchUrl("");
+      syncClearButton();
+      search.focus();
     });
 
     // Deep-link: `/?q=term` pre-fills and filters.
@@ -507,6 +536,8 @@ const structuredData = site
       search.value = initialQuery;
       applyFilter(initialQuery);
     }
+    syncClearButton();
+
 
     grid?.addEventListener("click", (event) => {
       const mouse = event as MouseEvent;
