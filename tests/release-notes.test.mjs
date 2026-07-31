@@ -42,4 +42,9 @@ describe("release notes", () => {
     expect(notes).toContain("No icon source changes in this release.");
     expect(notes).toContain("Package metadata and release state only");
   });
+
+  test("includes the release version in generated notes", () => {
+    const notes = renderReleaseNotes(summarizeReleaseDiff(""), 240, "v0.0.35");
+    expect(notes).toStartWith("Vadivam v0.0.35 ships 240 Vadivam icons");
+  });
 });

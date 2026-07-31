@@ -4,14 +4,39 @@ export default defineConfig({
   title: "Vadivam Icons",
   description:
     "Browse pixel-perfect, open-source 24px outline icons for SVG, React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.",
-  basePath: "/docs",
+  content: {
+    sources: [
+      { type: "filesystem", root: "docs", prefix: "docs" },
+      {
+        type: "github-releases",
+        prefix: "changelog",
+        owner: "praveenjuge",
+        repo: "vadivam",
+      },
+    ],
+  },
   lastModified: true,
+  i18n: {
+    defaultLocale: "en",
+    locales: [{ code: "en", label: "English" }],
+    ui: {
+      en: {
+        changelog: {
+          description:
+            "Read every Vadivam release with version-specific icon additions, package updates, documentation improvements, and tooling changes.",
+        },
+      },
+    },
+  },
   logo: {
     image: "/logo.svg",
     text: "",
   },
   navigation: {
-    tabs: [{ label: "Documentation", path: "/docs" }],
+    tabs: [
+      { label: "Documentation", path: "/docs" },
+      { label: "Changelog", path: "/changelog", href: "/changelog" },
+    ],
   },
   github: {
     owner: "praveenjuge",

@@ -56,19 +56,43 @@ describe("website SEO", () => {
     expect(image.readUInt32BE(20)).toBe(630);
   });
 
-  test("sitemap contains exactly the homepage, docs, and canonical icon routes", () => {
+  test("changelog renders GitHub releases with a discoverable RSS feed", () => {
+    const html = readDist("changelog", "index.html");
+    const feed = new XMLParser().parse(readDist("changelog", "rss.xml"));
+    const releases = Array.isArray(feed.rss.channel.item)
+      ? feed.rss.channel.item
+      : [feed.rss.channel.item];
+
+    expect(html).toContain("<h1>Changelog</h1>");
+    expect(html).toContain('href="/changelog">Changelog</a>');
+    expect(html).toContain('href="/changelog/rss.xml" rel="alternate"');
+    expect(releases.length).toBeGreaterThan(0);
+    expect(html).toContain(`href="${new URL(releases[0].link).pathname}"`);
+  });
+
+  test("sitemap contains exactly the homepage, docs, changelog, and canonical icon routes", () => {
     const xml = readDist("sitemap.xml");
     expect(XMLValidator.validate(xml)).toBe(true);
     const parsed = new XMLParser().parse(xml);
     const entries = Array.isArray(parsed.urlset.url) ? parsed.urlset.url : [parsed.urlset.url];
     const locations = entries.map(({ loc }) => loc);
+    const feed = new XMLParser().parse(readDist("changelog", "rss.xml"));
+    const releases = Array.isArray(feed.rss.channel.item)
+      ? feed.rss.channel.item
+      : [feed.rss.channel.item];
+    const changelog = [`${site}/changelog`, ...releases.map(({ link }) => link)];
     const docs = readdirSync(path.join(root, "apps/docs/docs"), { recursive: true })
       .filter((file) => file.endsWith(".md"))
       .map((file) => {
         const slug = path.basename(file, ".md").replace(/^\d+-/, "");
         return file === "index.md" ? `${site}/docs` : `${site}/docs/${slug}`;
       });
-    const expected = [site + "/", ...docs, ...icons.map(({ name }) => `${site}/icons/${name}`)].sort();
+    const expected = [
+      site + "/",
+      ...changelog,
+      ...docs,
+      ...icons.map(({ name }) => `${site}/icons/${name}`),
+    ].sort();
     expect(locations).toHaveLength(expected.length);
     expect(new Set(locations).size).toBe(locations.length);
     expect(locations.sort()).toEqual(expected);

@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "blume dev",
     "build": "blume build && bun ../../scripts/complete-sitemap.mjs",
-    "audit": "blume audit --strict",
+    "audit": "bun ../../scripts/audit-docs.mjs",
     "check": "blume check",
     "validate": "blume validate",
     "doctor": "blume doctor"
@@ -15,7 +15,7 @@
     "@shikijs/twoslash": "4.3.1",
     "@tailwindcss/typography": "0.5.20",
     "@tailwindcss/vite": "4.3.3",
-    "blume": "1.1.2",
+    "blume": "1.2.1",
     "tailwindcss": "4.3.3",
     "vadivam": "workspace:*"
   },

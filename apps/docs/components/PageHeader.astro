@@ -1,0 +1,17 @@
+---
+interface Props {
+  route: string;
+}
+
+const { route } = Astro.props;
+---
+
+{
+  route.startsWith("/changelog") && (
+    <style is:global>
+      #blume-content a {
+        overflow-wrap: anywhere;
+      }
+    </style>
+  )
+}

@@ -63,7 +63,7 @@ export function summarizeReleaseDiff(diff) {
 
 const formatNames = (label, names) => (names.length ? `- **${label}:** ${names.map((name) => `\`${name}\``).join(", ")}` : null);
 
-export function renderReleaseNotes(summary, totalIcons) {
+export function renderReleaseNotes(summary, totalIcons, version) {
   const iconLines = [
     formatNames("Added", summary.icons.added),
     formatNames("Updated", summary.icons.changed),
@@ -74,7 +74,8 @@ export function renderReleaseNotes(summary, totalIcons) {
     ? summary.surfaces.map((surface) => `- ${surface}`).join("\n")
     : "- Package metadata and release state only";
 
-  return `Ships ${totalIcons} Vadivam icons across SVG, React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.\n\n## Icons\n\n${iconSection}\n\n## Updated surfaces\n\n${surfaces}\n`;
+  const subject = version ? `Vadivam ${version} ships` : "Ships";
+  return `${subject} ${totalIcons} Vadivam icons across SVG, React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.\n\n## Icons\n\n${iconSection}\n\n## Updated surfaces\n\n${surfaces}\n`;
 }
 
 function gitDiff(from, to) {
@@ -89,5 +90,7 @@ function gitDiff(from, to) {
 if (import.meta.main) {
   const [from = "", to = "HEAD"] = process.argv.slice(2);
   const totalIcons = readdirSync(path.join(root, "icons")).filter((file) => file.endsWith(".svg")).length;
-  process.stdout.write(renderReleaseNotes(summarizeReleaseDiff(gitDiff(from, to)), totalIcons));
+  process.stdout.write(
+    renderReleaseNotes(summarizeReleaseDiff(gitDiff(from, to)), totalIcons, to)
+  );
 }
