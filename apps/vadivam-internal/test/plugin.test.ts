@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
 import vm from "node:vm";
+import { getMissingShadcnIcons } from "../src/shadcn";
 
 interface MockFrame {
   type: "FRAME";
@@ -56,7 +57,7 @@ describe("compiled Figma plugin", () => {
       strokeCap: "ROUND",
       strokeJoin: "ROUND",
     });
-    const existing = ["x", "check", "chevron-right"].map((name, index) => {
+    const existing = ["x", "check", "chevron-right", "columns"].map((name, index) => {
       const artwork = validArtwork();
       if (name === "x") artwork.strokeCap = "NONE";
       if (name === "check") {
@@ -164,10 +165,15 @@ describe("compiled Figma plugin", () => {
     const expectedNames = catalog.candidates.slice(0, 2).map((icon) => icon.slug);
 
     await ui.onmessage?.({ type: "arrange" });
+    expect(messages[messages.length - 1]).toEqual({
+      type: "error",
+      message: "Deprecated Lucide name: columns → columns-2. Rename before arranging",
+    });
     expect(existing.map((frame) => [frame.name, frame.x, frame.y])).toEqual([
-      ["x", 80, 0],
-      ["check", 0, 0],
-      ["chevron-right", 40, 0],
+      ["x", 0, 0],
+      ["check", 40, 0],
+      ["chevron-right", 80, 0],
+      ["columns", 120, 0],
     ]);
 
     await ui.onmessage?.({ type: "audit" });
@@ -184,20 +190,22 @@ describe("compiled Figma plugin", () => {
       issues: Array<{ name: string; violations: string[] }>;
     };
     expect(audit.summary).toEqual({
-      checked: 3,
+      checked: 4,
       passed: 2,
-      failed: 1,
-      renamed: 2,
+      failed: 2,
+      renamed: 3,
       rounded: 1,
     });
     expect(existing.map((frame) => frame.children[0]?.name)).toEqual([
       "Vector",
       "Path",
       "Vector",
+      "Vector",
     ]);
     expect(existing.map((frame) => frame.children[0]?.strokeCap)).toEqual([
       "ROUND",
       "NONE",
+      "ROUND",
       "ROUND",
     ]);
     expect(audit.issues[0]?.name).toBe("check");
@@ -205,6 +213,19 @@ describe("compiled Figma plugin", () => {
     expect(audit.issues[0]?.violations).toContain("Frame must have no layout guides");
     expect(audit.issues[0]?.violations).toContain("Artwork must have no fill");
     expect(audit.issues[0]?.violations).toContain("Stroke weight must be 2 px");
+    expect(audit.issues[1]).toEqual({
+      name: "columns",
+      violations: ['Deprecated Lucide name; use "columns-2"'],
+    });
+
+    existing[3]!.name = "columns-2";
+    await ui.onmessage?.({ type: "arrange" });
+    expect(existing.map((frame) => [frame.name, frame.x, frame.y])).toEqual([
+      ["x", 120, 0],
+      ["check", 0, 0],
+      ["chevron-right", 40, 0],
+      ["columns-2", 80, 0],
+    ]);
 
     await ui.onmessage?.({ type: "generate", count: 2 });
     const created = currentPage.children.slice(existing.length) as MockFrame[];
@@ -234,6 +255,31 @@ describe("compiled Figma plugin", () => {
         },
       ],
     });
+
+    const existingAfterRanked = new Set([
+      ...existing.map((frame) => frame.name),
+      ...expectedNames,
+    ]);
+    const firstShadcnBatch = getMissingShadcnIcons(existingAfterRanked).slice(0, 20);
+    await ui.onmessage?.({ type: "generate-shadcn" });
+    const afterFirstShadcn = currentPage.children.slice(
+      existing.length + expectedNames.length,
+    ) as MockFrame[];
+    expect(afterFirstShadcn.map((frame) => frame.name)).toEqual(firstShadcnBatch);
+
+    const secondShadcnBatch = getMissingShadcnIcons(
+      new Set([...existingAfterRanked, ...firstShadcnBatch]),
+    ).slice(0, 20);
+    await ui.onmessage?.({ type: "generate-shadcn" });
+    const afterSecondShadcn = currentPage.children.slice(
+      existing.length + expectedNames.length + firstShadcnBatch.length,
+    ) as MockFrame[];
+    expect(afterSecondShadcn.map((frame) => frame.name)).toEqual(secondShadcnBatch);
+    expect(
+      messages.filter((message) =>
+        (message as { type?: string }).type === "shadcn-generated"
+      ),
+    ).toHaveLength(2);
   });
 
   test("creates and updates the documented canonical component library", async () => {

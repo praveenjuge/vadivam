@@ -8,7 +8,8 @@
     "build": "bun scripts/build.mjs",
     "dev": "bun scripts/build.mjs --watch",
     "test": "bun run build && bun test && bun run typecheck",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "update:lucide-data": "bun scripts/update-lucide-data.mjs"
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.130.0",

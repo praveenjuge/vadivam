@@ -189,10 +189,24 @@ describe("WOFF2 font", () => {
     const font = openSync(fontPath);
     const registry = await readFontCodepoints(registryPath);
     expect(font.familyName).toBe("Vadivam Icons");
-    expect(font.numGlyphs).toBe(manifest.length + 1);
+    const glyphGeometries = new Map();
     for (const icon of manifest) {
-      expect(font.glyphForCodePoint(registry[icon.name]).id).toBeGreaterThan(0);
+      const glyphId = font.glyphForCodePoint(registry[icon.name]).id;
+      expect(glyphId).toBeGreaterThan(0);
+      const geometry = JSON.stringify(
+        icon.iconNode
+          .map(([tag, attrs]) => [
+            tag,
+            Object.fromEntries(
+              Object.entries(attrs).filter(([name]) => name !== "key"),
+            ),
+          ])
+          .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right))),
+      );
+      expect(glyphGeometries.get(glyphId) ?? geometry).toBe(geometry);
+      glyphGeometries.set(glyphId, geometry);
     }
+    expect(font.numGlyphs).toBe(glyphGeometries.size + 1);
   });
 
   test("ships complete CSS and no legacy font formats", async () => {
