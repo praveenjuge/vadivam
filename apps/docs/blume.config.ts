@@ -4,6 +4,17 @@ export default defineConfig({
   title: "Vadivam Icons",
   description:
     "Browse pixel-perfect, open-source 24px outline icons for SVG, React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.",
+  analytics: {
+    scripts: [
+      {
+        src: "https://static.cloudflareinsights.com/beacon.min.js",
+        attributes: {
+          type: "module",
+          "data-cf-beacon": '{"token":"aab722c0300445d9b5c73b06de1a4fc6"}',
+        },
+      },
+    ],
+  },
   content: {
     sources: [
       { type: "filesystem", root: "docs", prefix: "docs" },
