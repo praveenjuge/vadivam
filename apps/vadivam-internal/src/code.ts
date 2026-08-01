@@ -8,7 +8,17 @@ import {
 import iconCatalog from "vadivam:icon-catalog";
 import { getBatchPositions, getGridPositions, ICON_SIZE } from "./layout";
 import popularIcons from "./data/popular-icons.json";
-import { lucideIconNames, resolveLucideIconName } from "./lucide";
+import {
+  getDeprecatedLucideReplacement,
+  lucideIconNames,
+  resolveLucideIconName,
+  resolveLucideIconNameIncludingDeprecated,
+} from "./lucide";
+import {
+  getMissingShadcnIcons,
+  SHADCN_BATCH_SIZE,
+  shadcnIconNames,
+} from "./shadcn";
 import type {
   CatalogSummary,
   IconAuditIssue,
@@ -25,7 +35,10 @@ const LIBRARY_NAME = "Vadivam Icons";
 const LIBRARY_DATA_KEY = "vadivam-internal";
 const LIBRARY_SCHEMA = 1;
 const DOCUMENTATION_URL = "https://vadivam.praveenjuge.com";
-const feed: PopularFeed = parsePopularFeed(popularIcons, resolveLucideIconName);
+const feed: PopularFeed = parsePopularFeed(
+  popularIcons,
+  resolveLucideIconNameIncludingDeprecated,
+);
 const allowedIconNames = new Set(lucideIconNames);
 
 let batchSize = 20;
@@ -126,11 +139,25 @@ function publishCatalog(): void {
   });
 }
 
+function publishShadcnStatus(): void {
+  post({
+    type: "shadcn-status",
+    total: shadcnIconNames.length,
+    remaining: getMissingShadcnIcons(existingSlugs).length,
+    batchSize: SHADCN_BATCH_SIZE,
+  });
+}
+
+function publishQueues(): void {
+  publishCatalog();
+  publishShadcnStatus();
+}
+
 async function refreshCatalog(): Promise<void> {
   post({ type: "loading" });
   existingSlugs = await scanDocument();
   candidates = getMissingIcons(feed.icons, existingSlugs);
-  publishCatalog();
+  publishQueues();
 }
 
 function createIconFrame(name: string, position: { x: number; y: number }): FrameNode {
@@ -372,25 +399,57 @@ function generateFrames(countValue: unknown): void {
   const selected = candidates.slice(0, count);
   if (selected.length === 0) throw new Error("No missing ranked icons remain");
 
+  const names = selected.map((icon) => icon.slug);
+  createNamedFrames(names);
+  publishQueues();
+  post({ type: "generated", names });
+}
+
+function createNamedFrames(names: readonly string[]): void {
   const currentIcons = figma.currentPage.children.filter(isCanonicalIconNode);
   const positions = getBatchPositions(
-    selected.length,
+    names.length,
     currentIcons.map((node) => ({ x: node.x, y: node.y })),
     figma.viewport.center,
   );
-  const frames = selected.map((icon, index) =>
-    createIconFrame(icon.slug, positions[index] as { x: number; y: number }),
+  const frames = names.map((name, index) =>
+    createIconFrame(name, positions[index] as { x: number; y: number }),
   );
 
   figma.currentPage.selection = frames;
   figma.viewport.scrollAndZoomIntoView(frames);
-  for (const icon of selected) existingSlugs.add(icon.slug);
+  for (const name of names) existingSlugs.add(name);
   candidates = getMissingIcons(feed.icons, existingSlugs);
-  post({ type: "generated", names: selected.map((icon) => icon.slug) });
-  publishCatalog();
+}
+
+function generateShadcnFrames(): void {
+  const selected = getMissingShadcnIcons(existingSlugs).slice(0, SHADCN_BATCH_SIZE);
+  if (selected.length === 0) throw new Error("No missing shadcn icons remain");
+
+  createNamedFrames(selected);
+  publishQueues();
+  post({ type: "shadcn-generated", names: selected });
 }
 
 function arrangeIcons(): void {
+  const deprecated = figma.currentPage.children
+    .filter(isIconContainer)
+    .map((node) => ({ node, replacement: getDeprecatedLucideReplacement(node.name) }))
+    .filter(
+      (entry): entry is { node: FrameNode | ComponentNode | InstanceNode; replacement: string } =>
+        entry.replacement !== null,
+    )
+    .sort((left, right) => left.node.name.localeCompare(right.node.name));
+  if (deprecated.length > 0) {
+    const examples = deprecated
+      .slice(0, 3)
+      .map(({ node, replacement }) => `${node.name} → ${replacement}`)
+      .join(", ");
+    const remaining = deprecated.length > 3 ? ` and ${deprecated.length - 3} more` : "";
+    throw new Error(
+      `Deprecated Lucide name${deprecated.length === 1 ? "" : "s"}: ${examples}${remaining}. Rename before arranging`,
+    );
+  }
   const icons = currentKnownIcons().sort((left, right) =>
     (resolveLucideIconName(left.name) ?? left.name).localeCompare(
       resolveLucideIconName(right.name) ?? right.name,
@@ -436,8 +495,13 @@ function auditIcon(icon: FrameNode | ComponentNode | InstanceNode): IconAuditRes
   const violations = new Set<string>();
   let renamed = 0;
   let rounded = 0;
+  const deprecatedReplacement = getDeprecatedLucideReplacement(icon.name);
   const slug = resolveLucideIconName(icon.name);
-  addViolation(violations, !slug || !allowedIconNames.has(slug), "Name is not in Lucide");
+  if (deprecatedReplacement) {
+    violations.add(`Deprecated Lucide name; use "${deprecatedReplacement}"`);
+  } else {
+    addViolation(violations, !slug || !allowedIconNames.has(slug), "Name is not in Lucide");
+  }
   addViolation(
     violations,
     Math.abs(icon.width - ICON_SIZE) >= 0.01 || Math.abs(icon.height - ICON_SIZE) >= 0.01,
@@ -558,6 +622,8 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
       publishCatalog();
     } else if (request.type === "generate") {
       generateFrames(request.count);
+    } else if (request.type === "generate-shadcn") {
+      generateShadcnFrames();
     } else if (request.type === "arrange") {
       arrangeIcons();
     } else if (request.type === "audit") {

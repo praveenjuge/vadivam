@@ -2,7 +2,7 @@
 
 <!-- vadivam-icon-count:start -->
 
-Vadivam is a free, open-source library of 327 pixel-perfect 24px outline SVG icons for React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.
+Vadivam is a free, open-source library of 376 pixel-perfect 24px outline SVG icons for React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.
 
 <!-- vadivam-icon-count:end -->
 

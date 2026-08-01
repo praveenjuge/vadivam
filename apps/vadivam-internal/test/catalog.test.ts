@@ -5,7 +5,18 @@ import {
   parsePopularFeed,
   toIconSlug,
 } from "../src/catalog";
-import { resolveLucideIconName } from "../src/lucide";
+import deprecatedAliases from "../src/data/lucide-deprecated-aliases.json";
+import {
+  getDeprecatedLucideReplacement,
+  lucideIconNames,
+  resolveLucideIconName,
+  resolveLucideIconNameIncludingDeprecated,
+} from "../src/lucide";
+import {
+  getMissingShadcnIcons,
+  SHADCN_BATCH_SIZE,
+  shadcnIconNames,
+} from "../src/shadcn";
 
 describe("toIconSlug", () => {
   test("normalizes Lucide component names to Vadivam slugs", () => {
@@ -34,6 +45,30 @@ describe("resolveLucideIconName", () => {
       resolveLucideIconName,
     );
     expect(feed.icons[0]?.slug).toBe("arrow-up-a-z");
+  });
+
+  test("keeps deprecated aliases out of the canonical catalog", () => {
+    expect(resolveLucideIconName("columns")).toBeNull();
+    expect(getDeprecatedLucideReplacement("columns")).toBe("columns-2");
+    expect(getDeprecatedLucideReplacement("Columns")).toBe("columns-2");
+    expect(getDeprecatedLucideReplacement("CircleEuroSign")).toBe("circle-euro");
+    expect(resolveLucideIconNameIncludingDeprecated("columns")).toBe("columns-2");
+    expect(
+      Object.keys(deprecatedAliases).every((alias) => !lucideIconNames.includes(alias)),
+    ).toBe(true);
+    expect(
+      Object.values(deprecatedAliases).every((name) => lucideIconNames.includes(name)),
+    ).toBe(true);
+  });
+
+  test("canonicalizes deprecated popularity names before frame creation", () => {
+    const feed = parsePopularFeed(
+      {
+        icons: [{ name: "Columns", repositories: 1, files: 1, rank: 1 }],
+      },
+      resolveLucideIconNameIncludingDeprecated,
+    );
+    expect(feed.icons[0]?.slug).toBe("columns-2");
   });
 });
 
@@ -77,4 +112,18 @@ test("parseBatchSize clamps user input to a safe range", () => {
   expect(parseBatchSize(20)).toBe(20);
   expect(parseBatchSize(500)).toBe(100);
   expect(() => parseBatchSize(2.5)).toThrow("integer");
+});
+
+describe("shadcn icon queue", () => {
+  test("contains unique canonical Lucide names in 20-icon batches", () => {
+    expect(SHADCN_BATCH_SIZE).toBe(20);
+    expect(shadcnIconNames).toHaveLength(105);
+    expect(new Set(shadcnIconNames)).toHaveProperty("size", 105);
+    expect(shadcnIconNames.every((name) => resolveLucideIconName(name) === name)).toBe(true);
+  });
+
+  test("excludes icons already present in the Figma document", () => {
+    const first = shadcnIconNames[0] as string;
+    expect(getMissingShadcnIcons(new Set([first]))).not.toContain(first);
+  });
 });
