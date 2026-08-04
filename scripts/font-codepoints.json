@@ -466,5 +466,16 @@
   "volume-x": 57808,
   "wallet": 57809,
   "waves-horizontal": 57810,
-  "zoom-out": 57811
+  "zoom-out": 57811,
+  "scale": 57812,
+  "scissors": 57813,
+  "shopping-bag": 57814,
+  "shuffle": 57815,
+  "square-centerline-dashed-horizontal": 57816,
+  "square-centerline-dashed-vertical": 57817,
+  "telescope": 57818,
+  "trophy": 57819,
+  "undo-2": 57820,
+  "user-check": 57821,
+  "workflow": 57822
 }

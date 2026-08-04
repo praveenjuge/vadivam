@@ -22,6 +22,8 @@ function codepointHex(codepoint) {
 }
 
 function assertValidRegistry(registry) {
+  // Keep allocations append-only: names for retired icons remain here so their
+  // published codepoints can never be reassigned to a different glyph.
   const allocated = new Map();
   for (const [name, codepoint] of Object.entries(registry)) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) {

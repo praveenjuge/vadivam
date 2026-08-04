@@ -100,11 +100,15 @@ describe("static SVG assets", () => {
 });
 
 describe("font codepoints", () => {
-  test("covers every icon with a unique private-use codepoint", async () => {
+  test("covers every icon and preserves retired codepoint reservations", async () => {
     const registry = await readFontCodepoints(registryPath);
     expect(() => validateFontCodepoints(manifest, registry)).not.toThrow();
     const current = manifest.map(({ name }) => registry[name]);
+    const currentNames = new Set(manifest.map(({ name }) => name));
+    const retired = Object.keys(registry).filter((name) => !currentNames.has(name));
     expect(new Set(current).size).toBe(manifest.length);
+    expect(retired).toContain("history");
+    expect(current).not.toContain(registry.history);
     expect(Math.min(...current)).toBeGreaterThanOrEqual(privateUseStart);
     expect(Math.max(...current)).toBeLessThanOrEqual(privateUseEnd);
   });
@@ -188,6 +192,7 @@ describe("WOFF2 font", () => {
     expect(contents.subarray(0, 4).toString()).toBe("wOF2");
     const font = openSync(fontPath);
     const registry = await readFontCodepoints(registryPath);
+    const currentNames = new Set(manifest.map(({ name }) => name));
     expect(font.familyName).toBe("Vadivam Icons");
     const glyphGeometries = new Map();
     for (const icon of manifest) {
@@ -206,17 +211,25 @@ describe("WOFF2 font", () => {
       expect(glyphGeometries.get(glyphId) ?? geometry).toBe(geometry);
       glyphGeometries.set(glyphId, geometry);
     }
+    for (const name of Object.keys(registry).filter((name) => !currentNames.has(name))) {
+      expect(font.glyphForCodePoint(registry[name]).id).toBe(0);
+    }
     expect(font.numGlyphs).toBe(glyphGeometries.size + 1);
   });
 
   test("ships complete CSS and no legacy font formats", async () => {
     const fontDirectory = path.join(packageDist, "font");
     const css = await readFile(path.join(fontDirectory, "vadivam.css"), "utf8");
+    const registry = await readFontCodepoints(registryPath);
+    const currentNames = new Set(manifest.map(({ name }) => name));
     expect(css).toContain('url("./vadivam.woff2") format("woff2")');
     expect(css).toContain('font-family: "Vadivam Icons"');
     expect(css).toContain(String.raw`content: "\e004"`);
     for (const icon of manifest) {
       expect(css).toContain(`.vadivam-icon-${icon.name}::before`);
+    }
+    for (const name of Object.keys(registry).filter((name) => !currentNames.has(name))) {
+      expect(css).not.toContain(`.vadivam-icon-${name}::before`);
     }
     expect((await readdir(fontDirectory)).sort()).toEqual([
       "vadivam.css",
