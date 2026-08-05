@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  normalizeSvg,
   readIcons,
   shuffleUnique,
   updateIconCountMarkers,
@@ -11,6 +12,24 @@ const validSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
 describe("icon validation", () => {
   test("accepts a valid outline SVG", () => {
     expect(() => validateSvgContent(validSvg, "valid-fixture.svg")).not.toThrow();
+  });
+
+  test("rejects filled Figma exports before normalization", () => {
+    const outlinedExport = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 2h20v20H2z" fill="black"/></svg>`;
+    expect(() => normalizeSvg(outlinedExport, "outlined-export.svg")).toThrow(
+      "filled artwork cannot be normalized",
+    );
+  });
+
+  test("rejects compound paths that look like expanded strokes", () => {
+    const closedShapes = Array.from(
+      { length: 9 },
+      (_value, index) => `M${index} 0h1v1h-1z`,
+    ).join("");
+    const expandedStroke = validSvg.replace("M4 12h16", closedShapes);
+    expect(() => validateSvgContent(expandedStroke, "expanded-stroke.svg")).toThrow(
+      "looks like expanded stroke geometry",
+    );
   });
 
   test.each([

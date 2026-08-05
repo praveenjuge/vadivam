@@ -96,6 +96,7 @@ const blockedTags = new Set([
   "text",
   "use",
 ]);
+const maxClosedSubpathsPerPath = 8;
 
 async function svgFiles() {
   return (await readdir(iconsDir))
@@ -167,6 +168,15 @@ export function validateSvgContent(svg, file = "inline.svg") {
           `${file}: invalid <${tag}> element`,
         );
         const allowed = geometryAttrs[tag];
+        if (tag === "path") {
+          const pathData = item["@_d"];
+          const closedSubpaths =
+            typeof pathData === "string" ? (pathData.match(/z/gi) ?? []).length : 0;
+          assert(
+            closedSubpaths <= maxClosedSubpathsPerPath,
+            `${file}: path has ${closedSubpaths} closed subpaths and looks like expanded stroke geometry; use open centerline strokes`,
+          );
+        }
         for (const attr of Object.keys(item)) {
           if (attr.startsWith("@_")) {
             assert(
@@ -189,6 +199,25 @@ export function validateSvgContent(svg, file = "inline.svg") {
   assert(count > 0, `${file}: no drawable elements found`);
 }
 
+function assertNoFilledSourceArtwork(svg, file) {
+  const rootNode = parseSvg(svg, file);
+  const visit = (current) => {
+    for (const [tag, value] of Object.entries(current)) {
+      if (tag.startsWith("@_")) continue;
+      for (const item of asArray(value)) {
+        if (!item || typeof item !== "object") continue;
+        const fill = item["@_fill"];
+        assert(
+          fill === undefined || fill === "none",
+          `${file}: filled artwork cannot be normalized; use open centerline strokes instead of outlined stroke geometry`,
+        );
+        visit(item);
+      }
+    }
+  };
+  visit(rootNode);
+}
+
 function iconNodeFromSvg(svg, file) {
   const node = parseSvg(svg, file);
   const iconNode = [];
@@ -206,6 +235,7 @@ function iconNodeFromSvg(svg, file) {
 }
 
 export function normalizeSvg(svg, file) {
+  assertNoFilledSourceArtwork(svg, file);
   const result = optimize(svg, {
     path: file,
     multipass: true,
@@ -282,10 +312,14 @@ async function synchronizeIconCounts(count, { check = false } = {}) {
 
 export async function optimizeIcons() {
   const files = await svgFiles();
+  const normalizedIcons = [];
   for (const fileName of files) {
     const filePath = path.join(iconsDir, fileName);
     const svg = await readFile(filePath, "utf8");
-    await writeFile(filePath, normalizeSvg(svg, fileName));
+    normalizedIcons.push([filePath, normalizeSvg(svg, fileName)]);
+  }
+  for (const [filePath, svg] of normalizedIcons) {
+    await writeFile(filePath, svg);
   }
   await synchronizeIconCounts(files.length);
   console.log(`Optimized ${files.length} icons.`);
