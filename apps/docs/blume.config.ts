@@ -16,12 +16,10 @@ export default defineConfig({
     ],
   },
   content: {
-    sources: [
-      { type: "filesystem", root: "docs", prefix: "docs" },
-      // Commit release notes under changelog/ so static deploys stay populated
-      // even when the GitHub API is unreachable or rate-limited at build time.
-      { type: "filesystem", root: "changelog", prefix: "changelog" },
-    ],
+    // One filesystem source rooted at the docs app: docs/ and changelog/ both
+    // live under this root so Blume entry ids stay aligned with the collection.
+    root: ".",
+    include: ["docs/**/*.{md,mdx}", "changelog/**/*.{md,mdx}"],
   },
   lastModified: true,
   i18n: {
