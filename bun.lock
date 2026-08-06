@@ -5,7 +5,6 @@
     "": {
       "name": "vadivam-monorepo",
       "dependencies": {
-        "blume": "^1.3.1",
         "vadivam": "workspace:*",
         "vadivam-angular": "workspace:*",
         "vadivam-astro": "workspace:*",
