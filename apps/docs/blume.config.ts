@@ -71,4 +71,10 @@ export default defineConfig({
     output: "static",
     site: "https://vadivam.praveenjuge.com",
   },
+  theme: {
+    fonts: {
+      display: { name: "SN Pro", weights: [400, 500, 600, 700] },
+      body: { name: "SN Pro", weights: [400, 500, 600, 700] },
+    },
+  },
 });
