@@ -88,9 +88,9 @@ function gitDiff(from, to) {
 }
 
 if (import.meta.main) {
-  const [from = "", to = "HEAD"] = process.argv.slice(2);
+  const [from = "", to = "HEAD", version = to] = process.argv.slice(2);
   const totalIcons = readdirSync(path.join(root, "icons")).filter((file) => file.endsWith(".svg")).length;
   process.stdout.write(
-    renderReleaseNotes(summarizeReleaseDiff(gitDiff(from, to)), totalIcons, to)
+    renderReleaseNotes(summarizeReleaseDiff(gitDiff(from, to)), totalIcons, version)
   );
 }

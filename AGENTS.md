@@ -32,6 +32,7 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - Validate without writing files with `bun run icons:check`.
 - Keep every icon `24x24` with `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `stroke-width="2"`, and round caps/joins.
 - Keep icons outline-only. Do not add fills, gradients, masks, scripts, inline styles, external references, or unsafe SVG features.
+- Docs changelog entries live in `apps/docs/changelog/` and are synced from GitHub Releases with `bun run changelog:sync`. Release bumps write the matching entry into that folder.
 
 ## Code Style
 

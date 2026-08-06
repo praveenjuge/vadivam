@@ -56,7 +56,7 @@ describe("website SEO", () => {
     expect(image.readUInt32BE(20)).toBe(630);
   });
 
-  test("changelog renders GitHub releases with a discoverable RSS feed", () => {
+  test("changelog renders committed release entries with a discoverable RSS feed", () => {
     const html = readDist("changelog", "index.html");
     const feed = new XMLParser().parse(readDist("changelog", "rss.xml"));
     const releases = Array.isArray(feed.rss.channel.item)
@@ -64,6 +64,7 @@ describe("website SEO", () => {
       : [feed.rss.channel.item];
 
     expect(html).toContain("<h1>Changelog</h1>");
+    expect(html).not.toContain("No changelog entries yet.");
     expect(html).toContain('href="/changelog">Changelog</a>');
     expect(html).toContain('href="/changelog/rss.xml" rel="alternate"');
     expect(releases.length).toBeGreaterThan(0);

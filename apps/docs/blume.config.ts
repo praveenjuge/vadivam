@@ -18,12 +18,9 @@ export default defineConfig({
   content: {
     sources: [
       { type: "filesystem", root: "docs", prefix: "docs" },
-      {
-        type: "github-releases",
-        prefix: "changelog",
-        owner: "praveenjuge",
-        repo: "vadivam",
-      },
+      // Commit release notes under changelog/ so static deploys stay populated
+      // even when the GitHub API is unreachable or rate-limited at build time.
+      { type: "filesystem", root: "changelog", prefix: "changelog" },
     ],
   },
   lastModified: true,
