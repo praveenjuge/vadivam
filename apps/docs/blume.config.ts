@@ -16,10 +16,15 @@ export default defineConfig({
     ],
   },
   content: {
-    // One filesystem source rooted at the docs app: docs/ and changelog/ both
-    // live under this root so Blume entry ids stay aligned with the collection.
-    root: ".",
-    include: ["docs/**/*.{md,mdx}", "changelog/**/*.{md,mdx}"],
+    sources: [
+      { type: "filesystem", root: "docs", prefix: "docs" },
+      {
+        type: "github-releases",
+        prefix: "changelog",
+        owner: "praveenjuge",
+        repo: "vadivam",
+      },
+    ],
   },
   lastModified: true,
   i18n: {

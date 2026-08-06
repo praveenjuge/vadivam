@@ -56,7 +56,7 @@ describe("website SEO", () => {
     expect(image.readUInt32BE(20)).toBe(630);
   });
 
-  test("changelog renders committed release entries with a discoverable RSS feed", () => {
+  test("changelog renders GitHub releases with a discoverable RSS feed", () => {
     const html = readDist("changelog", "index.html");
     const feed = new XMLParser().parse(readDist("changelog", "rss.xml"));
     const releases = Array.isArray(feed.rss.channel.item)
