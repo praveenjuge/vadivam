@@ -28,13 +28,13 @@
     "@bruits/satteri-linux-x64-musl": "0.9.5",
     "@bruits/satteri-win32-arm64-msvc": "0.9.5",
     "@bruits/satteri-win32-x64-msvc": "0.9.5",
-    "@takumi-rs/core-darwin-arm64": "1.8.7",
-    "@takumi-rs/core-darwin-x64": "1.8.7",
-    "@takumi-rs/core-linux-arm64-gnu": "1.8.7",
-    "@takumi-rs/core-linux-arm64-musl": "1.8.7",
-    "@takumi-rs/core-linux-x64-gnu": "1.8.7",
-    "@takumi-rs/core-linux-x64-musl": "1.8.7",
-    "@takumi-rs/core-win32-arm64-msvc": "1.8.7",
-    "@takumi-rs/core-win32-x64-msvc": "1.8.7"
+    "@takumi-rs/core-darwin-arm64": "2.4.0",
+    "@takumi-rs/core-darwin-x64": "2.4.0",
+    "@takumi-rs/core-linux-arm64-gnu": "2.4.0",
+    "@takumi-rs/core-linux-arm64-musl": "2.4.0",
+    "@takumi-rs/core-linux-x64-gnu": "2.4.0",
+    "@takumi-rs/core-linux-x64-musl": "2.4.0",
+    "@takumi-rs/core-win32-arm64-msvc": "2.4.0",
+    "@takumi-rs/core-win32-x64-msvc": "2.4.0"
   }
 }

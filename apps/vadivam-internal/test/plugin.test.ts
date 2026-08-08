@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
 import vm from "node:vm";
-import { getMissingShadcnIcons } from "../src/shadcn";
 
 interface MockFrame {
   type: "FRAME";
@@ -44,7 +43,7 @@ async function waitFor(predicate: () => boolean): Promise<void> {
 }
 
 describe("compiled Figma plugin", () => {
-  test("loads the feed, excludes existing icons, and creates canonical frames", async () => {
+  test("loads Lucide popularity, excludes existing icons, and creates canonical frames", async () => {
     const messages: unknown[] = [];
     const validArtwork = (): MockArtwork => ({
       type: "VECTOR",
@@ -159,10 +158,10 @@ describe("compiled Figma plugin", () => {
     );
     const catalog = messages.find(
       (message) => (message as { type?: string }).type === "catalog",
-    ) as { candidates: Array<{ slug: string }> };
+    ) as { candidates: Array<{ name: string }> };
     expect(catalog.candidates.length).toBeGreaterThan(2);
-    expect(catalog.candidates.map((icon) => icon.slug)).not.toContain("x");
-    const expectedNames = catalog.candidates.slice(0, 2).map((icon) => icon.slug);
+    expect(catalog.candidates.map((icon) => icon.name)).not.toContain("x");
+    const expectedNames = catalog.candidates.slice(0, 2).map((icon) => icon.name);
 
     await ui.onmessage?.({ type: "arrange" });
     expect(messages[messages.length - 1]).toEqual({
@@ -255,31 +254,6 @@ describe("compiled Figma plugin", () => {
         },
       ],
     });
-
-    const existingAfterRanked = new Set([
-      ...existing.map((frame) => frame.name),
-      ...expectedNames,
-    ]);
-    const firstShadcnBatch = getMissingShadcnIcons(existingAfterRanked).slice(0, 20);
-    await ui.onmessage?.({ type: "generate-shadcn" });
-    const afterFirstShadcn = currentPage.children.slice(
-      existing.length + expectedNames.length,
-    ) as MockFrame[];
-    expect(afterFirstShadcn.map((frame) => frame.name)).toEqual(firstShadcnBatch);
-
-    const secondShadcnBatch = getMissingShadcnIcons(
-      new Set([...existingAfterRanked, ...firstShadcnBatch]),
-    ).slice(0, 20);
-    await ui.onmessage?.({ type: "generate-shadcn" });
-    const afterSecondShadcn = currentPage.children.slice(
-      existing.length + expectedNames.length + firstShadcnBatch.length,
-    ) as MockFrame[];
-    expect(afterSecondShadcn.map((frame) => frame.name)).toEqual(secondShadcnBatch);
-    expect(
-      messages.filter((message) =>
-        (message as { type?: string }).type === "shadcn-generated"
-      ),
-    ).toHaveLength(2);
   });
 
   test("creates and updates the documented canonical component library", async () => {

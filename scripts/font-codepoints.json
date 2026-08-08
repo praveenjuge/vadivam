@@ -504,5 +504,11 @@
   "popcorn": 57846,
   "qr-code": 57847,
   "quote": 57848,
-  "radar": 57849
+  "radar": 57849,
+  "book-open-text": 57850,
+  "face-angry": 57851,
+  "face-expressionless": 57852,
+  "face-slightly-smiling": 57853,
+  "folder-code": 57854,
+  "frame": 57855
 }
