@@ -22,7 +22,7 @@ import type {
 
 const UI_WIDTH = 360;
 const UI_HEIGHT = 620;
-const ARRANGE_COLUMNS = 20;
+const ARRANGE_COLUMNS = 40;
 const LIBRARY_GAP = 24;
 const LIBRARY_PADDING = 24;
 const LIBRARY_NAME = "Vadivam Icons";

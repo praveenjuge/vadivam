@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
+  fetchLatestLucideCatalog,
   normalizeSvg,
   readIcons,
   shuffleUnique,
   updateIconCountMarkers,
+  validateLucideIconNames,
   validateSvgContent,
 } from "../scripts/icons.mjs";
 
@@ -50,6 +52,43 @@ describe("icon validation", () => {
       expect(icon.svgPath).toBe(`icons/${icon.fileName}`);
       expect(icon.componentName).toMatch(/^[A-Z][A-Za-z0-9]*$/);
     }
+  });
+
+  test("loads canonical names from the latest stable Lucide release", async () => {
+    const requests = [];
+    const fetchImpl = async (url) => {
+      requests.push(url);
+      if (url === "https://registry.npmjs.org/lucide/latest") {
+        return Response.json({ version: "1.30.0" });
+      }
+      return Response.json({
+        truncated: false,
+        tree: [
+          { path: "icons/check.svg" },
+          { path: "icons/columns-2.svg" },
+          { path: "icons/columns-2.json" },
+          { path: "packages/lucide/icons/check.svg" },
+        ],
+      });
+    };
+
+    const catalog = await fetchLatestLucideCatalog(fetchImpl);
+    expect(catalog.version).toBe("1.30.0");
+    expect(catalog.names).toEqual(new Set(["check", "columns-2"]));
+    expect(requests).toEqual([
+      "https://registry.npmjs.org/lucide/latest",
+      "https://api.github.com/repos/lucide-icons/lucide/git/trees/1.30.0?recursive=1",
+    ]);
+  });
+
+  test("rejects deprecated and unknown Lucide icon filenames", () => {
+    const catalog = { version: "1.30.0", names: new Set(["check", "columns-2"]) };
+    expect(() =>
+      validateLucideIconNames(["check.svg", "columns-2.svg"], catalog),
+    ).not.toThrow();
+    expect(() => validateLucideIconNames(["columns.svg", "custom.svg"], catalog)).toThrow(
+      "Deprecated or non-canonical icon names for Lucide 1.30.0: columns.svg, custom.svg",
+    );
   });
 
   test("updates every marked icon count without changing unrelated numbers", () => {

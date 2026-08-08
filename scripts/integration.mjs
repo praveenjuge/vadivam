@@ -1,8 +1,9 @@
 // Builds real framework applications against materialized local packages and
-// verifies the six browser packages from their production output.
-import { spawn, spawnSync } from "node:child_process";
+// verifies the seven browser packages from their production output.
+import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { cpSync, existsSync, readFileSync, rmSync } from "node:fs";
+import { performance } from "node:perf_hooks";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -16,11 +17,20 @@ const allApps = [
   { name: "nextjs", packages: ["vadivam-react"] },
   { name: "tanstack-start", packages: ["vadivam-react"] },
   { name: "vite-react", packages: ["vadivam-react"] },
-  { name: "expo", packages: ["vadivam-react-native"] },
+  {
+    name: "expo",
+    packages: ["vadivam-react-native"],
+    buildIncludesTypecheck: true,
+  },
   { name: "vue", packages: ["vadivam-vue"], output: "dist" },
   { name: "svelte", packages: ["vadivam-svelte"], output: "build" },
   { name: "solid", packages: ["vadivam-solid"], output: "dist" },
-  { name: "angular", packages: ["vadivam-angular"], output: "dist/vadivam-integration-angular/browser" },
+  {
+    name: "angular",
+    packages: ["vadivam-angular"],
+    output: "dist/vadivam-integration-angular/browser",
+    buildIncludesTypecheck: true,
+  },
   { name: "astro", packages: ["vadivam-astro"], output: "dist" },
   { name: "preact", packages: ["vadivam-preact"], output: "dist" },
 ];
@@ -34,20 +44,33 @@ if (requestedApps.size && apps.length !== requestedApps.size) {
 
 function run(command, args, cwd) {
   console.log(`\n$ ${command} ${args.join(" ")}  (cwd: ${path.relative(root, cwd)})`);
-  const result = spawnSync(command, args, {
-    cwd,
-    stdio: "inherit",
-    timeout: commandTimeoutMs,
-    killSignal: "SIGTERM",
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { cwd, stdio: "inherit" });
+    let timedOut = false;
+    let forceKillTimeout;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGTERM");
+      forceKillTimeout = setTimeout(() => child.kill("SIGKILL"), 5000);
+    }, commandTimeoutMs);
+    child.on("error", (error) => {
+      clearTimeout(timeout);
+      clearTimeout(forceKillTimeout);
+      reject(
+        new Error(`${command} ${args.join(" ")} failed in ${cwd}: ${error.message}`),
+      );
+    });
+    child.on("exit", (code, signal) => {
+      clearTimeout(timeout);
+      clearTimeout(forceKillTimeout);
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      const reason = timedOut ? "timed out" : `exited with ${signal ?? code}`;
+      reject(new Error(`${command} ${args.join(" ")} ${reason} in ${cwd}`));
+    });
   });
-  if (result.error) {
-    throw new Error(
-      `${command} ${args.join(" ")} failed in ${cwd}: ${result.error.message}`,
-    );
-  }
-  if (result.status !== 0) {
-    throw new Error(`${command} ${args.join(" ")} failed in ${cwd}`);
-  }
 }
 
 async function launchBrowser() {
@@ -87,7 +110,7 @@ async function waitForServer(url) {
   throw new Error(`Timed out waiting for ${url}`);
 }
 
-async function verifyBrowser(app, cwd, index) {
+async function verifyBrowser(browser, app, cwd, index) {
   const port = 4310 + index;
   const url = `http://127.0.0.1:${port}`;
   const server = spawn(
@@ -95,11 +118,10 @@ async function verifyBrowser(app, cwd, index) {
     [path.join(root, "scripts/serve-dist.mjs"), path.join(cwd, app.output), String(port)],
     { cwd: root, stdio: "inherit" },
   );
-  let browser;
+  let page;
   try {
     await waitForServer(url);
-    browser = await launchBrowser();
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     const errors = [];
     page.on("console", (message) => {
       if (message.type() === "error") errors.push(message.text());
@@ -196,7 +218,7 @@ async function verifyBrowser(app, cwd, index) {
     }
     console.log(`Browser smoke passed for ${app.name}.`);
   } finally {
-    await browser?.close();
+    await page?.close();
     if (server.exitCode === null && server.signalCode === null) {
       const exited = once(server, "exit");
       server.kill("SIGTERM");
@@ -205,15 +227,54 @@ async function verifyBrowser(app, cwd, index) {
   }
 }
 
-for (const [index, app] of apps.entries()) {
+let browserPromise;
+
+async function validateIntegrationApp(app, index) {
+  const startedAt = performance.now();
   const cwd = path.join(integrationDir, app.name);
   if (!existsSync(cwd)) throw new Error(`integration app missing: ${cwd}`);
-  run("bun", ["install", "--frozen-lockfile"], cwd);
+  await run("bun", ["install", "--frozen-lockfile"], cwd);
   for (const packageName of app.packages) materializePackage(cwd, packageName);
   const manifest = JSON.parse(readFileSync(path.join(cwd, "package.json"), "utf8"));
-  if (manifest.scripts?.typecheck) run("bun", ["run", "typecheck"], cwd);
-  run("bun", ["run", "build"], cwd);
-  if (app.output) await verifyBrowser(app, cwd, index);
+  if (manifest.scripts?.typecheck && !app.buildIncludesTypecheck) {
+    await run("bun", ["run", "typecheck"], cwd);
+  }
+  await run("bun", ["run", "build"], cwd);
+  if (app.output) {
+    browserPromise ??= launchBrowser();
+    await verifyBrowser(await browserPromise, app, cwd, index);
+  }
+  console.log(
+    `[integration] ${app.name} passed in ${((performance.now() - startedAt) / 1000).toFixed(2)}s`,
+  );
 }
 
-console.log(`\nIntegration builds passed for: ${apps.map(({ name }) => name).join(", ")}`);
+async function validateIntegrationApps(concurrency) {
+  let nextIndex = 0;
+  let firstError;
+  const workers = Array.from(
+    { length: Math.min(concurrency, apps.length) },
+    async () => {
+      while (!firstError) {
+        const index = nextIndex;
+        nextIndex += 1;
+        const app = apps[index];
+        if (!app) return;
+        try {
+          await validateIntegrationApp(app, index);
+        } catch (error) {
+          firstError ??= error;
+        }
+      }
+    },
+  );
+  await Promise.all(workers);
+  if (firstError) throw firstError;
+}
+
+try {
+  await validateIntegrationApps(3);
+  console.log(`\nIntegration builds passed for: ${apps.map(({ name }) => name).join(", ")}`);
+} finally {
+  if (browserPromise) await (await browserPromise).close();
+}

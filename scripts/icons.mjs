@@ -38,11 +38,14 @@ const webIconsDir = path.join(root, "apps/docs/public/icons");
 const previewPath = path.join(root, "apps/docs/public/preview.png");
 const ogPath = path.join(root, "apps/docs/public/og.png");
 const fontCodepointsPath = path.join(root, "scripts/font-codepoints.json");
+const lucideLatestUrl = "https://registry.npmjs.org/lucide/latest";
+const lucideTreeUrl = "https://api.github.com/repos/lucide-icons/lucide/git/trees";
 const iconCountFiles = [
   path.join(root, "README.md"),
   path.join(root, "apps/docs/docs/index.md"),
 ];
-const iconCountPattern = /(<!-- vadivam-icon-count:start -->[\s\S]*?)(\d+)([\s\S]*?<!-- vadivam-icon-count:end -->)/g;
+const iconCountPattern =
+  /(<!-- vadivam-icon-count:start -->[\s\S]*?)(\d+)([\s\S]*?<!-- vadivam-icon-count:end -->)/g;
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
@@ -120,6 +123,67 @@ export function validateIconName(name, file = `${name}.svg`) {
   assert(
     /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name),
     `${file}: icon filename must use lowercase kebab-case`,
+  );
+}
+
+async function fetchJson(url, description, fetchImpl) {
+  const response = await fetchImpl(url, {
+    headers: {
+      Accept: "application/vnd.github+json, application/json",
+      "User-Agent": "vadivam-icon-checker",
+    },
+  });
+  assert(response.ok, `Could not fetch ${description}: HTTP ${response.status}`);
+  try {
+    return await response.json();
+  } catch {
+    throw new Error(`Could not parse ${description}`);
+  }
+}
+
+export async function fetchLatestLucideCatalog(fetchImpl = fetch) {
+  const release = await fetchJson(
+    lucideLatestUrl,
+    "the latest Lucide release",
+    fetchImpl,
+  );
+  assert(
+    release && typeof release.version === "string" && /^\d+\.\d+\.\d+$/.test(release.version),
+    "The latest Lucide release has an invalid version",
+  );
+
+  const tree = await fetchJson(
+    `${lucideTreeUrl}/${release.version}?recursive=1`,
+    `the Lucide ${release.version} source tree`,
+    fetchImpl,
+  );
+  assert(
+    tree && tree.truncated === false,
+    `The Lucide ${release.version} source tree is incomplete`,
+  );
+  assert(Array.isArray(tree.tree), `The Lucide ${release.version} source tree is invalid`);
+
+  const names = tree.tree
+    .map((entry) => entry?.path)
+    .filter(
+      (entryPath) =>
+        typeof entryPath === "string" && /^icons\/[^/]+\.svg$/.test(entryPath),
+    )
+    .map((entryPath) => entryPath.slice("icons/".length, -".svg".length));
+  const uniqueNames = new Set(names);
+  assert(uniqueNames.size === names.length, `Lucide ${release.version} has duplicate icon names`);
+  assert(uniqueNames.size > 0, `Lucide ${release.version} has no canonical icon names`);
+
+  return { version: release.version, names: uniqueNames };
+}
+
+export function validateLucideIconNames(fileNames, catalog) {
+  const invalid = fileNames.filter(
+    (fileName) => !catalog.names.has(fileName.replace(/\.svg$/, "")),
+  );
+  assert(
+    invalid.length === 0,
+    `Deprecated or non-canonical icon names for Lucide ${catalog.version}: ${invalid.join(", ")}. Rename them to current canonical Lucide names`,
   );
 }
 
@@ -328,13 +392,18 @@ export async function optimizeIcons() {
 export async function checkIcons() {
   const files = await svgFiles();
   for (const fileName of files) {
+    validateIconName(fileName.replace(/\.svg$/, ""), fileName);
     validateSvgContent(
       await readFile(path.join(iconsDir, fileName), "utf8"),
       fileName,
     );
   }
+  const lucideCatalog = await fetchLatestLucideCatalog();
+  validateLucideIconNames(files, lucideCatalog);
   await synchronizeIconCounts(files.length, { check: true });
-  console.log(`Checked ${files.length} icons.`);
+  console.log(
+    `Checked ${files.length} icons against Lucide ${lucideCatalog.version} canonical names.`,
+  );
 }
 
 async function buildRawPackage(icons) {

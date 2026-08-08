@@ -10,10 +10,11 @@ on:
 
 permissions:
   contents: write
+  statuses: write
 
 concurrency:
   group: icons-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   optimize-and-release:
@@ -48,9 +49,11 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Install Chromium
-        run: bunx playwright install --with-deps chromium
+        if: github.event_name == 'push'
+        run: bunx playwright install --with-deps --only-shell chromium
 
       - name: Cache integration app dependencies
+        if: github.event_name == 'push'
         uses: actions/cache@v6
         with:
           path: |
@@ -71,14 +74,6 @@ jobs:
 
       - name: Render OG image
         run: bun run icons:og
-
-      - name: Test
-        timeout-minutes: 15
-        run: bun run test
-
-      - name: Check generated inputs
-        if: github.event_name == 'pull_request'
-        run: git diff --exit-code -- icons README.md apps/docs/docs/index.md apps/docs/public/preview.png apps/docs/public/og.png scripts/font-codepoints.json
 
       - name: Configure git
         if: github.event_name == 'push'
@@ -113,7 +108,7 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Bump versions and tag
+      - name: Bump versions
         if: github.event_name == 'push' && steps.changes.outputs.changed == 'true'
         id: bump
         run: |
@@ -121,8 +116,103 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           git add package.json packages/*/package.json apps/figma-plugin/package.json README.md packages/*/README.md
           git commit -m "chore(release): v$version"
-          git tag -a "v$version" -m "v$version"
 
-      - name: Push commits and tag
+      - name: Test core
+        if: github.event_name == 'pull_request'
+        timeout-minutes: 15
+        run: bun run test:core
+
+      - name: Test exact release commit
+        if: github.event_name == 'push'
+        timeout-minutes: 15
+        run: bun run test
+
+      - name: Check generated inputs
+        if: github.event_name == 'pull_request'
+        run: git diff --exit-code -- icons README.md apps/docs/docs/index.md apps/docs/public/preview.png apps/docs/public/og.png scripts/font-codepoints.json
+
+      - name: Push tested commits
         if: github.event_name == 'push' && (steps.normalize.outputs.committed == 'true' || steps.changes.outputs.changed == 'true')
-        run: git push --follow-tags origin "HEAD:${GITHUB_REF#refs/heads/}"
+        run: git push origin "HEAD:${GITHUB_REF#refs/heads/}"
+
+      - name: Record exact commit test status
+        if: github.event_name == 'push' && steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+        run: |
+          tested_sha=$(git rev-parse HEAD)
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$tested_sha" \
+            -f state=success \
+            -f context=vadivam/full-test \
+            -f description="Full test suite passed for this release commit" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+      - name: Push tested release tag
+        if: github.event_name == 'push' && steps.changes.outputs.changed == 'true'
+        run: |
+          git tag -a "v${{ steps.bump.outputs.version }}" -m "v${{ steps.bump.outputs.version }}"
+          git push origin "v${{ steps.bump.outputs.version }}"
+
+  integration-matrix:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      max-parallel: 3
+      matrix:
+        include:
+          - shard: react-web
+            apps: static nextjs tanstack-start vite-react
+            cache_paths: |
+              tests/integration/static/node_modules
+              tests/integration/nextjs/node_modules
+              tests/integration/nextjs/.next/cache
+              tests/integration/tanstack-start/node_modules
+              tests/integration/vite-react/node_modules
+          - shard: native-and-ui
+            apps: expo vue svelte solid
+            cache_paths: |
+              tests/integration/expo/node_modules
+              tests/integration/vue/node_modules
+              tests/integration/svelte/node_modules
+              tests/integration/solid/node_modules
+          - shard: compiled-web
+            apps: angular astro preact
+            cache_paths: |
+              tests/integration/angular/node_modules
+              tests/integration/astro/node_modules
+              tests/integration/preact/node_modules
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Restore integration dependencies
+        uses: actions/cache@v6
+        with:
+          path: ${{ matrix.cache_paths }}
+          key: integration-${{ runner.os }}-${{ matrix.shard }}-${{ hashFiles('tests/integration/*/bun.lock') }}
+          restore-keys: |
+            integration-${{ runner.os }}-${{ matrix.shard }}-
+
+      - name: Install Chromium headless shell
+        run: bunx playwright install --with-deps --only-shell chromium
+
+      - name: Build packages
+        run: bun run icons:build
+
+      - name: Test integration shard
+        timeout-minutes: 10
+        run: bun scripts/integration.mjs ${{ matrix.apps }}

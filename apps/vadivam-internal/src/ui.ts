@@ -130,7 +130,7 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
   }
 
   if (message.type === "library-status") {
-    libraryMeta.textContent = `${message.count} icons · 20/row`;
+    libraryMeta.textContent = `${message.count} icons · 40/row`;
     syncLibraryButton.textContent = message.available ? "Update" : "Create";
     syncLibraryButton.disabled = false;
     return;
@@ -147,7 +147,7 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
     const retained = message.retained > 0 ? ` · ${message.retained} custom retained` : "";
     status.textContent = `${message.created ? "Created" : "Updated"} ${message.count} component icons${added}${retained}`;
   } else if (message.type === "arranged") {
-    status.textContent = `Arranged ${message.count} icons A–Z · 20 per row`;
+    status.textContent = `Arranged ${message.count} icons A–Z · 40 per row`;
   } else if (message.type === "audit") {
     status.textContent = `${message.summary.passed} passed · ${message.summary.failed} issues · ${message.summary.renamed} renamed · ${message.summary.rounded} caps fixed`;
     renderAudit(message.issues);

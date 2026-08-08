@@ -427,7 +427,7 @@ describe("compiled Figma plugin", () => {
     expect(componentSet).toMatchObject({
       type: "COMPONENT_SET",
       name: "Vadivam Icons",
-      width: 984,
+      width: 1944,
       layoutMode: "HORIZONTAL",
       layoutWrap: "WRAP",
       paddingTop: 24,

@@ -24,8 +24,8 @@ test("snaps empty files to the viewport grid", () => {
   ]);
 });
 
-test("arranges exactly 20 icons per row", () => {
-  const positions = getGridPositions(21, 20, { x: 0, y: 0 });
-  expect(positions[19]).toEqual({ x: 760, y: 0 });
-  expect(positions[20]).toEqual({ x: 0, y: 72 });
+test("arranges exactly 40 icons per row", () => {
+  const positions = getGridPositions(41, 40, { x: 0, y: 0 });
+  expect(positions[39]).toEqual({ x: 1560, y: 0 });
+  expect(positions[40]).toEqual({ x: 0, y: 72 });
 });

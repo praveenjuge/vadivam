@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   id-token: write
+  statuses: read
 
 jobs:
   publish:
@@ -36,27 +37,25 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Install Chromium
-        run: bunx playwright install --with-deps chromium
-
-      - name: Cache integration app dependencies
-        uses: actions/cache@v6
-        with:
-          path: |
-            tests/integration/*/node_modules
-            tests/integration/nextjs/.next/cache
-          key: integration-${{ runner.os }}-${{ hashFiles('tests/integration/*/bun.lock') }}
-          restore-keys: |
-            integration-${{ runner.os }}-
+      - name: Verify exact commit test status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tested_sha=$(git rev-parse HEAD)
+          state=$(gh api "repos/$GITHUB_REPOSITORY/commits/$tested_sha/status" \
+            --jq '[.statuses[] | select(.context == "vadivam/full-test")][0].state // ""')
+          if [ "$state" != "success" ]; then
+            echo "Missing successful vadivam/full-test status for $tested_sha" >&2
+            exit 1
+          fi
 
       - name: Validate release version
         env:
           TAG_NAME: ${{ github.ref_name }}
         run: bun run release:validate "$TAG_NAME"
 
-      - name: Test
-        timeout-minutes: 15
-        run: bun run test
+      - name: Build tested release artifacts
+        run: bun run icons:build && bun run figma-plugin:build
 
       - name: Publish and verify packages
         run: bun run release:publish
