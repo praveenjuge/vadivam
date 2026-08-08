@@ -18,7 +18,7 @@ body { margin: 0; }
 
 main {
   display: grid;
-  grid-template-rows: 40px 30px auto 32px minmax(0, 1fr);
+  grid-template-rows: auto 32px minmax(0, 1fr);
   height: 100vh;
   overflow: hidden;
 }

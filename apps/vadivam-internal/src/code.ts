@@ -1,24 +1,18 @@
 import {
   getMissingIcons,
   parseBatchSize,
-  parsePopularFeed,
-  type PopularFeed,
-  type PopularIcon,
+  parseLucideCatalog,
+  type LucideCatalog,
+  type LucideIconRanking,
 } from "./catalog";
 import iconCatalog from "vadivam:icon-catalog";
 import { getBatchPositions, getGridPositions, ICON_SIZE } from "./layout";
-import popularIcons from "./data/popular-icons.json";
+import lucideRankings from "./data/lucide-icon-rankings.json";
 import {
   getDeprecatedLucideReplacement,
   lucideIconNames,
   resolveLucideIconName,
-  resolveLucideIconNameIncludingDeprecated,
 } from "./lucide";
-import {
-  getMissingShadcnIcons,
-  SHADCN_BATCH_SIZE,
-  shadcnIconNames,
-} from "./shadcn";
 import type {
   CatalogSummary,
   IconAuditIssue,
@@ -35,15 +29,15 @@ const LIBRARY_NAME = "Vadivam Icons";
 const LIBRARY_DATA_KEY = "vadivam-internal";
 const LIBRARY_SCHEMA = 1;
 const DOCUMENTATION_URL = "https://vadivam.praveenjuge.com";
-const feed: PopularFeed = parsePopularFeed(
-  popularIcons,
-  resolveLucideIconNameIncludingDeprecated,
+const catalog: LucideCatalog = parseLucideCatalog(
+  lucideRankings,
+  resolveLucideIconName,
 );
 const allowedIconNames = new Set(lucideIconNames);
 
 let batchSize = 20;
 let existingSlugs = new Set<string>();
-let candidates: PopularIcon[] = [];
+let candidates: LucideIconRanking[] = [];
 
 figma.showUI(__html__, {
   width: UI_WIDTH,
@@ -120,13 +114,15 @@ async function scanDocument(): Promise<Set<string>> {
 }
 
 function summary(): CatalogSummary {
-  const matchedCount = feed.icons.length - candidates.length;
+  const matchedCount = catalog.icons.length - candidates.length;
   return {
     existingCount: existingSlugs.size,
     matchedCount,
     remainingCount: candidates.length,
-    scannedAt: feed.scannedAt,
-    methodology: feed.methodology,
+    lucideVersion: catalog.lucideVersion,
+    retrievedAt: catalog.retrievedAt,
+    source: catalog.source,
+    ranking: catalog.ranking,
     currentPage: figma.currentPage.name,
   };
 }
@@ -139,25 +135,11 @@ function publishCatalog(): void {
   });
 }
 
-function publishShadcnStatus(): void {
-  post({
-    type: "shadcn-status",
-    total: shadcnIconNames.length,
-    remaining: getMissingShadcnIcons(existingSlugs).length,
-    batchSize: SHADCN_BATCH_SIZE,
-  });
-}
-
-function publishQueues(): void {
-  publishCatalog();
-  publishShadcnStatus();
-}
-
 async function refreshCatalog(): Promise<void> {
   post({ type: "loading" });
   existingSlugs = await scanDocument();
-  candidates = getMissingIcons(feed.icons, existingSlugs);
-  publishQueues();
+  candidates = getMissingIcons(catalog.icons, existingSlugs);
+  publishCatalog();
 }
 
 function createIconFrame(name: string, position: { x: number; y: number }): FrameNode {
@@ -399,9 +381,9 @@ function generateFrames(countValue: unknown): void {
   const selected = candidates.slice(0, count);
   if (selected.length === 0) throw new Error("No missing ranked icons remain");
 
-  const names = selected.map((icon) => icon.slug);
+  const names = selected.map((icon) => icon.name);
   createNamedFrames(names);
-  publishQueues();
+  publishCatalog();
   post({ type: "generated", names });
 }
 
@@ -419,16 +401,7 @@ function createNamedFrames(names: readonly string[]): void {
   figma.currentPage.selection = frames;
   figma.viewport.scrollAndZoomIntoView(frames);
   for (const name of names) existingSlugs.add(name);
-  candidates = getMissingIcons(feed.icons, existingSlugs);
-}
-
-function generateShadcnFrames(): void {
-  const selected = getMissingShadcnIcons(existingSlugs).slice(0, SHADCN_BATCH_SIZE);
-  if (selected.length === 0) throw new Error("No missing shadcn icons remain");
-
-  createNamedFrames(selected);
-  publishQueues();
-  post({ type: "shadcn-generated", names: selected });
+  candidates = getMissingIcons(catalog.icons, existingSlugs);
 }
 
 function arrangeIcons(): void {
@@ -622,8 +595,6 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
       publishCatalog();
     } else if (request.type === "generate") {
       generateFrames(request.count);
-    } else if (request.type === "generate-shadcn") {
-      generateShadcnFrames();
     } else if (request.type === "arrange") {
       arrangeIcons();
     } else if (request.type === "audit") {

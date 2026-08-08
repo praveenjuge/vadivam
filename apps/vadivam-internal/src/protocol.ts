@@ -1,11 +1,13 @@
-import type { PopularIcon } from "./catalog";
+import type { LucideIconRanking } from "./catalog";
 
 export interface CatalogSummary {
   existingCount: number;
   matchedCount: number;
   remainingCount: number;
-  scannedAt: string | null;
-  methodology: string | null;
+  lucideVersion: string;
+  retrievedAt: string;
+  source: string;
+  ranking: string;
   currentPage: string;
 }
 
@@ -32,10 +34,8 @@ export type PluginToUiMessage =
       added: number;
       retained: number;
     }
-  | { type: "catalog"; summary: CatalogSummary; candidates: PopularIcon[] }
+  | { type: "catalog"; summary: CatalogSummary; candidates: LucideIconRanking[] }
   | { type: "generated"; names: string[] }
-  | { type: "shadcn-status"; total: number; remaining: number; batchSize: number }
-  | { type: "shadcn-generated"; names: string[] }
   | { type: "arranged"; count: number }
   | {
       type: "audit";
@@ -49,6 +49,5 @@ export type UiToPluginMessage =
   | { type: "sync-library" }
   | { type: "set-count"; count: number }
   | { type: "generate"; count: number }
-  | { type: "generate-shadcn" }
   | { type: "arrange" }
   | { type: "audit" };

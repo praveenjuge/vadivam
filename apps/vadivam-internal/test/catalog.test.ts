@@ -2,30 +2,15 @@ import { describe, expect, test } from "bun:test";
 import {
   getMissingIcons,
   parseBatchSize,
-  parsePopularFeed,
-  toIconSlug,
+  parseLucideCatalog,
 } from "../src/catalog";
 import deprecatedAliases from "../src/data/lucide-deprecated-aliases.json";
+import rankings from "../src/data/lucide-icon-rankings.json";
 import {
   getDeprecatedLucideReplacement,
   lucideIconNames,
   resolveLucideIconName,
-  resolveLucideIconNameIncludingDeprecated,
 } from "../src/lucide";
-import {
-  getMissingShadcnIcons,
-  SHADCN_BATCH_SIZE,
-  shadcnIconNames,
-} from "../src/shadcn";
-
-describe("toIconSlug", () => {
-  test("normalizes Lucide component names to Vadivam slugs", () => {
-    expect(toIconSlug("Trash2")).toBe("trash-2");
-    expect(toIconSlug("ALargeSmall")).toBe("a-large-small");
-    expect(toIconSlug("FileJson2")).toBe("file-json-2");
-    expect(toIconSlug("X")).toBe("x");
-  });
-});
 
 describe("resolveLucideIconName", () => {
   test("preserves canonical separators lost in component names", () => {
@@ -37,22 +22,11 @@ describe("resolveLucideIconName", () => {
     expect(resolveLucideIconName("made-up-icon")).toBeNull();
   });
 
-  test("gives ranked component names their canonical Lucide slug", () => {
-    const feed = parsePopularFeed(
-      {
-        icons: [{ name: "ArrowUpAZ", repositories: 1, files: 1, rank: 1 }],
-      },
-      resolveLucideIconName,
-    );
-    expect(feed.icons[0]?.slug).toBe("arrow-up-a-z");
-  });
-
   test("keeps deprecated aliases out of the canonical catalog", () => {
     expect(resolveLucideIconName("columns")).toBeNull();
     expect(getDeprecatedLucideReplacement("columns")).toBe("columns-2");
     expect(getDeprecatedLucideReplacement("Columns")).toBe("columns-2");
     expect(getDeprecatedLucideReplacement("CircleEuroSign")).toBe("circle-euro");
-    expect(resolveLucideIconNameIncludingDeprecated("columns")).toBe("columns-2");
     expect(
       Object.keys(deprecatedAliases).every((alias) => !lucideIconNames.includes(alias)),
     ).toBe(true);
@@ -61,50 +35,92 @@ describe("resolveLucideIconName", () => {
     ).toBe(true);
   });
 
-  test("canonicalizes deprecated popularity names before frame creation", () => {
-    const feed = parsePopularFeed(
-      {
-        icons: [{ name: "Columns", repositories: 1, files: 1, rank: 1 }],
-      },
-      resolveLucideIconNameIncludingDeprecated,
-    );
-    expect(feed.icons[0]?.slug).toBe("columns-2");
-  });
 });
 
-describe("parsePopularFeed", () => {
-  test("validates, deduplicates, and sorts ranked icons", () => {
-    const feed = parsePopularFeed({
-      methodology: { scannedAt: "2026-07-13", ranking: "Repository count" },
+describe("parseLucideCatalog", () => {
+  test("validates canonical names and popularity order", () => {
+    const catalog = parseLucideCatalog({
+      lucideVersion: "1.30.0",
+      retrievedAt: "2026-08-08T00:00:00.000Z",
+      source: "https://lucide.dev/icons/",
+      ranking: "Lucide icon-page visitors over the last 12 months",
       icons: [
-        { name: "Search", repositories: 20, files: 30, rank: 2 },
-        { name: "X", repositories: 30, files: 40, rank: 1 },
-        { name: "Search", repositories: 10, files: 10, rank: 3 },
+        { name: "search", popularity: 20, rank: 2 },
+        { name: "x", popularity: 30, rank: 1 },
       ],
-    });
-    expect(feed.icons.map((icon) => icon.slug)).toEqual(["x", "search"]);
-    expect(feed.scannedAt).toBe("2026-07-13");
+    }, resolveLucideIconName);
+    expect(catalog.icons.map((icon) => icon.name)).toEqual(["x", "search"]);
+    expect(catalog.lucideVersion).toBe("1.30.0");
   });
 
-  test("rejects unsafe or malformed names", () => {
+  test("rejects deprecated, unsafe, duplicate, or out-of-order data", () => {
+    const base = {
+      lucideVersion: "1.30.0",
+      retrievedAt: "2026-08-08T00:00:00.000Z",
+      source: "https://lucide.dev/icons/",
+      ranking: "Lucide icon-page visitors over the last 12 months",
+    };
     expect(() =>
-      parsePopularFeed({
-        icons: [
-          { name: "<script>", repositories: 1, files: 1, rank: 1 },
-        ],
-      }),
+      parseLucideCatalog({
+        ...base,
+        icons: [{ name: "columns", popularity: 1, rank: 1 }],
+      }, resolveLucideIconName),
+    ).toThrow("non-canonical");
+    expect(() =>
+      parseLucideCatalog({
+        ...base,
+        icons: [{ name: "<script>", popularity: 1, rank: 1 }],
+      }, resolveLucideIconName),
     ).toThrow("invalid icon name");
+    expect(() =>
+      parseLucideCatalog({
+        ...base,
+        icons: [
+          { name: "x", popularity: 1, rank: 1 },
+          { name: "x", popularity: 1, rank: 2 },
+        ],
+      }, resolveLucideIconName),
+    ).toThrow("duplicate icon name");
+    expect(() =>
+      parseLucideCatalog({
+        ...base,
+        icons: [
+          { name: "x", popularity: 1, rank: 1 },
+          { name: "search", popularity: 2, rank: 2 },
+        ],
+      }, resolveLucideIconName),
+    ).toThrow("not sorted by popularity");
+  });
+
+  test("bundles every canonical Lucide 1.30.0 name in official popularity order", () => {
+    const catalog = parseLucideCatalog(rankings, resolveLucideIconName);
+    expect(catalog.lucideVersion).toBe("1.30.0");
+    expect(catalog.icons).toHaveLength(lucideIconNames.length);
+    expect(catalog.icons.map((icon) => icon.name).sort()).toEqual(
+      Array.from(lucideIconNames),
+    );
+    expect(catalog.icons.slice(0, 5).map((icon) => icon.name)).toEqual([
+      "x",
+      "check",
+      "search",
+      "chevron-down",
+      "plus",
+    ]);
   });
 });
 
 test("getMissingIcons excludes icons already present in the file", () => {
-  const feed = parsePopularFeed({
+  const catalog = parseLucideCatalog({
+    lucideVersion: "1.30.0",
+    retrievedAt: "2026-08-08T00:00:00.000Z",
+    source: "https://lucide.dev/icons/",
+    ranking: "Lucide icon-page visitors over the last 12 months",
     icons: [
-      { name: "X", repositories: 2, files: 3, rank: 1 },
-      { name: "Search", repositories: 1, files: 2, rank: 2 },
+      { name: "x", popularity: 2, rank: 1 },
+      { name: "search", popularity: 1, rank: 2 },
     ],
-  });
-  expect(getMissingIcons(feed.icons, new Set(["x"]))[0]?.slug).toBe("search");
+  }, resolveLucideIconName);
+  expect(getMissingIcons(catalog.icons, new Set(["x"]))[0]?.name).toBe("search");
 });
 
 test("parseBatchSize clamps user input to a safe range", () => {
@@ -112,18 +128,4 @@ test("parseBatchSize clamps user input to a safe range", () => {
   expect(parseBatchSize(20)).toBe(20);
   expect(parseBatchSize(500)).toBe(100);
   expect(() => parseBatchSize(2.5)).toThrow("integer");
-});
-
-describe("shadcn icon queue", () => {
-  test("contains unique canonical Lucide names in 20-icon batches", () => {
-    expect(SHADCN_BATCH_SIZE).toBe(20);
-    expect(shadcnIconNames).toHaveLength(105);
-    expect(new Set(shadcnIconNames)).toHaveProperty("size", 105);
-    expect(shadcnIconNames.every((name) => resolveLucideIconName(name) === name)).toBe(true);
-  });
-
-  test("excludes icons already present in the Figma document", () => {
-    const first = shadcnIconNames[0] as string;
-    expect(getMissingShadcnIcons(new Set([first]))).not.toContain(first);
-  });
 });

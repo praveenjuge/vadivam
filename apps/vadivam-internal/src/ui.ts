@@ -3,7 +3,7 @@ import type {
   PluginToUiMessage,
   UiToPluginMessage,
 } from "./protocol";
-import type { PopularIcon } from "./catalog";
+import type { LucideIconRanking } from "./catalog";
 
 function element<T extends Element>(selector: string): T {
   const match = document.querySelector<T>(selector);
@@ -11,21 +11,17 @@ function element<T extends Element>(selector: string): T {
   return match;
 }
 
-const summary = element<HTMLParagraphElement>("#summary");
 const status = element<HTMLParagraphElement>("#status");
 const countInput = element<HTMLInputElement>("#count");
 const libraryMeta = element<HTMLSpanElement>("#library-meta");
-const shadcnMeta = element<HTMLSpanElement>("#shadcn-meta");
 const syncLibraryButton = element<HTMLButtonElement>("#sync-library");
 const generateButton = element<HTMLButtonElement>("#generate");
-const generateShadcnButton = element<HTMLButtonElement>("#generate-shadcn");
 const refreshButton = element<HTMLButtonElement>("#refresh");
 const arrangeButton = element<HTMLButtonElement>("#arrange");
 const auditButton = element<HTMLButtonElement>("#audit");
 const resultList = element<HTMLOListElement>("#results");
 
-let candidates: PopularIcon[] = [];
-let shadcnRemaining = 0;
+let candidates: LucideIconRanking[] = [];
 
 function send(message: UiToPluginMessage): void {
   parent.postMessage({ pluginMessage: message }, "*");
@@ -46,7 +42,7 @@ function renderCandidates(): void {
   if (candidates.length === 0) {
     const empty = document.createElement("li");
     empty.className = "empty";
-    empty.textContent = "No missing ranked icons remain in this feed.";
+    empty.textContent = "No missing Lucide icons remain.";
     resultList.append(empty);
     return;
   }
@@ -61,8 +57,8 @@ function renderCandidates(): void {
     name.className = "name";
     usage.className = "usage";
     rank.textContent = `#${icon.rank}`;
-    name.textContent = icon.slug;
-    usage.textContent = `${formatNumber(icon.repositories)} repos`;
+    name.textContent = icon.name;
+    usage.textContent = `${formatNumber(icon.popularity)} visitors`;
     item.append(rank, name, usage);
     fragment.append(item);
   }
@@ -112,12 +108,6 @@ generateButton.addEventListener("click", () => {
   send({ type: "generate", count: readCount() });
 });
 
-generateShadcnButton.addEventListener("click", () => {
-  generateShadcnButton.disabled = true;
-  status.textContent = "Creating the next shadcn icon frames…";
-  send({ type: "generate-shadcn" });
-});
-
 refreshButton.addEventListener("click", () => send({ type: "refresh" }));
 arrangeButton.addEventListener("click", () => {
   status.textContent = "Arranging recognized icons A–Z…";
@@ -133,9 +123,8 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
   if (!message) return;
 
   if (message.type === "loading") {
-    status.textContent = "Comparing this file with the ranked feed…";
+    status.textContent = "Comparing this file with the Lucide catalog…";
     generateButton.disabled = true;
-    generateShadcnButton.disabled = true;
     refreshButton.disabled = true;
     return;
   }
@@ -151,17 +140,8 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
   if (message.type === "error") {
     status.textContent = message.message;
     generateButton.disabled = candidates.length === 0;
-    generateShadcnButton.disabled = shadcnRemaining === 0;
   } else if (message.type === "generated") {
     status.textContent = `Created ${message.names.length} frames on this page`;
-  } else if (message.type === "shadcn-status") {
-    shadcnRemaining = message.remaining;
-    const nextCount = Math.min(message.batchSize, message.remaining);
-    shadcnMeta.textContent = `${message.remaining}/${message.total} left`;
-    generateShadcnButton.textContent = nextCount > 0 ? `Next ${nextCount}` : "Done";
-    generateShadcnButton.disabled = message.remaining === 0;
-  } else if (message.type === "shadcn-generated") {
-    status.textContent = `Created ${message.names.length} shadcn frames on this page`;
   } else if (message.type === "library-synced") {
     const added = message.added > 0 ? ` · ${message.added} added` : "";
     const retained = message.retained > 0 ? ` · ${message.retained} custom retained` : "";
@@ -169,14 +149,12 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
   } else if (message.type === "arranged") {
     status.textContent = `Arranged ${message.count} icons A–Z · 20 per row`;
   } else if (message.type === "audit") {
-    summary.textContent = `${message.summary.checked} icons checked on this page`;
     status.textContent = `${message.summary.passed} passed · ${message.summary.failed} issues · ${message.summary.renamed} renamed · ${message.summary.rounded} caps fixed`;
     renderAudit(message.issues);
   } else if (message.type === "catalog") {
     candidates = message.candidates;
     const { summary: catalog } = message;
-    summary.textContent = `${catalog.existingCount} in file · ${catalog.matchedCount} matched · ${catalog.remainingCount} queued`;
-    status.textContent = `${candidates.length} next / ${catalog.currentPage}`;
+    status.textContent = `${candidates.length} next · Lucide ${catalog.lucideVersion}`;
     generateButton.disabled = candidates.length === 0;
     renderCandidates();
   }

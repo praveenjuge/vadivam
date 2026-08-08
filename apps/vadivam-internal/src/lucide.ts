@@ -53,7 +53,3 @@ export function getDeprecatedLucideReplacement(value: string): string | null {
     null
   );
 }
-
-export function resolveLucideIconNameIncludingDeprecated(value: string): string | null {
-  return resolveLucideIconName(value) ?? getDeprecatedLucideReplacement(value);
-}
