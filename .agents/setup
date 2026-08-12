@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+bun_version="1.3.14"
+node_version="24.15.0"
+nvm_version="v0.40.3"
+
+run_step() {
+  local label="$1"
+  shift
+  local started_at=$SECONDS
+  printf '\n[setup] %s\n' "$label"
+  "$@"
+  printf '[setup] %s completed in %ss\n' "$label" "$((SECONDS - started_at))"
+}
+
+install_bun() {
+  if [[ -x "$HOME/.bun/bin/bun" ]] &&
+    [[ "$("$HOME/.bun/bin/bun" --version)" == "$bun_version" ]]; then
+    echo "Bun $bun_version is already installed."
+    return
+  fi
+
+  curl -fsSL https://bun.sh/install | bash -s -- "bun-v$bun_version"
+}
+
+install_node() {
+  export NVM_DIR="$HOME/.nvm"
+  if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
+    curl -fsSL \
+      "https://raw.githubusercontent.com/nvm-sh/nvm/$nvm_version/install.sh" | PROFILE=/dev/null bash
+  fi
+
+  # shellcheck disable=SC1090
+  source "$NVM_DIR/nvm.sh"
+  nvm install "$node_version"
+  nvm alias default "$node_version" >/dev/null
+}
+
+configure_login_shell() {
+  local profile="$HOME/.bash_profile"
+  local start_marker="# >>> vadivam orb toolchain >>>"
+  local end_marker="# <<< vadivam orb toolchain <<<"
+  local temporary
+  temporary="$(mktemp)"
+
+  if [[ -f "$profile" ]]; then
+    awk -v start="$start_marker" -v end="$end_marker" '
+      $0 == start { skipping = 1; next }
+      $0 == end { skipping = 0; next }
+      !skipping { print }
+    ' "$profile" >"$temporary"
+  fi
+
+  cat >>"$temporary" <<EOF
+
+$start_marker
+export BUN_INSTALL="\$HOME/.bun"
+case ":\$PATH:" in
+  *":\$BUN_INSTALL/bin:"*) ;;
+  *) export PATH="\$BUN_INSTALL/bin:\$PATH" ;;
+esac
+case ":\$PATH:" in
+  *":\$HOME/.nvm/versions/node/v$node_version/bin:"*) ;;
+  *) export PATH="\$HOME/.nvm/versions/node/v$node_version/bin:\$PATH" ;;
+esac
+$end_marker
+EOF
+
+  mv "$temporary" "$profile"
+}
+
+install_dependencies() {
+  "$HOME/.bun/bin/bun" install --frozen-lockfile
+}
+
+install_chromium() {
+  local manifests=(node_modules/.bun/playwright-core@*/node_modules/playwright-core/browsers.json)
+  local browser_revision
+  browser_revision="$("$HOME/.bun/bin/bun" -e '
+    const manifest = await Bun.file(process.argv[1]).json();
+    console.log(manifest.browsers.find(({ name }) => name === "chromium-headless-shell").revision);
+  ' "${manifests[0]}")"
+  if [[ -f "$HOME/.cache/ms-playwright/chromium_headless_shell-$browser_revision/INSTALLATION_COMPLETE" ]]; then
+    echo "Playwright Chromium is already installed."
+    return
+  fi
+
+  "$HOME/.bun/bin/bun" x playwright install --with-deps --only-shell chromium
+}
+
+verify_login_shell() {
+  env -i HOME="$HOME" USER="$(id -un)" PATH=/usr/bin:/bin \
+    EXPECTED_BUN="$bun_version" EXPECTED_NODE="v$node_version" \
+    /bin/bash -lc '
+      [[ "$(bun --version)" == "$EXPECTED_BUN" ]]
+      [[ "$(node --version)" == "$EXPECTED_NODE" ]]
+      printf "Bun %s and Node %s are available in a clean login shell.\n" \
+        "$EXPECTED_BUN" "$EXPECTED_NODE"
+    '
+}
+
+cd "$repo_root"
+run_step "Install Bun $bun_version" install_bun
+run_step "Install Node $node_version" install_node
+run_step "Configure login shell" configure_login_shell
+run_step "Install workspace dependencies" install_dependencies
+run_step "Install Playwright Chromium" install_chromium
+run_step "Verify clean login shell" verify_login_shell
+
+printf '\n[setup] Vadivam orb setup complete.\n'

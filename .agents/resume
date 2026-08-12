@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+bun="$HOME/.bun/bin/bun"
+node="$HOME/.nvm/versions/node/v24.15.0/bin/node"
+
+[[ -x "$bun" ]] || { echo "Bun is missing; rerun .agents/setup." >&2; exit 1; }
+[[ -x "$node" ]] || { echo "Node is missing; rerun .agents/setup." >&2; exit 1; }
+[[ "$($bun --version)" == "1.3.14" ]] || { echo "Unexpected Bun version; rerun .agents/setup." >&2; exit 1; }
+[[ "$($node --version)" == "v24.15.0" ]] || { echo "Unexpected Node version; rerun .agents/setup." >&2; exit 1; }
+[[ -d "$repo_root/node_modules" ]] || { echo "Dependencies are missing; rerun .agents/setup." >&2; exit 1; }
+
+echo "Vadivam orb is ready."
