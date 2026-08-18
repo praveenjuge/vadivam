@@ -14,6 +14,31 @@ import {
 import { relatedIcons } from "../apps/docs/lib/icon-seo.ts";
 
 describe("icon related links", () => {
+  test("keeps every icon meta description within the audit window", async () => {
+    const { readdir } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    const files = (await readdir(join(import.meta.dir, "../icons"))).filter((file) =>
+      file.endsWith(".svg"),
+    );
+    const { iconPageDescription } = await import("../apps/docs/lib/icon-seo.ts");
+    expect(files.length).toBeGreaterThan(400);
+    for (const file of files) {
+      const name = file.slice(0, -4);
+      const componentName = name
+        .split("-")
+        .filter(Boolean)
+        .map((part) => part[0].toUpperCase() + part.slice(1))
+        .join("");
+      const description = iconPageDescription({
+        name,
+        componentName,
+        fileName: file,
+      });
+      expect(description.length).toBeGreaterThanOrEqual(110);
+      expect(description.length).toBeLessThanOrEqual(155);
+    }
+  });
+
   test("prefers shared prefixes and fills from neighbors", () => {
     const icons = [
       { name: "activity", componentName: "Activity", fileName: "activity.svg" },

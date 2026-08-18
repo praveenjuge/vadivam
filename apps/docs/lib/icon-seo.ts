@@ -24,9 +24,31 @@ export function iconPageTitle(componentName: string): string {
   return `${componentName} icon — Vadivam`;
 }
 
+const DESCRIPTION_MIN = 110;
+const DESCRIPTION_MAX = 155;
+
 export function iconPageDescription(icon: CatalogIcon): string {
   const words = humanizeIconName(icon.name);
-  return `${icon.componentName} (${icon.name}) is a free, open-source 24px outline ${words} icon from Vadivam. Download the SVG or import { ${icon.componentName} } from vadivam-react and other supported frameworks.`;
+  const options = [
+    `${icon.componentName} (${icon.name}) is a free, open-source 24px outline ${words} icon from Vadivam. Download the SVG or use it in React, Vue, and more.`,
+    `${icon.componentName} (${icon.name}) is a free 24px outline ${words} icon from Vadivam. Download the SVG or use it in React.`,
+    `${icon.componentName} (${icon.name}) is a free 24px outline icon from Vadivam. Download the SVG or use it in React.`,
+  ];
+  const inRange = options.find(
+    (text) => text.length >= DESCRIPTION_MIN && text.length <= DESCRIPTION_MAX,
+  );
+  if (inRange) return inRange;
+
+  const shortEnough = options.find((text) => text.length <= DESCRIPTION_MAX);
+  if (shortEnough) {
+    const pad = " MIT licensed.";
+    return shortEnough.length + pad.length <= DESCRIPTION_MAX &&
+      shortEnough.length < DESCRIPTION_MIN
+      ? `${shortEnough}${pad}`
+      : shortEnough;
+  }
+
+  return `${icon.componentName} (${icon.name}) is a free 24px outline icon from Vadivam.`;
 }
 
 export function relatedIcons(

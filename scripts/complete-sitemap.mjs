@@ -2,7 +2,6 @@ import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
-import { icons } from "../packages/vadivam/dist/manifest.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sitemapPath = path.join(root, "apps/docs/dist/sitemap.xml");
@@ -100,6 +99,7 @@ export function completeLlmsIndex(markdown, site) {
 }
 
 if (import.meta.main) {
+  const { icons } = await import("../packages/vadivam/dist/manifest.js");
   const lastmods = Object.fromEntries(
     await Promise.all(
       icons.map(async ({ name, fileName }) => {
