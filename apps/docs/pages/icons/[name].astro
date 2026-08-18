@@ -20,6 +20,7 @@ import {
   ogImageAlt,
   relatedIcons,
 } from "../../lib/icon-seo";
+import { frameworkUsage } from "../../lib/framework-snippets";
 
 export function getStaticPaths() {
   return icons.map((icon) => ({ params: { name: icon.name }, props: { icon } }));
@@ -38,15 +39,7 @@ const install = [
   { title: "yarn", lang: "sh", code: "yarn add vadivam-react" },
 ];
 
-const usage = [
-  { title: "React", lang: "tsx", code: `import { ${c} } from "vadivam-react";\n\n<${c} />` },
-  { title: "Vue", lang: "vue", code: `<script setup>\nimport { ${c} } from "vadivam-vue";\n</script>\n\n<template>\n  <${c} />\n</template>` },
-  { title: "Svelte", lang: "svelte", code: `<script>\n  import { ${c} } from "vadivam-svelte";\n</script>\n\n<${c} />` },
-  { title: "Solid", lang: "tsx", code: `import { ${c} } from "vadivam-solid";\n\n<${c} />` },
-  { title: "Preact", lang: "tsx", code: `import { ${c} } from "vadivam-preact";\n\n<${c} />` },
-  { title: "Astro", lang: "astro", code: `---\nimport { ${c} } from "vadivam-astro";\n---\n\n<${c} />` },
-  { title: "Angular", lang: "ts", code: `import { ${c} } from "vadivam-angular";\n\n<svg vadivam${c}></svg>` },
-];
+const usage = frameworkUsage(c);
 
 const pageTitle = iconPageTitle(c);
 const pageDescription = iconPageDescription(icon);

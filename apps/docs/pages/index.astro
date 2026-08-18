@@ -12,6 +12,7 @@ import {
   homeStructuredData,
   ogImageAlt,
 } from "../lib/icon-seo";
+import { snippetTemplate, usageCode } from "../lib/framework-snippets";
 
 const { config } = data;
 
@@ -79,29 +80,6 @@ const clearIconSvg = iconsByName.x?.svg ?? "";
 // framework (instead of per icon) keeps the page light while the snippet picks
 // up the same Shiki theme as the icon detail pages.
 const SNIPPET_PLACEHOLDER = "VadivamIcon";
-const snippetTemplate = (tab: string, name: string): { lang: string; code: string } | null => {
-  switch (tab) {
-    case "react":
-      return { lang: "tsx", code: `import { ${name} } from "vadivam-react";\n\n<${name} />` };
-    case "solid":
-      return { lang: "tsx", code: `import { ${name} } from "vadivam-solid";\n\n<${name} />` };
-    case "preact":
-      return { lang: "tsx", code: `import { ${name} } from "vadivam-preact";\n\n<${name} />` };
-    case "vue":
-      return {
-        lang: "vue",
-        code: `<script setup>\nimport { ${name} } from "vadivam-vue";\n<\/script>\n\n<template>\n  <${name} />\n</template>`,
-      };
-    case "svelte":
-      return { lang: "svelte", code: `<script>\n  import { ${name} } from "vadivam-svelte";\n<\/script>\n\n<${name} />` };
-    case "astro":
-      return { lang: "astro", code: `---\nimport { ${name} } from "vadivam-astro";\n---\n\n<${name} />` };
-    case "angular":
-      return { lang: "ts", code: `import { ${name} } from "vadivam-angular";\n\n<svg vadivam${name}></svg>` };
-    default:
-      return null;
-  }
-};
 
 const highlightThemes = config.codeThemes;
 const tabSnippets: Record<string, string> = {};
@@ -355,6 +333,8 @@ const socialImageAlt = ogImageAlt(icons.length);
   <script is:inline type="application/json" id="snippetHighlight" set:html={highlightedSnippets}></script>
 
   <script>
+    import { usageCode } from "../lib/framework-snippets";
+
     const explorer = document.querySelector<HTMLElement>("#iconExplorer");
     const search = document.querySelector<HTMLInputElement>("#iconSearch");
     const searchClear = document.querySelector<HTMLButtonElement>("#iconSearchClear");
@@ -382,26 +362,8 @@ const socialImageAlt = ogImageAlt(icons.length);
     });
 
     // Plain-text snippet, used for the copy-to-clipboard action.
-    const snippet = (tab: string, component: string, svg: string) => {
-      switch (tab) {
-        case "react":
-          return `import { ${component} } from "vadivam-react";\n\n<${component} />`;
-        case "solid":
-          return `import { ${component} } from "vadivam-solid";\n\n<${component} />`;
-        case "preact":
-          return `import { ${component} } from "vadivam-preact";\n\n<${component} />`;
-        case "vue":
-          return `<script setup>\nimport { ${component} } from "vadivam-vue";\n<\/script>\n\n<template>\n  <${component} />\n</template>`;
-        case "svelte":
-          return `<script>\n  import { ${component} } from "vadivam-svelte";\n<\/script>\n\n<${component} />`;
-        case "astro":
-          return `---\nimport { ${component} } from "vadivam-astro";\n---\n\n<${component} />`;
-        case "angular":
-          return `import { ${component} } from "vadivam-angular";\n\n<svg vadivam${component}></svg>`;
-        default:
-          return svg;
-      }
-    };
+    const snippet = (tab: string, component: string, svg: string) =>
+      usageCode(tab, component, svg);
 
     // Shiki-highlighted templates rendered at build time (see the page frontmatter).
     // Framework tabs carry a placeholder component name; the SVG tab is keyed by
