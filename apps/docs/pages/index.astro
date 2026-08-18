@@ -6,6 +6,12 @@ import Tooltip from "blume/components/content/Tooltip.astro";
 import data from "blume:data";
 import { highlightCode } from "blume/markdown";
 import { icons, iconsByName } from "vadivam/manifest";
+import {
+  OG_IMAGE,
+  OG_IMAGE_SIZE,
+  homeStructuredData,
+  ogImageAlt,
+} from "../lib/icon-seo";
 
 const { config } = data;
 
@@ -132,23 +138,12 @@ const highlightedSnippets = JSON.stringify({
   svg: svgSnippets,
 }).replaceAll("</", "<\\/");
 
-// PageLayout (unlike RootLayout) emits no structured data, so declare the site
-// identity here.
+// PageLayout would emit a WebSite node; add SoftwareApplication beside it.
 const site = config.site?.replace(/\/$/, "");
 const structuredData = site
-  ? {
-      "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "WebSite",
-          "@id": `${site}#website`,
-          name: config.title,
-          url: `${site}/`,
-          description: config.description,
-        },
-      ],
-    }
+  ? homeStructuredData(site, config.title, config.description)
   : null;
+const socialImageAlt = ogImageAlt(icons.length);
 ---
 
 <PageLayout
@@ -164,16 +159,20 @@ const structuredData = site
   searchEnabled={config.search.enabled}
   siteUrl={config.site}
   ogEnabled={config.og.enabled}
+  ogImage={OG_IMAGE}
+  ogImageAlt={socialImageAlt}
+  ogImageSize={OG_IMAGE_SIZE}
+  structuredDataEnabled={false}
   x={config.x}
-  page={{ title: "Vadivam — 24px outline icons", description: config.description }}
+  page={{ title: "Vadivam — 24px outline icons", description: config.description, route: "/" }}
 >
-  <main id="iconExplorer" class="w-full px-4 pt-3 pb-8 md:px-6">
+  <div id="iconExplorer" class="w-full px-4 pt-3 pb-8 md:px-6">
     <header class="pb-4">
       <h1 class="m-0 text-[clamp(1.375rem,2vw,1.75rem)] font-semibold leading-none tracking-[-0.03em]">
-        Icons shaped for interfaces.
+        {icons.length} free 24px outline icons
       </h1>
       <p class="mt-2 mb-0 text-sm text-muted-foreground">
-        A free, open-source icon set made for designers and developers building thoughtful digital experiences.
+        Icons shaped for interfaces. A free, open-source icon set made for designers and developers building thoughtful digital experiences.
       </p>
     </header>
 
@@ -248,8 +247,9 @@ const structuredData = site
               data-name={icon.name}
               data-component={icon.componentName}
               data-svg={icon.svg}
-              aria-label={`View ${icon.componentName} icon`}
+              aria-label={`${icon.componentName} icon`}
             >
+              <span class="sr-only">{icon.name} icon</span>
               <Tooltip tip={icon.name}>
                 <span class="grid place-items-center [&>svg]:size-6" aria-hidden="true" set:html={icon.svg} />
               </Tooltip>
@@ -260,7 +260,7 @@ const structuredData = site
 
       <p class="py-12 text-center text-sm text-muted-foreground" id="emptyState" hidden>No icons match that search.</p>
     </section>
-  </main>
+  </div>
 
   <aside
     class="fixed inset-x-0 bottom-0 z-40 translate-y-full border-t border-border bg-background/95 text-foreground shadow-[0_-12px_40px_rgb(0_0_0/0.1)] backdrop-blur-lg transition-transform duration-200 ease-out data-[open]:translate-y-0 motion-reduce:transition-none"
@@ -471,7 +471,7 @@ const structuredData = site
       if (drawerPreview) drawerPreview.innerHTML = svg;
       if (drawerName) drawerName.textContent = name;
       if (drawerComponent) drawerComponent.textContent = component;
-      if (drawerOpenPage) drawerOpenPage.href = `/icons/${name}/`;
+      if (drawerOpenPage) drawerOpenPage.href = `/icons/${name}`;
 
       renderCode();
 

@@ -66,6 +66,7 @@ export default defineConfig({
       },
     },
     x: { creator: "@praveenjuge", handle: "@praveenjuge" },
+    structuredData: true,
   },
   deployment: {
     output: "static",

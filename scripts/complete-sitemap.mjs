@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
@@ -7,6 +7,8 @@ import { icons } from "../packages/vadivam/dist/manifest.js";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sitemapPath = path.join(root, "apps/docs/dist/sitemap.xml");
 const llmsPath = path.join(root, "apps/docs/dist/llms.txt");
+const distDir = path.join(root, "apps/docs/dist");
+const iconsDir = path.join(root, "icons");
 
 const xmlEscape = (value) =>
   value
@@ -18,7 +20,15 @@ const xmlEscape = (value) =>
 
 const asArray = (value) => (Array.isArray(value) ? value : value ? [value] : []);
 
-export function completeSitemap(xml, iconNames) {
+export function sitemapDay(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid sitemap lastmod: ${value}`);
+  }
+  return date.toISOString().slice(0, 10);
+}
+
+export function completeSitemap(xml, iconNames, lastmods = {}) {
   const validation = XMLValidator.validate(xml);
   if (validation !== true) {
     throw new Error(`Invalid generated sitemap: ${validation.err.msg}`);
@@ -37,7 +47,8 @@ export function completeSitemap(xml, iconNames) {
   for (const name of iconNames) {
     const loc = `${origin}/icons/${encodeURIComponent(name)}`;
     if (byLocation.has(loc)) throw new Error(`Duplicate icon URL: ${loc}`);
-    byLocation.set(loc, { loc });
+    const lastmod = lastmods[name];
+    byLocation.set(loc, lastmod ? { loc, lastmod } : { loc });
   }
 
   const expectedCount = entries.length + iconNames.length;
@@ -66,6 +77,17 @@ export function completeSitemap(xml, iconNames) {
   return output;
 }
 
+export function googleSiteVerificationFile(token) {
+  if (!token) return null;
+  if (!/^[A-Za-z0-9_-]+$/.test(token)) {
+    throw new Error("GOOGLE_SITE_VERIFICATION must be an alphanumeric token");
+  }
+  return {
+    fileName: `google${token}.html`,
+    contents: `google-site-verification: ${token}\n`,
+  };
+}
+
 export function completeLlmsIndex(markdown, site) {
   if (!markdown.trimStart().startsWith("# ")) {
     throw new Error("Generated llms.txt does not start with a title");
@@ -78,19 +100,37 @@ export function completeLlmsIndex(markdown, site) {
 }
 
 if (import.meta.main) {
+  const lastmods = Object.fromEntries(
+    await Promise.all(
+      icons.map(async ({ name, fileName }) => {
+        const info = await stat(path.join(iconsDir, fileName));
+        return [name, sitemapDay(info.mtime)];
+      }),
+    ),
+  );
   const [xml, llms] = await Promise.all([
     readFile(sitemapPath, "utf8"),
     readFile(llmsPath, "utf8"),
   ]);
-  const sitemap = completeSitemap(xml, icons.map(({ name }) => name));
+  const sitemap = completeSitemap(
+    xml,
+    icons.map(({ name }) => name),
+    lastmods,
+  );
   const parsed = new XMLParser().parse(sitemap);
   const [firstEntry] = asArray(parsed?.urlset?.url);
   if (!firstEntry?.loc) throw new Error("Completed sitemap contains no URLs");
   const llmsIndex = completeLlmsIndex(llms, firstEntry.loc);
+  const verification = googleSiteVerificationFile(
+    process.env.GOOGLE_SITE_VERIFICATION,
+  );
 
   await Promise.all([
     writeFile(sitemapPath, sitemap),
     writeFile(llmsPath, llmsIndex),
+    verification
+      ? writeFile(path.join(distDir, verification.fileName), verification.contents)
+      : Promise.resolve(),
   ]);
   process.stdout.write(
     `Completed sitemap.xml with ${icons.length} icon URLs and added the icon catalog to llms.txt.\n`,
