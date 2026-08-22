@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
@@ -18,7 +19,7 @@ const xmlEscape = (value) =>
 
 const asArray = (value) => (Array.isArray(value) ? value : value ? [value] : []);
 
-export function completeSitemap(xml, iconNames) {
+export function completeSitemap(xml, iconNames, iconLastmod = {}) {
   const validation = XMLValidator.validate(xml);
   if (validation !== true) {
     throw new Error(`Invalid generated sitemap: ${validation.err.msg}`);
@@ -37,7 +38,8 @@ export function completeSitemap(xml, iconNames) {
   for (const name of iconNames) {
     const loc = `${origin}/icons/${encodeURIComponent(name)}`;
     if (byLocation.has(loc)) throw new Error(`Duplicate icon URL: ${loc}`);
-    byLocation.set(loc, { loc });
+    const lastmod = iconLastmod[name];
+    byLocation.set(loc, lastmod ? { loc, lastmod } : { loc });
   }
 
   const expectedCount = entries.length + iconNames.length;
@@ -66,6 +68,38 @@ export function completeSitemap(xml, iconNames) {
   return output;
 }
 
+/**
+ * Map each icon name to the date (YYYY-MM-DD) of the last commit that touched
+ * its source SVG, so icon sitemap entries can carry an accurate `lastmod`.
+ * Newest-first history means the first hit per file wins. Outside a git repo,
+ * returns an empty map and icon entries simply omit `lastmod`.
+ */
+export function iconLastmods(rootDir) {
+  try {
+    const output = execFileSync(
+      "git",
+      ["log", "--format=%cI", "--name-only", "--", "icons/"],
+      { cwd: rootDir, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+    );
+    const modified = new Map();
+    let committedAt = null;
+    for (const line of output.split("\n")) {
+      if (!line.trim()) continue;
+      if (/^\d{4}-\d{2}-\d{2}/.test(line)) {
+        committedAt = line.slice(0, 10);
+        continue;
+      }
+      const match = line.match(/^icons\/(.+)\.svg$/);
+      if (match && committedAt && !modified.has(match[1])) {
+        modified.set(match[1], committedAt);
+      }
+    }
+    return modified;
+  } catch {
+    return new Map();
+  }
+}
+
 export function completeLlmsIndex(markdown, site) {
   if (!markdown.trimStart().startsWith("# ")) {
     throw new Error("Generated llms.txt does not start with a title");
@@ -82,7 +116,9 @@ if (import.meta.main) {
     readFile(sitemapPath, "utf8"),
     readFile(llmsPath, "utf8"),
   ]);
-  const sitemap = completeSitemap(xml, icons.map(({ name }) => name));
+  const lastmods = iconLastmods(root);
+  const iconNames = icons.map(({ name }) => name);
+  const sitemap = completeSitemap(xml, iconNames, Object.fromEntries(lastmods));
   const parsed = new XMLParser().parse(sitemap);
   const [firstEntry] = asArray(parsed?.urlset?.url);
   if (!firstEntry?.loc) throw new Error("Completed sitemap contains no URLs");
@@ -92,7 +128,8 @@ if (import.meta.main) {
     writeFile(sitemapPath, sitemap),
     writeFile(llmsPath, llmsIndex),
   ]);
+  const applied = iconNames.filter((name) => lastmods.has(name)).length;
   process.stdout.write(
-    `Completed sitemap.xml with ${icons.length} icon URLs and added the icon catalog to llms.txt.\n`,
+    `Completed sitemap.xml with ${icons.length} icon URLs (${applied} carrying lastmod) and added the icon catalog to llms.txt.\n`,
   );
 }

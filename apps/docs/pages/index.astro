@@ -6,6 +6,7 @@ import Tooltip from "blume/components/content/Tooltip.astro";
 import data from "blume:data";
 import { highlightCode } from "blume/markdown";
 import { icons, iconsByName } from "vadivam/manifest";
+import pkg from "../../../package.json";
 
 const { config } = data;
 
@@ -132,8 +133,8 @@ const highlightedSnippets = JSON.stringify({
   svg: svgSnippets,
 }).replaceAll("</", "<\\/");
 
-// PageLayout (unlike RootLayout) emits no structured data, so declare the site
-// identity here.
+// PageLayout's built-in JSON-LD is disabled so this page can declare the site
+// identity plus the library's software entity in one graph.
 const site = config.site?.replace(/\/$/, "");
 const structuredData = site
   ? {
@@ -145,6 +146,20 @@ const structuredData = site
           name: config.title,
           url: `${site}/`,
           description: config.description,
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": `${site}#software`,
+          name: config.title,
+          url: `${site}/`,
+          description: config.description,
+          applicationCategory: "DesignApplication",
+          operatingSystem: "Any",
+          softwareVersion: pkg.version,
+          author: { "@type": "Person", name: "Praveen Juge", url: "https://github.com/praveenjuge" },
+          license: "https://github.com/praveenjuge/vadivam/blob/main/LICENSE",
+          screenshot: `${site}/preview.png`,
+          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
         },
       ],
     }
@@ -165,6 +180,7 @@ const structuredData = site
   siteUrl={config.site}
   ogEnabled={config.og.enabled}
   x={config.x}
+  structuredDataEnabled={false}
   page={{ title: "Vadivam — 24px outline icons", description: config.description }}
 >
   <main id="iconExplorer" class="w-full px-4 pt-3 pb-8 md:px-6">
@@ -239,7 +255,7 @@ const structuredData = site
         </div>
       </div>
 
-      <div class="grid grid-cols-[repeat(auto-fill,minmax(4.25rem,1fr))]" id="iconGrid">
+      <div class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-13" id="iconGrid">
         {
           icons.map((icon) => (
             <a

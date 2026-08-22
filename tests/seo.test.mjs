@@ -10,6 +10,14 @@ const dist = path.join(root, "apps/docs/dist");
 const site = "https://vadivam.praveenjuge.com";
 const readDist = (...segments) => readFileSync(path.join(dist, ...segments), "utf8");
 
+/** Parse every inline JSON-LD script and flatten all @graph nodes. */
+function jsonLdNodes(html) {
+  const graphs = [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map(
+    ({ 1: json }) => JSON.parse(json),
+  );
+  return graphs.flatMap(({ "@graph": graph }) => graph ?? [graph]);
+}
+
 describe("website SEO", () => {
   test.each(["activity", "accessibility"])("%s has one self-canonical URL across metadata", (name) => {
     const html = readDist("icons", name, "index.html");
@@ -24,6 +32,19 @@ describe("website SEO", () => {
     expect(html).not.toContain(`${site}/og/icons/${name}.png`);
   });
 
+  test.each(["activity", "accessibility"])("%s links an ImageObject as its primary image", (name) => {
+    const nodes = jsonLdNodes(readDist("icons", name, "index.html"));
+    const byId = new Map(nodes.map((node) => [node["@id"], node]));
+    const page = nodes.find(({ "@type": type }) => type === "WebPage");
+    const imageId = `${site}/icons/${name}#image`;
+    expect(page?.primaryImageOfPage).toEqual({ "@id": imageId });
+    expect(byId.get(imageId)).toMatchObject({
+      "@type": "ImageObject",
+      contentUrl: `${site}/icons/${name}.svg`,
+      encodingFormat: "image/svg+xml",
+    });
+  });
+
   test("homepage keeps WebSite identity without obsolete SearchAction markup", () => {
     const html = readDist("index.html");
     expect(html).toContain('"@type":"WebSite"');
@@ -35,6 +56,21 @@ describe("website SEO", () => {
     expect(html).toContain('<meta content="@praveenjuge" name="twitter:creator">');
     expect(html).toContain("A free, open-source icon set made for designers and developers building thoughtful digital experiences.");
     expect(html).toContain('href="/icons/activity"');
+  });
+
+  test("homepage declares the library as a free SoftwareApplication", () => {
+    const app = jsonLdNodes(readDist("index.html")).find(({ "@type": type }) => type === "SoftwareApplication");
+    const { version } = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
+    expect(app).toMatchObject({
+      "@id": `${site}#software`,
+      applicationCategory: "DesignApplication",
+      operatingSystem: "Any",
+      softwareVersion: version,
+      screenshot: `${site}/preview.png`,
+      license: "https://github.com/praveenjuge/vadivam/blob/main/LICENSE",
+      author: { "@type": "Person", name: "Praveen Juge" },
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    });
   });
 
   test("robots allows search, AI grounding, and AI training", () => {
@@ -96,6 +132,12 @@ describe("website SEO", () => {
     expect(locations).toHaveLength(expected.length);
     expect(new Set(locations).size).toBe(locations.length);
     expect(locations.sort()).toEqual(expected);
+    const iconEntries = entries.filter(({ loc }) => loc.startsWith(`${site}/icons/`));
+    expect(iconEntries).toHaveLength(icons.length);
+    for (const { lastmod } of iconEntries) {
+      expect(lastmod).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(Number.parseInt(lastmod, 10)).toBeLessThanOrEqual(new Date().getUTCFullYear());
+    }
   });
 
   const frameworkTitles = {

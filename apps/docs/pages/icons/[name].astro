@@ -42,8 +42,9 @@ const pageTitle = `${c} icon — Vadivam`;
 const pageDescription = `${c} is a free, open-source 24px outline icon from Vadivam. Download the SVG or use it in React and other supported frameworks.`;
 const sectionClass = "mt-10 text-xs font-semibold uppercase tracking-wide text-muted-foreground";
 
-// PageLayout emits no structured data, so describe the icon page and its
-// breadcrumb trail here (matches what RootLayout does for content pages).
+// PageLayout's built-in JSON-LD is disabled so this page can describe the icon,
+// its image, and its breadcrumb trail in one graph (blume's default would emit
+// an article node colliding with this page's #page entity).
 const site = config.site?.replace(/\/$/, "");
 const iconUrl = site ? `${site}/icons/${icon.name}` : `/icons/${icon.name}`;
 const structuredData = site
@@ -63,11 +64,19 @@ const structuredData = site
           description: pageDescription,
           url: iconUrl,
           isPartOf: { "@id": `${site}#website` },
+          primaryImageOfPage: { "@id": `${iconUrl}#image` },
           about: {
             "@type": "CreativeWork",
             name: `${c} icon`,
             keywords: `${icon.name}, ${c}, vadivam, svg icon, outline icon, 24px icon`,
           },
+        },
+        {
+          "@type": "ImageObject",
+          "@id": `${iconUrl}#image`,
+          name: `${c} icon`,
+          contentUrl: `${site}/icons/${icon.name}.svg`,
+          encodingFormat: "image/svg+xml",
         },
         {
           "@type": "BreadcrumbList",
@@ -96,6 +105,7 @@ const structuredData = site
   ogEnabled={config.og.enabled}
   ogImage="/og.png"
   x={config.x}
+  structuredDataEnabled={false}
   page={{ title: pageTitle, description: pageDescription, route: `/icons/${icon.name}` }}
 >
   <main id="iconDetail" class="mx-auto w-full max-w-4xl px-4 pt-4 pb-16 md:px-6">
