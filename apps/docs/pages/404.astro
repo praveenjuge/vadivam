@@ -1,0 +1,67 @@
+---
+import PageLayout from "blume/components/layout/PageLayout.astro";
+import { withBase } from "blume/components/islands/base-path.ts";
+import data from "blume:data";
+
+export const prerender = true;
+
+const nf = data.ui.notFound;
+
+const i18n = data.config.i18n;
+const localeMeta = i18n ? i18n.locales.find((l) => l.code === i18n.defaultLocale) : null;
+const dir = localeMeta?.dir ?? "ltr";
+const htmlLang = i18n ? i18n.defaultLocale : "en";
+---
+
+<PageLayout
+  site={{ title: data.config.title, description: data.config.description }}
+  logo={data.config.logo}
+  favicon={data.config.favicon}
+  appleIcon={data.config.appleIcon}
+  banner={data.config.banner}
+  analytics={data.config.analytics}
+  navigation={data.navigation}
+  page={{ title: nf.title, route: "/404" }}
+  themeMode={data.config.theme.mode}
+  fontCssVars={data.fontCssVars}
+  searchEnabled={data.config.search.enabled}
+  locale={htmlLang}
+  dir={dir}
+  ui={data.ui}
+  noindex={true}
+>
+  <div
+    class="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center gap-6 px-6 py-16 text-center"
+  >
+    <p class="text-6xl font-bold text-muted-foreground">404</p>
+    <h1 class="text-2xl font-semibold text-foreground">{nf.title}</h1>
+    <p class="max-w-prose text-muted-foreground">{nf.description}</p>
+    <a
+      class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground"
+      href={withBase("/")}>{nf.home}</a
+    >
+
+    <div class="mt-8 w-full max-w-xl rounded-lg border border-border bg-muted/30 p-6 text-left">
+      <h2 class="text-sm font-semibold tracking-wide text-foreground">Where to go next</h2>
+      <ul class="mt-3 list-disc space-y-1.5 ps-5 text-sm text-muted-foreground">
+        <li><a class="underline decoration-border underline-offset-4 hover:text-foreground" href={withBase("/")}>Home — icon catalog</a></li>
+        <li><a class="underline decoration-border underline-offset-4 hover:text-foreground" href={withBase("/docs")}>Documentation</a></li>
+        <li><a class="underline decoration-border underline-offset-4 hover:text-foreground" href={withBase("/sitemap.xml")}>Sitemap (/sitemap.xml)</a></li>
+        <li><a class="underline decoration-border underline-offset-4 hover:text-foreground" href={withBase("/llms.txt")}>LLM index (/llms.txt)</a></li>
+        <li><a class="underline decoration-border underline-offset-4 hover:text-foreground" href={withBase("/robots.txt")}>Robots (/robots.txt)</a></li>
+      </ul>
+      <pre class="mt-5 overflow-auto rounded-md bg-background p-4 text-xs leading-relaxed text-muted-foreground">{
+`# 404 — Page not found
+The page at this URL does not exist.
+
+## Where to go next
+- / — Vadivam icon catalog (https://vadivam.praveenjuge.com/)
+- /docs — Documentation (https://vadivam.praveenjuge.com/docs)
+- /sitemap.xml — Full site map
+- /llms.txt — LLM-friendly index
+- /robots.txt — Crawl rules
+`
+      }</pre>
+    </div>
+  </div>
+</PageLayout>
