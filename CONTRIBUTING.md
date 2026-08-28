@@ -6,7 +6,7 @@ Vadivam is a Bun monorepo. SVG files in `icons/` are the canonical source; gener
 
 ```sh
 bun install
-bun run dev
+bun run dev  # docs at http://localhost:4321
 ```
 
 Keep pull requests focused and describe any visible or package API changes.
