@@ -54,6 +54,16 @@ export default defineConfig({
     repo: "vadivam",
     dir: "apps/docs",
   },
+  search: {
+    popular: [
+      { href: "/docs/installation", label: "Installation", icon: "download" },
+      { href: "/docs/usage", label: "Usage & styling", icon: "palette" },
+      { href: "/docs/dynamic-icons", label: "Dynamic icons", icon: "shuffle" },
+      { href: "/docs/react", label: "React", icon: "code" },
+      { href: "/docs/core", label: "Core SVG", icon: "file-code" },
+      { href: "/docs/contributing", label: "Contributing", icon: "git-pull-request" },
+    ],
+  },
   seo: {
     contentSignals: {
       search: true,
