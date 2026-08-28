@@ -11,7 +11,7 @@ Vadivam is a Bun monorepo. Source SVGs in the root `icons/` directory are canoni
 git clone https://github.com/praveenjuge/vadivam.git
 cd vadivam
 bun install
-bun run dev
+bun run dev  # docs at http://localhost:4321
 ```
 
 Keep pull requests focused and describe visible changes and package API changes.
