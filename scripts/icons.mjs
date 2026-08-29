@@ -19,6 +19,7 @@ import { buildSolidPackage } from "./generators/solid.mjs";
 import { buildSveltePackage } from "./generators/svelte.mjs";
 import { buildVuePackage } from "./generators/vue.mjs";
 import {
+  runtimePolicyRecursiveSource,
   runtimePolicySource,
   svgElementTypeSource,
 } from "./generators/runtime-policy.mjs";
@@ -463,7 +464,7 @@ async function buildRawPackage(icons) {
   );
   await writeFile(
     path.join(rawDist, "runtimePolicy.js"),
-    runtimePolicySource,
+    runtimePolicyRecursiveSource,
   );
   await writeFile(
     path.join(rawDist, "createElement.js"),
@@ -580,11 +581,11 @@ async function buildReactPackage(icons) {
   );
   await writeFile(
     path.join(reactDist, "runtimePolicy.d.ts"),
-    `import type { IconNode } from "./types.js";\nexport declare function sanitizeIconNode(iconNode: unknown): IconNode;\nexport declare function sanitizeRootAttributes(attrs: unknown, allowEventFunctions?: boolean): Record<string, unknown>;\n`,
+    `import type { IconNode } from "./types.js";\nexport declare function sanitizeIconNode(iconNode: unknown): IconNode;\nexport declare function sanitizePaint(value: unknown, fallback?: string): string | number;\nexport declare function sanitizeRootAttributes(attrs: unknown, allowEventFunctions?: boolean): Record<string, unknown>;\n`,
   );
   await writeFile(
     path.join(reactDist, "Icon.js"),
-    `"use client";\nimport React, { forwardRef } from "react";\nimport defaultAttributes from "./defaultAttributes.js";\nimport { sanitizeIconNode, sanitizeRootAttributes } from "./runtimePolicy.js";\nimport { useVadivamContext } from "./context.js";\n\nfunction mergeClasses(...values) {\n  return values.flatMap((value) => typeof value === "string" ? value.split(/\\s+/) : []).filter((value, index, all) => value && all.indexOf(value) === index).join(" ");\n}\nfunction hasA11yProp(props) {\n  return Object.keys(props).some((name) => name.startsWith("aria-") || name === "role" || name === "title");\n}\nfunction renderNode([tag, attrs]) {\n  return React.createElement(tag, attrs);\n}\n\nexport const Icon = forwardRef(({ color, size, strokeWidth, absoluteStrokeWidth, className = "", title, children, iconNode = [], ...rest }, ref) => {\n  const context = useVadivamContext();\n  const resolvedSize = size ?? context.size ?? 24;\n  const resolvedStrokeWidth = strokeWidth ?? context.strokeWidth ?? 2;\n  const numericSize = Number(resolvedSize);\n  const numericStrokeWidth = Number(resolvedStrokeWidth);\n  const useAbsoluteStrokeWidth = absoluteStrokeWidth ?? context.absoluteStrokeWidth ?? false;\n  const calculatedStrokeWidth = useAbsoluteStrokeWidth && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStrokeWidth) ? numericStrokeWidth * 24 / numericSize : resolvedStrokeWidth;\n  const safeRootAttributes = sanitizeRootAttributes(rest, true);\n  const labelled = Boolean(title) || hasA11yProp(safeRootAttributes);\n  return React.createElement(\n    "svg",\n    {\n      ref,\n      ...defaultAttributes,\n      width: resolvedSize,\n      height: resolvedSize,\n      stroke: color ?? context.color ?? "currentColor",\n      strokeWidth: calculatedStrokeWidth,\n      className: mergeClasses("vadivam", context.className, className),\n      ...(!labelled ? { "aria-hidden": "true" } : {}),\n      ...(title ? { role: "img" } : {}),\n      ...safeRootAttributes\n    },\n    title ? React.createElement("title", { key: "title" }, title) : null,\n    ...sanitizeIconNode(iconNode).map(renderNode),\n    children\n  );\n});\nIcon.displayName = "Icon";\nexport default Icon;\n`,
+    `"use client";\nimport React, { forwardRef } from "react";\nimport defaultAttributes from "./defaultAttributes.js";\nimport { sanitizeIconNode, sanitizePaint, sanitizeRootAttributes } from "./runtimePolicy.js";\nimport { useVadivamContext } from "./context.js";\n\nfunction mergeClasses(...values) {\n  return values.flatMap((value) => typeof value === "string" ? value.split(/\\s+/) : []).filter((value, index, all) => value && all.indexOf(value) === index).join(" ");\n}\nfunction hasA11yProp(props) {\n  return Object.keys(props).some((name) => name.startsWith("aria-") || name === "role" || name === "title");\n}\nfunction renderNode([tag, attrs]) {\n  return React.createElement(tag, attrs);\n}\n\nexport const Icon = forwardRef(({ color, size, strokeWidth, absoluteStrokeWidth, className = "", title, children, iconNode = [], ...rest }, ref) => {\n  const context = useVadivamContext();\n  const resolvedSize = size ?? context.size ?? 24;\n  const resolvedStrokeWidth = strokeWidth ?? context.strokeWidth ?? 2;\n  const numericSize = Number(resolvedSize);\n  const numericStrokeWidth = Number(resolvedStrokeWidth);\n  const useAbsoluteStrokeWidth = absoluteStrokeWidth ?? context.absoluteStrokeWidth ?? false;\n  const calculatedStrokeWidth = useAbsoluteStrokeWidth && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStrokeWidth) ? numericStrokeWidth * 24 / numericSize : resolvedStrokeWidth;\n  const safeRootAttributes = sanitizeRootAttributes(rest, true);\n  const labelled = Boolean(title) || hasA11yProp(safeRootAttributes);\n  return React.createElement(\n    "svg",\n    {\n      ref,\n      ...defaultAttributes,\n      width: resolvedSize,\n      height: resolvedSize,\n      stroke: sanitizePaint(color ?? context.color),\n      strokeWidth: calculatedStrokeWidth,\n      className: mergeClasses("vadivam", context.className, className),\n      ...(!labelled ? { "aria-hidden": "true" } : {}),\n      ...(title ? { role: "img" } : {}),\n      ...safeRootAttributes\n    },\n    title ? React.createElement("title", { key: "title" }, title) : null,\n    ...sanitizeIconNode(iconNode).map(renderNode),\n    children\n  );\n});\nIcon.displayName = "Icon";\nexport default Icon;\n`,
   );
   await writeFile(
     path.join(reactDist, "Icon.d.ts"),

@@ -12,7 +12,7 @@ import { AArrowDown } from "vadivam-angular/a-arrow-down";
     <svg id="direct" vadivamAArrowDown></svg>
     <svg id="dynamic" [vadivamDynamicIcon]="'airplay'"></svg>
     <svg id="factory" [vadivamIcon]="factory"></svg>
-    <svg id="security" [vadivamIcon]="security"></svg>
+    <svg id="security" [vadivamIcon]="security" [color]="'url(https://example.com/paint.svg#x)'"></svg>
   `,
 })
 class App {

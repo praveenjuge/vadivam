@@ -164,6 +164,7 @@ describe("createIcon rendering (client)", () => {
         dangerouslySetInnerHTML: { __html: "<script>alert(1)</script>" },
         href: "javascript:alert(1)",
         fill: "url(https://example.com/paint.svg#x)",
+        color: "url(https://example.com/stroke.svg#x)",
         style: {
           color: "red",
           backgroundImage: "image-set('https://example.com/track.png' 1x)",
@@ -180,6 +181,7 @@ describe("createIcon rendering (client)", () => {
     expect(svg.querySelector("script, animate, image")).toBeNull();
     expect(svg.getAttribute("href")).toBeNull();
     expect(svg.getAttribute("fill")).toBe("none");
+    expect(svg.getAttribute("stroke")).toBe("currentColor");
     expect(svg.style.color).toBe("red");
     expect(svg.style.backgroundImage).toBe("");
     expect(svg.style.borderImage).toBe("");
@@ -195,10 +197,11 @@ describe("createIcon rendering (client)", () => {
 
   test("generated icons cannot have their trusted iconNode overridden", () => {
     const { container } = render(createElement(Activity, {
-      iconNode: [["script", { key: "script" }]],
+      iconNode: [["path", { d: "M0 0h1", key: "override" }]],
     }));
-    expect(container.querySelector("svg path")).not.toBeNull();
-    expect(container.querySelector("script")).toBeNull();
+    const paths = Array.from(container.querySelectorAll("svg path"));
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.some((path) => path.getAttribute("d") === "M0 0h1")).toBe(false);
   });
 
   test("VadivamProvider applies global defaults and merges classes", () => {

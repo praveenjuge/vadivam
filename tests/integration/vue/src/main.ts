@@ -17,6 +17,6 @@ createApp({
       h(AArrowDown, { id: "direct" }),
       h(DynamicIcon, { id: "dynamic", name: "airplay" }),
       h(FactoryIcon, { id: "factory" }),
-      h(SecurityIcon, { id: "security", innerHTML: "<script>alert(1)</script>", onload: "alert(1)" }),
+      h(SecurityIcon, { id: "security", color: "url(https://example.com/paint.svg#x)", innerHTML: "<script>alert(1)</script>", onload: "alert(1)" }),
     ]),
 }).mount("#app");

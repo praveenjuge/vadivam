@@ -57,6 +57,7 @@ describe("createIcon server rendering", () => {
       onLoad: "alert(1)",
       dangerouslySetInnerHTML: { __html: "<script>alert(1)</script>" },
       href: "javascript:alert(1)",
+      color: "url(https://example.com/stroke.svg#x)",
     }));
     expect(html).toContain('<path d="M4 12h16"></path>');
     expect(html).not.toContain("<script");
@@ -65,14 +66,15 @@ describe("createIcon server rendering", () => {
     expect(html).not.toContain("onload");
     expect(html).not.toContain("href=");
     expect(html).not.toContain("alert(1)");
+    expect(html).toContain('stroke="currentColor"');
   });
 
   test("generated icons ignore an iconNode prop override during SSR", () => {
     const html = renderToStaticMarkup(createElement(Activity, {
-      iconNode: [["script", { key: "script" }]],
+      iconNode: [["path", { d: "M0 0h1", key: "override" }]],
     }));
     expect(html).toContain("<path");
-    expect(html).not.toContain("<script");
+    expect(html).not.toContain("M0 0h1");
   });
 
   test("DynamicIcon renders its fallback for a valid name during sync SSR", () => {

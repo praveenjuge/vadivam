@@ -9,7 +9,7 @@
     ["animate", { onbegin: "alert(1)", attributeName: "href" }],
     ["path", { d: "M2 2h2", onclick: "alert(1)", innerHTML: rawScript }],
   ] as any);
-  const unsafeRootProps = { innerHTML: rawScript, onload: "alert(1)" } as any;
+  const unsafeRootProps = { color: "url(https://example.com/paint.svg#x)", innerHTML: rawScript, onload: "alert(1)" } as any;
 </script>
 
 <VadivamProvider size={48} color="navy" strokeWidth={2} class="context-icon">

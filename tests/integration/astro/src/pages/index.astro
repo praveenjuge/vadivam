@@ -13,4 +13,4 @@ const security = createVadivamIcon("security", [
 <AArrowDown id="direct" size={48} color="navy" />
 <DynamicIcon id="dynamic" name="airplay" size={48} color="navy" />
 <Icon id="factory" {...factory} size={48} color="navy" />
-<Icon id="security" {...security} {...({ innerHTML: "<script>alert(1)</script>", onload: "alert(1)" } as any)} />
+<Icon id="security" {...security} {...({ color: "url(https://example.com/paint.svg#x)", innerHTML: "<script>alert(1)</script>", onload: "alert(1)" } as any)} />

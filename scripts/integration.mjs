@@ -223,7 +223,7 @@ async function verifyBrowser(browser, app, cwd, index) {
     if (result.direct.paths === 0 || result.dynamic.paths === 0 || result.factory.paths === 0 || result.direct.ariaHidden !== "true" || result.dynamic.ariaHidden !== "true" || result.factory.ariaHidden !== "true" || !result.factory.className?.split(/\s+/).includes("vadivam-factory")) {
       throw new Error(`${app.name}: direct, dynamic, or factory icon did not render`);
     }
-    if (result.security.paths !== 1 || result.securityUnsafe !== 0 || result.securityRawContent) {
+    if (result.security.paths !== 1 || result.security.stroke !== "currentColor" || result.securityUnsafe !== 0 || result.securityRawContent) {
       throw new Error(`${app.name}: unsafe runtime icon content survived ${JSON.stringify(result)}`);
     }
     if (app.verifiesFunctionEvents && result.functionEventCount !== 1) {

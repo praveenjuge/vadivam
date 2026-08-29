@@ -76,6 +76,7 @@ const unsafeIconNode = [
 ];
 
 function assertSafeCustomIcon(markup) {
+  expect(markup).toContain('stroke="currentColor"');
   expect(markup).toContain("<path");
   expect(markup).toContain('d="M4 12h16"');
   expect(markup).toContain('stroke="navy"');
@@ -112,6 +113,7 @@ describe("framework-native server rendering", () => {
     const app = createSSRApp({
       render: () => vueH(VueIcon, {
         iconNode: unsafeIconNode,
+        color: "url(https://example.com/paint.svg#x)",
         onload: "alert(1)",
         innerHTML: "<script>alert(1)</script>",
         href: "javascript:alert(1)",
@@ -145,6 +147,7 @@ describe("framework-native server rendering", () => {
   test("Preact strips executable custom icon data during SSR", () => {
     assertSafeCustomIcon(renderPreact(preactH(PreactIcon, {
       iconNode: unsafeIconNode,
+      color: "url(https://example.com/paint.svg#x)",
       onLoad: "alert(1)",
       dangerouslySetInnerHTML: { __html: "<script>alert(1)</script>" },
       href: "javascript:alert(1)",
@@ -179,6 +182,7 @@ describe("framework-native server rendering", () => {
   test("Solid strips executable custom icon data during SSR", () => {
     assertSafeCustomIcon(renderSolid(() => createSolidComponent(SolidIcon, {
       iconNode: unsafeIconNode,
+      color: "url(https://example.com/paint.svg#x)",
       onload: "alert(1)",
       innerHTML: "<script>alert(1)</script>",
       href: "javascript:alert(1)",

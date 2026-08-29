@@ -10,6 +10,7 @@ const SecurityIcon = createVadivamIcon("security", [
   ["path", { d: "M2 2h2", onclick: "alert(1)", innerHTML: "<script>alert(1)</script>" }],
 ] as any);
 const unsafeRootProps = {
+  color: "url(https://example.com/paint.svg#x)",
   innerHTML: "<script>alert(1)</script>",
   onload: "alert(1)",
 } as any;
