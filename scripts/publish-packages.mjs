@@ -18,7 +18,7 @@ function publishedVersion(name, version) {
 }
 
 async function verify(name, version) {
-  for (let attempt = 0; attempt < 12; attempt += 1) {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
     if (publishedVersion(name, version) === version) return;
     await new Promise((resolve) => setTimeout(resolve, 5000));
   }
