@@ -138,7 +138,9 @@ jobs:
       - name: Record exact commit test status
         if: github.event_name == 'push' && steps.changes.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+          # RELEASE_TOKEN is needed for tag-triggered workflows, but may not
+          # have commit-status scope. The job token has statuses:write above.
+          GH_TOKEN: ${{ github.token }}
         run: |
           tested_sha=$(git rev-parse HEAD)
           gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$tested_sha" \
