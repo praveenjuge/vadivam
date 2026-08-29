@@ -1,10 +1,25 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  runtimePolicySource,
+  svgElementTypeSource,
+} from "./runtime-policy.mjs";
 
 export async function prepareDist(dist) {
   await rm(dist, { recursive: true, force: true });
   await mkdir(path.join(dist, "icons"), { recursive: true });
 }
+
+export async function writeRuntimePolicy(dist) {
+  await write(dist, "runtimePolicy.js", runtimePolicySource);
+  await write(
+    dist,
+    "runtimePolicy.d.ts",
+    `import type { IconNode } from "./types.js";\nexport declare function sanitizeIconNode(iconNode: unknown): IconNode;\nexport declare function sanitizePaint(value: unknown, fallback?: string): string | number;\nexport declare function sanitizeRootAttributes(attrs: unknown, allowEventFunctions?: boolean): Record<string, unknown>;\n`,
+  );
+}
+
+export { svgElementTypeSource };
 
 export function iconNameType(icons) {
   return icons.map(({ name }) => JSON.stringify(name)).join(" | ");

@@ -9,14 +9,17 @@ import { createSSRApp, h as vueH } from "vue";
 import { renderToString as renderVue } from "@vue/server-renderer";
 import {
   Activity as PreactActivity,
+  Icon as PreactIcon,
   VadivamProvider as PreactProvider,
 } from "../../packages/vadivam-preact/dist/index.js";
 import {
   Activity as SolidActivity,
+  Icon as SolidIcon,
   VadivamProvider as SolidProvider,
 } from "../../packages/vadivam-solid/dist/index.js";
 import {
   Activity as VueActivity,
+  Icon as VueIcon,
   VadivamProvider as VueProvider,
 } from "../../packages/vadivam-vue/dist/index.js";
 
@@ -52,6 +55,42 @@ function assertSafeFallback(markup) {
   expect(markup).toContain('aria-hidden="true"');
 }
 
+const unsafeIconNode = [
+  ["script", { href: "https://example.com/x.js", key: "script" }],
+  ["animate", { attributeName: "href", values: "javascript:alert(1)", key: "animate" }],
+  ["image", { href: "javascript:alert(1)", key: "image" }],
+  ["path", {
+    d: "M4 12h16",
+    stroke: "navy",
+    onclick: "alert(1)",
+    innerHTML: "<script>alert(1)</script>",
+    key: "safe",
+  }],
+  ["path", {
+    d: "M2 4h2",
+    'bad" onload': "alert(1)",
+    ".innerHTML": "<script>alert(1)</script>",
+    "prop:innerHTML": "<script>alert(1)</script>",
+    key: "malformed",
+  }],
+];
+
+function assertSafeCustomIcon(markup) {
+  expect(markup).toContain('stroke="currentColor"');
+  expect(markup).toContain("<path");
+  expect(markup).toContain('d="M4 12h16"');
+  expect(markup).toContain('stroke="navy"');
+  expect(markup).not.toContain("<script");
+  expect(markup).not.toContain("<animate");
+  expect(markup).not.toContain("<image");
+  expect(markup).not.toContain("onclick");
+  expect(markup).not.toContain("onload");
+  expect(markup).not.toContain("href=");
+  expect(markup).not.toContain("alert(1)");
+  expect(markup).not.toContain("prop:innerHTML");
+  expect(markup).not.toContain("bad&quot;");
+}
+
 describe("framework-native server rendering", () => {
   test("Vue renders provider defaults, title, and absolute stroke width", async () => {
     const app = createSSRApp({
@@ -68,6 +107,19 @@ describe("framework-native server rendering", () => {
       render: () => vueH(VueActivity, { absoluteStrokeWidth: true, size: 0, strokeWidth: 3 }),
     });
     assertSafeFallback(await renderVue(app));
+  });
+
+  test("Vue strips executable custom icon data during SSR", async () => {
+    const app = createSSRApp({
+      render: () => vueH(VueIcon, {
+        iconNode: unsafeIconNode,
+        color: "url(https://example.com/paint.svg#x)",
+        onload: "alert(1)",
+        innerHTML: "<script>alert(1)</script>",
+        href: "javascript:alert(1)",
+      }),
+    });
+    assertSafeCustomIcon(await renderVue(app));
   });
 
   test("Preact renders provider defaults, title, and absolute stroke width", () => {
@@ -89,6 +141,16 @@ describe("framework-native server rendering", () => {
       absoluteStrokeWidth: true,
       size: 0,
       strokeWidth: 3,
+    })));
+  });
+
+  test("Preact strips executable custom icon data during SSR", () => {
+    assertSafeCustomIcon(renderPreact(preactH(PreactIcon, {
+      iconNode: unsafeIconNode,
+      color: "url(https://example.com/paint.svg#x)",
+      onLoad: "alert(1)",
+      dangerouslySetInnerHTML: { __html: "<script>alert(1)</script>" },
+      href: "javascript:alert(1)",
     })));
   });
 
@@ -114,6 +176,16 @@ describe("framework-native server rendering", () => {
       absoluteStrokeWidth: true,
       size: 0,
       strokeWidth: 3,
+    })));
+  });
+
+  test("Solid strips executable custom icon data during SSR", () => {
+    assertSafeCustomIcon(renderSolid(() => createSolidComponent(SolidIcon, {
+      iconNode: unsafeIconNode,
+      color: "url(https://example.com/paint.svg#x)",
+      onload: "alert(1)",
+      innerHTML: "<script>alert(1)</script>",
+      href: "javascript:alert(1)",
     })));
   });
 });

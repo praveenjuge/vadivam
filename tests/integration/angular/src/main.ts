@@ -12,10 +12,16 @@ import { AArrowDown } from "vadivam-angular/a-arrow-down";
     <svg id="direct" vadivamAArrowDown></svg>
     <svg id="dynamic" [vadivamDynamicIcon]="'airplay'"></svg>
     <svg id="factory" [vadivamIcon]="factory"></svg>
+    <svg id="security" [vadivamIcon]="security" [color]="'url(https://example.com/paint.svg#x)'"></svg>
   `,
 })
 class App {
   readonly factory = createVadivamIcon("factory", [["line", { x1: "2", y1: "12", x2: "22", y2: "12" }]]);
+  readonly security = createVadivamIcon("security", [
+    ["script", { href: "data:text/javascript,alert(1)" }],
+    ["animate", { onbegin: "alert(1)", attributeName: "href" }],
+    ["path", { d: "M2 2h2", onclick: "alert(1)", innerHTML: "<script>alert(1)</script>" }],
+  ] as any);
 }
 
 bootstrapApplication(App, {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createElement, createRef } from "react";
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import {
   Activity,
   Icon,
@@ -143,6 +143,65 @@ describe("createIcon rendering (client)", () => {
       })
     );
     expect(container.querySelector("svg line")).not.toBeNull();
+  });
+
+  test("Icon strips executable custom nodes while preserving safe geometry", () => {
+    const { container } = render(
+      createElement(Icon, {
+        iconNode: [
+          ["script", { href: "https://example.com/x.js", key: "script" }],
+          ["animate", { attributeName: "href", values: "javascript:alert(1)", key: "animate" }],
+          ["image", { href: "javascript:alert(1)", key: "image" }],
+          ["path", {
+            d: "M4 12h16",
+            stroke: "navy",
+            onclick: "alert(1)",
+            dangerouslySetInnerHTML: { __html: "<script>alert(1)</script>" },
+            key: "safe",
+          }],
+        ],
+        onLoad: "alert(1)",
+        dangerouslySetInnerHTML: { __html: "<script>alert(1)</script>" },
+        href: "javascript:alert(1)",
+        fill: "url(https://example.com/paint.svg#x)",
+        color: "url(https://example.com/stroke.svg#x)",
+        style: {
+          color: "red",
+          backgroundImage: "image-set('https://example.com/track.png' 1x)",
+          borderImage: "u\\72l(https://example.com/border.png)",
+        },
+      }),
+    );
+    const svg = container.querySelector("svg");
+    const path = svg.querySelector("path");
+    expect(path).not.toBeNull();
+    expect(path.getAttribute("d")).toBe("M4 12h16");
+    expect(path.getAttribute("stroke")).toBe("navy");
+    expect(path.getAttribute("onclick")).toBeNull();
+    expect(svg.querySelector("script, animate, image")).toBeNull();
+    expect(svg.getAttribute("href")).toBeNull();
+    expect(svg.getAttribute("fill")).toBe("none");
+    expect(svg.getAttribute("stroke")).toBe("currentColor");
+    expect(svg.style.color).toBe("red");
+    expect(svg.style.backgroundImage).toBe("");
+    expect(svg.style.borderImage).toBe("");
+    expect(svg.innerHTML).not.toContain("alert(1)");
+  });
+
+  test("preserves genuine function event handlers", () => {
+    let clicks = 0;
+    const { svg } = renderIcon({ onClick: () => clicks++ });
+    fireEvent.click(svg);
+    expect(clicks).toBe(1);
+  });
+
+  test("generated icons cannot have their trusted iconNode overridden", () => {
+    const { container } = render(createElement(Activity, {
+      iconNode: [["path", { d: "M0 0h1", key: "override" }]],
+    }));
+    const paths = Array.from(container.querySelectorAll("svg path"));
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.some((path) => path.getAttribute("d") === "M0 0h1")).toBe(false);
   });
 
   test("VadivamProvider applies global defaults and merges classes", () => {
