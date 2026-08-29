@@ -69,6 +69,12 @@ export class StatusIcon {}
 
 See each [framework guide](/docs/#choose-a-package) for complete syntax.
 
+## Custom icon data
+
+Validate runtime icon names against `iconNames` before rendering them. The generic `Icon` and `createVadivamIcon` APIs also accept custom icon data, but constrain it to safe SVG geometry: `circle`, `ellipse`, `line`, `path`, `polygon`, `polyline`, and `rect`, with geometry, presentation, accessibility, class, and data attributes. Scripts, animation elements, links, images, raw HTML, string event handlers, URL attributes, and malformed property names are discarded.
+
+This custom-data API is for icon geometry, not arbitrary SVG documents. Named generated icons and dynamic icons selected from `iconNames` are unchanged.
+
 ## Import map API
 
 Each framework package exports its generated lazy-import map from `/dynamicIconImports`:

@@ -22,9 +22,9 @@ const allApps = [
     packages: ["vadivam-react-native"],
     buildIncludesTypecheck: true,
   },
-  { name: "vue", packages: ["vadivam-vue"], output: "dist" },
-  { name: "svelte", packages: ["vadivam-svelte"], output: "build" },
-  { name: "solid", packages: ["vadivam-solid"], output: "dist" },
+  { name: "vue", packages: ["vadivam-vue"], output: "dist", verifiesFunctionEvents: true },
+  { name: "svelte", packages: ["vadivam-svelte"], output: "build", verifiesFunctionEvents: true },
+  { name: "solid", packages: ["vadivam-solid"], output: "dist", verifiesFunctionEvents: true },
   {
     name: "angular",
     packages: ["vadivam-angular"],
@@ -32,7 +32,7 @@ const allApps = [
     buildIncludesTypecheck: true,
   },
   { name: "astro", packages: ["vadivam-astro"], output: "dist" },
-  { name: "preact", packages: ["vadivam-preact"], output: "dist" },
+  { name: "preact", packages: ["vadivam-preact"], output: "dist", verifiesFunctionEvents: true },
 ];
 const requestedApps = new Set(process.argv.slice(2));
 const apps = requestedApps.size
@@ -179,7 +179,7 @@ async function verifyBrowser(browser, app, cwd, index) {
       return;
     }
     await page.waitForFunction(() =>
-      ["static", "direct", "dynamic", "factory"].every(
+      ["static", "direct", "dynamic", "factory", "security"].every(
         (id) => document.querySelector(`#${id}`)?.children.length,
       ),
     );
@@ -204,9 +204,16 @@ async function verifyBrowser(browser, app, cwd, index) {
         direct: read("direct"),
         dynamic: read("dynamic"),
         factory: read("factory"),
+        security: read("security"),
+        securityUnsafe: document.querySelectorAll("#security script, #security animate, #security image, #security [onclick], #security [onbegin], #security [onerror], #security [href], #security [src]").length,
+        securityRawContent: document.querySelector("#security")?.innerHTML.includes("alert(1)") ?? false,
         title: document.querySelector("#static title")?.textContent,
       };
     });
+    if (app.verifiesFunctionEvents) {
+      await page.click("#static");
+      result.functionEventCount = await page.evaluate(() => window.__vadivamFunctionEventCount ?? 0);
+    }
     if (errors.length) throw new Error(`${app.name}: ${errors.join(" | ")}`);
     const icon = result.staticIcon;
     const classNames = icon.className?.split(/\s+/) ?? [];
@@ -215,6 +222,12 @@ async function verifyBrowser(browser, app, cwd, index) {
     }
     if (result.direct.paths === 0 || result.dynamic.paths === 0 || result.factory.paths === 0 || result.direct.ariaHidden !== "true" || result.dynamic.ariaHidden !== "true" || result.factory.ariaHidden !== "true" || !result.factory.className?.split(/\s+/).includes("vadivam-factory")) {
       throw new Error(`${app.name}: direct, dynamic, or factory icon did not render`);
+    }
+    if (result.security.paths !== 1 || result.securityUnsafe !== 0 || result.securityRawContent) {
+      throw new Error(`${app.name}: unsafe runtime icon content survived ${JSON.stringify(result)}`);
+    }
+    if (app.verifiesFunctionEvents && result.functionEventCount !== 1) {
+      throw new Error(`${app.name}: function event handler was not preserved ${JSON.stringify(result)}`);
     }
     console.log(`Browser smoke passed for ${app.name}.`);
   } finally {

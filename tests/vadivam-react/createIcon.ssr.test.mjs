@@ -1,7 +1,7 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup, renderToString } from "react-dom/server";
-import { Activity } from "vadivam-react";
+import { Activity, Icon } from "vadivam-react";
 import { DynamicIcon } from "vadivam-react/dynamic";
 
 describe("createIcon server rendering", () => {
@@ -45,6 +45,34 @@ describe("createIcon server rendering", () => {
     expect(html).toContain("<title>Open</title>");
     expect(html).toContain('role="img"');
     expect(html).not.toContain("aria-hidden");
+  });
+
+  test("does not serialize executable custom icon data or root props", () => {
+    const html = renderToStaticMarkup(createElement(Icon, {
+      iconNode: [
+        ["script", { href: "https://example.com/x.js", key: "script" }],
+        ["animate", { attributeName: "href", values: "javascript:alert(1)", key: "animate" }],
+        ["path", { d: "M4 12h16", onclick: "alert(1)", key: "safe" }],
+      ],
+      onLoad: "alert(1)",
+      dangerouslySetInnerHTML: { __html: "<script>alert(1)</script>" },
+      href: "javascript:alert(1)",
+    }));
+    expect(html).toContain('<path d="M4 12h16"></path>');
+    expect(html).not.toContain("<script");
+    expect(html).not.toContain("<animate");
+    expect(html).not.toContain("onclick");
+    expect(html).not.toContain("onload");
+    expect(html).not.toContain("href=");
+    expect(html).not.toContain("alert(1)");
+  });
+
+  test("generated icons ignore an iconNode prop override during SSR", () => {
+    const html = renderToStaticMarkup(createElement(Activity, {
+      iconNode: [["script", { key: "script" }]],
+    }));
+    expect(html).toContain("<path");
+    expect(html).not.toContain("<script");
   });
 
   test("DynamicIcon renders its fallback for a valid name during sync SSR", () => {

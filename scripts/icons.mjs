@@ -19,6 +19,10 @@ import { buildSolidPackage } from "./generators/solid.mjs";
 import { buildSveltePackage } from "./generators/svelte.mjs";
 import { buildVuePackage } from "./generators/vue.mjs";
 import {
+  runtimePolicySource,
+  svgElementTypeSource,
+} from "./generators/runtime-policy.mjs";
+import {
   allocateFontCodepoints,
   buildStaticAssets,
 } from "./generators/static.mjs";
@@ -451,15 +455,19 @@ async function buildRawPackage(icons) {
     .join("\n");
   await writeFile(
     path.join(rawDist, "types.d.ts"),
-    `export type SVGProps = Record<string, string | number | undefined>;\nexport type IconNode = readonly [tag: string, attrs: SVGProps, children?: IconNode][];\nexport type Icons = Record<string, IconNode>;\nexport type IconName = ${iconNameType};\n`,
+    `export type SVGElementType = ${svgElementTypeSource};\nexport type SVGProps = Record<string, string | number | boolean | undefined>;\nexport type IconNode = readonly [tag: SVGElementType, attrs: SVGProps, children?: IconNode][];\nexport type Icons = Record<string, IconNode>;\nexport type IconName = ${iconNameType};\n`,
   );
   await writeFile(
     path.join(rawDist, "defaultAttributes.js"),
     `const defaultAttributes = { xmlns: "http://www.w3.org/2000/svg", width: 24, height: 24, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round" };\nexport default defaultAttributes;\n`,
   );
   await writeFile(
+    path.join(rawDist, "runtimePolicy.js"),
+    runtimePolicySource,
+  );
+  await writeFile(
     path.join(rawDist, "createElement.js"),
-    `import defaultAttributes from "./defaultAttributes.js";\n\nconst unsafeAttribute = /^(?:on|href$|xlink:href$|src$)/i;\nfunction createSvgElement(document, [tag, attrs, children]) {\n  const element = document.createElementNS("http://www.w3.org/2000/svg", tag);\n  for (const [name, value] of Object.entries(attrs)) {\n    if (value !== undefined && !unsafeAttribute.test(name)) element.setAttribute(name, String(value));\n  }\n  for (const child of children ?? []) element.appendChild(createSvgElement(document, child));\n  return element;\n}\n\nexport function createElement(iconNode, customAttrs = {}) {\n  if (typeof document === "undefined") throw new Error("createElement() only works in a browser environment.");\n  return createSvgElement(document, ["svg", { ...defaultAttributes, ...customAttrs }, iconNode]);\n}\nexport default createElement;\n`,
+    `import defaultAttributes from "./defaultAttributes.js";\nimport { sanitizeIconNode, sanitizeRootAttributes } from "./runtimePolicy.js";\n\nfunction createSvgElement(document, [tag, attrs, children]) {\n  const element = document.createElementNS("http://www.w3.org/2000/svg", tag);\n  for (const [name, value] of Object.entries(attrs)) element.setAttribute(name, String(value));\n  for (const child of children ?? []) element.appendChild(createSvgElement(document, child));\n  return element;\n}\n\nexport function createElement(iconNode, customAttrs = {}) {\n  if (typeof document === "undefined") throw new Error("createElement() only works in a browser environment.");\n  return createSvgElement(document, ["svg", { ...defaultAttributes, ...sanitizeRootAttributes(customAttrs) }, sanitizeIconNode(iconNode)]);\n}\nexport default createElement;\n`,
   );
   await writeFile(
     path.join(rawDist, "createElement.d.ts"),
@@ -534,7 +542,7 @@ export default createIcons;
   );
   await writeFile(
     path.join(rawDist, "index.d.ts"),
-    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\nexport { icons as manifest, iconNames, iconsByName } from "./manifest.js";\n${rawNamedExports}\nexport type { CreateIconsOptions } from "./createIcons.js";\nexport type { VadivamIconMetadata } from "./manifest.js";\nexport type { IconName, IconNode, Icons, SVGProps } from "./types.js";\n`,
+    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\nexport { icons as manifest, iconNames, iconsByName } from "./manifest.js";\n${rawNamedExports}\nexport type { CreateIconsOptions } from "./createIcons.js";\nexport type { VadivamIconMetadata } from "./manifest.js";\nexport type { IconName, IconNode, Icons, SVGElementType, SVGProps } from "./types.js";\n`,
   );
   await buildStaticAssets(icons, {
     iconsDirectory: iconsDir,
@@ -552,7 +560,7 @@ async function buildReactPackage(icons) {
     .join(" | ");
   await writeFile(
     path.join(reactDist, "types.d.ts"),
-    `import type * as React from "react";\nexport type SVGElementType = "circle" | "ellipse" | "g" | "line" | "path" | "polygon" | "polyline" | "rect";\nexport type IconNode = readonly [tag: SVGElementType, attrs: Record<string, string>][];\nexport type SVGAttributes = Partial<React.SVGProps<SVGSVGElement>>;\nexport interface VadivamProps extends Omit<React.SVGProps<SVGSVGElement>, "color"> {\n  size?: string | number;\n  color?: string;\n  strokeWidth?: string | number;\n  absoluteStrokeWidth?: boolean;\n  title?: string;\n}\nexport type VadivamIcon = React.ForwardRefExoticComponent<Omit<VadivamProps, "ref"> & React.RefAttributes<SVGSVGElement>>;\nexport type IconName = ${iconNameType};\n`,
+    `import type * as React from "react";\nexport type SVGElementType = ${svgElementTypeSource};\nexport type IconNode = readonly [tag: SVGElementType, attrs: Record<string, string | number | boolean>][];\nexport type SVGAttributes = Partial<React.SVGProps<SVGSVGElement>>;\nexport interface VadivamProps extends Omit<React.SVGProps<SVGSVGElement>, "color"> {\n  size?: string | number;\n  color?: string;\n  strokeWidth?: string | number;\n  absoluteStrokeWidth?: boolean;\n  title?: string;\n}\nexport type VadivamIcon = React.ForwardRefExoticComponent<Omit<VadivamProps, "ref"> & React.RefAttributes<SVGSVGElement>>;\nexport type IconName = ${iconNameType};\n`,
   );
   await writeFile(
     path.join(reactDist, "defaultAttributes.js"),
@@ -567,8 +575,16 @@ async function buildReactPackage(icons) {
     `import type * as React from "react";\nimport type { VadivamProps } from "./types.js";\nexport interface VadivamProviderProps extends Pick<VadivamProps, "size" | "color" | "strokeWidth" | "absoluteStrokeWidth" | "className"> { children: React.ReactNode; }\nexport declare function VadivamProvider(props: VadivamProviderProps): React.ReactElement;\nexport declare function useVadivamContext(): Partial<VadivamProps>;\n`,
   );
   await writeFile(
+    path.join(reactDist, "runtimePolicy.js"),
+    runtimePolicySource,
+  );
+  await writeFile(
+    path.join(reactDist, "runtimePolicy.d.ts"),
+    `import type { IconNode } from "./types.js";\nexport declare function sanitizeIconNode(iconNode: unknown): IconNode;\nexport declare function sanitizeRootAttributes(attrs: unknown, allowEventFunctions?: boolean): Record<string, unknown>;\n`,
+  );
+  await writeFile(
     path.join(reactDist, "Icon.js"),
-    `"use client";\nimport React, { forwardRef } from "react";\nimport defaultAttributes from "./defaultAttributes.js";\nimport { useVadivamContext } from "./context.js";\n\nfunction mergeClasses(...values) {\n  return values.flatMap((value) => typeof value === "string" ? value.split(/\\s+/) : []).filter((value, index, all) => value && all.indexOf(value) === index).join(" ");\n}\nfunction hasA11yProp(props) {\n  return Object.keys(props).some((name) => name.startsWith("aria-") || name === "role" || name === "title");\n}\nfunction renderNode([tag, attrs]) {\n  return React.createElement(tag, attrs);\n}\n\nexport const Icon = forwardRef(({ color, size, strokeWidth, absoluteStrokeWidth, className = "", title, children, iconNode, ...rest }, ref) => {\n  const context = useVadivamContext();\n  const resolvedSize = size ?? context.size ?? 24;\n  const resolvedStrokeWidth = strokeWidth ?? context.strokeWidth ?? 2;\n  const numericSize = Number(resolvedSize);\n  const numericStrokeWidth = Number(resolvedStrokeWidth);\n  const useAbsoluteStrokeWidth = absoluteStrokeWidth ?? context.absoluteStrokeWidth ?? false;\n  const calculatedStrokeWidth = useAbsoluteStrokeWidth && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStrokeWidth) ? numericStrokeWidth * 24 / numericSize : resolvedStrokeWidth;\n  const labelled = Boolean(title) || hasA11yProp(rest);\n  return React.createElement(\n    "svg",\n    {\n      ref,\n      ...defaultAttributes,\n      width: resolvedSize,\n      height: resolvedSize,\n      stroke: color ?? context.color ?? "currentColor",\n      strokeWidth: calculatedStrokeWidth,\n      className: mergeClasses("vadivam", context.className, className),\n      ...(!labelled ? { "aria-hidden": "true" } : {}),\n      ...(title ? { role: "img" } : {}),\n      ...rest\n    },\n    title ? React.createElement("title", { key: "title" }, title) : null,\n    ...iconNode.map(renderNode),\n    children\n  );\n});\nIcon.displayName = "Icon";\nexport default Icon;\n`,
+    `"use client";\nimport React, { forwardRef } from "react";\nimport defaultAttributes from "./defaultAttributes.js";\nimport { sanitizeIconNode, sanitizeRootAttributes } from "./runtimePolicy.js";\nimport { useVadivamContext } from "./context.js";\n\nfunction mergeClasses(...values) {\n  return values.flatMap((value) => typeof value === "string" ? value.split(/\\s+/) : []).filter((value, index, all) => value && all.indexOf(value) === index).join(" ");\n}\nfunction hasA11yProp(props) {\n  return Object.keys(props).some((name) => name.startsWith("aria-") || name === "role" || name === "title");\n}\nfunction renderNode([tag, attrs]) {\n  return React.createElement(tag, attrs);\n}\n\nexport const Icon = forwardRef(({ color, size, strokeWidth, absoluteStrokeWidth, className = "", title, children, iconNode = [], ...rest }, ref) => {\n  const context = useVadivamContext();\n  const resolvedSize = size ?? context.size ?? 24;\n  const resolvedStrokeWidth = strokeWidth ?? context.strokeWidth ?? 2;\n  const numericSize = Number(resolvedSize);\n  const numericStrokeWidth = Number(resolvedStrokeWidth);\n  const useAbsoluteStrokeWidth = absoluteStrokeWidth ?? context.absoluteStrokeWidth ?? false;\n  const calculatedStrokeWidth = useAbsoluteStrokeWidth && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStrokeWidth) ? numericStrokeWidth * 24 / numericSize : resolvedStrokeWidth;\n  const safeRootAttributes = sanitizeRootAttributes(rest, true);\n  const labelled = Boolean(title) || hasA11yProp(safeRootAttributes);\n  return React.createElement(\n    "svg",\n    {\n      ref,\n      ...defaultAttributes,\n      width: resolvedSize,\n      height: resolvedSize,\n      stroke: color ?? context.color ?? "currentColor",\n      strokeWidth: calculatedStrokeWidth,\n      className: mergeClasses("vadivam", context.className, className),\n      ...(!labelled ? { "aria-hidden": "true" } : {}),\n      ...(title ? { role: "img" } : {}),\n      ...safeRootAttributes\n    },\n    title ? React.createElement("title", { key: "title" }, title) : null,\n    ...sanitizeIconNode(iconNode).map(renderNode),\n    children\n  );\n});\nIcon.displayName = "Icon";\nexport default Icon;\n`,
   );
   await writeFile(
     path.join(reactDist, "Icon.d.ts"),
@@ -576,7 +592,7 @@ async function buildReactPackage(icons) {
   );
   await writeFile(
     path.join(reactDist, "createIcon.js"),
-    `import React, { forwardRef } from "react";\nimport Icon from "./Icon.js";\n\nfunction toKebabCase(value) {\n  return value.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/[ _]+/g, "-").toLowerCase();\n}\nfunction toPascalCase(value) {\n  return value.split(/[-_ ]+/).filter(Boolean).map((part) => part[0].toUpperCase() + part.slice(1)).join("");\n}\nexport function createIcon(iconName, iconNode) {\n  const Component = forwardRef(({ className, ...props }, ref) => React.createElement(Icon, { ref, iconNode, className: [\`vadivam-${"${toKebabCase(iconName)}"}\`, className].filter(Boolean).join(" "), ...props }));\n  Component.displayName = toPascalCase(iconName);\n  return Component;\n}\nexport const createVadivamIcon = createIcon;\n`,
+    `import React, { forwardRef } from "react";\nimport Icon from "./Icon.js";\n\nfunction toKebabCase(value) {\n  return value.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/[ _]+/g, "-").toLowerCase();\n}\nfunction toPascalCase(value) {\n  return value.split(/[-_ ]+/).filter(Boolean).map((part) => part[0].toUpperCase() + part.slice(1)).join("");\n}\nexport function createIcon(iconName, iconNode) {\n  const Component = forwardRef(({ className, ...props }, ref) => React.createElement(Icon, { ...props, ref, iconNode, className: [\`vadivam-${"${toKebabCase(iconName)}"}\`, className].filter(Boolean).join(" ") }));\n  Component.displayName = toPascalCase(iconName);\n  return Component;\n}\nexport const createVadivamIcon = createIcon;\n`,
   );
   await writeFile(
     path.join(reactDist, "createIcon.d.ts"),
@@ -633,7 +649,7 @@ async function buildReactPackage(icons) {
   );
   await writeFile(
     path.join(reactDist, "index.d.ts"),
-    `${namedExports}\nexport { Icon } from "./Icon.js";\nexport { createIcon, createVadivamIcon } from "./createIcon.js";\nexport { icons } from "./icons.js";\nexport { VadivamProvider, useVadivamContext } from "./context.js";\nexport type { IconName, IconNode, SVGAttributes, VadivamIcon, VadivamProps } from "./types.js";\n`,
+    `${namedExports}\nexport { Icon } from "./Icon.js";\nexport { createIcon, createVadivamIcon } from "./createIcon.js";\nexport { icons } from "./icons.js";\nexport { VadivamProvider, useVadivamContext } from "./context.js";\nexport type { IconName, IconNode, SVGAttributes, SVGElementType, VadivamIcon, VadivamProps } from "./types.js";\n`,
   );
   await writeFile(
     path.join(reactDist, "dynamicIconImports.js"),
