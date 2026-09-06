@@ -56,6 +56,14 @@ describe("website SEO", () => {
     expect(html).toContain('<meta content="@praveenjuge" name="twitter:creator">');
     expect(html).toContain("A free, open-source icon set made for designers and developers building thoughtful digital experiences.");
     expect(html).toContain('href="/icons/activity"');
+    expect(html).toContain('data-tab="react-native"');
+    expect(html).toContain("vadivam-react-native");
+  });
+
+  test("icon pages include a React Native usage snippet", () => {
+    const html = readDist("icons", "activity", "index.html");
+    expect(html).toContain("vadivam-react-native");
+    expect(html).toContain('data-title="React Native"');
   });
 
   test("homepage declares the library as a free SoftwareApplication", () => {
