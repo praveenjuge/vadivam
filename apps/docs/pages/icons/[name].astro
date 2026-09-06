@@ -31,6 +31,7 @@ const install = [
 
 const usage = [
   { title: "React", lang: "tsx", code: `import { ${c} } from "vadivam-react";\n\n<${c} />` },
+  { title: "React Native", lang: "tsx", code: `import { ${c} } from "vadivam-react-native";\n\n<${c} />` },
   { title: "Vue", lang: "vue", code: `<script setup>\nimport { ${c} } from "vadivam-vue";\n</script>\n\n<template>\n  <${c} />\n</template>` },
   { title: "Svelte", lang: "svelte", code: `<script>\n  import { ${c} } from "vadivam-svelte";\n</script>\n\n<${c} />` },
   { title: "Solid", lang: "tsx", code: `import { ${c} } from "vadivam-solid";\n\n<${c} />` },
@@ -40,7 +41,7 @@ const usage = [
 ];
 
 const pageTitle = `${c} icon — Vadivam`;
-const pageDescription = `${c} is a free, open-source 24px outline icon from Vadivam. Download the SVG or use it in React and other supported frameworks.`;
+const pageDescription = `${c} is a free, open-source 24px outline icon from Vadivam. Download the SVG or use it in React, React Native, and other supported frameworks.`;
 const sectionClass = "mt-10 text-xs font-semibold uppercase tracking-wide text-muted-foreground";
 
 // PageLayout's built-in JSON-LD is disabled so this page can describe the icon,

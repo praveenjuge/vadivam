@@ -52,6 +52,7 @@ const links: ProjectLink[] = [
 
 const codeTabs = [
   { id: "react", label: "React" },
+  { id: "react-native", label: "React Native" },
   { id: "vue", label: "Vue" },
   { id: "svelte", label: "Svelte" },
   { id: "solid", label: "Solid" },
@@ -78,6 +79,8 @@ const snippetTemplate = (tab: string, name: string): { lang: string; code: strin
   switch (tab) {
     case "react":
       return { lang: "tsx", code: `import { ${name} } from "vadivam-react";\n\n<${name} />` };
+    case "react-native":
+      return { lang: "tsx", code: `import { ${name} } from "vadivam-react-native";\n\n<${name} />` };
     case "solid":
       return { lang: "tsx", code: `import { ${name} } from "vadivam-solid";\n\n<${name} />` };
     case "preact":
@@ -402,6 +405,8 @@ const structuredData = site
       switch (tab) {
         case "react":
           return `import { ${component} } from "vadivam-react";\n\n<${component} />`;
+        case "react-native":
+          return `import { ${component} } from "vadivam-react-native";\n\n<${component} />`;
         case "solid":
           return `import { ${component} } from "vadivam-solid";\n\n<${component} />`;
         case "preact":
@@ -487,7 +492,7 @@ const structuredData = site
       if (drawerPreview) drawerPreview.innerHTML = svg;
       if (drawerName) drawerName.textContent = name;
       if (drawerComponent) drawerComponent.textContent = component;
-      if (drawerOpenPage) drawerOpenPage.href = `/icons/${name}/`;
+      if (drawerOpenPage) drawerOpenPage.href = `/icons/${name}`;
 
       renderCode();
 
