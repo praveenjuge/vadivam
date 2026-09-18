@@ -146,7 +146,7 @@ async function fetchJson(url, description, fetchImpl) {
   }
 }
 
-export async function fetchLatestLucideCatalog(fetchImpl = fetch) {
+export async function fetchPinnedLucideCatalog(fetchImpl = fetch) {
   const release = await fetchJson(
     `https://registry.npmjs.org/lucide/${lucideVersion}`,
     `the pinned Lucide ${lucideVersion} release`,
@@ -403,7 +403,7 @@ export async function checkIcons() {
       fileName,
     );
   }
-  const lucideCatalog = await fetchLatestLucideCatalog();
+  const lucideCatalog = await fetchPinnedLucideCatalog();
   validateLucideIconNames(files, lucideCatalog);
   await synchronizeIconCounts(files.length, { check: true });
   console.log(
