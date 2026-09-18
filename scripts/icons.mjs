@@ -43,7 +43,7 @@ const webIconsDir = path.join(root, "apps/docs/public/icons");
 const previewPath = path.join(root, "apps/docs/public/preview.png");
 const ogPath = path.join(root, "apps/docs/public/og.png");
 const fontCodepointsPath = path.join(root, "scripts/font-codepoints.json");
-const lucideLatestUrl = "https://registry.npmjs.org/lucide/latest";
+const lucideVersion = "1.40.0";
 const lucideTreeUrl = "https://api.github.com/repos/lucide-icons/lucide/git/trees";
 const iconCountFiles = [
   path.join(root, "README.md"),
@@ -148,13 +148,13 @@ async function fetchJson(url, description, fetchImpl) {
 
 export async function fetchLatestLucideCatalog(fetchImpl = fetch) {
   const release = await fetchJson(
-    lucideLatestUrl,
-    "the latest Lucide release",
+    `https://registry.npmjs.org/lucide/${lucideVersion}`,
+    `the pinned Lucide ${lucideVersion} release`,
     fetchImpl,
   );
   assert(
-    release && typeof release.version === "string" && /^\d+\.\d+\.\d+$/.test(release.version),
-    "The latest Lucide release has an invalid version",
+    release && release.version === lucideVersion,
+    `The pinned Lucide release must resolve to ${lucideVersion}`,
   );
 
   const tree = await fetchJson(
