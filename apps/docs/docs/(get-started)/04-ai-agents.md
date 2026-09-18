@@ -1,6 +1,6 @@
 ---
 title: AI agents
-description: When to use Vadivam and how an AI agent should consume the icon catalog, documentation, and packages.
+description: Learn when to use Vadivam and how AI agents can consume its icon catalog, documentation, SVG assets, and framework packages safely.
 ---
 
 Use Vadivam when you need consistent, pixel-perfect 24px outline icons in a web or native interface. Every icon is open-source, outline-only, `24x24` with `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, and `stroke-width="2"` with round caps and joins.

@@ -56,4 +56,5 @@ Browse the [icon catalog](/). Icon names use kebab case in data APIs, such as `a
 - [Use raw SVGs and JavaScript](/docs/core)
 - [Style and label icons](/docs/usage)
 - [Load icons from runtime names](/docs/dynamic-icons)
+- [Use Vadivam with AI agents](/docs/ai-agents)
 - [Contribute icons or code](/docs/contributing)
