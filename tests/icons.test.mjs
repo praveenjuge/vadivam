@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
-  fetchLatestLucideCatalog,
+  fetchPinnedLucideCatalog,
   normalizeSvg,
   readIcons,
   shuffleUnique,
@@ -72,7 +72,7 @@ describe("icon validation", () => {
       });
     };
 
-    const catalog = await fetchLatestLucideCatalog(fetchImpl);
+    const catalog = await fetchPinnedLucideCatalog(fetchImpl);
     expect(catalog.version).toBe("1.40.0");
     expect(catalog.names).toEqual(new Set(["check", "columns-2"]));
     expect(requests).toEqual([
@@ -89,16 +89,27 @@ describe("icon validation", () => {
       throw new Error(`Unexpected request: ${url}`);
     };
 
-    await expect(fetchLatestLucideCatalog(fetchImpl)).rejects.toThrow(
+    await expect(fetchPinnedLucideCatalog(fetchImpl)).rejects.toThrow(
       "The pinned Lucide release must resolve to 1.40.0",
     );
   });
 
-  test("keeps Vadivam's legacy public names valid against the pinned catalog", () => {
-    const catalog = {
-      version: "1.40.0",
-      names: new Set(["album", "building-2", "trash-2"]),
+  test("keeps Vadivam's legacy public names valid against the pinned catalog", async () => {
+    const fetchImpl = async (url) => {
+      if (url === "https://registry.npmjs.org/lucide/1.40.0") {
+        return Response.json({ version: "1.40.0" });
+      }
+      return Response.json({
+        truncated: false,
+        tree: [
+          { path: "icons/album.svg" },
+          { path: "icons/building-2.svg" },
+          { path: "icons/trash-2.svg" },
+        ],
+      });
     };
+
+    const catalog = await fetchPinnedLucideCatalog(fetchImpl);
     expect(() =>
       validateLucideIconNames(
         ["album.svg", "building-2.svg", "trash-2.svg"],
