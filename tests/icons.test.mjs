@@ -54,12 +54,12 @@ describe("icon validation", () => {
     }
   });
 
-  test("loads canonical names from the latest stable Lucide release", async () => {
+  test("loads canonical names from the pinned Lucide release", async () => {
     const requests = [];
     const fetchImpl = async (url) => {
       requests.push(url);
-      if (url === "https://registry.npmjs.org/lucide/latest") {
-        return Response.json({ version: "1.30.0" });
+      if (url === "https://registry.npmjs.org/lucide/1.40.0") {
+        return Response.json({ version: "1.40.0" });
       }
       return Response.json({
         truncated: false,
@@ -73,21 +73,21 @@ describe("icon validation", () => {
     };
 
     const catalog = await fetchLatestLucideCatalog(fetchImpl);
-    expect(catalog.version).toBe("1.30.0");
+    expect(catalog.version).toBe("1.40.0");
     expect(catalog.names).toEqual(new Set(["check", "columns-2"]));
     expect(requests).toEqual([
-      "https://registry.npmjs.org/lucide/latest",
-      "https://api.github.com/repos/lucide-icons/lucide/git/trees/1.30.0?recursive=1",
+      "https://registry.npmjs.org/lucide/1.40.0",
+      "https://api.github.com/repos/lucide-icons/lucide/git/trees/1.40.0?recursive=1",
     ]);
   });
 
   test("rejects deprecated and unknown Lucide icon filenames", () => {
-    const catalog = { version: "1.30.0", names: new Set(["check", "columns-2"]) };
+    const catalog = { version: "1.40.0", names: new Set(["check", "columns-2"]) };
     expect(() =>
       validateLucideIconNames(["check.svg", "columns-2.svg"], catalog),
     ).not.toThrow();
     expect(() => validateLucideIconNames(["columns.svg", "custom.svg"], catalog)).toThrow(
-      "Deprecated or non-canonical icon names for Lucide 1.30.0: columns.svg, custom.svg",
+      "Deprecated or non-canonical icon names for Lucide 1.40.0: columns.svg, custom.svg",
     );
   });
 
