@@ -81,6 +81,32 @@ describe("icon validation", () => {
     ]);
   });
 
+  test("rejects a registry response that does not match the pin", async () => {
+    const fetchImpl = async (url) => {
+      if (url === "https://registry.npmjs.org/lucide/1.40.0") {
+        return Response.json({ version: "1.41.0" });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    };
+
+    await expect(fetchLatestLucideCatalog(fetchImpl)).rejects.toThrow(
+      "The pinned Lucide release must resolve to 1.40.0",
+    );
+  });
+
+  test("keeps Vadivam's legacy public names valid against the pinned catalog", () => {
+    const catalog = {
+      version: "1.40.0",
+      names: new Set(["album", "building-2", "trash-2"]),
+    };
+    expect(() =>
+      validateLucideIconNames(
+        ["album.svg", "building-2.svg", "trash-2.svg"],
+        catalog,
+      ),
+    ).not.toThrow();
+  });
+
   test("rejects deprecated and unknown Lucide icon filenames", () => {
     const catalog = { version: "1.40.0", names: new Set(["check", "columns-2"]) };
     expect(() =>
