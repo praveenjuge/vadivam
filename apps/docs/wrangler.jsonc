@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "vadivam",
+  "compatibility_date": "2026-05-16",
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "html_handling": "drop-trailing-slash",
+  },
+  "routes": [
+    {
+      "pattern": "vadivam.praveenjuge.com",
+      "custom_domain": true,
+    },
+  ],
+  "observability": {
+    "enabled": true,
+  },
+}
