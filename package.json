@@ -50,7 +50,7 @@
     "packages:check:built": "bun run test:vadivam:built && bun run test:vadivam-react:built && bun run test:vadivam-react-native:built && bun run test:frameworks:unit && bun run packages:validate",
     "packages:check": "bun run icons:build && bun run packages:check:built",
     "deploy": "bun run build && wrangler deploy --config apps/docs/dist/server/wrangler.json",
-    "deploy:worker": "wrangler deploy --config apps/docs/dist/server/wrangler.json",
+    "deploy:worker": "bun run docs:build && wrangler deploy --config apps/docs/dist/server/wrangler.json",
     "test:core": "bun scripts/test-suite.mjs core",
     "test": "bun scripts/test-suite.mjs full"
   },
