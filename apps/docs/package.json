@@ -11,6 +11,7 @@
     "doctor": "blume doctor"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "14.1.3",
     "@astrojs/mdx": "7.0.7",
     "@shikijs/twoslash": "4.4.3",
     "@tailwindcss/typography": "0.5.20",
