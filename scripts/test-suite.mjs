@@ -7,6 +7,7 @@ if (mode !== "core" && mode !== "full") {
 }
 
 const corePhases = [
+  ["Worker responses", null, ["test", "tests/worker.test.mjs"]],
   ["Icon unit tests", "icons:test"],
   ["Internal Figma plugin", "test:vadivam-internal"],
   ["Public Figma plugin", "test:figma-plugin"],
@@ -39,7 +40,9 @@ function runPhase(label, script, explicitArgs) {
         resolve();
         return;
       }
-      reject(new Error(`${label} failed after ${duration} (${signal ?? code})`));
+      reject(
+        new Error(`${label} failed after ${duration} (${signal ?? code})`),
+      );
     });
   });
 }
