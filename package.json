@@ -49,8 +49,8 @@
     "release:publish": "bun scripts/publish-packages.mjs",
     "packages:check:built": "bun run test:vadivam:built && bun run test:vadivam-react:built && bun run test:vadivam-react-native:built && bun run test:frameworks:unit && bun run packages:validate",
     "packages:check": "bun run icons:build && bun run packages:check:built",
-    "deploy": "bun run build && wrangler deploy",
-    "deploy:worker": "wrangler deploy",
+    "deploy": "bun run build && wrangler deploy --config apps/docs/dist/server/wrangler.json",
+    "deploy:worker": "wrangler deploy --config apps/docs/dist/server/wrangler.json",
     "test:core": "bun scripts/test-suite.mjs core",
     "test": "bun scripts/test-suite.mjs full"
   },
@@ -101,6 +101,6 @@
     "tslib": "^2.8.1",
     "typescript": "^6.0.3",
     "vue": "3.5.40",
-    "wrangler": "^4.111.0"
+    "wrangler": "4.125.0"
   }
 }
