@@ -6,8 +6,9 @@ import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { icons } from "../packages/vadivam/dist/manifest.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const sitemapPath = path.join(root, "apps/docs/dist/sitemap.xml");
-const llmsPath = path.join(root, "apps/docs/dist/llms.txt");
+const deployRoot = path.join(root, "apps/docs/dist/client");
+const sitemapPath = path.join(deployRoot, "sitemap.xml");
+const llmsPath = path.join(deployRoot, "llms.txt");
 
 const xmlEscape = (value) =>
   value
@@ -17,7 +18,8 @@ const xmlEscape = (value) =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&apos;");
 
-const asArray = (value) => (Array.isArray(value) ? value : value ? [value] : []);
+const asArray = (value) =>
+  Array.isArray(value) ? value : value ? [value] : [];
 
 export function completeSitemap(xml, iconNames, iconLastmod = {}) {
   const validation = XMLValidator.validate(xml);
@@ -44,20 +46,26 @@ export function completeSitemap(xml, iconNames, iconLastmod = {}) {
 
   const expectedCount = entries.length + iconNames.length;
   if (byLocation.size !== expectedCount) {
-    throw new Error(`Expected ${expectedCount} sitemap URLs, found ${byLocation.size}`);
+    throw new Error(
+      `Expected ${expectedCount} sitemap URLs, found ${byLocation.size}`,
+    );
   }
 
   const rows = [...byLocation.values()]
     .sort((a, b) => a.loc.localeCompare(b.loc))
     .map(({ loc, lastmod }) => {
-      const modified = lastmod ? `<lastmod>${xmlEscape(String(lastmod))}</lastmod>` : "";
+      const modified = lastmod
+        ? `<lastmod>${xmlEscape(String(lastmod))}</lastmod>`
+        : "";
       return `  <url><loc>${xmlEscape(loc)}</loc>${modified}</url>`;
     });
   const output = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${rows.join("\n")}\n</urlset>\n`;
 
   const outputValidation = XMLValidator.validate(output);
   if (outputValidation !== true) {
-    throw new Error(`Completed sitemap is invalid: ${outputValidation.err.msg}`);
+    throw new Error(
+      `Completed sitemap is invalid: ${outputValidation.err.msg}`,
+    );
   }
   for (const name of iconNames) {
     const expected = `${origin}/icons/${encodeURIComponent(name)}`;
