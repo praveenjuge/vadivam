@@ -23,7 +23,8 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - Run the React render/SSR/exports unit suite only: `bun run test:react:unit`
 - Build and browser-test all framework integration apps: `bun run test:integration`
 - React Native compatibility is verified by the minimal Expo integration app for Android and iOS.
-- Deploy the static Workers site: `bun run deploy`
+- Build and deploy the Cloudflare server Worker: `bun run deploy`
+- Deploy only the docs Worker (builds docs first): `bun run deploy:worker`
 
 ## Icon Workflow
 
