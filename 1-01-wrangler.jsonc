@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "vadivam",
+  "main": "apps/docs/dist/server/blume-worker.mjs",
+  "no_bundle": true,
+  "compatibility_date": "2026-05-16",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "vadivam.praveenjuge.com",
+      "custom_domain": true,
+    },
+  ],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "apps/docs/dist/client",
+    "html_handling": "drop-trailing-slash",
+    "run_worker_first": [
+      "/",
+      "/changelog/*",
+      "/docs",
+      "/docs/*",
+      "!/changelog/*.md",
+      "!/changelog/*.mdx",
+      "!/docs/*.md",
+      "!/docs/*.mdx",
+    ],
+  },
+  "observability": {
+    "enabled": true,
+  },
+}
