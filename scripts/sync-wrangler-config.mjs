@@ -19,12 +19,14 @@ for (const key of [
   delete config[key];
 }
 
-const generatedDirectory = path.posix.dirname(
-  path.posix.relative(root, generatedPath),
-);
-config.main = path.posix.join(generatedDirectory, config.main);
-config.assets.directory = path.posix.normalize(
-  path.posix.join(generatedDirectory, config.assets.directory),
-);
+const generatedDirectory = path.dirname(generatedPath);
+const toRootRelative = (target) =>
+  path
+    .relative(root, path.resolve(generatedDirectory, target))
+    .split(path.sep)
+    .join("/");
+
+config.main = toRootRelative(config.main);
+config.assets.directory = toRootRelative(config.assets.directory);
 
 await writeFile(outputPath, `${JSON.stringify(config, null, 2)}\n`);
