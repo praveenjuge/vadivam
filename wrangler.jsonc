@@ -1,21 +1,30 @@
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
+  "compatibility_date": "2026-05-16",
+  "compatibility_flags": [],
+  "jsx_factory": "React.createElement",
+  "jsx_fragment": "React.Fragment",
+  "rules": [
+    {
+      "type": "ESModule",
+      "globs": [
+        "**/*.js",
+        "**/*.mjs"
+      ]
+    }
+  ],
   "name": "vadivam",
   "main": "apps/docs/dist/server/blume-worker.mjs",
-  "no_bundle": true,
-  "compatibility_date": "2026-05-16",
-  "workers_dev": false,
-  "preview_urls": false,
   "routes": [
     {
       "pattern": "vadivam.praveenjuge.com",
-      "custom_domain": true,
-    },
+      "custom_domain": true
+    }
   ],
+  "triggers": {},
   "assets": {
+    "html_handling": "drop-trailing-slash",
     "binding": "ASSETS",
     "directory": "apps/docs/dist/client",
-    "html_handling": "drop-trailing-slash",
     "run_worker_first": [
       "/",
       "/changelog/*",
@@ -24,10 +33,64 @@
       "!/changelog/*.md",
       "!/changelog/*.mdx",
       "!/docs/*.md",
-      "!/docs/*.mdx",
-    ],
+      "!/docs/*.mdx"
+    ]
+  },
+  "workers_dev": false,
+  "preview_urls": false,
+  "vars": {},
+  "durable_objects": {
+    "bindings": []
+  },
+  "workflows": [],
+  "migrations": [],
+  "exports": {},
+  "kv_namespaces": [],
+  "cloudchamber": {},
+  "send_email": [],
+  "queues": {
+    "producers": [],
+    "consumers": []
+  },
+  "connect": [],
+  "r2_buckets": [],
+  "d1_databases": [],
+  "vectorize": [],
+  "ai_search_namespaces": [],
+  "ai_search": [],
+  "agent_memory": [],
+  "hyperdrive": [],
+  "services": [],
+  "analytics_engine_datasets": [],
+  "dispatch_namespaces": [],
+  "mtls_certificates": [],
+  "pipelines": [],
+  "secrets_store_secrets": [],
+  "artifacts": [],
+  "unsafe_hello_world": [],
+  "flagship": [],
+  "worker_loaders": [],
+  "ratelimits": [],
+  "vpc_services": [],
+  "vpc_networks": [],
+  "logfwdr": {
+    "bindings": []
   },
   "observability": {
-    "enabled": true,
+    "enabled": true
   },
+  "python_modules": {
+    "exclude": [
+      "**/*.pyc"
+    ]
+  },
+  "previews": {},
+  "dev": {
+    "ip": "localhost",
+    "local_protocol": "http",
+    "upstream_protocol": "http",
+    "enable_containers": true,
+    "generate_types": false
+  },
+  "no_bundle": true
 }
