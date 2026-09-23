@@ -26,8 +26,11 @@ export function toRootConfig(
   const config = structuredClone(generated);
   for (const key of GENERATED_ONLY_KEYS) delete config[key];
 
-  const generatedFile =
-    generatedPath ?? pathModule.join(rootDir, GENERATED_CONFIG);
+  // Anchor relative paths to rootDir, never process.cwd().
+  const generatedFile = pathModule.resolve(
+    rootDir,
+    generatedPath ?? GENERATED_CONFIG,
+  );
   const generatedDirectory = pathModule.dirname(generatedFile);
   const toRootRelative = (target) =>
     pathModule
