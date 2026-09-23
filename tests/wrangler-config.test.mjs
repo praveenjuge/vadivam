@@ -32,12 +32,14 @@ describe("root wrangler config sync", () => {
   });
 
   test("anchors a relative generated path to the root, not the cwd", () => {
+    // Uses a non-default location so a cwd-anchored resolve would leak the
+    // test runner's working directory into the output paths.
     const config = toRootConfig(generated, {
       rootDir: "/repo",
-      generatedPath: GENERATED_CONFIG,
+      generatedPath: "build/server/wrangler.json",
     });
-    expect(config.main).toBe("apps/docs/dist/server/blume-worker.mjs");
-    expect(config.assets.directory).toBe("apps/docs/dist/client");
+    expect(config.main).toBe("build/server/blume-worker.mjs");
+    expect(config.assets.directory).toBe("build/client");
   });
 
   test("drops generated-only metadata", () => {
