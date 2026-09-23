@@ -31,6 +31,15 @@ describe("root wrangler config sync", () => {
     expect(config.no_bundle).toBe(true);
   });
 
+  test("anchors a relative generated path to the root, not the cwd", () => {
+    const config = toRootConfig(generated, {
+      rootDir: "/repo",
+      generatedPath: GENERATED_CONFIG,
+    });
+    expect(config.main).toBe("apps/docs/dist/server/blume-worker.mjs");
+    expect(config.assets.directory).toBe("apps/docs/dist/client");
+  });
+
   test("drops generated-only metadata", () => {
     const config = toRootConfig(generated, { rootDir: "/repo" });
     for (const key of GENERATED_ONLY_KEYS) expect(config).not.toHaveProperty(key);
