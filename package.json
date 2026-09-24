@@ -42,7 +42,7 @@
     "test:integration:built": "bun scripts/integration.mjs",
     "test:integration": "bun run icons:build && bun run test:integration:built",
     "test:frameworks:unit": "bun test tests/frameworks/*.test.mjs",
-    "test:seo:built": "bun run docs:build:built && bun run --cwd apps/docs audit && bun test tests/seo.test.mjs tests/release-notes.test.mjs tests/release-changes.test.mjs",
+    "test:seo:built": "bun run docs:build:built && bun run --cwd apps/docs audit && bun test tests/seo.test.mjs tests/release-notes.test.mjs tests/release-changes.test.mjs tests/wrangler-config.test.mjs",
     "test:seo": "bun run icons:build && bun run test:seo:built",
     "packages:validate": "bun scripts/packages-check.mjs",
     "release:validate": "bun scripts/validate-versions.mjs",
