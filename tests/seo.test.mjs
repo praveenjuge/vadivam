@@ -156,10 +156,15 @@ describe("website SEO", () => {
     const docs = readdirSync(path.join(root, "apps/docs/docs"), {
       recursive: true,
     })
-      .filter((file) => file.endsWith(".md"))
+      .filter((file) => file.endsWith(".md") || file.endsWith(".mdx"))
       .map((file) => {
-        const slug = path.basename(file, ".md").replace(/^\d+-/, "");
-        return file === "index.md" ? `${site}/docs` : `${site}/docs/${slug}`;
+        const base = file.endsWith(".mdx")
+          ? path.basename(file, ".mdx")
+          : path.basename(file, ".md");
+        const slug = base.replace(/^\d+-/, "");
+        return file === "index.md" || file === "index.mdx"
+          ? `${site}/docs`
+          : `${site}/docs/${slug}`;
       });
     const expected = [
       site + "/",
@@ -209,7 +214,7 @@ describe("website SEO", () => {
   test("tracked icon counts and Cloudflare canonical policy stay aligned", () => {
     const readme = readFileSync(path.join(root, "README.md"), "utf8");
     const docsIndex = readFileSync(
-      path.join(root, "apps/docs/docs/index.md"),
+      path.join(root, "apps/docs/docs/index.mdx"),
       "utf8",
     );
     const wrangler = readFileSync(
@@ -237,10 +242,10 @@ describe("website SEO", () => {
     expect(wrapper).toContain("text/markdown");
     expect(wrapper.toLowerCase()).toContain("vary");
     const rules = config.assets?.run_worker_first ?? [];
-    for (const route of ["/", "/docs", "/docs/*"]) {
+    for (const route of ["/*"]) {
       expect(rules).toContain(route);
     }
-    for (const raw of ["!/docs/*.md", "!/docs/*.mdx"]) {
+    for (const raw of ["!/*.md", "!/*.mdx"]) {
       expect(rules).toContain(raw);
     }
   });

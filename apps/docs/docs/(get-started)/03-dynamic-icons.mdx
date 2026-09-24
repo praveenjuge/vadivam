@@ -9,7 +9,10 @@ Dynamic names are kebab-case values such as `activity`, `arrow-right`, and `tras
 
 ## Component API
 
-React, React Native, Vue, Solid, and Preact export a named `DynamicIcon` from their `/dynamic` entry point:
+React, React Native, Vue, Solid, and Preact export a named `DynamicIcon` from their `/dynamic` entry point. Svelte and Astro expose their dynamic component as the default export, and Angular uses a standalone directive. Pick your framework:
+
+<Tabs syncKey="framework">
+  <Tab title="React">
 
 ```tsx
 import { DynamicIcon, type IconName } from "vadivam-react/dynamic";
@@ -26,17 +29,30 @@ export function DataIcon({ name }: { name: IconName }) {
 }
 ```
 
-The component loads the matching per-icon module. A fallback is optional. Keep untrusted strings outside the component until they have been checked against `iconNames`:
+  </Tab>
+  <Tab title="React Native">
 
-```ts
-import { iconNames, type IconName } from "vadivam-react/dynamic";
+```tsx
+import { DynamicIcon } from "vadivam-react-native/dynamic";
 
-export function isIconName(value: string): value is IconName {
-  return iconNames.includes(value as IconName);
-}
+<DynamicIcon name="search" size={20} fallback={null} />;
 ```
 
-Svelte and Astro expose their dynamic component as the default export:
+  </Tab>
+  <Tab title="Vue">
+
+```vue
+<script setup lang="ts">
+import { DynamicIcon } from "vadivam-vue/dynamic";
+</script>
+
+<template>
+  <DynamicIcon name="activity" :size="20" title="Activity" />
+</template>
+```
+
+  </Tab>
+  <Tab title="Svelte">
 
 ```svelte
 <script lang="ts">
@@ -46,15 +62,17 @@ Svelte and Astro expose their dynamic component as the default export:
 <DynamicIcon name="activity" size={20} title="Activity" />
 ```
 
-```astro
----
-import DynamicIcon from "vadivam-astro/dynamic";
----
+  </Tab>
+  <Tab title="Solid">
 
-<DynamicIcon name="activity" size={20} title="Activity" />
+```tsx
+import { DynamicIcon } from "vadivam-solid/dynamic";
+
+<DynamicIcon name="activity" size={20} fallback={null} />;
 ```
 
-Angular uses a standalone directive:
+  </Tab>
+  <Tab title="Angular">
 
 ```ts
 import { Component } from "@angular/core";
@@ -65,6 +83,39 @@ import { DynamicIcon } from "vadivam-angular/dynamic";
   template: '<svg vadivamDynamicIcon="activity" title="Activity"></svg>',
 })
 export class StatusIcon {}
+```
+
+  </Tab>
+  <Tab title="Astro">
+
+```astro
+---
+import DynamicIcon from "vadivam-astro/dynamic";
+---
+
+<DynamicIcon name="activity" size={20} title="Activity" />
+```
+
+  </Tab>
+  <Tab title="Preact">
+
+```tsx
+import { DynamicIcon } from "vadivam-preact/dynamic";
+
+<DynamicIcon name="activity" size={20} fallback={null} />;
+```
+
+  </Tab>
+</Tabs>
+
+The component loads the matching per-icon module. A fallback is optional. Keep untrusted strings outside the component until they have been checked against `iconNames`:
+
+```ts
+import { iconNames, type IconName } from "vadivam-react/dynamic";
+
+export function isIconName(value: string): value is IconName {
+  return iconNames.includes(value as IconName);
+}
 ```
 
 See each [framework guide](/docs/#choose-a-package) for complete syntax.
@@ -92,7 +143,25 @@ This low-level API is useful for a custom cache or loading boundary. Its module 
 
 ## Bundle and rendering notes
 
-- Dynamic imports create separate asynchronous modules; the exact chunks depend on the bundler.
-- The `name` API is restricted to generated icon names in TypeScript, but runtime data still needs validation.
-- Fallback types differ by framework: React-family packages accept renderable nodes, Svelte accepts a snippet, and Angular's directive accepts icon-node data.
-- The core `vadivam` package has no lazy `DynamicIcon` component. Use a small icon-node map with `createIcons`, or choose a framework package.
+<Accordion>
+  <AccordionItem title="How are dynamic icons bundled?">
+
+Dynamic imports create separate asynchronous modules; the exact chunks depend on the bundler.
+
+  </AccordionItem>
+  <AccordionItem title="Do I still need to validate names at runtime?">
+
+Yes. The `name` API is restricted to generated icon names in TypeScript, but runtime data still needs validation against `iconNames`.
+
+  </AccordionItem>
+  <AccordionItem title="What fallback types are supported?">
+
+Fallback types differ by framework: React-family packages accept renderable nodes, Svelte accepts a snippet, and Angular's directive accepts icon-node data.
+
+  </AccordionItem>
+  <AccordionItem title="Can I use dynamic icons with the core package?">
+
+The core `vadivam` package has no lazy `DynamicIcon` component. Use a small icon-node map with `createIcons`, or choose a framework package.
+
+  </AccordionItem>
+</Accordion>

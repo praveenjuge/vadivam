@@ -7,12 +7,30 @@ Vadivam is a Bun monorepo. Source SVGs in the root `icons/` directory are canoni
 
 ## Set up the repository
 
+<Steps>
+  <Step title="Clone the repository">
+
 ```sh
 git clone https://github.com/praveenjuge/vadivam.git
 cd vadivam
+```
+
+  </Step>
+  <Step title="Install dependencies">
+
+```sh
 bun install
+```
+
+  </Step>
+  <Step title="Start the docs site">
+
+```sh
 bun run dev  # docs at http://localhost:4321
 ```
+
+  </Step>
+</Steps>
 
 Keep pull requests focused and describe visible changes and package API changes.
 
@@ -29,14 +47,31 @@ Add or replace only the source SVG in `icons/`. Every icon must use:
 
 Do not add fills, gradients, masks, scripts, inline styles, external references, or other unsafe SVG features.
 
-Normalize source SVGs, then validate them without writing further changes:
+<Steps>
+  <Step title="Normalize the source SVGs">
 
 ```sh
 bun run icons:optimize
+```
+
+  </Step>
+  <Step title="Validate without writing further changes">
+
+```sh
 bun run icons:check
 ```
 
-The generated package and site assets come from `bun run icons:build`. Do not hand-edit generated output to fix an icon; correct the canonical SVG and regenerate.
+  </Step>
+  <Step title="Regenerate derived assets">
+
+```sh
+bun run icons:build
+```
+
+The generated package and site assets come from this command. Do not hand-edit generated output to fix an icon; correct the canonical SVG and regenerate.
+
+  </Step>
+</Steps>
 
 ## Validate changes
 
@@ -60,7 +95,7 @@ Framework integration tests build real applications against freshly generated lo
 
 ## Documentation changes
 
-Documentation source lives in `apps/docs/docs`. Use Markdown where possible, include `title` and `description` YAML frontmatter, keep examples executable, and use links rooted at `/docs` for documentation pages.
+Documentation source lives in `apps/docs/docs`. Use Markdown where possible, and MDX only when a page needs built-in components. Include `title` and `description` YAML frontmatter, keep examples executable, and use links rooted at `/docs` for documentation pages.
 
 For package behavior, verify the package README, `package.json` export map, and generated public declarations before documenting it. Do not infer an API from another framework package: providers, dynamic exports, fallback types, and peer ranges differ.
 

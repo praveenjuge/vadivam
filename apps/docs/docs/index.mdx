@@ -5,9 +5,9 @@ sidebar:
   label: Introduction
 ---
 
-<!-- vadivam-icon-count:start -->
+{/* <!-- vadivam-icon-count:start --> */}
 Vadivam is an open-source set of 508 pixel-perfect 24px outline icons. Use optimized SVG assets, browser JavaScript helpers, or native components for React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.
-<!-- vadivam-icon-count:end -->
+{/* <!-- vadivam-icon-count:end --> */}
 
 Designers can use the bundled, offline Figma plugin to search the same canonical catalog and place editable local components.
 
@@ -33,18 +33,38 @@ Static named imports are tree-shakeable and are the best default when the icon i
 
 ## Choose a package
 
-| Target                     | Package                | Guide                              |
-| -------------------------- | ---------------------- | ---------------------------------- |
-| SVG and browser JavaScript | `vadivam`              | [Core package](/docs/core)         |
-| React                      | `vadivam-react`        | [React](/docs/react)               |
-| React Native and Expo      | `vadivam-react-native` | [React Native](/docs/react-native) |
-| Vue                        | `vadivam-vue`          | [Vue](/docs/vue)                   |
-| Svelte                     | `vadivam-svelte`       | [Svelte](/docs/svelte)             |
-| Solid                      | `vadivam-solid`        | [Solid](/docs/solid)               |
-| Angular                    | `vadivam-angular`      | [Angular](/docs/angular)           |
-| Astro                      | `vadivam-astro`        | [Astro](/docs/astro)               |
-| Preact                     | `vadivam-preact`       | [Preact](/docs/preact)             |
-| Figma                      | Vadivam Icons plugin   | [Plugin source](https://github.com/praveenjuge/vadivam/tree/main/apps/figma-plugin) |
+<CardGroup cols={2}>
+  <Card title="Core SVG" href="/docs/core" icon="file-code">
+    Optimized SVG assets and browser JavaScript helpers from `vadivam`.
+  </Card>
+  <Card title="React" href="/docs/react" icon="atom">
+    Tree-shakeable components from `vadivam-react`.
+  </Card>
+  <Card title="React Native" href="/docs/react-native" icon="smartphone">
+    Native components from `vadivam-react-native` via `react-native-svg`.
+  </Card>
+  <Card title="Vue" href="/docs/vue" icon="layers">
+    Native components from `vadivam-vue`.
+  </Card>
+  <Card title="Svelte" href="/docs/svelte" icon="flame">
+    Native components from `vadivam-svelte`.
+  </Card>
+  <Card title="Solid" href="/docs/solid" icon="hexagon">
+    Native components from `vadivam-solid`.
+  </Card>
+  <Card title="Angular" href="/docs/angular" icon="triangle">
+    Standalone directives from `vadivam-angular`.
+  </Card>
+  <Card title="Astro" href="/docs/astro" icon="orbit">
+    Static components from `vadivam-astro`.
+  </Card>
+  <Card title="Preact" href="/docs/preact" icon="zap">
+    Native components from `vadivam-preact`.
+  </Card>
+  <Card title="Figma" href="https://github.com/praveenjuge/vadivam/tree/main/apps/figma-plugin" icon="figma">
+    The Vadivam Icons plugin for designers.
+  </Card>
+</CardGroup>
 
 All packages are ESM-only. Icon components accept native SVG attributes in addition to Vadivam's sizing and stroke props. See [installation](/docs/installation) for peer requirements and [usage](/docs/usage) for styling and accessibility guidance.
 

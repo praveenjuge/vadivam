@@ -26,14 +26,18 @@
     "binding": "ASSETS",
     "directory": "apps/docs/dist/client",
     "run_worker_first": [
-      "/",
-      "/changelog/*",
-      "/docs",
-      "/docs/*",
-      "!/changelog/*.md",
-      "!/changelog/*.mdx",
-      "!/docs/*.md",
-      "!/docs/*.mdx"
+      "/*",
+      "!/_astro/*",
+      "!/*.md",
+      "!/*.mdx",
+      "!/*.txt",
+      "!/.well-known/*",
+      "!/404.json",
+      "!/agent-readability.json",
+      "!/blume-search.json",
+      "!/openapi.json",
+      "!/api/docs/pages.json",
+      "!/api/docs/navigation.json"
     ]
   },
   "workers_dev": false,
@@ -45,7 +49,11 @@
   "workflows": [],
   "migrations": [],
   "exports": {},
-  "kv_namespaces": [],
+  "kv_namespaces": [
+    {
+      "binding": "SESSION"
+    }
+  ],
   "cloudchamber": {},
   "send_email": [],
   "queues": {
@@ -84,7 +92,13 @@
       "**/*.pyc"
     ]
   },
-  "previews": {},
+  "previews": {
+    "kv_namespaces": [
+      {
+        "binding": "SESSION"
+      }
+    ]
+  },
   "dev": {
     "ip": "localhost",
     "local_protocol": "http",

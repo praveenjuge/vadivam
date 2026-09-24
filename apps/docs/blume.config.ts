@@ -1,32 +1,24 @@
 import { defineConfig } from "blume";
+import { cloudflare } from "blume/analytics";
+import { cloudflare as cloudflareDeployment } from "blume/deploy";
+import { filesystem, githubReleases } from "blume/sources";
 
 export default defineConfig({
   title: "Vadivam Icons",
   description:
     "Browse pixel-perfect, open-source 24px outline icons for SVG, React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.",
-  analytics: {
-    scripts: [
-      {
-        src: "https://static.cloudflareinsights.com/beacon.min.js",
-        attributes: {
-          type: "module",
-          "data-cf-beacon": '{"token":"aab722c0300445d9b5c73b06de1a4fc6"}',
-        },
-      },
-    ],
-  },
+  analytics: [cloudflare({ token: "aab722c0300445d9b5c73b06de1a4fc6" })],
   content: {
     sources: [
-      { type: "filesystem", root: "docs", prefix: "docs" },
-      {
-        type: "github-releases",
+      filesystem({ root: "docs", prefix: "docs" }),
+      githubReleases({
         prefix: "changelog",
         owner: "praveenjuge",
         repo: "vadivam",
-      },
+      }),
     ],
   },
-  lastModified: true,
+  lastModified: "git",
   i18n: {
     defaultLocale: "en",
     locales: [{ code: "en", label: "English" }],
@@ -68,12 +60,14 @@ export default defineConfig({
       },
     ],
   },
-  seo: {
+  agents: {
     contentSignals: {
       search: true,
       aiInput: true,
       aiTrain: true,
     },
+  },
+  seo: {
     og: {
       titles: {
         "/": "Vadivam — 24px Outline Icons",
@@ -81,10 +75,11 @@ export default defineConfig({
     },
     x: { creator: "@praveenjuge", handle: "@praveenjuge" },
   },
-  deployment: {
-    output: "server",
-    adapter: "cloudflare",
+  deployment: cloudflareDeployment({
     site: "https://vadivam.praveenjuge.com",
+  }),
+  markdown: {
+    externalLinks: true,
   },
   theme: {
     fonts: {

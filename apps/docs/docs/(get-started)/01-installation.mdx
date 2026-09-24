@@ -7,6 +7,9 @@ Install only the package for the environment where the icons render. Every Vadiv
 
 ## Package commands
 
+<Steps>
+  <Step title="Install the package for your stack">
+
 ```sh
 # SVG assets and browser JavaScript
 npm install vadivam
@@ -24,13 +27,42 @@ npm install vadivam-preact
 npm install vadivam-react-native react-native-svg
 ```
 
+  </Step>
+  <Step title="Use your package manager">
+
 The same package names work with other package managers:
 
-```sh
+<CodeGroup>
+
+```sh npm
+npm install vadivam-react
+```
+
+```sh pnpm
 pnpm add vadivam-react
+```
+
+```sh bun
 bun add vadivam-react
+```
+
+```sh yarn
 yarn add vadivam-react
 ```
+
+</CodeGroup>
+
+  </Step>
+  <Step title="Import an icon">
+
+Use a named import in application code, then read [Import styles](#import-styles) for per-icon and asset paths:
+
+```ts
+import { Activity, Search } from "vadivam-react";
+```
+
+  </Step>
+</Steps>
 
 ## Peer requirements
 

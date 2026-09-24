@@ -39,9 +39,44 @@ Normally, scaling an SVG also scales its visible stroke. Set `absoluteStrokeWidt
 
 This prop is available in all component and directive packages. It is not an option of the core `createElement` helper; set the resulting SVG attributes directly when using the core package.
 
+## Shared props
+
+Every framework package accepts the same visual controls alongside its native SVG attributes:
+
+<TypeTable
+  type={{
+    size: {
+      type: "number | string",
+      default: "24",
+      description: "Sets the icon width and height.",
+    },
+    color: {
+      type: "string",
+      default: '"currentColor"',
+      description: "Sets the SVG stroke color. Icons inherit the surrounding text color by default.",
+    },
+    strokeWidth: {
+      type: "number | string",
+      default: "2",
+      description: "Sets the SVG stroke width.",
+    },
+    absoluteStrokeWidth: {
+      type: "boolean",
+      description: "Keeps the stroke visually close to strokeWidth when the icon is scaled.",
+    },
+    title: {
+      type: "string",
+      description: "Adds an accessible title and exposes the icon as an image.",
+    },
+  }}
+/>
+
 ## Shared defaults
 
-React, React Native, Vue, Svelte, Solid, and Preact provide a `VadivamProvider`. Provider values are defaults and can be overridden by an individual icon:
+Provider values are defaults and can be overridden by an individual icon. Pick your framework to see its provider API:
+
+<Tabs syncKey="framework">
+  <Tab title="React">
 
 ```tsx
 import { Activity, Search, VadivamProvider } from "vadivam-react";
@@ -52,7 +87,110 @@ import { Activity, Search, VadivamProvider } from "vadivam-react";
 </VadivamProvider>;
 ```
 
-Angular uses `provideVadivamConfig` instead. Astro has no provider API; pass props to each component.
+  </Tab>
+  <Tab title="React Native">
+
+```tsx
+import { Activity, Search, VadivamProvider } from "vadivam-react-native";
+
+<VadivamProvider size={20} color="navy" strokeWidth={1.5}>
+  <Activity />
+  <Search color="tomato" />
+</VadivamProvider>;
+```
+
+  </Tab>
+  <Tab title="Vue">
+
+```vue
+<script setup lang="ts">
+import { Activity, Search, VadivamProvider } from "vadivam-vue";
+</script>
+
+<template>
+  <VadivamProvider :size="20" color="navy" :stroke-width="1.5">
+    <Activity />
+    <Search color="tomato" />
+  </VadivamProvider>
+</template>
+```
+
+  </Tab>
+  <Tab title="Svelte">
+
+```svelte
+<script lang="ts">
+  import { Activity, Search, VadivamProvider } from "vadivam-svelte";
+</script>
+
+<VadivamProvider size={20} color="navy" strokeWidth={1.5}>
+  <Activity />
+  <Search color="tomato" />
+</VadivamProvider>
+```
+
+  </Tab>
+  <Tab title="Solid">
+
+```tsx
+import { Activity, Search, VadivamProvider } from "vadivam-solid";
+
+export function Toolbar() {
+  return (
+    <VadivamProvider size={20} color="navy" strokeWidth={1.5}>
+      <Activity />
+      <Search color="tomato" />
+    </VadivamProvider>
+  );
+}
+```
+
+  </Tab>
+  <Tab title="Angular">
+
+Angular uses `provideVadivamConfig` instead of a provider component:
+
+```ts
+import { bootstrapApplication } from "@angular/platform-browser";
+import { provideVadivamConfig } from "vadivam-angular";
+import { AppComponent } from "./app.component";
+
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideVadivamConfig({
+      size: 20,
+      color: "navy",
+      strokeWidth: 1.5,
+    }),
+  ],
+});
+```
+
+  </Tab>
+  <Tab title="Astro">
+
+Astro has no provider API; pass props to each component or set defaults through your own wrapper component. See [Astro](/docs/astro).
+
+  </Tab>
+  <Tab title="Preact">
+
+```tsx
+import { Activity, Search, VadivamProvider } from "vadivam-preact";
+
+export function Toolbar() {
+  return (
+    <VadivamProvider size={20} color="navy" strokeWidth={1.5}>
+      <Activity />
+      <Search color="tomato" />
+    </VadivamProvider>
+  );
+}
+```
+
+  </Tab>
+</Tabs>
+
+An icon's own props override provider values. See each [framework guide](/docs/#choose-a-package) for the full provider API.
 
 ## Accessibility
 

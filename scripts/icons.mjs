@@ -47,7 +47,7 @@ const lucideVersion = "1.40.0";
 const lucideTreeUrl = "https://api.github.com/repos/lucide-icons/lucide/git/trees";
 const iconCountFiles = [
   path.join(root, "README.md"),
-  path.join(root, "apps/docs/docs/index.md"),
+  path.join(root, "apps/docs/docs/index.mdx"),
 ];
 const iconCountPattern =
   /(<!-- vadivam-icon-count:start -->[\s\S]*?)(\d+)([\s\S]*?<!-- vadivam-icon-count:end -->)/g;

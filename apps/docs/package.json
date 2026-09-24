@@ -16,7 +16,7 @@
     "@shikijs/twoslash": "4.4.3",
     "@tailwindcss/typography": "0.5.20",
     "@tailwindcss/vite": "4.3.3",
-    "blume": "1.7.3",
+    "blume": "^2.0.1",
     "tailwindcss": "4.3.3",
     "vadivam": "workspace:*"
   },

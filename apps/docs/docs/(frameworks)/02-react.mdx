@@ -40,6 +40,34 @@ export function FocusableIcon() {
 }
 ```
 
+<TypeTable
+  type={{
+    size: {
+      type: "number | string",
+      default: "24",
+      description: "Sets the icon width and height.",
+    },
+    color: {
+      type: "string",
+      default: '"currentColor"',
+      description: "Sets the SVG stroke color. Icons inherit the surrounding text color by default.",
+    },
+    strokeWidth: {
+      type: "number | string",
+      default: "2",
+      description: "Sets the SVG stroke width.",
+    },
+    absoluteStrokeWidth: {
+      type: "boolean",
+      description: "Keeps the stroke visually close to strokeWidth when the icon is scaled.",
+    },
+    title: {
+      type: "string",
+      description: "Adds an accessible title and exposes the icon as an image.",
+    },
+  }}
+/>
+
 ## Shared defaults
 
 ```tsx
@@ -76,3 +104,23 @@ import { DynamicIcon } from "vadivam-react/dynamic";
 ```
 
 `DynamicIcon` loads the per-icon module and accepts the normal icon props plus `name` and an optional `fallback`. See [Dynamic icons](/docs/dynamic-icons) and [accessibility guidance](/docs/usage#accessibility).
+
+## Frequently asked questions
+
+<Accordion>
+  <AccordionItem title="How do I forward a ref to an icon?">
+
+Every icon forwards its ref to the root `SVGSVGElement`, so `useRef<SVGSVGElement>` works directly on any icon component.
+
+  </AccordionItem>
+  <AccordionItem title="When should I use per-icon imports?">
+
+Static named imports from the root are tree-shakeable and are the best default. Use a per-icon import such as `vadivam-react/activity` when you want a direct dependency on a single icon module.
+
+  </AccordionItem>
+  <AccordionItem title="How do I render an icon chosen at runtime?">
+
+Use `DynamicIcon` from `vadivam-react/dynamic` with a kebab-case `name`, validate untrusted strings against `iconNames` first, and provide a `fallback` while the per-icon module loads. See [Dynamic icons](/docs/dynamic-icons).
+
+  </AccordionItem>
+</Accordion>
