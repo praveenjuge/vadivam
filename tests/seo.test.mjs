@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
@@ -223,5 +223,20 @@ describe("website SEO", () => {
       `set of ${icons.length} pixel-perfect 24px outline icons`,
     );
     expect(wrangler).toContain('"html_handling": "drop-trailing-slash"');
+  });
+  test("Cloudflare build serves Markdown negotiation through the wrapper worker", () => {
+    const serverDir = path.join(root, "apps/docs/dist/server");
+    const config = JSON.parse(
+      readFileSync(path.join(serverDir, "wrangler.json"), "utf8"),
+    );
+    expect(config.main).toBe("blume-worker.mjs");
+    expect(existsSync(path.join(serverDir, "blume-worker.mjs"))).toBe(true);
+    const rules = config.assets?.run_worker_first ?? [];
+    for (const route of ["/", "/docs", "/docs/*"]) {
+      expect(rules).toContain(route);
+    }
+    for (const raw of ["!/docs/*.md", "!/docs/*.mdx"]) {
+      expect(rules).toContain(raw);
+    }
   });
 });
