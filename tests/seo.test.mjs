@@ -230,7 +230,12 @@ describe("website SEO", () => {
       readFileSync(path.join(serverDir, "wrangler.json"), "utf8"),
     );
     expect(config.main).toBe("blume-worker.mjs");
-    expect(existsSync(path.join(serverDir, "blume-worker.mjs"))).toBe(true);
+    const wrapper = readFileSync(
+      path.join(serverDir, "blume-worker.mjs"),
+      "utf8",
+    );
+    expect(wrapper).toContain("text/markdown");
+    expect(wrapper.toLowerCase()).toContain("vary");
     const rules = config.assets?.run_worker_first ?? [];
     for (const route of ["/", "/docs", "/docs/*"]) {
       expect(rules).toContain(route);
