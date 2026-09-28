@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawn } from "node:child_process";
+import { createServer } from "node:net";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dist = path.join(root, "apps", "docs", "dist");
@@ -39,6 +41,55 @@ describe("docs 404 twins", () => {
       expect(link.href).toStartWith("https://vadivam.praveenjuge.com");
     }
   });
+
+  test("built Worker serves negotiated 404s for missing pages", async () => {
+    const listener = createServer();
+    const port = await new Promise((resolve, reject) => {
+      listener.once("error", reject);
+      listener.listen(0, "127.0.0.1", () => resolve(listener.address().port));
+    });
+    await new Promise((resolve) => listener.close(resolve));
+    const url = `http://127.0.0.1:${port}/this-page-does-not-exist`;
+    const worker = spawn(
+      process.execPath,
+      ["--cwd", "apps/docs", "wrangler", "dev", "--config", "dist/server/wrangler.json", "--ip", "127.0.0.1", "--port", String(port)],
+      { cwd: root, stdio: "ignore" },
+    );
+    try {
+      let ready = false;
+      for (let attempt = 0; attempt < 80; attempt++) {
+        if (worker.exitCode !== null) throw new Error(`Wrangler exited with ${worker.exitCode}`);
+        try {
+          const response = await fetch(url, { signal: AbortSignal.timeout(1000) });
+          if (response.status === 404) {
+            ready = true;
+            break;
+          }
+        } catch { /* Wait for Wrangler to start. */ }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      expect(ready).toBe(true);
+      for (const [accept, type, marker] of [
+        ["text/markdown", "text/markdown", "# Page not found"],
+        ["application/json", "application/problem+json", '"code":"PAGE_NOT_FOUND"'],
+      ]) {
+        const response = await fetch(url, { headers: { Accept: accept } });
+        expect(response.status).toBe(404);
+        expect(response.headers.get("content-type")).toStartWith(type);
+        expect(response.headers.get("vary")).toContain("Accept");
+        expect((await response.text()).replaceAll(/\s+/g, "")).toContain(marker.replaceAll(/\s+/g, ""));
+      }
+      const browser = await fetch(url, { headers: { Accept: "text/html" } });
+      expect(browser.status).toBe(404);
+      expect(browser.headers.get("content-type")).toStartWith("text/html");
+    } finally {
+      worker.kill();
+      await new Promise((resolve) => {
+        if (worker.exitCode !== null || worker.signalCode !== null) resolve();
+        else worker.once("exit", resolve);
+      });
+    }
+  }, 30000);
 
   test("Cloudflare wrapper and asset routing enable negotiated 404s", () => {
     const wrapper = readFileSync(path.join(serverDir, "blume-worker.mjs"), "utf8");
