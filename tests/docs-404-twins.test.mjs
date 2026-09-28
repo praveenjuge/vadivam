@@ -57,10 +57,11 @@ describe("docs 404 twins", () => {
     );
     try {
       let ready = false;
-      for (let attempt = 0; attempt < 80; attempt++) {
+      const deadline = Date.now() + 15000;
+      while (Date.now() < deadline) {
         if (worker.exitCode !== null) throw new Error(`Wrangler exited with ${worker.exitCode}`);
         try {
-          const response = await fetch(url, { signal: AbortSignal.timeout(1000) });
+          const response = await fetch(url, { signal: AbortSignal.timeout(500) });
           if (response.status === 404) {
             ready = true;
             break;
