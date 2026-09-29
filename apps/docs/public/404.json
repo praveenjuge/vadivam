@@ -1,0 +1,16 @@
+{
+  "type": "about:blank",
+  "title": "Page not found",
+  "status": 404,
+  "detail": "We couldn't find the page you're looking for.",
+  "code": "PAGE_NOT_FOUND",
+  "resolution": "Suggestions: https://vadivam.praveenjuge.com/, https://vadivam.praveenjuge.com/docs, https://vadivam.praveenjuge.com/changelog, https://vadivam.praveenjuge.com/sitemap.xml, https://vadivam.praveenjuge.com/llms.txt, https://vadivam.praveenjuge.com/openapi.json",
+  "links": [
+    { "href": "https://vadivam.praveenjuge.com/", "label": "Home" },
+    { "href": "https://vadivam.praveenjuge.com/docs", "label": "Documentation" },
+    { "href": "https://vadivam.praveenjuge.com/changelog", "label": "Changelog" },
+    { "href": "https://vadivam.praveenjuge.com/sitemap.xml", "label": "Sitemap" },
+    { "href": "https://vadivam.praveenjuge.com/llms.txt", "label": "llms.txt" },
+    { "href": "https://vadivam.praveenjuge.com/openapi.json", "label": "OpenAPI" }
+  ]
+}
