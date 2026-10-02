@@ -68,7 +68,11 @@ describe("website SEO", () => {
     expect(gridIndex).toBeGreaterThan(-1);
     // Crawlers that truncate the response must still see the identity graph.
     expect(ldIndex).toBeLessThan(gridIndex);
-    expect(ldIndex).toBeLessThan(64 * 1024);
+    // Measure bytes through the closing tag, since crawlers truncate bytes.
+    const ldEnd = html.indexOf("</script>", ldIndex) + "</script>".length;
+    expect(Buffer.byteLength(html.slice(0, ldEnd), "utf8")).toBeLessThan(
+      64 * 1024,
+    );
     expect(jsonLdNodes(html).map((node) => node["@type"])).toEqual([
       "WebSite",
       "SoftwareApplication",
