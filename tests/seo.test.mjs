@@ -60,6 +60,25 @@ describe("website SEO", () => {
     },
   );
 
+  test("homepage declares JSON-LD before the bulky icon grid", () => {
+    const html = readDist("index.html");
+    const ldIndex = html.indexOf('type="application/ld+json"');
+    const gridIndex = html.indexOf('id="iconGrid"');
+    expect(ldIndex).toBeGreaterThan(-1);
+    expect(gridIndex).toBeGreaterThan(-1);
+    // Crawlers that truncate the response must still see the identity graph.
+    expect(ldIndex).toBeLessThan(gridIndex);
+    // Measure bytes through the closing tag, since crawlers truncate bytes.
+    const ldEnd = html.indexOf("</script>", ldIndex) + "</script>".length;
+    expect(Buffer.byteLength(html.slice(0, ldEnd), "utf8")).toBeLessThan(
+      64 * 1024,
+    );
+    expect(jsonLdNodes(html).map((node) => node["@type"])).toEqual([
+      "WebSite",
+      "SoftwareApplication",
+    ]);
+  });
+
   test("homepage keeps WebSite identity without obsolete SearchAction markup", () => {
     const html = readDist("index.html");
     expect(html).toContain('"@type":"WebSite"');
