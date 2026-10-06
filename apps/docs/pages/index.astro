@@ -6,6 +6,7 @@ import Tooltip from "blume/components/content/Tooltip.astro";
 import data from "blume:data";
 import { highlightCode } from "blume/markdown";
 import { icons, iconsByName } from "vadivam/manifest";
+import { iconLastmods } from "../../../scripts/icon-lastmods.mjs";
 import pkg from "../../../package.json";
 
 const { config } = data;
@@ -139,6 +140,8 @@ const highlightedSnippets = JSON.stringify({
 // PageLayout's built-in JSON-LD is disabled so this page can declare the site
 // identity plus the library's software entity in one graph.
 const site = config.site?.replace(/\/$/, "");
+// The catalog changes when an icon does, so date the page by its newest icon.
+const lastModified = [...iconLastmods().values()].sort().at(-1);
 const structuredData = site
   ? {
       "@context": "https://schema.org",
@@ -149,6 +152,17 @@ const structuredData = site
           name: config.title,
           url: `${site}/`,
           description: config.description,
+        },
+        {
+          "@type": "WebPage",
+          "@id": `${site}/#page`,
+          name: "Vadivam — 24px outline icons",
+          url: `${site}/`,
+          description: config.description,
+          inLanguage: "en",
+          isPartOf: { "@id": `${site}#website` },
+          about: { "@id": `${site}#software` },
+          ...(lastModified && { dateModified: lastModified }),
         },
         {
           "@type": "SoftwareApplication",

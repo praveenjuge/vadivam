@@ -12,13 +12,18 @@ import Frame from "blume/components/content/Frame.astro";
 import Icon from "blume/components/Icon.astro";
 import data from "blume:data";
 import { icons, iconsByName } from "vadivam/manifest";
+import { iconLastmods } from "../../../../scripts/icon-lastmods.mjs";
 
 export function getStaticPaths() {
-  return icons.map((icon) => ({ params: { name: icon.name }, props: { icon } }));
+  const lastmods = iconLastmods();
+  return icons.map((icon) => ({
+    params: { name: icon.name },
+    props: { icon, lastModified: lastmods.get(icon.name) },
+  }));
 }
 
 const { config } = data;
-const { icon } = Astro.props;
+const { icon, lastModified } = Astro.props;
 const svg = iconsByName[icon.name].svg;
 const c = icon.componentName;
 
@@ -67,6 +72,7 @@ const structuredData = site
           url: iconUrl,
           isPartOf: { "@id": `${site}#website` },
           primaryImageOfPage: { "@id": `${iconUrl}#image` },
+          ...(lastModified && { dateModified: lastModified }),
           about: {
             "@type": "CreativeWork",
             name: `${c} icon`,

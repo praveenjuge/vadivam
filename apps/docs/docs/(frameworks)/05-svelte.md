@@ -3,6 +3,12 @@ title: Svelte
 description: Use free, open-source Vadivam SVG icon components in Svelte 5 with shared defaults, per-icon imports, and dynamic runtime names.
 seo:
   title: Svelte Icons – 24px Outline Icon Components
+related:
+  - /docs/usage
+  - /docs/dynamic-icons
+  - /docs/installation
+search:
+  keywords: [svelte 5, sveltekit]
 ---
 
 `vadivam-svelte` supports Svelte 5.56 and newer within the Svelte 5 release line.

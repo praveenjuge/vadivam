@@ -1,9 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { icons } from "../packages/vadivam/dist/manifest.js";
+import { iconLastmods } from "./icon-lastmods.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const deployRoot = path.join(root, "apps/docs/dist/client");
@@ -74,38 +74,6 @@ export function completeSitemap(xml, iconNames, iconLastmod = {}) {
     }
   }
   return output;
-}
-
-/**
- * Map each icon name to the date (YYYY-MM-DD) of the last commit that touched
- * its source SVG, so icon sitemap entries can carry an accurate `lastmod`.
- * Newest-first history means the first hit per file wins. Outside a git repo,
- * returns an empty map and icon entries simply omit `lastmod`.
- */
-export function iconLastmods(rootDir) {
-  try {
-    const output = execFileSync(
-      "git",
-      ["log", "--format=%cI", "--name-only", "--", "icons/"],
-      { cwd: rootDir, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
-    );
-    const modified = new Map();
-    let committedAt = null;
-    for (const line of output.split("\n")) {
-      if (!line.trim()) continue;
-      if (/^\d{4}-\d{2}-\d{2}/.test(line)) {
-        committedAt = line.slice(0, 10);
-        continue;
-      }
-      const match = line.match(/^icons\/(.+)\.svg$/);
-      if (match && committedAt && !modified.has(match[1])) {
-        modified.set(match[1], committedAt);
-      }
-    }
-    return modified;
-  } catch {
-    return new Map();
-  }
 }
 
 export function completeLlmsIndex(markdown, site) {
