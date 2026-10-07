@@ -75,8 +75,31 @@ describe("website SEO", () => {
     );
     expect(jsonLdNodes(html).map((node) => node["@type"])).toEqual([
       "WebSite",
+      "WebPage",
       "SoftwareApplication",
     ]);
+  });
+
+  test("homepage and icon pages date their WebPage from icon history", () => {
+    const pages = [
+      readDist("index.html"),
+      readDist("icons", "activity", "index.html"),
+    ];
+    for (const html of pages) {
+      const page = jsonLdNodes(html).find(
+        ({ "@type": type }) => type === "WebPage",
+      );
+      expect(page?.dateModified).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+  });
+
+  test("docs publish the hand-written agent skill and a site footer", () => {
+    const skill = readDist("skill.md");
+    expect(skill).toStartWith("---\nname: vadivam-icons\n");
+    expect(skill).toContain("## Gotchas");
+    const html = readDist("docs", "index.html");
+    expect(html).toContain('href="https://icon-sets.iconify.design/vadivam/"');
+    expect(html).toContain('href="https://x.com/praveenjuge"');
   });
 
   test("homepage keeps WebSite identity without obsolete SearchAction markup", () => {

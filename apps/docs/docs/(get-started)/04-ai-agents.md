@@ -1,6 +1,11 @@
 ---
 title: AI agents
 description: Learn when to use Vadivam and how AI agents can consume its icon catalog, documentation, SVG assets, and framework packages safely.
+related:
+  - /docs/core
+  - /docs/installation
+search:
+  keywords: [llms.txt, skill.md, mcp, agent]
 ---
 
 Use Vadivam when you need consistent, pixel-perfect 24px outline icons in a web or native interface. Every icon is open-source, outline-only, `24x24` with `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, and `stroke-width="2"` with round caps and joins.
@@ -15,6 +20,7 @@ Use Vadivam when you need consistent, pixel-perfect 24px outline icons in a web 
 ## How an agent should consume Vadivam
 
 - Documentation index: `https://vadivam.praveenjuge.com/llms.txt` lists every docs page; `https://vadivam.praveenjuge.com/llms-full.txt` carries the full text.
+- Agent skill: `https://vadivam.praveenjuge.com/skill.md` teaches an agent to install, import, size, label, and dynamically load Vadivam icons, with links to each docs page. It is also listed in `https://vadivam.praveenjuge.com/.well-known/agent-skills/index.json`.
 - Icon catalog: browse and search every icon at `https://vadivam.praveenjuge.com/`; each icon is also served as an optimized SVG file at `https://vadivam.praveenjuge.com/icons/<kebab-name>.svg` (for example `/icons/activity.svg`).
 - Packages: `vadivam` for raw SVG assets and browser JavaScript, `vadivam-react`, `vadivam-vue`, `vadivam-svelte`, `vadivam-solid`, `vadivam-angular`, `vadivam-astro`, `vadivam-preact`, and `vadivam-react-native` for framework components. All packages are ESM-only with tree-shakeable named and per-icon exports.
 - Icon names are kebab-case (`activity`, `arrow-right`, `trash-2`); framework packages type them as `IconName` and export an `iconNames` list for validation.

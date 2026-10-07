@@ -3,6 +3,12 @@ title: Preact
 description: Use free, open-source Vadivam SVG icon components in Preact with shared defaults, per-icon imports, and dynamic runtime names.
 seo:
   title: Preact Icons – 24px Outline Icon Components
+related:
+  - /docs/react
+  - /docs/usage
+  - /docs/dynamic-icons
+search:
+  keywords: [jsx]
 ---
 
 `vadivam-preact` supports Preact 10.29 and renders native SVG components.

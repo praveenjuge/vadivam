@@ -19,18 +19,14 @@ export default defineConfig({
     ],
   },
   lastModified: "git",
-  i18n: {
-    defaultLocale: "en",
-    locales: [{ code: "en", label: "English" }],
-    ui: {
-      en: {
-        changelog: {
-          description:
-            "Read every Vadivam release with version-specific icon additions, package updates, documentation improvements, and tooling changes.",
-        },
-      },
-    },
+  changelog: {
+    description:
+      "Read every Vadivam release with version-specific icon additions, package updates, documentation improvements, and tooling changes.",
   },
+  redirects: [
+    { from: "/icons", to: "/", status: 301 },
+    { from: "/icon/:name", to: "/icons/:name", status: 301 },
+  ],
   logo: {
     image: "/logo.svg",
     text: "",
@@ -40,6 +36,19 @@ export default defineConfig({
       { label: "Documentation", path: "/docs" },
       { label: "Changelog", path: "/changelog", href: "/changelog" },
     ],
+  },
+  footer: {
+    links: [
+      { label: "npm", href: "https://www.npmjs.com/package/vadivam" },
+      {
+        label: "Figma",
+        href: "https://www.figma.com/community/file/1661416202515574840/vadivam-icons",
+      },
+      { label: "Iconify", href: "https://icon-sets.iconify.design/vadivam/" },
+    ],
+    socials: {
+      x: "https://x.com/praveenjuge",
+    },
   },
   github: {
     owner: "praveenjuge",
@@ -61,6 +70,7 @@ export default defineConfig({
     ],
   },
   agents: {
+    skills: "./skills",
     contentSignals: {
       search: true,
       aiInput: true,
@@ -78,6 +88,7 @@ export default defineConfig({
   deployment: cloudflareDeployment({
     site: "https://vadivam.praveenjuge.com",
   }),
+  poweredBy: false,
   markdown: {
     externalLinks: true,
   },

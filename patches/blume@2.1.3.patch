@@ -1,0 +1,41 @@
+diff --git a/dist/cli/chunk-ave1wcbr.js b/dist/cli/chunk-ave1wcbr.js
+index 372a548c5111f9ff7c144fc5d50332d4b7b243b8..97da1cec3d2f71e1d0b795b1fe10c6caed463c96 100755
+--- a/dist/cli/chunk-ave1wcbr.js
++++ b/dist/cli/chunk-ave1wcbr.js
+@@ -70,7 +70,13 @@ var parseLocale = (tag) => {
+     return;
+   }
+ };
+-var resolveLocale = (tag) => parseLocale(tag)?.maximize();
++var resolveLocale = (tag) => {
++  try {
++    return parseLocale(tag)?.maximize();
++  } catch {
++    return;
++  }
++};
+ var BIGRAM_INDEX_SCRIPTS = new Set(["Hans", "Hant", "Jpan"]);
+ var isBigramLanguage = (language) => {
+   const script = resolveLocale(language)?.script;
+diff --git a/src/search/orama-index.ts b/src/search/orama-index.ts
+index 425f641db8694005b75874f063dba0cda3bac247..297bbeb1ae0fd4cf1a62c7bb2765123ea06671ad 100644
+--- a/src/search/orama-index.ts
++++ b/src/search/orama-index.ts
+@@ -126,8 +126,15 @@ const parseLocale = (tag: string): Intl.Locale | undefined => {
+  * salvage; a well-formed tag ICU knows nothing about keeps an `undefined`
+  * script instead.
+  */
+-const resolveLocale = (tag: string): Intl.Locale | undefined =>
+-  parseLocale(tag)?.maximize();
++const resolveLocale = (tag: string): Intl.Locale | undefined => {
++  // Chromium's ICU throws from `maximize()` on a well-formed tag it knows
++  // nothing about, such as Orama's default tokenizer language "english".
++  try {
++    return parseLocale(tag)?.maximize();
++  } catch {
++    return undefined;
++  }
++};
+ 
+ /**
+  * Indexes whose language maximizes to one of these scripts are built as

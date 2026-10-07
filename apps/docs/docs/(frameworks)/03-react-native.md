@@ -3,6 +3,12 @@ title: React Native
 description: Use free, open-source Vadivam icon components with React Native and Expo through react-native-svg, including dynamic imports and accessibility.
 seo:
   title: React Native Icons – 24px Outline Components
+related:
+  - /docs/react
+  - /docs/usage
+  - /docs/dynamic-icons
+search:
+  keywords: [expo, ios, android, react-native-svg]
 ---
 
 `vadivam-react-native` renders native SVG elements through `react-native-svg`. It supports React Native 0.71+, React 18–19, and `react-native-svg` 12–15.
