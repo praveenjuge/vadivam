@@ -24,6 +24,26 @@ export interface IconAuditSummary {
   rounded: number;
 }
 
+// "format" and "deprecated" ideas are exact matches; the rest are guesses.
+export type RenameReason =
+  | "format"
+  | "deprecated"
+  | "reordered"
+  | "tag"
+  | "spelling"
+  | "similar";
+
+export const EXACT_RENAME_REASONS: ReadonlySet<RenameReason> = new Set([
+  "format",
+  "deprecated",
+]);
+
+export interface RenameSuggestion {
+  id: string;
+  name: string;
+  ideas: Array<{ name: string; reason: RenameReason; taken: boolean }>;
+}
+
 export type PluginToUiMessage =
   | { type: "loading" }
   | { type: "library-status"; count: number; available: boolean }
@@ -37,6 +57,7 @@ export type PluginToUiMessage =
   | { type: "catalog"; summary: CatalogSummary; candidates: LucideIconRanking[] }
   | { type: "generated"; names: string[] }
   | { type: "arranged"; count: number }
+  | { type: "rename-ideas"; icons: RenameSuggestion[]; renamed: number }
   | {
       type: "audit";
       summary: IconAuditSummary;
@@ -50,4 +71,7 @@ export type UiToPluginMessage =
   | { type: "set-count"; count: number }
   | { type: "generate"; count: number }
   | { type: "arrange" }
+  | { type: "suggest-names" }
+  | { type: "rename"; renames: Array<{ id: string; name: string }> }
+  | { type: "select"; id: string }
   | { type: "audit" };

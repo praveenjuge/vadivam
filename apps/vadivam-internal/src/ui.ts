@@ -1,7 +1,10 @@
-import type {
-  IconAuditIssue,
-  PluginToUiMessage,
-  UiToPluginMessage,
+import {
+  EXACT_RENAME_REASONS,
+  type IconAuditIssue,
+  type PluginToUiMessage,
+  type RenameReason,
+  type RenameSuggestion,
+  type UiToPluginMessage,
 } from "./protocol";
 import type { LucideIconRanking } from "./catalog";
 
@@ -19,9 +22,20 @@ const generateButton = element<HTMLButtonElement>("#generate");
 const refreshButton = element<HTMLButtonElement>("#refresh");
 const arrangeButton = element<HTMLButtonElement>("#arrange");
 const auditButton = element<HTMLButtonElement>("#audit");
+const renameMeta = element<HTMLSpanElement>("#rename-meta");
+const suggestButton = element<HTMLButtonElement>("#suggest");
 const resultList = element<HTMLOListElement>("#results");
 
 let candidates: LucideIconRanking[] = [];
+
+const renameReasonLabels: Record<RenameReason, string> = {
+  format: "Lucide format",
+  deprecated: "Renamed in Lucide",
+  reordered: "Same words",
+  tag: "Lucide tag",
+  spelling: "Close spelling",
+  similar: "Similar name",
+};
 
 function send(message: UiToPluginMessage): void {
   parent.postMessage({ pluginMessage: message }, "*");
@@ -90,6 +104,91 @@ function renderAudit(issues: IconAuditIssue[]): void {
   resultList.append(fragment);
 }
 
+function renameTo(renames: Array<{ id: string; name: string }>): void {
+  status.textContent = `Renaming ${renames.length} icon${renames.length === 1 ? "" : "s"}…`;
+  send({ type: "rename", renames });
+}
+
+function renderRenameIdeas(icons: RenameSuggestion[]): void {
+  resultList.replaceChildren();
+  if (icons.length === 0) {
+    const success = document.createElement("li");
+    success.className = "empty success";
+    success.textContent = "Every icon uses a current Lucide name.";
+    resultList.append(success);
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  // Two frames can share an exact fix (alert-circle and AlertCircle); rename only the first.
+  const targets = new Set<string>();
+  const exact = icons.flatMap((icon) => {
+    // Exact ideas are always returned alone, so this is the frame's first idea.
+    const idea = icon.ideas.find((candidate) => EXACT_RENAME_REASONS.has(candidate.reason));
+    if (!idea || idea.taken || targets.has(idea.name)) return [];
+    targets.add(idea.name);
+    return [{ id: icon.id, name: idea.name }];
+  });
+  if (exact.length > 0) {
+    const item = document.createElement("li");
+    const label = document.createElement("span");
+    const button = document.createElement("button");
+    item.className = "rename-all";
+    label.textContent = `${exact.length} exact match${exact.length === 1 ? "" : "es"}`;
+    button.type = "button";
+    button.textContent = "Rename all";
+    button.addEventListener("click", () => {
+      renameTo(exact);
+    });
+    item.append(label, button);
+    fragment.append(item);
+  }
+
+  for (const icon of icons) {
+    const item = document.createElement("li");
+    const from = document.createElement("button");
+    item.className = "rename";
+    from.type = "button";
+    from.className = "rename-from";
+    from.title = "Select in Figma";
+    from.textContent = icon.name;
+    from.addEventListener("click", () => {
+      send({ type: "select", id: icon.id });
+    });
+    item.append(from);
+    if (icon.ideas.length === 0) {
+      const none = document.createElement("span");
+      none.className = "idea-reason";
+      none.textContent = "No close Lucide match";
+      item.append(none);
+    }
+    for (const idea of icon.ideas) {
+      const button = document.createElement("button");
+      const name = document.createElement("span");
+      const reason = document.createElement("span");
+      button.type = "button";
+      button.className = "idea";
+      button.title = idea.taken
+        ? `${idea.name} is already used in this file`
+        : `Rename to ${idea.name}`;
+      button.disabled = idea.taken;
+      name.className = "idea-name";
+      reason.className = "idea-reason";
+      name.textContent = idea.name;
+      reason.textContent = idea.taken
+        ? `${renameReasonLabels[idea.reason]} · already in file`
+        : renameReasonLabels[idea.reason];
+      button.append(name, reason);
+      button.addEventListener("click", () => {
+        renameTo([{ id: icon.id, name: idea.name }]);
+      });
+      item.append(button);
+    }
+    fragment.append(item);
+  }
+  resultList.append(fragment);
+}
+
 countInput.addEventListener("change", () => {
   const count = readCount();
   countInput.value = String(count);
@@ -112,6 +211,10 @@ refreshButton.addEventListener("click", () => send({ type: "refresh" }));
 arrangeButton.addEventListener("click", () => {
   status.textContent = "Arranging recognized icons A–Z…";
   send({ type: "arrange" });
+});
+suggestButton.addEventListener("click", () => {
+  status.textContent = "Finding current Lucide names…";
+  send({ type: "suggest-names" });
 });
 auditButton.addEventListener("click", () => {
   status.textContent = "Checking icons and renaming stroked layers…";
@@ -148,6 +251,10 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
     status.textContent = `${message.created ? "Created" : "Updated"} ${message.count} component icons${added}${retained}`;
   } else if (message.type === "arranged") {
     status.textContent = `Arranged ${message.count} icons A–Z · 40 per row`;
+  } else if (message.type === "rename-ideas") {
+    const left = `${message.icons.length} icon${message.icons.length === 1 ? "" : "s"} to rename`;
+    status.textContent = message.renamed > 0 ? `Renamed ${message.renamed} · ${left}` : left;
+    renderRenameIdeas(message.icons);
   } else if (message.type === "audit") {
     status.textContent = `${message.summary.passed} passed · ${message.summary.failed} issues · ${message.summary.renamed} renamed · ${message.summary.rounded} caps fixed`;
     renderAudit(message.issues);
@@ -155,6 +262,7 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
     candidates = message.candidates;
     const { summary: catalog } = message;
     status.textContent = `${candidates.length} next · Lucide ${catalog.lucideVersion}`;
+    renameMeta.textContent = `Lucide ${catalog.lucideVersion}`;
     generateButton.disabled = candidates.length === 0;
     renderCandidates();
   }

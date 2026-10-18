@@ -248,3 +248,73 @@ li:hover { background: var(--hover); }
   from { opacity: 0; transform: translateY(2px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+.rename,
+.rename-all {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-height: 0;
+  padding: 8px 10px;
+}
+
+.rename-all {
+  justify-content: space-between;
+  color: var(--muted);
+}
+
+.rename-all button,
+.idea {
+  padding: 3px 7px;
+  background: var(--surface);
+  border: 1px solid var(--figma-color-border-strong);
+  border-radius: 4px;
+}
+
+.rename-all button {
+  color: var(--figma-color-text);
+  font-weight: 600;
+}
+
+.rename-all button:hover,
+.idea:hover {
+  background: var(--hover);
+  border-color: var(--figma-color-border-selected);
+}
+
+.rename-from {
+  flex-basis: 100%;
+  padding: 0;
+  overflow: hidden;
+  background: none;
+  border: 0;
+  font-size: 12px;
+  font-weight: 650;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rename-from:hover { text-decoration: underline; }
+
+.idea {
+  display: grid;
+  text-align: left;
+}
+
+.idea-name {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.idea-reason {
+  color: var(--faint);
+  font-size: 10px;
+}
+
+.idea:disabled:hover {
+  background: var(--surface);
+  border-color: var(--figma-color-border-strong);
+}
