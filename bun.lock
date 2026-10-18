@@ -5,7 +5,6 @@
     "": {
       "name": "vadivam-monorepo",
       "dependencies": {
-        "proxy-addr": "2.0.8",
         "vadivam": "workspace:*",
         "vadivam-angular": "workspace:*",
         "vadivam-astro": "workspace:*",
@@ -88,7 +87,7 @@
     },
     "apps/figma-plugin": {
       "name": "@vadivam/figma-plugin",
-      "version": "0.0.46",
+      "version": "0.0.47",
       "devDependencies": {
         "@figma/plugin-typings": "1.142.0",
         "@happy-dom/global-registrator": "^21.0.3",
@@ -109,11 +108,11 @@
     },
     "packages/vadivam": {
       "name": "vadivam",
-      "version": "0.0.46",
+      "version": "0.0.47",
     },
     "packages/vadivam-angular": {
       "name": "vadivam-angular",
-      "version": "0.0.46",
+      "version": "0.0.47",
       "dependencies": {
         "tslib": "^2.8.1",
       },
@@ -124,28 +123,28 @@
     },
     "packages/vadivam-astro": {
       "name": "vadivam-astro",
-      "version": "0.0.46",
+      "version": "0.0.47",
       "peerDependencies": {
         "astro": ">=7 <8",
       },
     },
     "packages/vadivam-preact": {
       "name": "vadivam-preact",
-      "version": "0.0.46",
+      "version": "0.0.47",
       "peerDependencies": {
         "preact": ">=10.29 <11",
       },
     },
     "packages/vadivam-react": {
       "name": "vadivam-react",
-      "version": "0.0.46",
+      "version": "0.0.47",
       "peerDependencies": {
         "react": ">=18",
       },
     },
     "packages/vadivam-react-native": {
       "name": "vadivam-react-native",
-      "version": "0.0.46",
+      "version": "0.0.47",
       "peerDependencies": {
         "react": ">=18 <20",
         "react-native": ">=0.71",
@@ -154,21 +153,21 @@
     },
     "packages/vadivam-solid": {
       "name": "vadivam-solid",
-      "version": "0.0.46",
+      "version": "0.0.47",
       "peerDependencies": {
         "solid-js": ">=1.9 <2",
       },
     },
     "packages/vadivam-svelte": {
       "name": "vadivam-svelte",
-      "version": "0.0.46",
+      "version": "0.0.47",
       "peerDependencies": {
         "svelte": ">=5.56 <6",
       },
     },
     "packages/vadivam-vue": {
       "name": "vadivam-vue",
-      "version": "0.0.46",
+      "version": "0.0.47",
       "peerDependencies": {
         "vue": ">=3.5 <4",
       },
@@ -2332,7 +2331,7 @@
 
     "property-information": ["property-information@7.1.0", "", {}, "sha512-TwEZ+X+yCJmYfL7TPUOcvBZ4QfoT5YenQiJuX//0th53DE6w0xxLEtfK3iyryQFddXuvkIk51EEgrJQ0WJkOmQ=="],
 
-    "proxy-addr": ["proxy-addr@2.0.8", "", { "dependencies": { "forwarded": "0.2.0", "ipaddr.js": "1.9.1" } }, "sha512-5nnx0yGyVUcY6t9RnWcARWtwT9F1D8O9rt08htPvnd49W1IgZtmLkhu9WfMzQj1cFxjHIO6connUNVW5k7AVyQ=="],
+    "proxy-addr": ["proxy-addr@2.0.7", "", { "dependencies": { "forwarded": "0.2.0", "ipaddr.js": "1.9.1" } }, "sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg=="],
 
     "prr": ["prr@1.0.1", "", {}, "sha512-yPw4Sng1gWghHQWj0B3ZggWUm4qVbPwPFcRG8KyxiU7J2OHFSoEHKS+EZ3fv5l1t9CyCiop6l/ZYeWbrgoQejw=="],
 
@@ -3107,8 +3106,6 @@
     "execa/signal-exit": ["signal-exit@3.0.7", "", {}, "sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ=="],
 
     "express/cookie": ["cookie@0.7.2", "", {}, "sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w=="],
-
-    "express/proxy-addr": ["proxy-addr@2.0.7", "", { "dependencies": { "forwarded": "0.2.0", "ipaddr.js": "1.9.1" } }, "sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg=="],
 
     "express/serve-static": ["serve-static@2.2.1", "", { "dependencies": { "encodeurl": "^2.0.0", "escape-html": "^1.0.3", "parseurl": "^1.3.3", "send": "^1.2.0" } }, "sha512-xRXBn0pPqQTVQiC8wyQrKs2MOlX24zQ0POGaj0kultvoOCstBQM5yvOhAVSUwOMjQtTvsPWoNCHfPGwaaQJhTw=="],
 
