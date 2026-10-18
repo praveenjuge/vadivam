@@ -58,8 +58,8 @@ describe("icon validation", () => {
     const requests = [];
     const fetchImpl = async (url) => {
       requests.push(url);
-      if (url === "https://registry.npmjs.org/lucide/1.40.0") {
-        return Response.json({ version: "1.40.0" });
+      if (url === "https://registry.npmjs.org/lucide/1.59.0") {
+        return Response.json({ version: "1.59.0" });
       }
       return Response.json({
         truncated: false,
@@ -73,38 +73,39 @@ describe("icon validation", () => {
     };
 
     const catalog = await fetchPinnedLucideCatalog(fetchImpl);
-    expect(catalog.version).toBe("1.40.0");
+    expect(catalog.version).toBe("1.59.0");
     expect(catalog.names).toEqual(new Set(["check", "columns-2"]));
     expect(requests).toEqual([
-      "https://registry.npmjs.org/lucide/1.40.0",
-      "https://api.github.com/repos/lucide-icons/lucide/git/trees/1.40.0?recursive=1",
+      "https://registry.npmjs.org/lucide/1.59.0",
+      "https://api.github.com/repos/lucide-icons/lucide/git/trees/1.59.0?recursive=1",
     ]);
   });
 
   test("rejects a registry response that does not match the pin", async () => {
     const fetchImpl = async (url) => {
-      if (url === "https://registry.npmjs.org/lucide/1.40.0") {
+      if (url === "https://registry.npmjs.org/lucide/1.59.0") {
         return Response.json({ version: "1.41.0" });
       }
       throw new Error(`Unexpected request: ${url}`);
     };
 
     await expect(fetchPinnedLucideCatalog(fetchImpl)).rejects.toThrow(
-      "The pinned Lucide release must resolve to 1.40.0",
+      "The pinned Lucide release must resolve to 1.59.0",
     );
   });
 
-  test("keeps Vadivam's legacy public names valid against the pinned catalog", async () => {
+  test("accepts renamed icons and rejects their retired names through catalog parsing", async () => {
     const fetchImpl = async (url) => {
-      if (url === "https://registry.npmjs.org/lucide/1.40.0") {
-        return Response.json({ version: "1.40.0" });
+      if (url === "https://registry.npmjs.org/lucide/1.59.0") {
+        return Response.json({ version: "1.59.0" });
       }
       return Response.json({
         truncated: false,
         tree: [
-          { path: "icons/album.svg" },
-          { path: "icons/building-2.svg" },
-          { path: "icons/trash-2.svg" },
+          { path: "icons/building-complex.svg" },
+          { path: "icons/eighth-notes.svg" },
+          { path: "icons/square-bookmark.svg" },
+          { path: "icons/trash.svg" },
         ],
       });
     };
@@ -112,19 +113,24 @@ describe("icon validation", () => {
     const catalog = await fetchPinnedLucideCatalog(fetchImpl);
     expect(() =>
       validateLucideIconNames(
-        ["album.svg", "building-2.svg", "trash-2.svg"],
+        ["building-complex.svg", "eighth-notes.svg", "square-bookmark.svg", "trash.svg"],
         catalog,
       ),
     ).not.toThrow();
+    expect(() =>
+      validateLucideIconNames(["album.svg", "building-2.svg", "music.svg", "trash-2.svg"], catalog),
+    ).toThrow(
+      "Deprecated or non-canonical icon names for Lucide 1.59.0: album.svg, building-2.svg, music.svg, trash-2.svg",
+    );
   });
 
   test("rejects deprecated and unknown Lucide icon filenames", () => {
-    const catalog = { version: "1.40.0", names: new Set(["check", "columns-2"]) };
+    const catalog = { version: "1.59.0", names: new Set(["check", "columns-2"]) };
     expect(() =>
       validateLucideIconNames(["check.svg", "columns-2.svg"], catalog),
     ).not.toThrow();
     expect(() => validateLucideIconNames(["columns.svg", "custom.svg"], catalog)).toThrow(
-      "Deprecated or non-canonical icon names for Lucide 1.40.0: columns.svg, custom.svg",
+      "Deprecated or non-canonical icon names for Lucide 1.59.0: columns.svg, custom.svg",
     );
   });
 

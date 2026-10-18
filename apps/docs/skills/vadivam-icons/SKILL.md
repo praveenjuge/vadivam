@@ -32,7 +32,7 @@ Peer ranges: React 18 or newer; React Native 0.71+ with React 18–19 and `react
 
 ## Core concepts
 
-- **Names**: icon names are kebab case in data APIs (`activity`, `arrow-right`, `trash-2`) and PascalCase for component imports (`Activity`, `ArrowRight`). [Vadivam](https://vadivam.praveenjuge.com/docs.md)
+- **Names**: icon names are kebab case in data APIs (`activity`, `arrow-right`, `trash`) and PascalCase for component imports (`Activity`, `ArrowRight`). [Vadivam](https://vadivam.praveenjuge.com/docs.md)
 - **Visual defaults**: a `24 24` view box, no fill, `currentColor`, a stroke width of `2`, and round caps and joins. [Usage](https://vadivam.praveenjuge.com/docs/usage.md)
 - **Shared props**: every framework package accepts `size`, `color`, `strokeWidth`, `absoluteStrokeWidth`, and `title` alongside its native SVG attributes. [Usage](https://vadivam.praveenjuge.com/docs/usage.md)
 - **Static imports first**: static named imports are tree-shakeable and the best default when the icon is known while writing the application. [Dynamic icons](https://vadivam.praveenjuge.com/docs/dynamic-icons.md)

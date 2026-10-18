@@ -43,7 +43,7 @@ const webIconsDir = path.join(root, "apps/docs/public/icons");
 const previewPath = path.join(root, "apps/docs/public/preview.png");
 const ogPath = path.join(root, "apps/docs/public/og.png");
 const fontCodepointsPath = path.join(root, "scripts/font-codepoints.json");
-const lucideVersion = "1.40.0";
+const lucideVersion = "1.59.0";
 const lucideTreeUrl = "https://api.github.com/repos/lucide-icons/lucide/git/trees";
 const iconCountFiles = [
   path.join(root, "README.md"),

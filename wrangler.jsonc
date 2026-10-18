@@ -49,11 +49,7 @@
   "workflows": [],
   "migrations": [],
   "exports": {},
-  "kv_namespaces": [
-    {
-      "binding": "SESSION"
-    }
-  ],
+  "kv_namespaces": [],
   "cloudchamber": {},
   "send_email": [],
   "queues": {
@@ -73,6 +69,7 @@
   "dispatch_namespaces": [],
   "mtls_certificates": [],
   "pipelines": [],
+  "k2": [],
   "secrets_store_secrets": [],
   "artifacts": [],
   "unsafe_hello_world": [],
@@ -84,6 +81,7 @@
   "logfwdr": {
     "bindings": []
   },
+  "upload_source_maps": true,
   "observability": {
     "enabled": true
   },
@@ -92,13 +90,7 @@
       "**/*.pyc"
     ]
   },
-  "previews": {
-    "kv_namespaces": [
-      {
-        "binding": "SESSION"
-      }
-    ]
-  },
+  "previews": {},
   "dev": {
     "ip": "localhost",
     "local_protocol": "http",

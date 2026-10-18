@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": { "typecheck": "tsc --noEmit", "build": "vite build" },
-  "dependencies": { "solid-js": "1.9.14", "vadivam-solid": "file:../../../packages/vadivam-solid" },
-  "devDependencies": { "typescript": "6.0.3", "vite": "8.1.5", "vite-plugin-solid": "2.11.12" }
+  "dependencies": { "solid-js": "1.9.17", "vadivam-solid": "file:../../../packages/vadivam-solid" },
+  "devDependencies": { "typescript": "6.0.3", "vite": "8.3.4", "vite-plugin-solid": "2.11.14" }
 }

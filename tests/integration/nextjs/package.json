@@ -5,15 +5,15 @@
     "build": "next build"
   },
   "dependencies": {
-    "next": "^16.2.7",
-    "react": "19.2.7",
-    "react-dom": "19.2.7",
+    "next": "^16.4.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "vadivam-react": "file:../../../packages/vadivam-react"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1",
-    "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "typescript": "^6.0.3"
   }
 }
