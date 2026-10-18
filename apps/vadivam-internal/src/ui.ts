@@ -123,9 +123,9 @@ function renderRenameIdeas(icons: RenameSuggestion[]): void {
   // Two frames can share an exact fix (alert-circle and AlertCircle); rename only the first.
   const targets = new Set<string>();
   const exact = icons.flatMap((icon) => {
-    const idea = icon.ideas[0];
-    if (!idea || !EXACT_RENAME_REASONS.has(idea.reason) || idea.taken) return [];
-    if (targets.has(idea.name)) return [];
+    // Exact ideas are always returned alone, so this is the frame's first idea.
+    const idea = icon.ideas.find((candidate) => EXACT_RENAME_REASONS.has(candidate.reason));
+    if (!idea || idea.taken || targets.has(idea.name)) return [];
     targets.add(idea.name);
     return [{ id: icon.id, name: idea.name }];
   });
@@ -137,7 +137,9 @@ function renderRenameIdeas(icons: RenameSuggestion[]): void {
     label.textContent = `${exact.length} exact match${exact.length === 1 ? "" : "es"}`;
     button.type = "button";
     button.textContent = "Rename all";
-    button.addEventListener("click", () => renameTo(exact));
+    button.addEventListener("click", () => {
+      renameTo(exact);
+    });
     item.append(label, button);
     fragment.append(item);
   }
@@ -150,7 +152,9 @@ function renderRenameIdeas(icons: RenameSuggestion[]): void {
     from.className = "rename-from";
     from.title = "Select in Figma";
     from.textContent = icon.name;
-    from.addEventListener("click", () => send({ type: "select", id: icon.id }));
+    from.addEventListener("click", () => {
+      send({ type: "select", id: icon.id });
+    });
     item.append(from);
     if (icon.ideas.length === 0) {
       const none = document.createElement("span");
@@ -172,7 +176,9 @@ function renderRenameIdeas(icons: RenameSuggestion[]): void {
         ? `${renameReasonLabels[idea.reason]} · already in file`
         : renameReasonLabels[idea.reason];
       button.append(name, reason);
-      button.addEventListener("click", () => renameTo([{ id: icon.id, name: idea.name }]));
+      button.addEventListener("click", () => {
+        renameTo([{ id: icon.id, name: idea.name }]);
+      });
       item.append(button);
     }
     fragment.append(item);

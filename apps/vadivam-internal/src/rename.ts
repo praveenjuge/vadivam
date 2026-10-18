@@ -18,7 +18,7 @@ const iconNameSet = new Set(lucideIconNames);
 const popularityRank = new Map(
   lucideRankings.icons.map((icon) => [icon.name, icon.rank] as const),
 );
-const tagsByIcon: Record<string, readonly string[]> = iconTags;
+const tagsByIcon = new Map<string, readonly string[]>(Object.entries(iconTags));
 
 function byPopularity(left: string, right: string): number {
   return (
@@ -37,7 +37,7 @@ const namesByTag = new Map<string, string[]>();
 for (const name of lucideIconNames) {
   const key = tokenKey(name);
   namesByTokenKey.set(key, [...(namesByTokenKey.get(key) ?? []), name]);
-  for (const tag of tagsByIcon[name] ?? []) {
+  for (const tag of tagsByIcon.get(name) ?? []) {
     const tagKey = toKebabName(tag);
     if (tagKey) namesByTag.set(tagKey, [...(namesByTag.get(tagKey) ?? []), name]);
   }
@@ -58,7 +58,8 @@ export function toKebabName(value: string): string {
 function withoutAffixes(name: string): string {
   return name
     .replace(/^lucide-/, "")
-    .replace(/-copy(?:-\d+)?$/, "")
+    .replace(/-copy-\d+$/, "")
+    .replace(/-copy$/, "")
     .replace(/-icon$/, "");
 }
 
@@ -159,9 +160,8 @@ export function suggestRenameIdeas(value: string): RenameIdea[] {
     ["tag", [...(namesByTag.get(key) ?? [])].sort(byPopularity)],
     ["spelling", spellingMatches(key)],
   ];
-  for (let index = 0; ideas.size < MAX_RENAME_IDEAS; index += 1) {
-    if (groups.every(([, names]) => index >= names.length)) break;
-    for (const [reason, names] of groups) add(names[index] ?? null, reason);
+  while (ideas.size < MAX_RENAME_IDEAS && groups.some(([, names]) => names.length > 0)) {
+    for (const [reason, names] of groups) add(names.shift() ?? null, reason);
   }
   for (const name of similarMatches(key)) add(name, "similar");
   return [...ideas].map(([name, reason]) => ({ name, reason }));
