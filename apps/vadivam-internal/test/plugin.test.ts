@@ -165,14 +165,21 @@ describe("compiled Figma plugin", () => {
     expect(catalog.candidates.map((icon) => icon.name)).not.toContain("x");
     const expectedNames = catalog.candidates.slice(0, 2).map((icon) => icon.name);
 
+    // A 24×24 frame with an unknown name is arranged alongside the rest.
+    const unknown = { ...existing[0]!, id: "1:9", name: "made-up", x: 400, y: 400 };
+    currentPage.children.push(unknown);
     await ui.onmessage?.({ type: "arrange" });
-    expect(messages[messages.length - 1]).toEqual({ type: "arranged", count: 4 });
-    expect(existing.map((frame) => [frame.name, frame.x, frame.y])).toEqual([
-      ["x", 120, 0],
+    expect(messages[messages.length - 1]).toEqual({ type: "arranged", count: 5 });
+    expect(
+      [...existing, unknown].map((frame) => [frame.name, frame.x, frame.y]),
+    ).toEqual([
+      ["x", 160, 0],
       ["check", 0, 0],
       ["chevron-right", 40, 0],
       ["columns", 80, 0],
+      ["made-up", 120, 0],
     ]);
+    currentPage.children.splice(currentPage.children.indexOf(unknown), 1);
 
     await ui.onmessage?.({ type: "audit" });
     const audit = messages.find(

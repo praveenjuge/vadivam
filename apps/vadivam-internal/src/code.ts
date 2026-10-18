@@ -453,10 +453,12 @@ function arrangeIcons(): void {
 }
 
 async function publishRenameIdeas(renamed = 0): Promise<void> {
+  const frames = pageIconFrames();
+  if (frames.length === 0) throw new Error("No icon frames on this page");
   const owners = await iconNameOwners();
   existingSlugs = new Set(owners.keys());
   candidates = getMissingIcons(catalog.icons, existingSlugs);
-  const icons: RenameSuggestion[] = pageIconFrames()
+  const icons: RenameSuggestion[] = frames
     .filter((node) => !allowedIconNames.has(node.name))
     .map((node) => ({
       id: node.id,
