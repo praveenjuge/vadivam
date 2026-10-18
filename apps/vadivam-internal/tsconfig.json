@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "types": ["@figma/plugin-typings", "bun"]
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
+  "include": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"]
 }
