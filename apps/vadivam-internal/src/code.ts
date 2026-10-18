@@ -111,9 +111,10 @@ function pageIconFrames(): IconContainer[] {
   );
 }
 
-// Canonical icon frames across every page, keyed by their Lucide name.
-async function iconNameOwners(): Promise<Map<string, SceneNode[]>> {
-  await figma.loadAllPagesAsync();
+// Canonical icon frames across every page, keyed by their Lucide name. Call
+// after figma.loadAllPagesAsync(); it is synchronous so callers can check and
+// rename without another message running in between.
+function iconNameOwners(): Map<string, SceneNode[]> {
   const owners = new Map<string, SceneNode[]>();
   for (const page of figma.root.children) {
     for (const node of page.children) {
@@ -135,7 +136,8 @@ function isOwnedByAnother(
 }
 
 async function scanDocument(): Promise<Set<string>> {
-  return new Set((await iconNameOwners()).keys());
+  await figma.loadAllPagesAsync();
+  return new Set(iconNameOwners().keys());
 }
 
 function summary(): CatalogSummary {
@@ -453,9 +455,10 @@ function arrangeIcons(): void {
 }
 
 async function publishRenameIdeas(renamed = 0): Promise<void> {
+  await figma.loadAllPagesAsync();
   const frames = pageIconFrames();
   if (frames.length === 0) throw new Error("No icon frames on this page");
-  const owners = await iconNameOwners();
+  const owners = iconNameOwners();
   existingSlugs = new Set(owners.keys());
   candidates = getMissingIcons(catalog.icons, existingSlugs);
   const icons: RenameSuggestion[] = frames
@@ -476,6 +479,8 @@ async function renameIcons(renames: unknown): Promise<void> {
   if (!Array.isArray(renames) || renames.length === 0 || renames.length > 10_000) {
     throw new Error("Invalid rename request");
   }
+  // Everything from here to the rename runs synchronously after this load.
+  await figma.loadAllPagesAsync();
   const frames = new Map(pageIconFrames().map((node) => [node.id, node]));
   const updates = renames.map((entry: unknown) => {
     const { id, name } = (entry ?? {}) as { id?: unknown; name?: unknown };
@@ -489,7 +494,7 @@ async function renameIcons(renames: unknown): Promise<void> {
   if (new Set(updates.map((update) => update.name)).size !== updates.length) {
     throw new Error("Two icons would get the same name");
   }
-  const owners = await iconNameOwners();
+  const owners = iconNameOwners();
   const taken = updates.find(({ node, name }) => isOwnedByAnother(owners, name, node));
   if (taken) throw new Error(`"${taken.name}" is already used in this file`);
   for (const { node, name } of updates) node.name = name;
