@@ -71,6 +71,7 @@ describe("compiled Figma plugin", () => {
       const children = [artwork];
       return {
         type: "FRAME" as const,
+        id: `1:${index}`,
         name,
         width: 24,
         height: 24,
@@ -111,6 +112,7 @@ describe("compiled Figma plugin", () => {
       root: { children: [currentPage] },
       currentPage,
       async loadAllPagesAsync() {},
+      commitUndo() {},
       createFrame(): MockFrame {
         const frame: MockFrame = {
           type: "FRAME",
@@ -164,15 +166,12 @@ describe("compiled Figma plugin", () => {
     const expectedNames = catalog.candidates.slice(0, 2).map((icon) => icon.name);
 
     await ui.onmessage?.({ type: "arrange" });
-    expect(messages[messages.length - 1]).toEqual({
-      type: "error",
-      message: "Deprecated Lucide name: columns → columns-2. Rename before arranging",
-    });
+    expect(messages[messages.length - 1]).toEqual({ type: "arranged", count: 4 });
     expect(existing.map((frame) => [frame.name, frame.x, frame.y])).toEqual([
-      ["x", 0, 0],
-      ["check", 40, 0],
-      ["chevron-right", 80, 0],
-      ["columns", 120, 0],
+      ["x", 120, 0],
+      ["check", 0, 0],
+      ["chevron-right", 40, 0],
+      ["columns", 80, 0],
     ]);
 
     await ui.onmessage?.({ type: "audit" });
@@ -217,14 +216,33 @@ describe("compiled Figma plugin", () => {
       violations: ['Deprecated Lucide name; use "columns-2"'],
     });
 
-    existing[3]!.name = "columns-2";
-    await ui.onmessage?.({ type: "arrange" });
-    expect(existing.map((frame) => [frame.name, frame.x, frame.y])).toEqual([
-      ["x", 120, 0],
-      ["check", 0, 0],
-      ["chevron-right", 40, 0],
-      ["columns-2", 80, 0],
-    ]);
+    await ui.onmessage?.({ type: "suggest-names" });
+    expect(messages[messages.length - 1]).toEqual({
+      type: "rename-ideas",
+      icons: [
+        {
+          id: "1:3",
+          name: "columns",
+          ideas: [{ name: "columns-2", reason: "deprecated", taken: false }],
+        },
+      ],
+      renamed: 0,
+    });
+
+    await ui.onmessage?.({ type: "rename", renames: [{ id: "1:3", name: "made-up" }] });
+    expect(messages[messages.length - 1]).toEqual({
+      type: "error",
+      message: "Rename target is not a current Lucide name",
+    });
+    expect(existing[3]!.name).toBe("columns");
+
+    await ui.onmessage?.({ type: "rename", renames: [{ id: "1:3", name: "columns-2" }] });
+    expect(existing[3]!.name).toBe("columns-2");
+    expect(messages[messages.length - 1]).toEqual({
+      type: "rename-ideas",
+      icons: [],
+      renamed: 1,
+    });
 
     await ui.onmessage?.({ type: "generate", count: 2 });
     const created = currentPage.children.slice(existing.length) as MockFrame[];

@@ -17,8 +17,10 @@ import type {
   CatalogSummary,
   IconAuditIssue,
   PluginToUiMessage,
+  RenameSuggestion,
   UiToPluginMessage,
 } from "./protocol";
+import { suggestRenameIdeas, toKebabName } from "./rename";
 
 const UI_WIDTH = 360;
 const UI_HEIGHT = 620;
@@ -82,22 +84,30 @@ function publishLibraryStatus(): void {
   });
 }
 
-function isIconContainer(node: SceneNode): node is FrameNode | ComponentNode | InstanceNode {
+type IconContainer = FrameNode | ComponentNode | InstanceNode;
+
+function isIconContainer(node: SceneNode): node is IconContainer {
   return node.type === "FRAME" || node.type === "COMPONENT" || node.type === "INSTANCE";
 }
 
-function currentKnownIcons(): Array<FrameNode | ComponentNode | InstanceNode> {
-  return figma.currentPage.children.filter(
-    (node): node is FrameNode | ComponentNode | InstanceNode =>
-      isIconContainer(node) && resolveLucideIconName(node.name) !== null,
+function isIconSized(node: SceneNode): boolean {
+  return (
+    Math.abs(node.width - ICON_SIZE) < 0.01 && Math.abs(node.height - ICON_SIZE) < 0.01
   );
 }
 
 function isCanonicalIconNode(node: SceneNode): boolean {
-  return (
-    Math.abs(node.width - ICON_SIZE) < 0.01 &&
-    Math.abs(node.height - ICON_SIZE) < 0.01 &&
-    resolveLucideIconName(node.name) !== null
+  return isIconSized(node) && resolveLucideIconName(node.name) !== null;
+}
+
+// Top-level icon frames on this page, whether or not their names are current.
+function pageIconFrames(): IconContainer[] {
+  return figma.currentPage.children.filter(
+    (node): node is IconContainer =>
+      isIconContainer(node) &&
+      (isIconSized(node) ||
+        resolveLucideIconName(node.name) !== null ||
+        getDeprecatedLucideReplacement(node.name) !== null),
   );
 }
 
@@ -405,30 +415,12 @@ function createNamedFrames(names: readonly string[]): void {
 }
 
 function arrangeIcons(): void {
-  const deprecated = figma.currentPage.children
-    .filter(isIconContainer)
-    .map((node) => ({ node, replacement: getDeprecatedLucideReplacement(node.name) }))
-    .filter(
-      (entry): entry is { node: FrameNode | ComponentNode | InstanceNode; replacement: string } =>
-        entry.replacement !== null,
-    )
-    .sort((left, right) => left.node.name.localeCompare(right.node.name));
-  if (deprecated.length > 0) {
-    const examples = deprecated
-      .slice(0, 3)
-      .map(({ node, replacement }) => `${node.name} → ${replacement}`)
-      .join(", ");
-    const remaining = deprecated.length > 3 ? ` and ${deprecated.length - 3} more` : "";
-    throw new Error(
-      `Deprecated Lucide name${deprecated.length === 1 ? "" : "s"}: ${examples}${remaining}. Rename before arranging`,
-    );
-  }
-  const icons = currentKnownIcons().sort((left, right) =>
-    (resolveLucideIconName(left.name) ?? left.name).localeCompare(
-      resolveLucideIconName(right.name) ?? right.name,
-    ),
+  const sortKey = (node: SceneNode): string =>
+    resolveLucideIconName(node.name) ?? toKebabName(node.name);
+  const icons = pageIconFrames().sort((left, right) =>
+    sortKey(left).localeCompare(sortKey(right)),
   );
-  if (icons.length === 0) throw new Error("No recognized Lucide icons on this page");
+  if (icons.length === 0) throw new Error("No icon frames on this page");
   const origin = {
     x: Math.min(...icons.map((node) => node.x)),
     y: Math.min(...icons.map((node) => node.y)),
@@ -443,6 +435,52 @@ function arrangeIcons(): void {
   figma.currentPage.selection = icons;
   figma.viewport.scrollAndZoomIntoView(icons);
   post({ type: "arranged", count: icons.length });
+}
+
+async function publishRenameIdeas(renamed = 0): Promise<void> {
+  existingSlugs = await scanDocument();
+  candidates = getMissingIcons(catalog.icons, existingSlugs);
+  const icons: RenameSuggestion[] = pageIconFrames()
+    .filter((node) => !allowedIconNames.has(node.name))
+    .map((node) => {
+      const ownName = isIconSized(node) ? resolveLucideIconName(node.name) : null;
+      return {
+        id: node.id,
+        name: node.name,
+        ideas: suggestRenameIdeas(node.name).map((idea) => ({
+          ...idea,
+          taken: idea.name !== ownName && existingSlugs.has(idea.name),
+        })),
+      };
+    })
+    .sort((left, right) => left.name.localeCompare(right.name));
+  post({ type: "rename-ideas", icons, renamed });
+}
+
+async function renameIcons(renames: unknown): Promise<void> {
+  if (!Array.isArray(renames) || renames.length === 0 || renames.length > 10_000) {
+    throw new Error("Invalid rename request");
+  }
+  const frames = new Map(pageIconFrames().map((node) => [node.id, node]));
+  const updates = renames.map((entry: unknown) => {
+    const { id, name } = (entry ?? {}) as { id?: unknown; name?: unknown };
+    const node = typeof id === "string" ? frames.get(id) : undefined;
+    if (!node) throw new Error("An icon to rename is no longer on this page");
+    if (typeof name !== "string" || !allowedIconNames.has(name)) {
+      throw new Error("Rename target is not a current Lucide name");
+    }
+    return { node, name };
+  });
+  for (const { node, name } of updates) node.name = name;
+  figma.commitUndo();
+  await publishRenameIdeas(updates.length);
+}
+
+function selectIcon(id: unknown): void {
+  const node = pageIconFrames().find((frame) => frame.id === id);
+  if (!node) throw new Error("That icon is no longer on this page");
+  figma.currentPage.selection = [node];
+  figma.viewport.scrollAndZoomIntoView([node]);
 }
 
 function hasVisiblePaint(paints: readonly Paint[] | typeof figma.mixed): boolean {
@@ -597,6 +635,12 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
       generateFrames(request.count);
     } else if (request.type === "arrange") {
       arrangeIcons();
+    } else if (request.type === "suggest-names") {
+      await publishRenameIdeas();
+    } else if (request.type === "rename") {
+      await renameIcons(request.renames);
+    } else if (request.type === "select") {
+      selectIcon(request.id);
     } else if (request.type === "audit") {
       auditIcons();
     } else {

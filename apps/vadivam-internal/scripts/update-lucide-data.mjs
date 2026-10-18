@@ -71,6 +71,7 @@ const canonicalNames = entries
   .sort();
 const canonicalNameSet = new Set(canonicalNames);
 const deprecatedAliases = new Map(Object.entries(knownDeprecatedAliases));
+const iconTags = new Map(canonicalNames.map((name) => [name, []]));
 
 for (const entry of entries) {
   if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
@@ -81,6 +82,14 @@ for (const entry of entries) {
   const metadata = JSON.parse(
     await readFile(path.join(iconsDirectory, entry.name), "utf8"),
   );
+  const tags = metadata.tags ?? [];
+  if (
+    !Array.isArray(tags) ||
+    tags.some((tag) => typeof tag !== "string" || tag.length === 0 || tag.length > 80)
+  ) {
+    throw new Error(`Lucide metadata has invalid tags: ${entry.name}`);
+  }
+  iconTags.set(canonicalName, [...new Set(tags.map((tag) => tag.trim().toLowerCase()))]);
   for (const alias of metadata.aliases ?? []) {
     if (alias.deprecated !== true) continue;
     if (canonicalNameSet.has(alias.name)) {
@@ -121,13 +130,17 @@ await Promise.all([
     `${JSON.stringify(sortedAliases, null, 2)}\n`,
   ),
   writeFile(
+    new URL("lucide-icon-tags.json", dataDirectory),
+    `${JSON.stringify(Object.fromEntries(iconTags))}\n`,
+  ),
+  writeFile(
     new URL("lucide-icon-rankings.json", dataDirectory),
     `${JSON.stringify(rankingCatalog)}\n`,
   ),
 ]);
 
 console.log(
-  `Updated Lucide ${rankingCatalog.lucideVersion}: ${canonicalNames.length} canonical names, ${deprecatedAliases.size} deprecated aliases, and official popularity rankings`,
+  `Updated Lucide ${rankingCatalog.lucideVersion}: ${canonicalNames.length} canonical names, ${deprecatedAliases.size} deprecated aliases, tags, and official popularity rankings`,
 );
 if (unlisted.length > 0) {
   console.log(`Not on lucide.dev yet, ranked with zero popularity: ${unlisted.join(", ")}`);
