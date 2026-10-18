@@ -55,6 +55,7 @@
     "test": "bun scripts/test-suite.mjs full"
   },
   "dependencies": {
+    "proxy-addr": "2.0.8",
     "vadivam": "workspace:*",
     "vadivam-angular": "workspace:*",
     "vadivam-astro": "workspace:*",
