@@ -6,6 +6,9 @@ import path from "node:path";
 const knownDeprecatedAliases = { "circle-euro-sign": "circle-euro" };
 const LUCIDE_ICONS_URL = "https://lucide.dev/icons/";
 const POPULARITY_RANKING = "Lucide icon-page visitors over the last 12 months";
+// lucide.dev can trail the newest release by a few days. More unlisted icons
+// than this means the site data changed shape rather than just lagging.
+const MAX_UNLISTED_ICONS = 25;
 
 const checkout = process.argv[2];
 if (!checkout) {
@@ -32,11 +35,18 @@ async function fetchText(url) {
   return response.text();
 }
 
-function decodeSingleQuotedString(source, quoteIndex) {
+// Decodes a JavaScript string literal quoted with ', " or ` (a template
+// literal without substitutions), starting at its opening quote.
+function decodeStringLiteral(source, quoteIndex) {
+  const quote = source[quoteIndex];
+  if (!["'", '"', "`"].includes(quote)) throw new Error("Lucide data is not a string literal");
   let result = "";
   for (let index = quoteIndex + 1; index < source.length; index += 1) {
     const character = source[index];
-    if (character === "'") return result;
+    if (character === quote) return result;
+    if (quote === "`" && character === "$" && source[index + 1] === "{") {
+      throw new Error("Unsupported template substitution in Lucide data");
+    }
     if (character !== "\\") {
       result += character;
       continue;
@@ -47,6 +57,8 @@ function decodeSingleQuotedString(source, quoteIndex) {
     const simpleEscapes = {
       "'": "'",
       '"': '"',
+      "`": "`",
+      $: "$",
       "\\": "\\",
       "/": "/",
       b: "\b",
@@ -93,11 +105,10 @@ async function fetchLucidePopularity() {
   if (!chunkPath) throw new Error("Could not locate Lucide icon data asset");
 
   const source = await fetchText(new URL(chunkPath, LUCIDE_ICONS_URL));
-  const marker = "=JSON.parse('{\"icons\":[";
-  const markerIndex = source.indexOf(marker);
+  const markerIndex = source.search(/=JSON\.parse\(['`]\{"icons":\[/);
   if (markerIndex < 0) throw new Error("Could not locate Lucide icon catalog data");
   const quoteIndex = markerIndex + "=JSON.parse(".length;
-  const catalog = JSON.parse(decodeSingleQuotedString(source, quoteIndex));
+  const catalog = JSON.parse(decodeStringLiteral(source, quoteIndex));
   if (!Array.isArray(catalog.icons)) throw new Error("Lucide site icon data is invalid");
 
   const popularity = new Map();
@@ -148,12 +159,19 @@ for (const entry of entries) {
 }
 
 const popularity = await fetchLucidePopularity();
-const missingPopularity = canonicalNames.filter((name) => !popularity.has(name));
-if (missingPopularity.length > 0) {
-  throw new Error(`Lucide site is missing canonical icons: ${missingPopularity.join(", ")}`);
+// A lagging site still lists a renamed icon under its deprecated alias.
+for (const [alias, canonicalName] of deprecatedAliases) {
+  if (!popularity.has(canonicalName) && popularity.has(alias)) {
+    popularity.set(canonicalName, popularity.get(alias));
+  }
+}
+const unlisted = canonicalNames.filter((name) => !popularity.has(name));
+if (unlisted.length > MAX_UNLISTED_ICONS) {
+  throw new Error(`Lucide site is missing ${unlisted.length} canonical icons: ${unlisted.join(", ")}`);
 }
 const rankings = canonicalNames
-  .map((name) => ({ name, popularity: popularity.get(name) }))
+  // Icons released after the site's last deploy have no visitors yet.
+  .map((name) => ({ name, popularity: popularity.get(name) ?? 0 }))
   .sort(
     (left, right) =>
       right.popularity - left.popularity || left.name.localeCompare(right.name),
@@ -189,3 +207,6 @@ await Promise.all([
 console.log(
   `Updated Lucide ${rankingCatalog.lucideVersion}: ${canonicalNames.length} canonical names, ${deprecatedAliases.size} deprecated aliases, and official popularity rankings`,
 );
+if (unlisted.length > 0) {
+  console.log(`Not on lucide.dev yet, ranked with zero popularity: ${unlisted.join(", ")}`);
+}
