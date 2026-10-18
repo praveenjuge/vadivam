@@ -120,11 +120,14 @@ function renderRenameIdeas(icons: RenameSuggestion[]): void {
   }
 
   const fragment = document.createDocumentFragment();
+  // Two frames can share an exact fix (alert-circle and AlertCircle); rename only the first.
+  const targets = new Set<string>();
   const exact = icons.flatMap((icon) => {
     const idea = icon.ideas[0];
-    return idea && EXACT_RENAME_REASONS.has(idea.reason) && !idea.taken
-      ? [{ id: icon.id, name: idea.name }]
-      : [];
+    if (!idea || !EXACT_RENAME_REASONS.has(idea.reason) || idea.taken) return [];
+    if (targets.has(idea.name)) return [];
+    targets.add(idea.name);
+    return [{ id: icon.id, name: idea.name }];
   });
   if (exact.length > 0) {
     const item = document.createElement("li");

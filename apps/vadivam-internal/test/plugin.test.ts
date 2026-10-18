@@ -236,6 +236,24 @@ describe("compiled Figma plugin", () => {
     });
     expect(existing[3]!.name).toBe("columns");
 
+    await ui.onmessage?.({
+      type: "rename",
+      renames: [
+        { id: "1:0", name: "columns-2" },
+        { id: "1:3", name: "columns-2" },
+      ],
+    });
+    expect(messages[messages.length - 1]).toEqual({
+      type: "error",
+      message: "Two icons would get the same name",
+    });
+    expect(existing.map((frame) => frame.name)).toEqual([
+      "x",
+      "check",
+      "chevron-right",
+      "columns",
+    ]);
+
     await ui.onmessage?.({ type: "rename", renames: [{ id: "1:3", name: "columns-2" }] });
     expect(existing[3]!.name).toBe("columns-2");
     expect(messages[messages.length - 1]).toEqual({

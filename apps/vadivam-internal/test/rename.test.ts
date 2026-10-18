@@ -27,6 +27,7 @@ describe("suggestRenameIdeas", () => {
     expect(suggestRenameIdeas("Arrow Right copy")).toEqual([
       { name: "arrow-right", reason: "format" },
     ]);
+    expect(suggestRenameIdeas("x ")).toEqual([{ name: "x", reason: "format" }]);
     expect(suggestRenameIdeas("search-icon")).toEqual([
       { name: "search", reason: "format" },
     ]);

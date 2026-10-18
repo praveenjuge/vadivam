@@ -471,6 +471,9 @@ async function renameIcons(renames: unknown): Promise<void> {
     }
     return { node, name };
   });
+  if (new Set(updates.map((update) => update.name)).size !== updates.length) {
+    throw new Error("Two icons would get the same name");
+  }
   for (const { node, name } of updates) node.name = name;
   figma.commitUndo();
   await publishRenameIdeas(updates.length);

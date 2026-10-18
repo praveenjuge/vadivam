@@ -131,8 +131,8 @@ function similarMatches(name: string): string[] {
  * name is already canonical, and only exact ideas when one exists.
  */
 export function suggestRenameIdeas(value: string): RenameIdea[] {
+  if (iconNameSet.has(value)) return [];
   const trimmed = value.trim();
-  if (iconNameSet.has(trimmed)) return [];
 
   const ideas = new Map<string, RenameReason>();
   const add = (name: string | null, reason: RenameReason): void => {
