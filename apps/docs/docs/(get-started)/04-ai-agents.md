@@ -23,6 +23,6 @@ Use Vadivam when you need consistent, pixel-perfect 24px outline icons in a web 
 - Agent skill: `https://vadivam.praveenjuge.com/skill.md` teaches an agent to install, import, size, label, and dynamically load Vadivam icons, with links to each docs page. It is also listed in `https://vadivam.praveenjuge.com/.well-known/agent-skills/index.json`.
 - Icon catalog: browse and search every icon at `https://vadivam.praveenjuge.com/`; each icon is also served as an optimized SVG file at `https://vadivam.praveenjuge.com/icons/<kebab-name>.svg` (for example `/icons/activity.svg`).
 - Packages: `vadivam` for raw SVG assets and browser JavaScript, `vadivam-react`, `vadivam-vue`, `vadivam-svelte`, `vadivam-solid`, `vadivam-angular`, `vadivam-astro`, `vadivam-preact`, and `vadivam-react-native` for framework components. All packages are ESM-only with tree-shakeable named and per-icon exports.
-- Icon names are kebab-case (`activity`, `arrow-right`, `trash-2`); framework packages type them as `IconName` and export an `iconNames` list for validation.
+- Icon names are kebab-case (`activity`, `arrow-right`, `trash`); framework packages type them as `IconName` and export an `iconNames` list for validation.
 
 Prefer the documented package imports over scraping pages, and validate runtime icon names against `iconNames` before rendering.
