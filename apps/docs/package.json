@@ -12,12 +12,7 @@
   },
   "dependencies": {
     "@astrojs/cloudflare": "14.4.0",
-    "@astrojs/mdx": "8.1.0",
-    "@shikijs/twoslash": "4.5.0",
-    "@tailwindcss/typography": "0.5.20",
-    "@tailwindcss/vite": "4.3.3",
     "blume": "2.2.4",
-    "tailwindcss": "4.3.3",
     "vadivam": "workspace:*"
   },
   "optionalDependencies": {

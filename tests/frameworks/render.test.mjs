@@ -6,7 +6,7 @@ import { h as preactH } from "preact";
 import { createComponent as createSolidComponent } from "solid-js";
 import { renderToString as renderSolid } from "solid-js/web";
 import { createSSRApp, h as vueH } from "vue";
-import { renderToString as renderVue } from "@vue/server-renderer";
+import { renderToString as renderVue } from "vue/server-renderer";
 import {
   Activity as PreactActivity,
   Icon as PreactIcon,
