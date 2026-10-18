@@ -20,9 +20,18 @@ describe("decodeStringLiteral", () => {
   });
 
   test("still decodes single-quoted strings", () => {
-    const source = String.raw`JSON.parse('{"name":"it\'s x\x21"}')`;
+    // Plain strings with doubled backslashes: Bun's transpiler decodes \u
+    // escapes even inside String.raw.
+    const source = "JSON.parse('{\"name\":\"it\\'s \\x21\"}')";
     const decoded = decodeStringLiteral(source, source.indexOf("'"));
-    expect(JSON.parse(decoded)).toEqual({ name: "it's x!" });
+    expect(JSON.parse(decoded)).toEqual({ name: "it's !" });
+  });
+
+  test("keeps the character after a Unicode escape", () => {
+    expect(decodeStringLiteral("'\\u0041BC'", 0)).toBe("ABC");
+    expect(decodeStringLiteral("'\\u0041'", 0)).toBe("A");
+    expect(decodeStringLiteral("'\\u{41}\\u{1F600}Z'", 0)).toBe("A\u{1F600}Z");
+    expect(() => decodeStringLiteral("'\\u004'", 0)).toThrow("Invalid Unicode escape");
   });
 });
 
