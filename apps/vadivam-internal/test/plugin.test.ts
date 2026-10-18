@@ -234,6 +234,8 @@ describe("compiled Figma plugin", () => {
     });
     currentPage.children.push(...savedChildren);
 
+    // Suggest also ignores the large layout frame.
+    currentPage.children.push(layout);
     await ui.onmessage?.({ type: "suggest-names" });
     expect(messages[messages.length - 1]).toEqual({
       type: "rename-ideas",
@@ -246,6 +248,7 @@ describe("compiled Figma plugin", () => {
       ],
       renamed: 0,
     });
+    currentPage.children.splice(currentPage.children.indexOf(layout), 1);
 
     await ui.onmessage?.({ type: "rename", renames: [{ id: "1:3", name: "made-up" }] });
     expect(messages[messages.length - 1]).toEqual({
