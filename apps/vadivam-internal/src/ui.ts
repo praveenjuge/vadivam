@@ -168,7 +168,10 @@ function renderRenameIdeas(icons: RenameSuggestion[]): void {
       const reason = document.createElement("span");
       button.type = "button";
       button.className = "idea";
-      button.title = `Rename to ${idea.name}`;
+      button.title = idea.taken
+        ? `${idea.name} is already used in this file`
+        : `Rename to ${idea.name}`;
+      button.disabled = idea.taken;
       name.className = "idea-name";
       reason.className = "idea-reason";
       name.textContent = idea.name;

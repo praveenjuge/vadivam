@@ -313,3 +313,8 @@ li:hover { background: var(--hover); }
   color: var(--faint);
   font-size: 10px;
 }
+
+.idea:disabled:hover {
+  background: var(--surface);
+  border-color: var(--figma-color-border-strong);
+}

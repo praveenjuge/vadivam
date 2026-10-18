@@ -254,6 +254,13 @@ describe("compiled Figma plugin", () => {
       "columns",
     ]);
 
+    await ui.onmessage?.({ type: "rename", renames: [{ id: "1:3", name: "check" }] });
+    expect(messages[messages.length - 1]).toEqual({
+      type: "error",
+      message: '"check" is already used in this file',
+    });
+    expect(existing[3]!.name).toBe("columns");
+
     await ui.onmessage?.({ type: "rename", renames: [{ id: "1:3", name: "columns-2" }] });
     expect(existing[3]!.name).toBe("columns-2");
     expect(messages[messages.length - 1]).toEqual({

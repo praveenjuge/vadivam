@@ -111,16 +111,31 @@ function pageIconFrames(): IconContainer[] {
   );
 }
 
-async function scanDocument(): Promise<Set<string>> {
+// Canonical icon frames across every page, keyed by their Lucide name.
+async function iconNameOwners(): Promise<Map<string, SceneNode[]>> {
   await figma.loadAllPagesAsync();
-  const names = new Set<string>();
+  const owners = new Map<string, SceneNode[]>();
   for (const page of figma.root.children) {
     for (const node of page.children) {
       const iconName = resolveLucideIconName(node.name);
-      if (isCanonicalIconNode(node) && iconName) names.add(iconName);
+      if (isCanonicalIconNode(node) && iconName) {
+        owners.set(iconName, [...(owners.get(iconName) ?? []), node]);
+      }
     }
   }
-  return names;
+  return owners;
+}
+
+function isOwnedByAnother(
+  owners: ReadonlyMap<string, SceneNode[]>,
+  name: string,
+  node: SceneNode,
+): boolean {
+  return (owners.get(name) ?? []).some((owner) => owner !== node);
+}
+
+async function scanDocument(): Promise<Set<string>> {
+  return new Set((await iconNameOwners()).keys());
 }
 
 function summary(): CatalogSummary {
@@ -438,21 +453,19 @@ function arrangeIcons(): void {
 }
 
 async function publishRenameIdeas(renamed = 0): Promise<void> {
-  existingSlugs = await scanDocument();
+  const owners = await iconNameOwners();
+  existingSlugs = new Set(owners.keys());
   candidates = getMissingIcons(catalog.icons, existingSlugs);
   const icons: RenameSuggestion[] = pageIconFrames()
     .filter((node) => !allowedIconNames.has(node.name))
-    .map((node) => {
-      const ownName = isIconSized(node) ? resolveLucideIconName(node.name) : null;
-      return {
-        id: node.id,
-        name: node.name,
-        ideas: suggestRenameIdeas(node.name).map((idea) => ({
-          ...idea,
-          taken: idea.name !== ownName && existingSlugs.has(idea.name),
-        })),
-      };
-    })
+    .map((node) => ({
+      id: node.id,
+      name: node.name,
+      ideas: suggestRenameIdeas(node.name).map((idea) => ({
+        ...idea,
+        taken: isOwnedByAnother(owners, idea.name, node),
+      })),
+    }))
     .sort((left, right) => left.name.localeCompare(right.name));
   post({ type: "rename-ideas", icons, renamed });
 }
@@ -474,6 +487,9 @@ async function renameIcons(renames: unknown): Promise<void> {
   if (new Set(updates.map((update) => update.name)).size !== updates.length) {
     throw new Error("Two icons would get the same name");
   }
+  const owners = await iconNameOwners();
+  const taken = updates.find(({ node, name }) => isOwnedByAnother(owners, name, node));
+  if (taken) throw new Error(`"${taken.name}" is already used in this file`);
   for (const { node, name } of updates) node.name = name;
   figma.commitUndo();
   await publishRenameIdeas(updates.length);
