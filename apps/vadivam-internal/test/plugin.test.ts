@@ -165,9 +165,11 @@ describe("compiled Figma plugin", () => {
     expect(catalog.candidates.map((icon) => icon.name)).not.toContain("x");
     const expectedNames = catalog.candidates.slice(0, 2).map((icon) => icon.name);
 
-    // A 24×24 frame with an unknown name is arranged alongside the rest.
+    // A 24×24 frame with an unknown name is arranged alongside the rest, while a
+    // large layout frame that happens to share a Lucide name is left alone.
     const unknown = { ...existing[0]!, id: "1:9", name: "made-up", x: 400, y: 400 };
-    currentPage.children.push(unknown);
+    const layout = { ...existing[0]!, id: "1:10", name: "Grid", width: 800, height: 600, x: -500, y: -500 };
+    currentPage.children.push(unknown, layout);
     await ui.onmessage?.({ type: "arrange" });
     expect(messages[messages.length - 1]).toEqual({ type: "arranged", count: 5 });
     expect(
@@ -179,7 +181,8 @@ describe("compiled Figma plugin", () => {
       ["columns", 80, 0],
       ["made-up", 120, 0],
     ]);
-    currentPage.children.splice(currentPage.children.indexOf(unknown), 1);
+    expect([layout.x, layout.y]).toEqual([-500, -500]);
+    currentPage.children.splice(currentPage.children.indexOf(unknown), 2);
 
     await ui.onmessage?.({ type: "audit" });
     const audit = messages.find(

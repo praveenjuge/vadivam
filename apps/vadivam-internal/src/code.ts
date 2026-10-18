@@ -100,14 +100,10 @@ function isCanonicalIconNode(node: SceneNode): boolean {
   return isIconSized(node) && resolveLucideIconName(node.name) !== null;
 }
 
-// Top-level icon frames on this page, whether or not their names are current.
+// Top-level 24×24 icon frames on this page, whether or not their names are current.
 function pageIconFrames(): IconContainer[] {
   return figma.currentPage.children.filter(
-    (node): node is IconContainer =>
-      isIconContainer(node) &&
-      (isIconSized(node) ||
-        resolveLucideIconName(node.name) !== null ||
-        getDeprecatedLucideReplacement(node.name) !== null),
+    (node): node is IconContainer => isIconContainer(node) && isIconSized(node),
   );
 }
 
