@@ -40,7 +40,7 @@ describe("resolveLucideIconName", () => {
 describe("parseLucideCatalog", () => {
   test("validates canonical names and popularity order", () => {
     const catalog = parseLucideCatalog({
-      lucideVersion: "1.30.0",
+      lucideVersion: "1.59.0",
       retrievedAt: "2026-08-08T00:00:00.000Z",
       source: "https://lucide.dev/icons/",
       ranking: "Lucide icon-page visitors over the last 12 months",
@@ -50,12 +50,12 @@ describe("parseLucideCatalog", () => {
       ],
     }, resolveLucideIconName);
     expect(catalog.icons.map((icon) => icon.name)).toEqual(["x", "search"]);
-    expect(catalog.lucideVersion).toBe("1.30.0");
+    expect(catalog.lucideVersion).toBe("1.59.0");
   });
 
   test("rejects deprecated, unsafe, duplicate, or out-of-order data", () => {
     const base = {
-      lucideVersion: "1.30.0",
+      lucideVersion: "1.59.0",
       retrievedAt: "2026-08-08T00:00:00.000Z",
       source: "https://lucide.dev/icons/",
       ranking: "Lucide icon-page visitors over the last 12 months",
@@ -92,9 +92,9 @@ describe("parseLucideCatalog", () => {
     ).toThrow("not sorted by popularity");
   });
 
-  test("bundles every canonical Lucide 1.30.0 name in official popularity order", () => {
+  test("bundles every canonical Lucide 1.59.0 name in official popularity order", () => {
     const catalog = parseLucideCatalog(rankings, resolveLucideIconName);
-    expect(catalog.lucideVersion).toBe("1.30.0");
+    expect(catalog.lucideVersion).toBe("1.59.0");
     expect(catalog.icons).toHaveLength(lucideIconNames.length);
     expect(catalog.icons.map((icon) => icon.name).sort()).toEqual(
       Array.from(lucideIconNames),
@@ -111,7 +111,7 @@ describe("parseLucideCatalog", () => {
 
 test("getMissingIcons excludes icons already present in the file", () => {
   const catalog = parseLucideCatalog({
-    lucideVersion: "1.30.0",
+    lucideVersion: "1.59.0",
     retrievedAt: "2026-08-08T00:00:00.000Z",
     source: "https://lucide.dev/icons/",
     ranking: "Lucide icon-page visitors over the last 12 months",
