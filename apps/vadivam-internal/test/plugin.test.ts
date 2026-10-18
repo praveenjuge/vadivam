@@ -223,6 +223,14 @@ describe("compiled Figma plugin", () => {
       violations: ['Deprecated Lucide name; use "columns-2"'],
     });
 
+    const savedChildren = currentPage.children.splice(0);
+    await ui.onmessage?.({ type: "suggest-names" });
+    expect(messages[messages.length - 1]).toEqual({
+      type: "error",
+      message: "No icon frames on this page",
+    });
+    currentPage.children.push(...savedChildren);
+
     await ui.onmessage?.({ type: "suggest-names" });
     expect(messages[messages.length - 1]).toEqual({
       type: "rename-ideas",
