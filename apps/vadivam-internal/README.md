@@ -9,7 +9,7 @@ Private Figma workflow for maintaining Vadivam's source frames and publishable C
 3. Select `apps/vadivam-internal/manifest.json`.
 4. Run **Vadivam Internal** in the Vadivam Icons file.
 
-The plugin has five tabs: **Create**, **Arrange**, **Rename**, **Audit**, and **Library**. The header shows the bundled Lucide version and how many Lucide icons the file already has; the refresh button rescans every page. The batch size, column count, and last open tab are saved per user with Figma's client storage.
+The plugin has six tabs: **Create**, **Replace**, **Arrange**, **Rename**, **Audit**, and **Library**. The header shows the bundled Lucide version and how many Lucide icons the file already has; the refresh button rescans every page. The batch size, column count, and last open tab are saved per user with Figma's client storage.
 
 ## Create or update the Community library
 
@@ -22,6 +22,8 @@ After changing `icons/`, rebuild and run the internal plugin in the library file
 The latest stable canonical Lucide icon names and the default popularity order from [lucide.dev/icons](https://lucide.dev/icons/) are stored locally under `src/data/` and bundled into the plugin, so Figma does not depend on cross-origin network access. Popularity follows Lucide's icon-page visitor ranking over the previous 12 months. The plugin scans every page for named top-level `24×24` nodes, and the **Create** tab makes frames for the next missing Lucide names on the current page with the canonical white fill, visible red `2 px` grid, SVG export settings, `40 px` column step, and `72 px` row step. New batches wrap at the column count set in **Arrange**.
 
 Run `bun run update:lucide-data -- /path/to/lucide-release-checkout` from `apps/vadivam-internal` to refresh the canonical name list, deprecated aliases, search tags, and official popularity order. The checkout must be on an exact stable Lucide release tag.
+
+**Replace** swaps new artwork into existing icon frames. Choose **Choose SVGs**, pick one or more 24×24 SVG files, and each file replaces the layers inside the top-level 24×24 frame on the current page with the same name. File names match in any format, so `ArrowRight.svg`, `arrow_right.svg`, and `arrow-right.svg` all replace `arrow-right`. The frame keeps its position, fill, grid, and export settings. Files with no matching frame, SVGs that aren't 24×24, and instances are skipped and listed with the reason; the replaced frames are selected and the whole replace is one undo step.
 
 **Arrange** sorts every top-level 24×24 icon frame on the page A–Z into a grid. Pick the number of columns (1–100, default 40) with the stepper or the 10 / 20 / 32 / 40 presets; the preview shows the resulting rows before you apply it. It works on its own: frames with deprecated or unknown names are arranged too, so you don't need to audit or rename first.
 

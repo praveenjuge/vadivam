@@ -19,6 +19,7 @@
 
     <nav class="tabs" role="tablist" aria-label="Tools">
       <button id="tab-create" role="tab" type="button" aria-controls="panel-create" data-tab="create">Create <span class="badge" data-badge="create"></span></button>
+      <button id="tab-replace" role="tab" type="button" aria-controls="panel-replace" data-tab="replace">Replace <span class="badge" data-badge="replace"></span></button>
       <button id="tab-arrange" role="tab" type="button" aria-controls="panel-arrange" data-tab="arrange">Arrange</button>
       <button id="tab-rename" role="tab" type="button" aria-controls="panel-rename" data-tab="rename">Rename <span class="badge" data-badge="rename"></span></button>
       <button id="tab-audit" role="tab" type="button" aria-controls="panel-audit" data-tab="audit">Audit <span class="badge" data-badge="audit"></span></button>
@@ -38,6 +39,18 @@
         </div>
       </div>
       <ol id="create-results" class="results" aria-label="Next icons to draw"></ol>
+    </section>
+
+    <section id="panel-replace" class="panel" role="tabpanel" aria-labelledby="tab-replace" hidden>
+      <div class="controls">
+        <p class="lede">Pick 24×24 SVG files to swap into the icon frames on this page. Each file replaces the artwork in the frame with the same name; the frame itself stays put.</p>
+        <div class="row">
+          <button id="choose-svgs" class="primary" type="button" data-action>Choose SVGs</button>
+          <span id="replace-meta" class="subtle"></span>
+          <input id="svg-files" type="file" accept=".svg,image/svg+xml" multiple hidden />
+        </div>
+      </div>
+      <ol id="replace-results" class="results" aria-label="Replace results"></ol>
     </section>
 
     <section id="panel-arrange" class="panel" role="tabpanel" aria-labelledby="tab-arrange" hidden>

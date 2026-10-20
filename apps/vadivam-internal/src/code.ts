@@ -20,18 +20,23 @@ import {
   resolveLucideIconName,
 } from "./lucide";
 import {
+  MAX_SVG_FILES,
+  MAX_SVG_LENGTH,
   TABS,
   type CatalogSummary,
   type IconAuditIssue,
   type PluginSettings,
   type PluginToUiMessage,
+  type ReplacedIcon,
   type RenameSuggestion,
+  type SkippedSvg,
+  type SvgFile,
   type Tab,
   type UiToPluginMessage,
 } from "./protocol";
 import { suggestRenameIdeas, toKebabName } from "./rename";
 
-const UI_WIDTH = 360;
+const UI_WIDTH = 420;
 const UI_HEIGHT = 600;
 const SETTINGS_KEY = "settings";
 // The published component set keeps a fixed width; Arrange columns are a per-user setting.
@@ -329,17 +334,15 @@ function createLibraryComponent(icon: { name: string; svg: string }): ComponentN
   }
 }
 
-function replaceLibraryGlyph(
-  component: ComponentNode,
-  icon: { name: string; svg: string },
-): void {
-  const source = figma.createNodeFromSvg(icon.svg);
-  const oldChildren = [...component.children];
-  const newChildren = [...source.children];
+// Swaps a node's layers for a 24×24 SVG's layers; the node itself and its settings stay.
+function replaceArtwork(target: FrameNode | ComponentNode, svg: string): void {
+  const source = figma.createNodeFromSvg(svg);
+  const oldChildren = [...target.children];
   const moved: SceneNode[] = [];
   try {
-    for (const child of newChildren) {
-      component.appendChild(child);
+    if (!isIconSized(source)) throw new Error("SVG must be 24×24");
+    for (const child of [...source.children]) {
+      target.appendChild(child);
       moved.push(child);
     }
   } catch (error) {
@@ -349,6 +352,13 @@ function replaceLibraryGlyph(
   }
   for (const child of oldChildren) child.remove();
   source.remove();
+}
+
+function replaceLibraryGlyph(
+  component: ComponentNode,
+  icon: { name: string; svg: string },
+): void {
+  replaceArtwork(component, icon.svg);
   tagLibraryComponent(component, icon.name);
 }
 
@@ -506,6 +516,69 @@ async function arrangeIcons(columnsValue: unknown): Promise<void> {
     columns,
     rows: Math.ceil(icons.length / columns),
   });
+}
+
+function parseSvgFiles(value: unknown): SvgFile[] {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_SVG_FILES) {
+    throw new Error(`Choose between 1 and ${MAX_SVG_FILES} SVG files`);
+  }
+  return value.map((entry: unknown) => {
+    const { name, svg } = (entry ?? {}) as { name?: unknown; svg?: unknown };
+    if (typeof name !== "string" || typeof svg !== "string" || svg.length > MAX_SVG_LENGTH) {
+      throw new Error("Invalid SVG file");
+    }
+    return { name, svg };
+  });
+}
+
+// Each file replaces the artwork of the 24×24 frames on this page with the same
+// name; "ArrowRight.svg", "arrow_right.svg", and "arrow-right.svg" all match "arrow-right".
+function replaceIcons(filesValue: unknown): void {
+  const files = parseSvgFiles(filesValue);
+  const frames = new Map<string, IconContainer[]>();
+  for (const node of pageIconFrames()) {
+    const key = toKebabName(node.name);
+    frames.set(key, [...(frames.get(key) ?? []), node]);
+  }
+  if (frames.size === 0) throw new Error("No icon frames on this page");
+
+  const replaced: ReplacedIcon[] = [];
+  const skipped: SkippedSvg[] = [];
+  const used = new Set<string>();
+  for (const file of files) {
+    const key = toKebabName(file.name.replace(/\.svg$/i, ""));
+    const targets = frames.get(key);
+    if (!targets) {
+      skipped.push({ file: file.name, reason: "No icon frame with this name on this page" });
+      continue;
+    }
+    if (used.has(key)) {
+      skipped.push({ file: file.name, reason: "Another file already replaced this frame" });
+      continue;
+    }
+    used.add(key);
+    for (const target of targets) {
+      if (target.type === "INSTANCE") {
+        skipped.push({ file: file.name, reason: `"${target.name}" is an instance; detach it first` });
+        continue;
+      }
+      try {
+        replaceArtwork(target, file.svg);
+        replaced.push({ id: target.id, name: target.name });
+      } catch (error) {
+        skipped.push({ file: file.name, reason: messageFromError(error) });
+      }
+    }
+  }
+
+  if (replaced.length > 0) {
+    const ids = new Set(replaced.map((icon) => icon.id));
+    const nodes = pageIconFrames().filter((node) => ids.has(node.id));
+    figma.currentPage.selection = nodes;
+    figma.viewport.scrollAndZoomIntoView(nodes);
+    figma.commitUndo();
+  }
+  post({ type: "replaced", replaced, skipped });
 }
 
 async function publishRenameIdeas(renamed = 0): Promise<void> {
@@ -723,6 +796,8 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
       generateFrames(request.count);
     } else if (request.type === "arrange") {
       await arrangeIcons(request.columns ?? settings.columns);
+    } else if (request.type === "replace") {
+      replaceIcons(request.files);
     } else if (request.type === "suggest-names") {
       await publishRenameIdeas();
     } else if (request.type === "rename") {

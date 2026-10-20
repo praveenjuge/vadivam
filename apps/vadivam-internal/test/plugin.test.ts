@@ -371,6 +371,137 @@ describe("compiled Figma plugin", () => {
     });
   });
 
+  test("replaces frame artwork with matching SVG files", async () => {
+    const messages: Array<Record<string, unknown>> = [];
+    const commits: number[] = [];
+    const page: any = {
+      name: "Icons",
+      children: [],
+      selection: [],
+      findAll(predicate: (node: any) => boolean) {
+        return page.children.filter(predicate);
+      },
+    };
+
+    function detach(node: any): void {
+      const index = node.parent?.children.indexOf(node) ?? -1;
+      if (index >= 0) node.parent.children.splice(index, 1);
+    }
+
+    function vector(name: string, parent: any): any {
+      const node: any = { type: "VECTOR", name, parent, remove: () => detach(node) };
+      parent.children.push(node);
+      return node;
+    }
+
+    function container(type: string, id: string, name: string, size = 24): any {
+      const node: any = {
+        type,
+        id,
+        name,
+        width: size,
+        height: size,
+        x: 40,
+        y: 72,
+        children: [],
+        parent: page,
+        appendChild(child: any) {
+          detach(child);
+          child.parent = node;
+          node.children.push(child);
+        },
+        remove() {
+          detach(node);
+          node.removed = true;
+        },
+      };
+      page.children.push(node);
+      return node;
+    }
+
+    const arrow = container("FRAME", "1:1", "arrow-right");
+    const check = container("FRAME", "1:2", "check");
+    const instance = container("INSTANCE", "1:3", "x");
+    for (const frame of [arrow, check, instance]) vector("Old", frame);
+
+    const ui: any = {
+      postMessage(message: Record<string, unknown>) {
+        messages.push(message);
+      },
+    };
+    const figmaMock: any = {
+      showUI() {},
+      on() {},
+      clientStorage: clientStorage(),
+      ui,
+      root: { children: [page] },
+      currentPage: page,
+      viewport: { center: { x: 0, y: 0 }, scrollAndZoomIntoView() {} },
+      async loadAllPagesAsync() {},
+      commitUndo() {
+        commits.push(commits.length + 1);
+      },
+      // The mock reads the size from the SVG's width attribute.
+      createNodeFromSvg(svg: string) {
+        const size = Number(/width="(\d+)"/.exec(svg)?.[1] ?? 24);
+        const frame = container("FRAME", `svg:${page.children.length}`, "SVG", size);
+        vector("New", frame);
+        vector("New", frame);
+        return frame;
+      },
+    };
+    const bundle = readFileSync(new URL("../dist/code.js", import.meta.url), "utf8");
+    vm.runInNewContext(bundle, {
+      figma: figmaMock,
+      __html__: "<html></html>",
+      Set,
+      Map,
+      Promise,
+      JSON,
+      Math,
+      Number,
+      Error,
+      Intl,
+    });
+    await waitFor(() => messages.some((message) => message.type === "catalog"));
+
+    await ui.onmessage({ type: "replace", files: [] });
+    expect(messages[messages.length - 1]).toEqual({
+      type: "error",
+      message: "Choose between 1 and 2000 SVG files",
+    });
+
+    const svg = (size: number) => `<svg width="${size}" height="${size}"></svg>`;
+    await ui.onmessage({
+      type: "replace",
+      files: [
+        { name: "ArrowRight.svg", svg: svg(24) },
+        { name: "arrow_right.svg", svg: svg(24) },
+        { name: "check.svg", svg: svg(48) },
+        { name: "x.svg", svg: svg(24) },
+        { name: "made-up.svg", svg: svg(24) },
+      ],
+    });
+    expect(messages[messages.length - 1]).toEqual({
+      type: "replaced",
+      replaced: [{ id: "1:1", name: "arrow-right" }],
+      skipped: [
+        { file: "arrow_right.svg", reason: "Another file already replaced this frame" },
+        { file: "check.svg", reason: "SVG must be 24×24" },
+        { file: "x.svg", reason: '"x" is an instance; detach it first' },
+        { file: "made-up.svg", reason: "No icon frame with this name on this page" },
+      ],
+    });
+    // The frame keeps its place; only its layers change, and the SVG frames are cleaned up.
+    expect(arrow.children.map((child: any) => child.name)).toEqual(["New", "New"]);
+    expect([arrow.x, arrow.y]).toEqual([40, 72]);
+    expect(check.children.map((child: any) => child.name)).toEqual(["Old"]);
+    expect(instance.children.map((child: any) => child.name)).toEqual(["Old"]);
+    expect(page.children).toEqual([arrow, check, instance]);
+    expect(page.selection).toEqual([arrow]);
+    expect(commits).toHaveLength(1);
+  });
+
   test("creates and updates the documented canonical component library", async () => {
     const messages: Array<Record<string, unknown>> = [];
     const commits: number[] = [];

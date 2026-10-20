@@ -1,5 +1,7 @@
 import {
   EXACT_RENAME_REASONS,
+  MAX_SVG_FILES,
+  MAX_SVG_LENGTH,
   TABS,
   type CatalogSummary,
   type IconAuditIssue,
@@ -9,6 +11,8 @@ import {
   type PluginToUiMessage,
   type RenameReason,
   type RenameSuggestion,
+  type ReplacedIcon,
+  type SkippedSvg,
   type Tab,
   type UiToPluginMessage,
 } from "./protocol";
@@ -31,6 +35,10 @@ const tabs = [...document.querySelectorAll<HTMLButtonElement>("[role=tab]")];
 const countInput = element<HTMLInputElement>("#count");
 const generateButton = element<HTMLButtonElement>("#generate");
 const createResults = element<HTMLOListElement>("#create-results");
+const chooseSvgsButton = element<HTMLButtonElement>("#choose-svgs");
+const svgFilesInput = element<HTMLInputElement>("#svg-files");
+const replaceMeta = element<HTMLSpanElement>("#replace-meta");
+const replaceResults = element<HTMLOListElement>("#replace-results");
 const columnsInput = element<HTMLInputElement>("#columns");
 const presetButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-columns]")];
 const arrangeSummary = element<HTMLSpanElement>("#arrange-summary");
@@ -276,6 +284,63 @@ function renderProgress(): void {
   setBadge("create", catalog.remainingCount);
 }
 
+// Replace
+
+async function readSvgFiles(files: File[]): Promise<void> {
+  if (files.length > MAX_SVG_FILES) {
+    setStatus(`Choose up to ${numberFormat.format(MAX_SVG_FILES)} SVG files`, "error");
+    return;
+  }
+  const tooLarge = files.find((file) => file.size > MAX_SVG_LENGTH);
+  if (tooLarge) {
+    setStatus(`${tooLarge.name} is too large for an icon`, "error");
+    return;
+  }
+  busy = true;
+  updateActions();
+  setStatus("Reading SVGs…", "busy");
+  try {
+    const svgs = await Promise.all(
+      files.map(async (file) => ({ name: file.name, svg: await file.text() })),
+    );
+    startAction(`Replacing ${plural(svgs.length, "icon")}…`, { type: "replace", files: svgs });
+  } catch {
+    finishAction("Couldn't read those files", "error");
+  }
+}
+
+function renderReplaced(replaced: ReplacedIcon[], skipped: SkippedSvg[]): void {
+  replaceResults.replaceChildren();
+  setBadge("replace", skipped.length, skipped.length > 0);
+  replaceMeta.textContent = [
+    replaced.length > 0 ? `${plural(replaced.length, "icon")} replaced` : "",
+    skipped.length > 0 ? `${numberFormat.format(skipped.length)} skipped` : "",
+  ].filter(Boolean).join(" · ");
+
+  const fragment = document.createDocumentFragment();
+  for (const skip of skipped) {
+    const item = document.createElement("li");
+    const file = document.createElement("span");
+    const reasons = document.createElement("ul");
+    const reason = document.createElement("li");
+    item.className = "issue";
+    file.className = "candidate-name";
+    reasons.className = "violations";
+    file.textContent = skip.file;
+    reason.textContent = skip.reason;
+    reasons.append(reason);
+    item.append(file, reasons);
+    fragment.append(item);
+  }
+  for (const icon of replaced) {
+    const item = document.createElement("li");
+    item.className = "replaced";
+    item.append(targetButton(icon.id, icon.name));
+    fragment.append(item);
+  }
+  replaceResults.append(fragment);
+}
+
 // Arrange
 
 function renderPreview(): void {
@@ -449,6 +514,13 @@ generateButton.addEventListener("click", () => {
 arrangeButton.addEventListener("click", () => {
   startAction("Arranging icons A–Z…", { type: "arrange", columns: readColumns() });
 });
+chooseSvgsButton.addEventListener("click", () => svgFilesInput.click());
+svgFilesInput.addEventListener("change", () => {
+  const files = [...(svgFilesInput.files ?? [])];
+  // Clear the input so choosing the same files again still fires a change.
+  svgFilesInput.value = "";
+  if (files.length > 0) void readSvgFiles(files);
+});
 suggestButton.addEventListener("click", () => {
   startAction("Checking names…", { type: "suggest-names" });
 });
@@ -511,6 +583,18 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
         "success",
       );
       return;
+    case "replaced": {
+      renderReplaced(message.replaced, message.skipped);
+      const done = message.replaced.length;
+      const skipped = message.skipped.length;
+      finishAction(
+        done === 0
+          ? `Nothing replaced · ${plural(skipped, "file")} skipped`
+          : `Replaced ${plural(done, "icon")}${skipped > 0 ? ` · ${numberFormat.format(skipped)} skipped` : ""}`,
+        done === 0 ? "error" : "success",
+      );
+      return;
+    }
     case "rename-ideas": {
       renderRenameIdeas(message.icons);
       const left = message.icons.length;
