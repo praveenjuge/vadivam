@@ -5,43 +5,75 @@ import { fileURLToPath } from "node:url";
 import { publishablePackages } from "./packages.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const registry = "https://registry.npmjs.org";
+// npm can take well over five minutes to serve a version it has accepted.
+const verifyTimeoutMinutes = 30;
+const verifyIntervalMs = 15_000;
 
-function npm(args, cwd = root) {
-  return spawnSync("npm", args, { cwd, encoding: "utf8" });
+async function isPublished(name, version) {
+  const response = await fetch(`${registry}/${name}/${version}`, {
+    headers: { accept: "application/json", "cache-control": "no-cache" },
+  });
+  if (response.ok) return true;
+  if (response.status === 404) return false;
+  throw new Error(`Could not query ${name}@${version}: HTTP ${response.status}`);
 }
 
-function publishedVersion(name, version) {
-  const result = npm(["view", `${name}@${version}`, "version", "--prefer-online"]);
-  if (result.status === 0) return result.stdout.trim();
-  if (/\bE404\b|404 Not Found/.test(result.stderr)) return null;
-  throw new Error(`Could not query ${name}@${version}: ${result.stderr.trim()}`);
+function publish(cwd) {
+  return spawnSync("npm", ["publish", "--access", "public"], { cwd, encoding: "utf8" });
 }
 
-async function verify(name, version) {
-  for (let attempt = 0; attempt < 60; attempt += 1) {
-    if (publishedVersion(name, version) === version) return;
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-  }
-  throw new Error(`${name}@${version} did not become visible on npm.`);
+// A re-run can reach a version npm accepted earlier but does not serve yet.
+function versionExists(result) {
+  return /EPUBLISHCONFLICT|cannot publish over the previously published version/i.test(
+    result.stderr,
+  );
 }
 
+const pending = [];
+const failed = [];
+
+// Publish everything first so one slow package does not hold back the rest.
 for (const { name, directory } of publishablePackages) {
   const cwd = path.join(root, directory);
-  const manifest = JSON.parse(await readFile(path.join(cwd, "package.json"), "utf8"));
-  const version = manifest.version;
-  const existing = publishedVersion(name, version);
-  if (existing === version) {
+  const { version } = JSON.parse(await readFile(path.join(cwd, "package.json"), "utf8"));
+  if (await isPublished(name, version)) {
     console.log(`Already published: ${name}@${version}`);
     continue;
   }
-  const result = npm(["publish", "--access", "public"], cwd);
-  if (result.status !== 0) {
-    process.stdout.write(result.stdout);
-    process.stderr.write(result.stderr);
-    throw new Error(`npm publish failed for ${name}@${version}`);
+  const result = publish(cwd);
+  if (result.status === 0 || versionExists(result)) {
+    console.log(`Submitted: ${name}@${version}`);
+    pending.push({ name, version });
+    continue;
   }
-  await verify(name, version);
-  console.log(`Published: ${name}@${version}`);
+  process.stdout.write(result.stdout);
+  process.stderr.write(result.stderr);
+  failed.push(`${name}@${version}`);
 }
+
+const deadline = Date.now() + verifyTimeoutMinutes * 60_000;
+while (pending.length > 0) {
+  for (const entry of [...pending]) {
+    try {
+      if (!(await isPublished(entry.name, entry.version))) continue;
+    } catch (error) {
+      console.warn(error.message);
+      continue;
+    }
+    pending.splice(pending.indexOf(entry), 1);
+    console.log(`Published: ${entry.name}@${entry.version}`);
+  }
+  if (pending.length === 0 || Date.now() >= deadline) break;
+  await new Promise((resolve) => setTimeout(resolve, verifyIntervalMs));
+}
+
+const problems = [];
+if (failed.length > 0) problems.push(`npm publish failed for ${failed.join(", ")}.`);
+if (pending.length > 0) {
+  const names = pending.map(({ name, version }) => `${name}@${version}`).join(", ");
+  problems.push(`${names} did not become visible on npm within ${verifyTimeoutMinutes} minutes.`);
+}
+if (problems.length > 0) throw new Error(problems.join("\n"));
 
 console.log(`Confirmed ${publishablePackages.length} package versions on npm.`);
