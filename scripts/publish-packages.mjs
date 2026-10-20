@@ -37,7 +37,14 @@ const failed = [];
 for (const { name, directory } of publishablePackages) {
   const cwd = path.join(root, directory);
   const { version } = JSON.parse(await readFile(path.join(cwd, "package.json"), "utf8"));
-  if (await isPublished(name, version)) {
+  // If the lookup fails, publish anyway: npm reports an existing version as a conflict.
+  let published = false;
+  try {
+    published = await isPublished(name, version);
+  } catch (error) {
+    console.warn(error.message);
+  }
+  if (published) {
     console.log(`Already published: ${name}@${version}`);
     continue;
   }
