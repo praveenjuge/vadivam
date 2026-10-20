@@ -85,26 +85,31 @@ jobs:
         if: github.event_name == 'push'
         id: normalize
         run: |
-          if [ -n "$(git status --porcelain icons README.md apps/docs/docs/index.md apps/docs/public/preview.png apps/docs/public/og.png)" ]; then
-            git add icons README.md apps/docs/docs/index.md apps/docs/public/preview.png apps/docs/public/og.png
+          if [ -n "$(git status --porcelain icons README.md apps/docs/docs/index.mdx apps/docs/public/preview.png apps/docs/public/og.png)" ]; then
+            git add icons README.md apps/docs/docs/index.mdx apps/docs/public/preview.png apps/docs/public/og.png
             git commit -m "chore(icons): normalize via icons:optimize"
             echo "committed=true" >> "$GITHUB_OUTPUT"
           else
             echo "committed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Detect releasable changes in this push
+      - name: Detect releasable changes since the last release
         if: github.event_name == 'push'
         id: changes
         run: |
-          base="${{ github.event.before }}"
-          if [ "$base" = "0000000000000000000000000000000000000000" ]; then
-            base="HEAD^"
+          # Compare against the last release tag, not just this push, so a
+          # release run that failed is picked up again by the next push.
+          base=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' HEAD 2>/dev/null || true)
+          if [ -z "$base" ]; then
+            base="${{ github.event.before }}"
+            if [ "$base" = "0000000000000000000000000000000000000000" ]; then
+              base="HEAD^"
+            fi
           fi
           if bun scripts/release-changes.mjs "$base" HEAD; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "No package-producing inputs changed in this push; skipping release."
+            echo "No package-producing inputs changed since $base; skipping release."
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -129,7 +134,7 @@ jobs:
 
       - name: Check generated inputs
         if: github.event_name == 'pull_request'
-        run: git diff --exit-code -- icons README.md apps/docs/docs/index.md apps/docs/public/preview.png apps/docs/public/og.png scripts/font-codepoints.json
+        run: git diff --exit-code -- icons README.md apps/docs/docs/index.mdx apps/docs/public/preview.png apps/docs/public/og.png scripts/font-codepoints.json
 
       - name: Push tested commits
         if: github.event_name == 'push' && (steps.normalize.outputs.committed == 'true' || steps.changes.outputs.changed == 'true')
@@ -218,3 +223,21 @@ jobs:
       - name: Test integration shard
         timeout-minutes: 10
         run: bun scripts/integration.mjs ${{ matrix.apps }}
+
+  # The single required status check for pull requests. Branch rules point at
+  # this job so matrix renames never leave a required check waiting forever.
+  pr-checks:
+    if: always() && github.event_name == 'pull_request'
+    needs: [optimize-and-release, integration-matrix]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every pull request job to pass
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            if [ "$result" != "success" ]; then
+              echo "A required job finished with: $result"
+              exit 1
+            fi
+          done
