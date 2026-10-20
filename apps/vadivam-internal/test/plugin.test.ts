@@ -34,6 +34,19 @@ interface MockArtwork {
   strokeJoin: string;
 }
 
+function clientStorage(initial: Record<string, unknown> = {}) {
+  const store = new Map(Object.entries(initial));
+  return {
+    store,
+    async getAsync(key: string) {
+      return store.get(key);
+    },
+    async setAsync(key: string, value: unknown) {
+      store.set(key, value);
+    },
+  };
+}
+
 async function waitFor(predicate: () => boolean): Promise<void> {
   for (let attempt = 0; attempt < 20; attempt += 1) {
     if (predicate()) return;
@@ -91,7 +104,7 @@ describe("compiled Figma plugin", () => {
     const currentPage = {
       name: "Vadivam Icons",
       children: [...existing],
-      selection: [],
+      selection: [] as unknown[],
       findAll(predicate: (node: (typeof existing)[number]) => boolean) {
         return this.children.filter(predicate);
       },
@@ -105,9 +118,12 @@ describe("compiled Figma plugin", () => {
       },
     };
 
+    const storage = clientStorage({ settings: { columns: 4, tab: "nope" } });
     const figmaMock = {
       mixed: Symbol("mixed"),
       showUI() {},
+      on() {},
+      clientStorage: storage,
       ui,
       root: { children: [currentPage] },
       currentPage,
@@ -161,6 +177,11 @@ describe("compiled Figma plugin", () => {
     const catalog = messages.find(
       (message) => (message as { type?: string }).type === "catalog",
     ) as { candidates: Array<{ name: string }> };
+    // Stored settings load at startup; invalid values fall back to defaults.
+    expect(messages[0]).toEqual({
+      type: "settings",
+      settings: { batchSize: 20, columns: 4, tab: "create" },
+    });
     expect(catalog.candidates.length).toBeGreaterThan(2);
     expect(catalog.candidates.map((icon) => icon.name)).not.toContain("x");
     const expectedNames = catalog.candidates.slice(0, 2).map((icon) => icon.name);
@@ -170,8 +191,33 @@ describe("compiled Figma plugin", () => {
     const unknown = { ...existing[0]!, id: "1:9", name: "made-up", x: 400, y: 400 };
     const layout = { ...existing[0]!, id: "1:10", name: "Grid", width: 800, height: 600, x: -500, y: -500 };
     currentPage.children.push(unknown, layout);
+    await ui.onmessage?.({ type: "arrange", columns: 2 });
+    expect(messages[messages.length - 1]).toEqual({
+      type: "arranged",
+      count: 5,
+      columns: 2,
+      rows: 3,
+    });
+    expect(
+      [...existing, unknown].map((frame) => [frame.name, frame.x, frame.y]),
+    ).toEqual([
+      ["x", 0, 144],
+      ["check", 0, 0],
+      ["chevron-right", 40, 0],
+      ["columns", 0, 72],
+      ["made-up", 40, 72],
+    ]);
+    expect(storage.store.get("settings")).toMatchObject({ columns: 2 });
+
+    // Without columns, Arrange uses the saved setting.
+    await ui.onmessage?.({ type: "set-columns", columns: 40 });
     await ui.onmessage?.({ type: "arrange" });
-    expect(messages[messages.length - 1]).toEqual({ type: "arranged", count: 5 });
+    expect(messages[messages.length - 1]).toEqual({
+      type: "arranged",
+      count: 5,
+      columns: 40,
+      rows: 1,
+    });
     expect(
       [...existing, unknown].map((frame) => [frame.name, frame.x, frame.y]),
     ).toEqual([
@@ -195,7 +241,7 @@ describe("compiled Figma plugin", () => {
         renamed: number;
         rounded: number;
       };
-      issues: Array<{ name: string; violations: string[] }>;
+      issues: Array<{ id: string; name: string; violations: string[] }>;
     };
     expect(audit.summary).toEqual({
       checked: 4,
@@ -222,9 +268,14 @@ describe("compiled Figma plugin", () => {
     expect(audit.issues[0]?.violations).toContain("Artwork must have no fill");
     expect(audit.issues[0]?.violations).toContain("Stroke weight must be 2 px");
     expect(audit.issues[1]).toEqual({
+      id: "1:3",
       name: "columns",
       violations: ['Deprecated Lucide name; use "columns-2"'],
     });
+
+    // Audit issues can be selected from the list.
+    await ui.onmessage?.({ type: "select", id: "1:1" });
+    expect(currentPage.selection).toEqual([existing[1]]);
 
     const savedChildren = currentPage.children.splice(0);
     await ui.onmessage?.({ type: "suggest-names" });
@@ -431,6 +482,8 @@ describe("compiled Figma plugin", () => {
     };
     const figmaMock: any = {
       showUI() {},
+      on() {},
+      clientStorage: clientStorage(),
       ui,
       root: { children: [page] },
       currentPage: page,

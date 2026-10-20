@@ -11,7 +11,25 @@ export interface CatalogSummary {
   currentPage: string;
 }
 
+export const TABS = ["create", "arrange", "rename", "audit", "library"] as const;
+
+export type Tab = (typeof TABS)[number];
+
+export interface PluginSettings {
+  batchSize: number;
+  columns: number;
+  tab: Tab;
+}
+
+export interface PageStatus {
+  name: string;
+  iconFrames: number;
+  hasLibrary: boolean;
+  libraryIcons: number;
+}
+
 export interface IconAuditIssue {
+  id: string;
   name: string;
   violations: string[];
 }
@@ -46,7 +64,8 @@ export interface RenameSuggestion {
 
 export type PluginToUiMessage =
   | { type: "loading" }
-  | { type: "library-status"; count: number; available: boolean }
+  | { type: "settings"; settings: PluginSettings }
+  | { type: "page"; page: PageStatus }
   | {
       type: "library-synced";
       count: number;
@@ -56,7 +75,7 @@ export type PluginToUiMessage =
     }
   | { type: "catalog"; summary: CatalogSummary; candidates: LucideIconRanking[] }
   | { type: "generated"; names: string[] }
-  | { type: "arranged"; count: number }
+  | { type: "arranged"; count: number; columns: number; rows: number }
   | { type: "rename-ideas"; icons: RenameSuggestion[]; renamed: number }
   | {
       type: "audit";
@@ -69,8 +88,10 @@ export type UiToPluginMessage =
   | { type: "refresh" }
   | { type: "sync-library" }
   | { type: "set-count"; count: number }
+  | { type: "set-columns"; columns: number }
+  | { type: "set-tab"; tab: Tab }
   | { type: "generate"; count: number }
-  | { type: "arrange" }
+  | { type: "arrange"; columns?: number }
   | { type: "suggest-names" }
   | { type: "rename"; renames: Array<{ id: string; name: string }> }
   | { type: "select"; id: string }

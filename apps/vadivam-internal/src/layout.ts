@@ -1,11 +1,17 @@
 export const ICON_SIZE = 24;
 export const COLUMN_STEP = 40;
 export const ROW_STEP = 72;
-export const COLUMNS_PER_ROW = 32;
+export const DEFAULT_COLUMNS = 40;
+export const MAX_COLUMNS = 100;
 
 export interface IconPosition {
   x: number;
   y: number;
+}
+
+export function parseColumns(value: unknown): number {
+  if (!Number.isInteger(value)) throw new Error("Columns must be a whole number");
+  return Math.min(MAX_COLUMNS, Math.max(1, value as number));
 }
 
 export function getGridPositions(
@@ -21,6 +27,7 @@ export function getGridPositions(
 
 export function getBatchPositions(
   count: number,
+  columns: number,
   existing: readonly IconPosition[],
   viewportCenter: IconPosition,
 ): IconPosition[] {
@@ -33,5 +40,5 @@ export function getBatchPositions(
       ? Math.max(...existing.map((position) => position.y)) + ROW_STEP
       : Math.round(viewportCenter.y / ROW_STEP) * ROW_STEP;
 
-  return getGridPositions(count, COLUMNS_PER_ROW, { x: startX, y: startY });
+  return getGridPositions(count, columns, { x: startX, y: startY });
 }

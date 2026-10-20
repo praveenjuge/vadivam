@@ -7,46 +7,119 @@
     <style>/* INJECT_UI_STYLES */</style>
   </head>
   <body>
-    <main>
-      <section class="toolkit" aria-label="Icon utilities">
-        <div class="tool-row">
-          <span class="tool-name">Icon library</span>
-          <span id="library-meta" class="tool-meta">Reading icons</span>
-          <button id="sync-library" type="button" disabled>Create</button>
-        </div>
-        <div class="tool-row">
-          <label for="count">Create frames</label>
-          <input id="count" type="number" min="1" max="100" step="1" value="20" />
-          <button id="generate" type="button" disabled>Create</button>
-        </div>
-        <div class="tool-row">
-          <span class="tool-name">Arrange icons</span>
-          <span class="tool-meta">A–Z · 40/row</span>
-          <button id="arrange" type="button">Arrange</button>
-        </div>
-        <div class="tool-row">
-          <span class="tool-name">Rename icons</span>
-          <span id="rename-meta" class="tool-meta">Lucide names</span>
-          <button id="suggest" type="button">Suggest</button>
-        </div>
-        <div class="tool-row">
-          <span class="tool-name">Audit icons</span>
-          <span class="tool-meta">Check + rename</span>
-          <button id="audit" type="button">Audit</button>
-        </div>
-        <div class="tool-row">
-          <span class="tool-name">Refresh queue</span>
-          <span class="tool-meta">Scan file</span>
-          <button id="refresh" type="button">Refresh</button>
-        </div>
-      </section>
+    <header class="header">
+      <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 5v10a3 3 0 0 1-3 3h-3.5c1-1.5 1.5-3.3 1.5-5.5a5.5 5.5 0 0 0-11 0c0 3 1.6 5.5 4 5.5a2.5 2.5 0 0 0 0-5c-1.6 0-2.8.6-3.7 1.6"/></svg>
+      <div class="heading">
+        <h1>Vadivam Internal</h1>
+        <p id="progress-label" class="subtle">Reading the Lucide catalog…</p>
+      </div>
+      <button id="refresh" class="icon-button" type="button" title="Rescan file" aria-label="Rescan file" data-action><!-- icon:refresh-cw --></button>
+      <div class="meter" aria-hidden="true"><span id="progress-bar"></span></div>
+    </header>
 
-      <section class="toolbar" aria-label="Utility status">
-        <p id="status" role="status">Loading Lucide icons…</p>
-      </section>
+    <nav class="tabs" role="tablist" aria-label="Tools">
+      <button id="tab-create" role="tab" type="button" aria-controls="panel-create" data-tab="create">Create <span class="badge" data-badge="create"></span></button>
+      <button id="tab-arrange" role="tab" type="button" aria-controls="panel-arrange" data-tab="arrange">Arrange</button>
+      <button id="tab-rename" role="tab" type="button" aria-controls="panel-rename" data-tab="rename">Rename <span class="badge" data-badge="rename"></span></button>
+      <button id="tab-audit" role="tab" type="button" aria-controls="panel-audit" data-tab="audit">Audit <span class="badge" data-badge="audit"></span></button>
+      <button id="tab-library" role="tab" type="button" aria-controls="panel-library" data-tab="library">Library</button>
+    </nav>
 
-      <ol id="results" aria-label="Plugin results"></ol>
-    </main>
+    <section id="panel-create" class="panel" role="tabpanel" aria-labelledby="tab-create">
+      <div class="controls">
+        <p class="lede">Add frames for the most popular Lucide icons this file doesn't have yet.</p>
+        <div class="row">
+          <div class="stepper" role="group" aria-label="Frames to create">
+            <button type="button" data-step="count" data-delta="-1" aria-label="Fewer frames"><!-- icon:minus --></button>
+            <input id="count" type="number" min="1" max="100" step="1" value="20" aria-label="Frames to create" />
+            <button type="button" data-step="count" data-delta="1" aria-label="More frames"><!-- icon:plus --></button>
+          </div>
+          <button id="generate" class="primary" type="button" data-action disabled>Create frames</button>
+        </div>
+      </div>
+      <ol id="create-results" class="results" aria-label="Next icons to draw"></ol>
+    </section>
+
+    <section id="panel-arrange" class="panel" role="tabpanel" aria-labelledby="tab-arrange" hidden>
+      <div class="controls">
+        <p class="lede">Sort every 24×24 icon frame on this page A–Z into a grid. New frames from Create use the same columns.</p>
+        <div class="row">
+          <label class="field-label" for="columns">Columns</label>
+          <div class="stepper" role="group" aria-label="Columns">
+            <button type="button" data-step="columns" data-delta="-1" aria-label="Fewer columns"><!-- icon:minus --></button>
+            <input id="columns" type="number" min="1" max="100" step="1" value="40" />
+            <button type="button" data-step="columns" data-delta="1" aria-label="More columns"><!-- icon:plus --></button>
+          </div>
+          <div class="presets" role="group" aria-label="Column presets">
+            <button type="button" data-columns="10">10</button>
+            <button type="button" data-columns="20">20</button>
+            <button type="button" data-columns="32">32</button>
+            <button type="button" data-columns="40">40</button>
+          </div>
+        </div>
+      </div>
+      <div class="preview-area">
+        <div class="preview-head">
+          <span id="arrange-summary">No icon frames on this page</span>
+          <span id="arrange-page" class="subtle"></span>
+        </div>
+        <div id="preview" class="preview" aria-hidden="true"></div>
+        <p id="preview-more" class="subtle" hidden></p>
+      </div>
+      <div class="actions">
+        <button id="arrange" class="primary wide" type="button" data-action>Arrange icons</button>
+      </div>
+    </section>
+
+    <section id="panel-rename" class="panel" role="tabpanel" aria-labelledby="tab-rename" hidden>
+      <div class="controls">
+        <p class="lede">Find icon frames on this page whose names aren't current Lucide names, with up to three ideas for each.</p>
+        <div class="row">
+          <button id="suggest" class="primary" type="button" data-action>Check names</button>
+          <span id="rename-meta" class="subtle"></span>
+        </div>
+      </div>
+      <ol id="rename-results" class="results" aria-label="Rename ideas"></ol>
+    </section>
+
+    <section id="panel-audit" class="panel" role="tabpanel" aria-labelledby="tab-audit" hidden>
+      <div class="controls">
+        <p class="lede">Check every frame on this page against the drawing rules. Stroked layers are renamed to Vector and get round caps.</p>
+        <div class="row">
+          <button id="audit" class="primary" type="button" data-action>Run audit</button>
+        </div>
+      </div>
+      <dl id="audit-stats" class="stats" hidden>
+        <div><dt>Checked</dt><dd data-stat="checked">0</dd></div>
+        <div><dt>Passed</dt><dd data-stat="passed">0</dd></div>
+        <div><dt>Issues</dt><dd data-stat="failed">0</dd></div>
+        <div><dt>Fixed</dt><dd data-stat="fixed">0</dd></div>
+      </dl>
+      <ol id="audit-results" class="results" aria-label="Audit issues"></ol>
+    </section>
+
+    <section id="panel-library" class="panel" role="tabpanel" aria-labelledby="tab-library" hidden>
+      <div class="controls">
+        <p class="lede">Build the Vadivam Icons component set from every SVG in <code>icons/</code>, 40 per row, with docs links on each variant.</p>
+      </div>
+      <dl class="facts">
+        <div><dt>Icons in repo</dt><dd id="library-count">–</dd></div>
+        <div><dt>On this page</dt><dd id="library-state">–</dd></div>
+      </dl>
+      <p class="note">Updating keeps each component's identity so published instances follow along. New icons are added A–Z and custom variants stay. If the page has more than one set, select the one to update first.</p>
+      <div class="actions">
+        <button id="sync-library" class="primary wide" type="button" data-action disabled>Create library</button>
+      </div>
+    </section>
+
+    <footer id="status" class="status" data-tone="busy" role="status">
+      <span class="status-icon" data-for="busy"><!-- icon:loader-circle --></span>
+      <span class="status-icon" data-for="success"><!-- icon:circle-check --></span>
+      <span class="status-icon" data-for="error"><!-- icon:circle-alert --></span>
+      <span id="status-text">Loading…</span>
+    </footer>
+    <template id="icon-success"><!-- icon:circle-check --></template>
+    <template id="icon-locate"><!-- icon:locate-fixed --></template>
     <script>/* INJECT_UI_SCRIPT */</script>
   </body>
 </html>

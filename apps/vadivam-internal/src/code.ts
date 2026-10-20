@@ -6,25 +6,36 @@ import {
   type LucideIconRanking,
 } from "./catalog";
 import iconCatalog from "vadivam:icon-catalog";
-import { getBatchPositions, getGridPositions, ICON_SIZE } from "./layout";
+import {
+  DEFAULT_COLUMNS,
+  getBatchPositions,
+  getGridPositions,
+  ICON_SIZE,
+  parseColumns,
+} from "./layout";
 import lucideRankings from "./data/lucide-icon-rankings.json";
 import {
   getDeprecatedLucideReplacement,
   lucideIconNames,
   resolveLucideIconName,
 } from "./lucide";
-import type {
-  CatalogSummary,
-  IconAuditIssue,
-  PluginToUiMessage,
-  RenameSuggestion,
-  UiToPluginMessage,
+import {
+  TABS,
+  type CatalogSummary,
+  type IconAuditIssue,
+  type PluginSettings,
+  type PluginToUiMessage,
+  type RenameSuggestion,
+  type Tab,
+  type UiToPluginMessage,
 } from "./protocol";
 import { suggestRenameIdeas, toKebabName } from "./rename";
 
 const UI_WIDTH = 360;
-const UI_HEIGHT = 620;
-const ARRANGE_COLUMNS = 40;
+const UI_HEIGHT = 600;
+const SETTINGS_KEY = "settings";
+// The published component set keeps a fixed width; Arrange columns are a per-user setting.
+const LIBRARY_COLUMNS = 40;
 const LIBRARY_GAP = 24;
 const LIBRARY_PADDING = 24;
 const LIBRARY_NAME = "Vadivam Icons";
@@ -37,7 +48,7 @@ const catalog: LucideCatalog = parseLucideCatalog(
 );
 const allowedIconNames = new Set(lucideIconNames);
 
-let batchSize = 20;
+let settings: PluginSettings = { batchSize: 20, columns: DEFAULT_COLUMNS, tab: "create" };
 let existingSlugs = new Set<string>();
 let candidates: LucideIconRanking[] = [];
 
@@ -76,12 +87,36 @@ function librarySetsOnPage(): ComponentSetNode[] {
     .filter(isLibrarySet);
 }
 
-function publishLibraryStatus(): void {
-  post({
-    type: "library-status",
-    count: iconCatalog.length,
-    available: librarySetsOnPage().length > 0,
-  });
+function isTab(value: unknown): value is Tab {
+  return (TABS as readonly unknown[]).includes(value);
+}
+
+// Settings are a convenience, so anything missing or invalid falls back to its default.
+async function loadSettings(): Promise<PluginSettings> {
+  const defaults = settings;
+  let stored: Partial<Record<keyof PluginSettings, unknown>> = {};
+  try {
+    stored = (await figma.clientStorage.getAsync(SETTINGS_KEY)) ?? {};
+  } catch {
+    return defaults;
+  }
+  const valid = <T>(parse: (value: unknown) => T, value: unknown, fallback: T): T => {
+    try {
+      return parse(value);
+    } catch {
+      return fallback;
+    }
+  };
+  return {
+    batchSize: valid(parseBatchSize, stored.batchSize, defaults.batchSize),
+    columns: valid(parseColumns, stored.columns, defaults.columns),
+    tab: isTab(stored.tab) ? stored.tab : defaults.tab,
+  };
+}
+
+async function saveSettings(next: Partial<PluginSettings>): Promise<void> {
+  settings = { ...settings, ...next };
+  await figma.clientStorage.setAsync(SETTINGS_KEY, settings);
 }
 
 type IconContainer = FrameNode | ComponentNode | InstanceNode;
@@ -105,6 +140,18 @@ function pageIconFrames(): IconContainer[] {
   return figma.currentPage.children.filter(
     (node): node is IconContainer => isIconContainer(node) && isIconSized(node),
   );
+}
+
+function publishPageStatus(): void {
+  post({
+    type: "page",
+    page: {
+      name: figma.currentPage.name,
+      iconFrames: pageIconFrames().length,
+      hasLibrary: librarySetsOnPage().length > 0,
+      libraryIcons: iconCatalog.length,
+    },
+  });
 }
 
 // Canonical icon frames across every page, keyed by their Lucide name. Call
@@ -154,7 +201,7 @@ function publishCatalog(): void {
   post({
     type: "catalog",
     summary: summary(),
-    candidates: candidates.slice(0, batchSize),
+    candidates: candidates.slice(0, settings.batchSize),
   });
 }
 
@@ -163,6 +210,7 @@ async function refreshCatalog(): Promise<void> {
   existingSlugs = await scanDocument();
   candidates = getMissingIcons(catalog.icons, existingSlugs);
   publishCatalog();
+  publishPageStatus();
 }
 
 function createIconFrame(name: string, position: { x: number; y: number }): FrameNode {
@@ -254,13 +302,13 @@ function configureLibrarySet(componentSet: ComponentSetNode): void {
   componentSet.cornerRadius = 0;
   componentSet.clipsContent = false;
   const width =
-    ARRANGE_COLUMNS * ICON_SIZE +
-    (ARRANGE_COLUMNS - 1) * LIBRARY_GAP +
+    LIBRARY_COLUMNS * ICON_SIZE +
+    (LIBRARY_COLUMNS - 1) * LIBRARY_GAP +
     LIBRARY_PADDING * 2;
   componentSet.resizeWithoutConstraints(width, Math.max(componentSet.height, ICON_SIZE));
   componentSet.setPluginData(
     LIBRARY_DATA_KEY,
-    pluginData({ kind: "library", columns: ARRANGE_COLUMNS }),
+    pluginData({ kind: "library", columns: LIBRARY_COLUMNS }),
   );
   componentSet.setRelaunchData({
     "sync-library": "Update all icons from the canonical icon catalog",
@@ -389,6 +437,7 @@ function syncIconLibrary(): void {
   figma.currentPage.selection = [componentSet];
   figma.viewport.scrollAndZoomIntoView([componentSet]);
   figma.commitUndo();
+  publishPageStatus();
   post({
     type: "library-synced",
     count: iconCatalog.length,
@@ -396,7 +445,6 @@ function syncIconLibrary(): void {
     added: result.added,
     retained: result.retained,
   });
-  publishLibraryStatus();
 }
 
 function generateFrames(countValue: unknown): void {
@@ -407,6 +455,7 @@ function generateFrames(countValue: unknown): void {
   const names = selected.map((icon) => icon.name);
   createNamedFrames(names);
   publishCatalog();
+  publishPageStatus();
   post({ type: "generated", names });
 }
 
@@ -414,6 +463,7 @@ function createNamedFrames(names: readonly string[]): void {
   const currentIcons = figma.currentPage.children.filter(isCanonicalIconNode);
   const positions = getBatchPositions(
     names.length,
+    settings.columns,
     currentIcons.map((node) => ({ x: node.x, y: node.y })),
     figma.viewport.center,
   );
@@ -427,7 +477,9 @@ function createNamedFrames(names: readonly string[]): void {
   candidates = getMissingIcons(catalog.icons, existingSlugs);
 }
 
-function arrangeIcons(): void {
+async function arrangeIcons(columnsValue: unknown): Promise<void> {
+  const columns = parseColumns(columnsValue);
+  if (columns !== settings.columns) await saveSettings({ columns });
   const sortKey = (node: SceneNode): string =>
     resolveLucideIconName(node.name) ?? toKebabName(node.name);
   const icons = pageIconFrames().sort((left, right) =>
@@ -438,7 +490,7 @@ function arrangeIcons(): void {
     x: Math.min(...icons.map((node) => node.x)),
     y: Math.min(...icons.map((node) => node.y)),
   };
-  const positions = getGridPositions(icons.length, ARRANGE_COLUMNS, origin);
+  const positions = getGridPositions(icons.length, columns, origin);
   icons.forEach((icon, index) => {
     const position = positions[index];
     if (!position) return;
@@ -447,7 +499,13 @@ function arrangeIcons(): void {
   });
   figma.currentPage.selection = icons;
   figma.viewport.scrollAndZoomIntoView(icons);
-  post({ type: "arranged", count: icons.length });
+  figma.commitUndo();
+  post({
+    type: "arranged",
+    count: icons.length,
+    columns,
+    rows: Math.ceil(icons.length / columns),
+  });
 }
 
 async function publishRenameIdeas(renamed = 0): Promise<void> {
@@ -468,6 +526,8 @@ async function publishRenameIdeas(renamed = 0): Promise<void> {
       })),
     }))
     .sort((left, right) => left.name.localeCompare(right.name));
+  publishCatalog();
+  publishPageStatus();
   post({ type: "rename-ideas", icons, renamed });
 }
 
@@ -498,8 +558,9 @@ async function renameIcons(renames: unknown): Promise<void> {
   await publishRenameIdeas(updates.length);
 }
 
+// Audit issues can point at frames of any size, so look through every top-level node.
 function selectIcon(id: unknown): void {
-  const node = pageIconFrames().find((frame) => frame.id === id);
+  const node = figma.currentPage.children.find((child) => child.id === id);
   if (!node) throw new Error("That icon is no longer on this page");
   figma.currentPage.selection = [node];
   figma.viewport.scrollAndZoomIntoView([node]);
@@ -606,7 +667,7 @@ function auditIcon(icon: FrameNode | ComponentNode | InstanceNode): IconAuditRes
   return {
     issue:
       violations.size > 0
-        ? { name: icon.name, violations: [...violations] }
+        ? { id: icon.id, name: icon.name, violations: [...violations] }
         : null,
     renamed,
     rounded,
@@ -651,12 +712,17 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
     } else if (request.type === "sync-library") {
       syncIconLibrary();
     } else if (request.type === "set-count") {
-      batchSize = parseBatchSize(request.count);
+      await saveSettings({ batchSize: parseBatchSize(request.count) });
       publishCatalog();
+    } else if (request.type === "set-columns") {
+      await saveSettings({ columns: parseColumns(request.columns) });
+    } else if (request.type === "set-tab") {
+      if (!isTab(request.tab)) throw new Error("Unknown tab");
+      await saveSettings({ tab: request.tab });
     } else if (request.type === "generate") {
       generateFrames(request.count);
     } else if (request.type === "arrange") {
-      arrangeIcons();
+      await arrangeIcons(request.columns ?? settings.columns);
     } else if (request.type === "suggest-names") {
       await publishRenameIdeas();
     } else if (request.type === "rename") {
@@ -673,7 +739,15 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
   }
 };
 
-publishLibraryStatus();
-refreshCatalog().catch((error: unknown) => {
+figma.on("currentpagechange", publishPageStatus);
+
+async function start(): Promise<void> {
+  settings = await loadSettings();
+  post({ type: "settings", settings });
+  publishPageStatus();
+  await refreshCatalog();
+}
+
+start().catch((error: unknown) => {
   post({ type: "error", message: messageFromError(error) });
 });

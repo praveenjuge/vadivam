@@ -55,9 +55,24 @@ const uiOptions = {
   logLevel: "info",
 };
 
+// The UI draws its own icons from the canonical set: <!-- icon:name --> becomes that SVG.
+async function injectIcons(template) {
+  const pattern = /<!-- icon:([a-z0-9-]+) -->/g;
+  const names = [...new Set([...template.matchAll(pattern)].map((match) => match[1]))];
+  const svgs = new Map(
+    await Promise.all(
+      names.map(async (name) => {
+        const svg = await readFile(resolve(iconsRoot, `${name}.svg`), "utf8");
+        return [name, svg.trim().replace("<svg ", '<svg class="icon" aria-hidden="true" ')];
+      }),
+    ),
+  );
+  return template.replace(pattern, (_, name) => svgs.get(name));
+}
+
 async function buildHtml() {
   const [template, css, javascript] = await Promise.all([
-    readFile(resolve(root, "src/ui.html"), "utf8"),
+    readFile(resolve(root, "src/ui.html"), "utf8").then(injectIcons),
     readFile(resolve(root, "src/ui.css"), "utf8"),
     readFile(resolve(dist, "ui.js"), "utf8"),
   ]);

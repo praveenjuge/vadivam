@@ -1,12 +1,22 @@
 import {
   EXACT_RENAME_REASONS,
+  TABS,
+  type CatalogSummary,
   type IconAuditIssue,
+  type IconAuditSummary,
+  type PageStatus,
+  type PluginSettings,
   type PluginToUiMessage,
   type RenameReason,
   type RenameSuggestion,
+  type Tab,
   type UiToPluginMessage,
 } from "./protocol";
 import type { LucideIconRanking } from "./catalog";
+import { MAX_BATCH_SIZE } from "./catalog";
+import { MAX_COLUMNS } from "./layout";
+
+type Tone = "idle" | "busy" | "success" | "error";
 
 function element<T extends Element>(selector: string): T {
   const match = document.querySelector<T>(selector);
@@ -14,19 +24,39 @@ function element<T extends Element>(selector: string): T {
   return match;
 }
 
-const status = element<HTMLParagraphElement>("#status");
-const countInput = element<HTMLInputElement>("#count");
-const libraryMeta = element<HTMLSpanElement>("#library-meta");
-const syncLibraryButton = element<HTMLButtonElement>("#sync-library");
-const generateButton = element<HTMLButtonElement>("#generate");
+const progressLabel = element<HTMLParagraphElement>("#progress-label");
+const progressBar = element<HTMLSpanElement>("#progress-bar");
 const refreshButton = element<HTMLButtonElement>("#refresh");
+const tabs = [...document.querySelectorAll<HTMLButtonElement>("[role=tab]")];
+const countInput = element<HTMLInputElement>("#count");
+const generateButton = element<HTMLButtonElement>("#generate");
+const createResults = element<HTMLOListElement>("#create-results");
+const columnsInput = element<HTMLInputElement>("#columns");
+const presetButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-columns]")];
+const arrangeSummary = element<HTMLSpanElement>("#arrange-summary");
+const arrangePage = element<HTMLSpanElement>("#arrange-page");
+const preview = element<HTMLDivElement>("#preview");
+const previewMore = element<HTMLParagraphElement>("#preview-more");
 const arrangeButton = element<HTMLButtonElement>("#arrange");
-const auditButton = element<HTMLButtonElement>("#audit");
-const renameMeta = element<HTMLSpanElement>("#rename-meta");
 const suggestButton = element<HTMLButtonElement>("#suggest");
-const resultList = element<HTMLOListElement>("#results");
+const renameMeta = element<HTMLSpanElement>("#rename-meta");
+const renameResults = element<HTMLOListElement>("#rename-results");
+const auditButton = element<HTMLButtonElement>("#audit");
+const auditStats = element<HTMLDListElement>("#audit-stats");
+const auditResults = element<HTMLOListElement>("#audit-results");
+const libraryCount = element<HTMLElement>("#library-count");
+const libraryState = element<HTMLElement>("#library-state");
+const syncLibraryButton = element<HTMLButtonElement>("#sync-library");
+const status = element<HTMLElement>("#status");
+const statusText = element<HTMLSpanElement>("#status-text");
+
+const PREVIEW_MAX_HEIGHT = 140;
+const PREVIEW_MAX_CELL = 24;
 
 let candidates: LucideIconRanking[] = [];
+let catalog: CatalogSummary | null = null;
+let page: PageStatus | null = null;
+let busy = true;
 
 const renameReasonLabels: Record<RenameReason, string> = {
   format: "Lucide format",
@@ -37,137 +67,309 @@ const renameReasonLabels: Record<RenameReason, string> = {
   similar: "Similar name",
 };
 
+const numberFormat = new Intl.NumberFormat("en");
+const compactFormat = new Intl.NumberFormat("en", { notation: "compact" });
+
+function plural(count: number, word: string, many = `${word}s`): string {
+  return `${numberFormat.format(count)} ${count === 1 ? word : many}`;
+}
+
 function send(message: UiToPluginMessage): void {
   parent.postMessage({ pluginMessage: message }, "*");
 }
 
-function readCount(): number {
-  const value = Number(countInput.value);
-  if (!Number.isInteger(value)) return 20;
-  return Math.min(100, Math.max(1, value));
+function icon(id: "success" | "locate"): Element {
+  const template = element<HTMLTemplateElement>(`#icon-${id}`);
+  return template.content.firstElementChild!.cloneNode(true) as Element;
 }
 
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat("en", { notation: "compact" }).format(value);
+function setStatus(text: string, tone: Tone = "idle"): void {
+  statusText.textContent = text;
+  status.dataset.tone = tone;
+}
+
+function setBadge(tab: Tab, value: number | null, alert = false): void {
+  const badge = document.querySelector<HTMLSpanElement>(`[data-badge="${tab}"]`);
+  if (!badge) return;
+  badge.textContent = value ? compactFormat.format(value) : "";
+  badge.classList.toggle("alert", alert);
+}
+
+function updateActions(): void {
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-action]")) {
+    button.disabled = busy;
+  }
+  if (!busy) {
+    generateButton.disabled = candidates.length === 0;
+    arrangeButton.disabled = page?.iconFrames === 0;
+    syncLibraryButton.disabled = page === null;
+  }
+}
+
+function startAction(text: string, message: UiToPluginMessage): void {
+  busy = true;
+  updateActions();
+  setStatus(text, "busy");
+  send(message);
+}
+
+function finishAction(text: string, tone: Tone): void {
+  busy = false;
+  updateActions();
+  setStatus(text, tone);
+}
+
+function emptyState(text: string, success = false): HTMLLIElement {
+  const item = document.createElement("li");
+  item.className = success ? "empty success" : "empty";
+  if (success) item.append(icon("success"));
+  const label = document.createElement("span");
+  label.textContent = text;
+  item.append(label);
+  return item;
+}
+
+function targetButton(id: string, name: string): HTMLButtonElement {
+  const button = document.createElement("button");
+  const label = document.createElement("span");
+  button.type = "button";
+  button.className = "target";
+  button.title = "Select in Figma";
+  label.textContent = name;
+  button.append(label, icon("locate"));
+  button.addEventListener("click", () => send({ type: "select", id }));
+  return button;
+}
+
+// Tabs
+
+function selectTab(tab: Tab, focus = false): void {
+  for (const button of tabs) {
+    const selected = button.dataset.tab === tab;
+    button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+    if (selected && focus) button.focus();
+    const panel = document.getElementById(`panel-${button.dataset.tab}`);
+    if (panel) panel.hidden = !selected;
+  }
+  if (tab === "arrange") renderPreview();
+}
+
+function isTab(value: string | undefined): value is Tab {
+  return (TABS as readonly string[]).includes(value ?? "");
+}
+
+for (const button of tabs) {
+  button.addEventListener("click", () => {
+    const tab = button.dataset.tab;
+    if (!isTab(tab)) return;
+    selectTab(tab);
+    send({ type: "set-tab", tab });
+  });
+}
+
+element<HTMLElement>("[role=tablist]").addEventListener("keydown", (event) => {
+  const current = tabs.findIndex((button) => button.getAttribute("aria-selected") === "true");
+  const next =
+    event.key === "ArrowRight" ? (current + 1) % tabs.length
+    : event.key === "ArrowLeft" ? (current - 1 + tabs.length) % tabs.length
+    : event.key === "Home" ? 0
+    : event.key === "End" ? tabs.length - 1
+    : -1;
+  const tab = tabs[next]?.dataset.tab;
+  if (next < 0 || !isTab(tab)) return;
+  event.preventDefault();
+  selectTab(tab, true);
+  send({ type: "set-tab", tab });
+});
+
+// Number inputs
+
+function clampInput(input: HTMLInputElement, max: number, fallback: number): number {
+  const value = Number(input.value);
+  const clamped = Number.isInteger(value) ? Math.min(max, Math.max(1, value)) : fallback;
+  input.value = String(clamped);
+  return clamped;
+}
+
+function readCount(): number {
+  return clampInput(countInput, MAX_BATCH_SIZE, 20);
+}
+
+function readColumns(): number {
+  return clampInput(columnsInput, MAX_COLUMNS, 40);
+}
+
+function commitCount(): void {
+  const count = readCount();
+  updateGenerateLabel();
+  send({ type: "set-count", count });
+}
+
+function commitColumns(): void {
+  send({ type: "set-columns", columns: readColumns() });
+  renderPreview();
+}
+
+countInput.addEventListener("change", commitCount);
+columnsInput.addEventListener("change", commitColumns);
+columnsInput.addEventListener("input", () => {
+  if (Number.isInteger(Number(columnsInput.value)) && Number(columnsInput.value) > 0) {
+    renderPreview();
+  }
+});
+
+for (const button of document.querySelectorAll<HTMLButtonElement>("[data-step]")) {
+  button.addEventListener("click", () => {
+    const input = button.dataset.step === "count" ? countInput : columnsInput;
+    input.value = String(Number(input.value) + Number(button.dataset.delta));
+    if (input === countInput) commitCount();
+    else commitColumns();
+  });
+}
+
+for (const button of presetButtons) {
+  button.addEventListener("click", () => {
+    columnsInput.value = button.dataset.columns ?? "40";
+    commitColumns();
+  });
+}
+
+// Create
+
+function updateGenerateLabel(): void {
+  const count = Math.min(readCount(), candidates.length || readCount());
+  generateButton.textContent = `Create ${plural(count, "frame")}`;
 }
 
 function renderCandidates(): void {
-  resultList.replaceChildren();
+  createResults.replaceChildren();
   if (candidates.length === 0) {
-    const empty = document.createElement("li");
-    empty.className = "empty";
-    empty.textContent = "No missing Lucide icons remain.";
-    resultList.append(empty);
+    createResults.append(emptyState("Every Lucide icon has a frame in this file.", true));
     return;
   }
-
   const fragment = document.createDocumentFragment();
-  for (const icon of candidates) {
+  for (const candidate of candidates) {
     const item = document.createElement("li");
     const rank = document.createElement("span");
     const name = document.createElement("span");
-    const usage = document.createElement("span");
+    const visitors = document.createElement("span");
+    item.className = "candidate";
     rank.className = "rank";
-    name.className = "name";
-    usage.className = "usage";
-    rank.textContent = `#${icon.rank}`;
-    name.textContent = icon.name;
-    usage.textContent = `${formatNumber(icon.popularity)} visitors`;
-    item.append(rank, name, usage);
+    name.className = "candidate-name";
+    visitors.className = "visitors";
+    rank.textContent = `#${candidate.rank}`;
+    name.textContent = candidate.name;
+    visitors.textContent = compactFormat.format(candidate.popularity);
+    visitors.title = `${numberFormat.format(candidate.popularity)} visitors in the last 12 months`;
+    item.append(rank, name, visitors);
     fragment.append(item);
   }
-  resultList.append(fragment);
+  createResults.append(fragment);
 }
 
-function renderAudit(issues: IconAuditIssue[]): void {
-  resultList.replaceChildren();
-  if (issues.length === 0) {
-    const success = document.createElement("li");
-    success.className = "empty success";
-    success.textContent = "Every icon passed all checks.";
-    resultList.append(success);
-    return;
+function renderProgress(): void {
+  if (!catalog) return;
+  const total = catalog.matchedCount + catalog.remainingCount;
+  progressLabel.textContent = `Lucide ${catalog.lucideVersion} · ${numberFormat.format(catalog.matchedCount)} of ${numberFormat.format(total)} drawn`;
+  progressBar.style.width = `${total === 0 ? 0 : (catalog.matchedCount / total) * 100}%`;
+  setBadge("create", catalog.remainingCount);
+}
+
+// Arrange
+
+function renderPreview(): void {
+  const columns = Math.min(MAX_COLUMNS, Math.max(1, Math.round(Number(columnsInput.value)) || 1));
+  const frames = page?.iconFrames ?? 0;
+  const rows = Math.ceil(frames / columns);
+
+  for (const button of presetButtons) {
+    button.setAttribute("aria-pressed", String(Number(button.dataset.columns) === columns));
   }
+  arrangePage.textContent = page ? page.name : "";
+  arrangeSummary.textContent =
+    frames === 0
+      ? "No icon frames on this page"
+      : `${plural(frames, "icon")} → ${plural(rows, "row")} of ${columns}`;
+  arrangeButton.textContent =
+    frames === 0 ? "Arrange icons" : `Arrange ${plural(frames, "icon")}`;
+
+  // Cells keep the real 40×72 grid step so the preview matches the canvas shape.
+  const available = Math.max(1, preview.clientWidth - 16 || document.body.clientWidth - 40);
+  const cell = Math.min(PREVIEW_MAX_CELL, available / columns);
+  const maxRows = Math.max(1, Math.floor(PREVIEW_MAX_HEIGHT / (cell * 1.8)));
+  const shownRows = frames === 0 ? Math.min(2, maxRows) : Math.min(rows, maxRows);
+  const shownCells = frames === 0 ? columns * shownRows : Math.min(frames, columns * shownRows);
+
+  preview.style.gridTemplateColumns = `repeat(${columns}, ${cell}px)`;
   const fragment = document.createDocumentFragment();
-  for (const issue of issues) {
-    const item = document.createElement("li");
-    const name = document.createElement("span");
-    const violations = document.createElement("span");
-    item.className = "issue";
-    name.className = "issue-name";
-    violations.className = "violations";
-    name.textContent = issue.name;
-    violations.textContent = issue.violations.join(" · ");
-    item.append(name, violations);
-    fragment.append(item);
+  for (let index = 0; index < shownCells; index += 1) {
+    const dot = document.createElement("i");
+    if (frames === 0) dot.className = "ghost";
+    fragment.append(dot);
   }
-  resultList.append(fragment);
+  preview.replaceChildren(fragment);
+
+  const hiddenRows = frames === 0 ? 0 : rows - shownRows;
+  previewMore.hidden = hiddenRows <= 0;
+  previewMore.textContent = `+ ${plural(hiddenRows, "more row")}`;
+  updateActions();
 }
 
-function renameTo(renames: Array<{ id: string; name: string }>): void {
-  status.textContent = `Renaming ${renames.length} icon${renames.length === 1 ? "" : "s"}…`;
-  send({ type: "rename", renames });
-}
+// Rename
 
 function renderRenameIdeas(icons: RenameSuggestion[]): void {
-  resultList.replaceChildren();
+  renameResults.replaceChildren();
+  setBadge("rename", icons.length, icons.length > 0);
+  renameMeta.textContent = icons.length === 0 ? "" : `${plural(icons.length, "frame")} to fix`;
   if (icons.length === 0) {
-    const success = document.createElement("li");
-    success.className = "empty success";
-    success.textContent = "Every icon uses a current Lucide name.";
-    resultList.append(success);
+    renameResults.append(emptyState("Every icon frame uses a current Lucide name.", true));
     return;
   }
 
   const fragment = document.createDocumentFragment();
   // Two frames can share an exact fix (alert-circle and AlertCircle); rename only the first.
   const targets = new Set<string>();
-  const exact = icons.flatMap((icon) => {
+  const exact = icons.flatMap((suggestion) => {
     // Exact ideas are always returned alone, so this is the frame's first idea.
-    const idea = icon.ideas.find((candidate) => EXACT_RENAME_REASONS.has(candidate.reason));
+    const idea = suggestion.ideas.find((candidate) => EXACT_RENAME_REASONS.has(candidate.reason));
     if (!idea || idea.taken || targets.has(idea.name)) return [];
     targets.add(idea.name);
-    return [{ id: icon.id, name: idea.name }];
+    return [{ id: suggestion.id, name: idea.name }];
   });
   if (exact.length > 0) {
     const item = document.createElement("li");
     const label = document.createElement("span");
     const button = document.createElement("button");
-    item.className = "rename-all";
-    label.textContent = `${exact.length} exact match${exact.length === 1 ? "" : "es"}`;
+    item.className = "bulk";
+    label.textContent = `${plural(exact.length, "exact fix", "exact fixes")} ready`;
     button.type = "button";
+    button.className = "secondary";
+    button.dataset.action = "";
     button.textContent = "Rename all";
-    button.addEventListener("click", () => {
-      renameTo(exact);
-    });
+    button.addEventListener("click", () => renameTo(exact));
     item.append(label, button);
     fragment.append(item);
   }
 
-  for (const icon of icons) {
+  for (const suggestion of icons) {
     const item = document.createElement("li");
-    const from = document.createElement("button");
-    item.className = "rename";
-    from.type = "button";
-    from.className = "rename-from";
-    from.title = "Select in Figma";
-    from.textContent = icon.name;
-    from.addEventListener("click", () => {
-      send({ type: "select", id: icon.id });
-    });
-    item.append(from);
-    if (icon.ideas.length === 0) {
+    const ideas = document.createElement("div");
+    item.className = "suggestion";
+    ideas.className = "ideas";
+    item.append(targetButton(suggestion.id, suggestion.name), ideas);
+    if (suggestion.ideas.length === 0) {
       const none = document.createElement("span");
       none.className = "idea-reason";
       none.textContent = "No close Lucide match";
-      item.append(none);
+      ideas.append(none);
     }
-    for (const idea of icon.ideas) {
+    for (const idea of suggestion.ideas) {
       const button = document.createElement("button");
       const name = document.createElement("span");
       const reason = document.createElement("span");
       button.type = "button";
-      button.className = "idea";
+      button.className = EXACT_RENAME_REASONS.has(idea.reason) ? "idea exact" : "idea";
       button.title = idea.taken
         ? `${idea.name} is already used in this file`
         : `Rename to ${idea.name}`;
@@ -175,95 +377,177 @@ function renderRenameIdeas(icons: RenameSuggestion[]): void {
       name.className = "idea-name";
       reason.className = "idea-reason";
       name.textContent = idea.name;
-      reason.textContent = idea.taken
-        ? `${renameReasonLabels[idea.reason]} · already in file`
-        : renameReasonLabels[idea.reason];
+      reason.textContent = idea.taken ? "Already in file" : renameReasonLabels[idea.reason];
       button.append(name, reason);
-      button.addEventListener("click", () => {
-        renameTo([{ id: icon.id, name: idea.name }]);
-      });
-      item.append(button);
+      button.addEventListener("click", () => renameTo([{ id: suggestion.id, name: idea.name }]));
+      ideas.append(button);
     }
     fragment.append(item);
   }
-  resultList.append(fragment);
+  renameResults.append(fragment);
 }
 
-countInput.addEventListener("change", () => {
-  const count = readCount();
-  countInput.value = String(count);
-  send({ type: "set-count", count });
-});
+function renameTo(renames: Array<{ id: string; name: string }>): void {
+  startAction(`Renaming ${plural(renames.length, "icon")}…`, { type: "rename", renames });
+}
 
-syncLibraryButton.addEventListener("click", () => {
-  syncLibraryButton.disabled = true;
-  status.textContent = "Creating or updating canonical icon components…";
-  send({ type: "sync-library" });
-});
+// Audit
 
+function renderAudit(summary: IconAuditSummary, issues: IconAuditIssue[]): void {
+  const fixed = summary.renamed + summary.rounded;
+  const values: Record<string, number> = { ...summary, fixed };
+  for (const stat of auditStats.querySelectorAll<HTMLElement>("[data-stat]")) {
+    stat.textContent = numberFormat.format(values[stat.dataset.stat ?? ""] ?? 0);
+  }
+  auditStats.querySelector("[data-stat=failed]")?.classList.toggle("alert", summary.failed > 0);
+  auditStats.querySelector("[data-stat=fixed]")?.setAttribute(
+    "title",
+    `${plural(summary.renamed, "layer")} renamed · ${plural(summary.rounded, "cap")} rounded`,
+  );
+  auditStats.hidden = false;
+  setBadge("audit", issues.length, issues.length > 0);
+
+  auditResults.replaceChildren();
+  if (issues.length === 0) {
+    auditResults.append(emptyState("Every icon passed all checks.", true));
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  for (const issue of issues) {
+    const item = document.createElement("li");
+    const violations = document.createElement("ul");
+    item.className = "issue";
+    violations.className = "violations";
+    for (const violation of issue.violations) {
+      const line = document.createElement("li");
+      line.textContent = violation;
+      violations.append(line);
+    }
+    item.append(targetButton(issue.id, issue.name), violations);
+    fragment.append(item);
+  }
+  auditResults.append(fragment);
+}
+
+// Library
+
+function renderLibrary(): void {
+  if (!page) return;
+  libraryCount.textContent = numberFormat.format(page.libraryIcons);
+  libraryState.textContent = page.hasLibrary ? "Found" : "Not yet";
+  syncLibraryButton.textContent = page.hasLibrary ? "Update library" : "Create library";
+}
+
+// Actions
+
+refreshButton.addEventListener("click", () => {
+  startAction("Scanning every page…", { type: "refresh" });
+});
 generateButton.addEventListener("click", () => {
-  generateButton.disabled = true;
-  status.textContent = "Creating canonical 24 px frames…";
-  send({ type: "generate", count: readCount() });
+  startAction("Creating frames…", { type: "generate", count: readCount() });
 });
-
-refreshButton.addEventListener("click", () => send({ type: "refresh" }));
 arrangeButton.addEventListener("click", () => {
-  status.textContent = "Arranging recognized icons A–Z…";
-  send({ type: "arrange" });
+  startAction("Arranging icons A–Z…", { type: "arrange", columns: readColumns() });
 });
 suggestButton.addEventListener("click", () => {
-  status.textContent = "Finding current Lucide names…";
-  send({ type: "suggest-names" });
+  startAction("Checking names…", { type: "suggest-names" });
 });
 auditButton.addEventListener("click", () => {
-  status.textContent = "Checking icons and renaming stroked layers…";
-  send({ type: "audit" });
+  startAction("Auditing icons…", { type: "audit" });
 });
+syncLibraryButton.addEventListener("click", () => {
+  startAction(
+    page?.hasLibrary ? "Updating the component library…" : "Creating the component library…",
+    { type: "sync-library" },
+  );
+});
+
+function applySettings(settings: PluginSettings): void {
+  countInput.value = String(settings.batchSize);
+  columnsInput.value = String(settings.columns);
+  updateGenerateLabel();
+  selectTab(settings.tab);
+}
 
 window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) => {
   const message = event.data.pluginMessage;
   if (!message) return;
 
-  if (message.type === "loading") {
-    status.textContent = "Comparing this file with the Lucide catalog…";
-    generateButton.disabled = true;
-    refreshButton.disabled = true;
-    return;
-  }
-
-  if (message.type === "library-status") {
-    libraryMeta.textContent = `${message.count} icons · 40/row`;
-    syncLibraryButton.textContent = message.available ? "Update" : "Create";
-    syncLibraryButton.disabled = false;
-    return;
-  }
-
-  refreshButton.disabled = false;
-  if (message.type === "error") {
-    status.textContent = message.message;
-    generateButton.disabled = candidates.length === 0;
-  } else if (message.type === "generated") {
-    status.textContent = `Created ${message.names.length} frames on this page`;
-  } else if (message.type === "library-synced") {
-    const added = message.added > 0 ? ` · ${message.added} added` : "";
-    const retained = message.retained > 0 ? ` · ${message.retained} custom retained` : "";
-    status.textContent = `${message.created ? "Created" : "Updated"} ${message.count} component icons${added}${retained}`;
-  } else if (message.type === "arranged") {
-    status.textContent = `Arranged ${message.count} icons A–Z · 40 per row`;
-  } else if (message.type === "rename-ideas") {
-    const left = `${message.icons.length} icon${message.icons.length === 1 ? "" : "s"} to rename`;
-    status.textContent = message.renamed > 0 ? `Renamed ${message.renamed} · ${left}` : left;
-    renderRenameIdeas(message.icons);
-  } else if (message.type === "audit") {
-    status.textContent = `${message.summary.passed} passed · ${message.summary.failed} issues · ${message.summary.renamed} renamed · ${message.summary.rounded} caps fixed`;
-    renderAudit(message.issues);
-  } else if (message.type === "catalog") {
-    candidates = message.candidates;
-    const { summary: catalog } = message;
-    status.textContent = `${candidates.length} next · Lucide ${catalog.lucideVersion}`;
-    renameMeta.textContent = `Lucide ${catalog.lucideVersion}`;
-    generateButton.disabled = candidates.length === 0;
-    renderCandidates();
+  switch (message.type) {
+    case "settings":
+      applySettings(message.settings);
+      return;
+    case "page":
+      page = message.page;
+      renderPreview();
+      renderLibrary();
+      return;
+    case "loading":
+      busy = true;
+      updateActions();
+      setStatus("Scanning every page…", "busy");
+      return;
+    case "catalog": {
+      candidates = message.candidates;
+      catalog = message.summary;
+      renderProgress();
+      renderCandidates();
+      updateGenerateLabel();
+      const left = catalog.remainingCount;
+      finishAction(
+        left === 0
+          ? `All ${numberFormat.format(catalog.matchedCount)} Lucide icons are drawn`
+          : `${plural(left, "Lucide icon")} left to draw`,
+        "idle",
+      );
+      return;
+    }
+    case "generated":
+      finishAction(`Created ${plural(message.names.length, "frame")} on this page`, "success");
+      return;
+    case "arranged":
+      finishAction(
+        `Arranged ${plural(message.count, "icon")} into ${plural(message.rows, "row")} of ${message.columns}`,
+        "success",
+      );
+      return;
+    case "rename-ideas": {
+      renderRenameIdeas(message.icons);
+      const left = message.icons.length;
+      const remaining = left === 0 ? "every name is current" : `${plural(left, "frame")} to fix`;
+      const renamed = message.renamed > 0 ? `Renamed ${plural(message.renamed, "icon")} · ` : "";
+      finishAction(
+        renamed ? `${renamed}${remaining}` : remaining.replace(/^e/, "E"),
+        left === 0 ? "success" : "idle",
+      );
+      return;
+    }
+    case "audit": {
+      const { summary } = message;
+      renderAudit(summary, message.issues);
+      finishAction(
+        summary.failed === 0
+          ? `All ${plural(summary.checked, "icon")} passed`
+          : `${plural(summary.failed, "icon")} with issues · ${numberFormat.format(summary.renamed + summary.rounded)} fixed`,
+        summary.failed === 0 ? "success" : "idle",
+      );
+      return;
+    }
+    case "library-synced": {
+      const extras = [
+        message.added > 0 ? `${numberFormat.format(message.added)} added` : "",
+        message.retained > 0 ? `${numberFormat.format(message.retained)} custom kept` : "",
+      ].filter(Boolean);
+      finishAction(
+        `${message.created ? "Created" : "Updated"} ${plural(message.count, "icon")}${extras.length ? ` · ${extras.join(" · ")}` : ""}`,
+        "success",
+      );
+      return;
+    }
+    case "error":
+      finishAction(message.message, "error");
+      return;
   }
 };
+
+updateActions();
