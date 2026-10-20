@@ -99,7 +99,7 @@ jobs:
         run: |
           # Compare against the last release tag, not just this push, so a
           # release run that failed is picked up again by the next push.
-          base=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' HEAD 2>/dev/null || true)
+          base=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' --exclude 'v*-*' HEAD 2>/dev/null || true)
           if [ -z "$base" ]; then
             base="${{ github.event.before }}"
             if [ "$base" = "0000000000000000000000000000000000000000" ]; then
