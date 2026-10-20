@@ -11,7 +11,7 @@
     "doctor": "blume doctor"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "14.4.0",
+    "@astrojs/cloudflare": "14.4.1",
     "blume": "2.2.4",
     "vadivam": "workspace:*"
   },
@@ -24,13 +24,13 @@
     "@bruits/satteri-linux-x64-musl": "0.10.5",
     "@bruits/satteri-win32-arm64-msvc": "0.10.5",
     "@bruits/satteri-win32-x64-msvc": "0.10.5",
-    "@takumi-rs/core-darwin-arm64": "2.16.3",
-    "@takumi-rs/core-darwin-x64": "2.16.3",
-    "@takumi-rs/core-linux-arm64-gnu": "2.16.3",
-    "@takumi-rs/core-linux-arm64-musl": "2.16.3",
-    "@takumi-rs/core-linux-x64-gnu": "2.16.3",
-    "@takumi-rs/core-linux-x64-musl": "2.16.3",
-    "@takumi-rs/core-win32-arm64-msvc": "2.16.3",
-    "@takumi-rs/core-win32-x64-msvc": "2.16.3"
+    "@takumi-rs/core-darwin-arm64": "2.17.1",
+    "@takumi-rs/core-darwin-x64": "2.17.1",
+    "@takumi-rs/core-linux-arm64-gnu": "2.17.1",
+    "@takumi-rs/core-linux-arm64-musl": "2.17.1",
+    "@takumi-rs/core-linux-x64-gnu": "2.17.1",
+    "@takumi-rs/core-linux-x64-musl": "2.17.1",
+    "@takumi-rs/core-win32-arm64-msvc": "2.17.1",
+    "@takumi-rs/core-win32-x64-msvc": "2.17.1"
   }
 }

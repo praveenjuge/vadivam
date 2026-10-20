@@ -10,8 +10,8 @@
     "build": "bun run typecheck && bun run build:android && bun run build:ios"
   },
   "dependencies": {
-    "expo": "58.0.14",
-    "react": "19.3.0",
+    "expo": "58.0.16",
+    "react": "19.3.1",
     "react-native": "0.88.0",
     "react-native-svg": "15.16.0",
     "vadivam-react-native": "file:../../../packages/vadivam-react-native"
