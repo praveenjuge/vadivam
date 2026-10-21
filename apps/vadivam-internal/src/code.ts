@@ -487,15 +487,14 @@ function createNamedFrames(names: readonly string[]): void {
   candidates = getMissingIcons(catalog.icons, existingSlugs);
 }
 
-async function arrangeIcons(columnsValue: unknown): Promise<void> {
-  const columns = parseColumns(columnsValue);
-  if (columns !== settings.columns) await saveSettings({ columns });
+// Sorts this page's icon frames A–Z into a grid that starts at their top-left corner.
+function layOutIconFrames(columns: number): IconContainer[] {
   const sortKey = (node: SceneNode): string =>
     resolveLucideIconName(node.name) ?? toKebabName(node.name);
   const icons = pageIconFrames().sort((left, right) =>
     sortKey(left).localeCompare(sortKey(right)),
   );
-  if (icons.length === 0) throw new Error("No icon frames on this page");
+  if (icons.length === 0) return icons;
   const origin = {
     x: Math.min(...icons.map((node) => node.x)),
     y: Math.min(...icons.map((node) => node.y)),
@@ -507,6 +506,14 @@ async function arrangeIcons(columnsValue: unknown): Promise<void> {
     icon.x = position.x;
     icon.y = position.y;
   });
+  return icons;
+}
+
+async function arrangeIcons(columnsValue: unknown): Promise<void> {
+  const columns = parseColumns(columnsValue);
+  if (columns !== settings.columns) await saveSettings({ columns });
+  const icons = layOutIconFrames(columns);
+  if (icons.length === 0) throw new Error("No icon frames on this page");
   figma.currentPage.selection = icons;
   figma.viewport.scrollAndZoomIntoView(icons);
   figma.commitUndo();
@@ -531,32 +538,76 @@ function parseSvgFiles(value: unknown): SvgFile[] {
   });
 }
 
+// Creates an icon frame for an SVG with no matching frame. The caller lays the page out again.
+function addIconFrame(name: string, svg: string): FrameNode {
+  const position = getBatchPositions(
+    1,
+    settings.columns,
+    pageIconFrames().map((node) => ({ x: node.x, y: node.y })),
+    figma.viewport.center,
+  )[0] as { x: number; y: number };
+  const frame = createIconFrame(name, position);
+  try {
+    replaceArtwork(frame, svg);
+  } catch (error) {
+    frame.remove();
+    throw error;
+  }
+  return frame;
+}
+
 // Each file replaces the artwork of the 24×24 frames on this page with the same
 // name; "ArrowRight.svg", "arrow_right.svg", and "arrow-right.svg" all match "arrow-right".
-function replaceIcons(filesValue: unknown): void {
+// Files with no frame get a new one, and the page is sorted A–Z so it lands in place.
+async function replaceIcons(filesValue: unknown): Promise<void> {
   const files = parseSvgFiles(filesValue);
+  // Everything from here to the edits runs synchronously after this load.
+  await figma.loadAllPagesAsync();
+  const owners = iconNameOwners();
   const frames = new Map<string, IconContainer[]>();
   for (const node of pageIconFrames()) {
     const key = toKebabName(node.name);
     frames.set(key, [...(frames.get(key) ?? []), node]);
   }
-  if (frames.size === 0) throw new Error("No icon frames on this page");
 
   const replaced: ReplacedIcon[] = [];
+  const added: ReplacedIcon[] = [];
   const skipped: SkippedSvg[] = [];
   const used = new Set<string>();
   for (const file of files) {
     const key = toKebabName(file.name.replace(/\.svg$/i, ""));
-    const targets = frames.get(key);
-    if (!targets) {
-      skipped.push({ file: file.name, reason: "No icon frame with this name on this page" });
+    if (!key) {
+      skipped.push({ file: file.name, reason: "File name is not an icon name" });
       continue;
     }
     if (used.has(key)) {
-      skipped.push({ file: file.name, reason: "Another file already replaced this frame" });
+      skipped.push({ file: file.name, reason: "Another file has the same icon name" });
       continue;
     }
     used.add(key);
+    const targets = frames.get(key);
+    if (!targets) {
+      const name = resolveLucideIconName(key) ?? key;
+      const owner = owners.get(name)?.[0];
+      if (owner) {
+        const page = owner.parent;
+        skipped.push({
+          file: file.name,
+          reason:
+            page === figma.currentPage
+              ? `"${owner.name}" on this page is the same icon; rename it first`
+              : `"${name}" is on the "${page?.name ?? "another"}" page`,
+        });
+        continue;
+      }
+      try {
+        const frame = addIconFrame(name, file.svg);
+        added.push({ id: frame.id, name: frame.name });
+      } catch (error) {
+        skipped.push({ file: file.name, reason: messageFromError(error) });
+      }
+      continue;
+    }
     for (const target of targets) {
       if (target.type === "INSTANCE") {
         skipped.push({ file: file.name, reason: `"${target.name}" is an instance; detach it first` });
@@ -571,14 +622,21 @@ function replaceIcons(filesValue: unknown): void {
     }
   }
 
-  if (replaced.length > 0) {
-    const ids = new Set(replaced.map((icon) => icon.id));
+  if (added.length > 0) {
+    layOutIconFrames(settings.columns);
+    for (const icon of added) existingSlugs.add(icon.name);
+    candidates = getMissingIcons(catalog.icons, existingSlugs);
+    publishCatalog();
+    publishPageStatus();
+  }
+  if (replaced.length > 0 || added.length > 0) {
+    const ids = new Set([...replaced, ...added].map((icon) => icon.id));
     const nodes = pageIconFrames().filter((node) => ids.has(node.id));
     figma.currentPage.selection = nodes;
     figma.viewport.scrollAndZoomIntoView(nodes);
     figma.commitUndo();
   }
-  post({ type: "replaced", replaced, skipped });
+  post({ type: "replaced", replaced, added, skipped });
 }
 
 async function publishRenameIdeas(renamed = 0): Promise<void> {
@@ -797,7 +855,7 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
     } else if (request.type === "arrange") {
       await arrangeIcons(request.columns ?? settings.columns);
     } else if (request.type === "replace") {
-      replaceIcons(request.files);
+      await replaceIcons(request.files);
     } else if (request.type === "suggest-names") {
       await publishRenameIdeas();
     } else if (request.type === "rename") {

@@ -309,11 +309,16 @@ async function readSvgFiles(files: File[]): Promise<void> {
   }
 }
 
-function renderReplaced(replaced: ReplacedIcon[], skipped: SkippedSvg[]): void {
+function renderReplaced(
+  replaced: ReplacedIcon[],
+  added: ReplacedIcon[],
+  skipped: SkippedSvg[],
+): void {
   replaceResults.replaceChildren();
   setBadge("replace", skipped.length, skipped.length > 0);
   replaceMeta.textContent = [
     replaced.length > 0 ? `${plural(replaced.length, "icon")} replaced` : "",
+    added.length > 0 ? `${numberFormat.format(added.length)} added` : "",
     skipped.length > 0 ? `${numberFormat.format(skipped.length)} skipped` : "",
   ].filter(Boolean).join(" · ");
 
@@ -336,6 +341,15 @@ function renderReplaced(replaced: ReplacedIcon[], skipped: SkippedSvg[]): void {
     const item = document.createElement("li");
     item.className = "replaced";
     item.append(targetButton(icon.id, icon.name));
+    fragment.append(item);
+  }
+  for (const icon of added) {
+    const item = document.createElement("li");
+    const note = document.createElement("span");
+    item.className = "replaced";
+    note.className = "subtle";
+    note.textContent = "New";
+    item.append(targetButton(icon.id, icon.name), note);
     fragment.append(item);
   }
   replaceResults.append(fragment);
@@ -584,14 +598,18 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
       );
       return;
     case "replaced": {
-      renderReplaced(message.replaced, message.skipped);
+      renderReplaced(message.replaced, message.added, message.skipped);
       const done = message.replaced.length;
+      const added = message.added.length;
       const skipped = message.skipped.length;
+      const parts = [
+        done > 0 ? `Replaced ${plural(done, "icon")}` : "",
+        added > 0 ? `${done > 0 ? "added" : "Added"} ${plural(added, "icon")}` : "",
+        skipped > 0 ? `${numberFormat.format(skipped)} skipped` : "",
+      ].filter(Boolean);
       finishAction(
-        done === 0
-          ? `Nothing replaced · ${plural(skipped, "file")} skipped`
-          : `Replaced ${plural(done, "icon")}${skipped > 0 ? ` · ${numberFormat.format(skipped)} skipped` : ""}`,
-        done === 0 ? "error" : "success",
+        done + added === 0 ? `Nothing replaced · ${plural(skipped, "file")} skipped` : parts.join(" · "),
+        done + added === 0 ? "error" : "success",
       );
       return;
     }

@@ -95,7 +95,7 @@ export type PluginToUiMessage =
   | { type: "catalog"; summary: CatalogSummary; candidates: LucideIconRanking[] }
   | { type: "generated"; names: string[] }
   | { type: "arranged"; count: number; columns: number; rows: number }
-  | { type: "replaced"; replaced: ReplacedIcon[]; skipped: SkippedSvg[] }
+  | { type: "replaced"; replaced: ReplacedIcon[]; added: ReplacedIcon[]; skipped: SkippedSvg[] }
   | { type: "rename-ideas"; icons: RenameSuggestion[]; renamed: number }
   | {
       type: "audit";

@@ -371,7 +371,7 @@ describe("compiled Figma plugin", () => {
     });
   });
 
-  test("replaces frame artwork with matching SVG files", async () => {
+  test("replaces frame artwork with matching SVG files and adds missing icons", async () => {
     const messages: Array<Record<string, unknown>> = [];
     const commits: number[] = [];
     const page: any = {
@@ -394,7 +394,7 @@ describe("compiled Figma plugin", () => {
       return node;
     }
 
-    function container(type: string, id: string, name: string, size = 24): any {
+    function container(type: string, id: string, name: string, size = 24, parent = page): any {
       const node: any = {
         type,
         id,
@@ -404,7 +404,7 @@ describe("compiled Figma plugin", () => {
         x: 40,
         y: 72,
         children: [],
-        parent: page,
+        parent,
         appendChild(child: any) {
           detach(child);
           child.parent = node;
@@ -415,10 +415,12 @@ describe("compiled Figma plugin", () => {
           node.removed = true;
         },
       };
-      page.children.push(node);
+      parent.children.push(node);
       return node;
     }
 
+    const otherPage: any = { name: "Drafts", children: [] };
+    container("FRAME", "2:1", "trash", 24, otherPage);
     const arrow = container("FRAME", "1:1", "arrow-right");
     const check = container("FRAME", "1:2", "check");
     const instance = container("INSTANCE", "1:3", "x");
@@ -434,12 +436,20 @@ describe("compiled Figma plugin", () => {
       on() {},
       clientStorage: clientStorage(),
       ui,
-      root: { children: [page] },
+      root: { children: [page, otherPage] },
       currentPage: page,
       viewport: { center: { x: 0, y: 0 }, scrollAndZoomIntoView() {} },
       async loadAllPagesAsync() {},
       commitUndo() {
         commits.push(commits.length + 1);
+      },
+      createFrame() {
+        const frame = container("FRAME", `new:${page.children.length}`, "Frame", 100);
+        frame.resize = (width: number, height: number) => {
+          frame.width = width;
+          frame.height = height;
+        };
+        return frame;
       },
       // The mock reads the size from the SVG's width attribute.
       createNodeFromSvg(svg: string) {
@@ -479,26 +489,37 @@ describe("compiled Figma plugin", () => {
         { name: "arrow_right.svg", svg: svg(24) },
         { name: "check.svg", svg: svg(48) },
         { name: "x.svg", svg: svg(24) },
-        { name: "made-up.svg", svg: svg(24) },
+        { name: "Bell.svg", svg: svg(24) },
+        { name: "bell.svg", svg: svg(24) },
+        { name: "big-new.svg", svg: svg(48) },
+        { name: "trash.svg", svg: svg(24) },
       ],
     });
+    const added = page.children.find((node: any) => node.name === "bell");
     expect(messages[messages.length - 1]).toEqual({
       type: "replaced",
       replaced: [{ id: "1:1", name: "arrow-right" }],
+      added: [{ id: added.id, name: "bell" }],
       skipped: [
-        { file: "arrow_right.svg", reason: "Another file already replaced this frame" },
+        { file: "arrow_right.svg", reason: "Another file has the same icon name" },
         { file: "check.svg", reason: "SVG must be 24×24" },
         { file: "x.svg", reason: '"x" is an instance; detach it first' },
-        { file: "made-up.svg", reason: "No icon frame with this name on this page" },
+        { file: "bell.svg", reason: "Another file has the same icon name" },
+        { file: "big-new.svg", reason: "SVG must be 24×24" },
+        { file: "trash.svg", reason: '"trash" is on the "Drafts" page' },
       ],
     });
-    // The frame keeps its place; only its layers change, and the SVG frames are cleaned up.
+    // Matched frames keep their node; only their layers change, and the SVG frames are cleaned up.
     expect(arrow.children.map((child: any) => child.name)).toEqual(["New", "New"]);
-    expect([arrow.x, arrow.y]).toEqual([40, 72]);
     expect(check.children.map((child: any) => child.name)).toEqual(["Old"]);
     expect(instance.children.map((child: any) => child.name)).toEqual(["Old"]);
-    expect(page.children).toEqual([arrow, check, instance]);
-    expect(page.selection).toEqual([arrow]);
+    expect(added.children.map((child: any) => child.name)).toEqual(["New", "New"]);
+    expect([added.width, added.height]).toEqual([24, 24]);
+    // New frames land in A–Z order on the grid, and a failed add leaves nothing behind.
+    expect(page.children).toEqual([arrow, check, instance, added]);
+    const order = [arrow, added, check, instance].map((node: any) => [node.x, node.y]);
+    expect(order).toEqual([[40, 72], [80, 72], [120, 72], [160, 72]]);
+    expect(page.selection).toEqual([arrow, added]);
     expect(commits).toHaveLength(1);
   });
 
