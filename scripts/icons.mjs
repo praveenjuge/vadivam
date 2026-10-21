@@ -683,13 +683,14 @@ async function buildWebAssets(icons) {
 
 export async function buildPreview() {
   const icons = await readIcons();
-  const rows = 8;
+  // A fixed column count keeps the width readable in README columns as the set grows.
+  const columns = 30;
   const cell = 32;
   const padding = 32;
   const gap = 24;
   const scale = 2;
   const strokeWidth = 2.25;
-  const columns = Math.max(1, Math.ceil(icons.length / rows));
+  const rows = Math.max(1, Math.ceil(icons.length / columns));
   const width = padding * 2 + columns * cell + (columns - 1) * gap;
   const height = padding * 2 + rows * cell + (rows - 1) * gap;
   const tiles = icons
