@@ -15,6 +15,7 @@ import { buildAngularPackage } from "./generators/angular.mjs";
 import { buildAstroPackage } from "./generators/astro.mjs";
 import { buildPreactPackage } from "./generators/preact.mjs";
 import { buildReactNativePackage } from "./generators/react-native.mjs";
+import { buildShadcnRegistry } from "./generators/shadcn.mjs";
 import { buildSolidPackage } from "./generators/solid.mjs";
 import { buildSveltePackage } from "./generators/svelte.mjs";
 import { buildVuePackage } from "./generators/vue.mjs";
@@ -40,6 +41,7 @@ const angularPackage = path.join(root, "packages/vadivam-angular");
 const astroDist = path.join(root, "packages/vadivam-astro/dist");
 const preactDist = path.join(root, "packages/vadivam-preact/dist");
 const webIconsDir = path.join(root, "apps/docs/public/icons");
+const shadcnRegistryDir = path.join(root, "apps/docs/public/r");
 const previewPath = path.join(root, "apps/docs/public/preview.png");
 const ogPath = path.join(root, "apps/docs/public/og.png");
 const fontCodepointsPath = path.join(root, "scripts/font-codepoints.json");
@@ -875,6 +877,7 @@ export async function build() {
   await buildAstroPackage(icons, astroDist);
   await buildPreactPackage(icons, preactDist);
   await buildWebAssets(icons);
+  await buildShadcnRegistry(icons, shadcnRegistryDir);
   console.log(`Built packages and web assets for ${icons.length} icons.`);
 }
 

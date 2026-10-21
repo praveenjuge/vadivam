@@ -28,6 +28,8 @@ Vadivam is a free, open-source library of 1899 pixel-perfect 24px outline SVG ic
 | [`vadivam-astro`](https://www.npmjs.com/package/vadivam-astro)               | Astro                 |
 | [`vadivam-preact`](https://www.npmjs.com/package/vadivam-preact)             | Preact                |
 
+Using shadcn/ui? Every icon is also a [registry item](https://vadivam.praveenjuge.com/docs/shadcn): `npx shadcn@latest add https://vadivam.praveenjuge.com/r/arrow-right.json`.
+
 ## Quick start
 
 ```sh
