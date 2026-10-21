@@ -145,9 +145,12 @@ export function svgBase64(svg) {
   return `data:image/svg+xml;base64,${btoa(binary)}`;
 }
 
-/** A CSS mask so the icon takes the element's text color. */
-export function cssMaskSnippet(name, svg) {
-  return `.icon-${name} {\n  display: inline-block;\n  width: 24px;\n  height: 24px;\n  background-color: currentColor;\n  mask: url("${svgDataUri(svg)}") no-repeat center / contain;\n}`;
+/** A CSS mask so the icon takes the element's text color, at the chosen size and stroke. */
+export function cssMaskSnippet(name, svg, options = {}) {
+  const { size } = resolveOptions(options);
+  // The mask only reads alpha, so the stroke color just has to be opaque.
+  const mask = svgDataUri(customizeSvg(svg, { ...options, color: "#000" }));
+  return `.icon-${name} {\n  display: inline-block;\n  width: ${size}px;\n  height: ${size}px;\n  background-color: currentColor;\n  mask: url("${mask}") no-repeat center / contain;\n}`;
 }
 
 export const siteUrl = "https://vadivam.praveenjuge.com";

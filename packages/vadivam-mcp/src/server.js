@@ -94,7 +94,7 @@ export function renderIcon(icon, format = "svg", options = {}) {
     case "base64":
       return svgBase64(svg);
     case "css-mask":
-      return cssMaskSnippet(icon.name, icon.svg);
+      return cssMaskSnippet(icon.name, icon.svg, options);
     case "cdn":
       return cdnUrl(icon.name, version);
     case "sprite":

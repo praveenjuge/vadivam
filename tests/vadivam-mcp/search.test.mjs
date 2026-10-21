@@ -148,6 +148,9 @@ describe("get_icon formats", () => {
     expect(base64).toMatch(/^data:image\/svg\+xml;base64,/);
     expect(atob(base64.split(",")[1])).toBe(activity.svg);
     expect(renderIcon(activity, "css-mask")).toContain(".icon-activity");
+    const mask = renderIcon(activity, "css-mask", { size: 48, strokeWidth: 1.5 });
+    expect(mask).toContain("width: 48px;");
+    expect(mask).toContain("stroke-width='1.5'");
   });
 
   test("framework snippets import from the matching package", () => {

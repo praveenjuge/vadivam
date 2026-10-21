@@ -447,12 +447,12 @@ const structuredData = site
       const loadIndex = () =>
         (indexPromise ??= fetch("/icons/index.json")
           .then((response) => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
-          .then((index: { categories: Record<string, string>; icons: [string, string, string][] }) => {
+          .then((index: { categories: Record<string, string>; icons: [string, string[], string][] }) => {
             categoryTitles = index.categories;
             for (const [name, tags, categories] of index.icons) {
               const entry = entryByName.get(name);
               if (!entry) continue;
-              entry.tags = tags ? tags.split("|") : [];
+              entry.tags = tags;
               entry.categories = categories ? categories.split(" ") : [];
             }
           })
@@ -530,6 +530,9 @@ const structuredData = site
         if (matches) renderBatch(matches.length);
       };
 
+      // Set by the drawer: keeps its selection on the tile that's on screen.
+      let afterFilter = () => {};
+
       let filterFrame = 0;
       const applyFilter = () => {
         cancelAnimationFrame(filterFrame);
@@ -544,6 +547,7 @@ const structuredData = site
             grid.classList.remove("is-dormant");
             emptyState.hidden = true;
             resultCount.textContent = `${entries.length} icons`;
+            afterFilter();
             return;
           }
           matches = entries
@@ -558,6 +562,7 @@ const structuredData = site
           renderBatch(batchSize);
           emptyState.hidden = matches.length > 0;
           resultCount.textContent = `${matches.length} of ${entries.length} icons`;
+          afterFilter();
         });
       };
 
@@ -726,6 +731,21 @@ const structuredData = site
         render();
         renderMeta();
         loadIndex()?.then(renderMeta);
+        syncNavigation();
+      };
+
+      // A filter swaps which grid is on screen, so move the selection to the
+      // matching tile there (or leave it alone when the icon is filtered out).
+      afterFilter = () => {
+        if (!selected) return;
+        const entry = entryByName.get(selected.dataset.name ?? "");
+        if (!entry) return;
+        const tile = !matches ? entry.card : matches.includes(entry) ? cloneOf(entry) : null;
+        if (tile && tile !== selected) {
+          selected.setAttribute("aria-current", "false");
+          tile.setAttribute("aria-current", "true");
+          selected = tile;
+        }
         syncNavigation();
       };
 

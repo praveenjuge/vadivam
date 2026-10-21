@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   componentSnippet,
+  cssMaskSnippet,
   customizeSvg,
   effectiveStrokeWidth,
   frameworks,
@@ -45,6 +46,14 @@ describe("copy formats", () => {
       color: "currentColor",
       absoluteStrokeWidth: false,
     });
+  });
+
+  test("CSS mask applies size and stroke settings", () => {
+    const css = cssMaskSnippet("arrow", svg, { size: 48, strokeWidth: 1.5 });
+    expect(css).toContain("width: 48px;\n  height: 48px;");
+    expect(css).toContain("stroke-width='1.5'");
+    expect(css).toContain("stroke='%23000'");
+    expect(cssMaskSnippet("arrow", svg)).toContain("width: 24px;");
   });
 
   test("JSX, data URI, and Base64 outputs", () => {

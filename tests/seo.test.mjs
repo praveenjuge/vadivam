@@ -90,6 +90,8 @@ describe("website SEO", () => {
     const index = JSON.parse(readDist("icons", "index.json"));
     expect(index.icons.map(([name]) => name)).toEqual(icons.map((icon) => icon.name));
     expect(index.icons.find(([name]) => name === "activity")[1]).toContain("heart rate monitor");
+    // Tags are arrays, so tags containing separators such as "->|" survive.
+    expect(index.icons.find(([name]) => name === "arrow-right-to-line")[1]).toContain("->|");
     expect(index.categories.arrows).toBe("Arrows");
   });
 

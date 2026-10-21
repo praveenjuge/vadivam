@@ -761,7 +761,7 @@ async function buildWebAssets(icons) {
     path.join(webIconsDir, "index.json"),
     JSON.stringify({
       categories: Object.fromEntries(iconCategories.map(({ id, title }) => [id, title])),
-      icons: icons.map((icon) => [icon.name, icon.tags.join("|"), icon.categories.join(" ")]),
+      icons: icons.map((icon) => [icon.name, icon.tags, icon.categories.join(" ")]),
     }),
   );
 }
