@@ -173,14 +173,19 @@ createIcons({
 Use `vadivam/manifest` to inspect the complete catalog:
 
 ```ts
-import { iconNames, icons, iconsByName } from "vadivam/manifest";
+import { categories, iconNames, icons, iconsByName } from "vadivam/manifest";
 
 console.log(iconNames.includes("activity"));
 console.log(iconsByName.activity.componentName); // "Activity"
 console.log(icons[0].svg);
+
+// Find icons by synonym or category.
+const deleteIcons = icons.filter((icon) => icon.tags.includes("delete"));
+const weatherIcons = icons.filter((icon) => icon.categories.includes("weather"));
+console.log(categories.find((category) => category.id === "weather")?.title);
 ```
 
-Each metadata record includes `name`, `componentName`, `fileName`, `svgPath`, `svg`, and `iconNode`.
+Each metadata record includes `name`, `componentName`, `fileName`, `svgPath`, `tags`, `categories`, `svg`, and `iconNode`. `tags` are search synonyms and `categories` are ids from the exported `categories` list (`id`, `title`, `description`). AI agents can run the same search through the [MCP server](/docs/mcp).
 
 The root entry point uses two similar names with different meanings: `icons` is the component-name-to-icon-node registry, while `manifest` is the metadata array. The dedicated `vadivam/manifest` entry point exports its metadata array as `icons`.
 
