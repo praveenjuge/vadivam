@@ -80,6 +80,9 @@ export function createSettingsStore({ url = false } = {}) {
     }
     history.replaceState(history.state, "", next);
   };
+  // Settings restored from storage show on the page, so the address must carry
+  // them too, or a copied link would show the default icon.
+  if (url && !isDefaultSettings(settings)) syncUrl();
 
   return {
     get: () => settings,
