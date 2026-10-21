@@ -123,6 +123,7 @@ See [Usage](https://vadivam.praveenjuge.com/docs/usage.md#accessibility).
 
 - [Icon catalog](https://vadivam.praveenjuge.com/): browse every icon; each is also served at `https://vadivam.praveenjuge.com/icons/<kebab-name>.svg`.
 - [AI agents](https://vadivam.praveenjuge.com/docs/ai-agents.md): how agents should consume Vadivam.
+- [Design guide](https://vadivam.praveenjuge.com/docs/design-guide.md): the drawing rules every icon follows.
 - [Contributing](https://vadivam.praveenjuge.com/docs/contributing.md): add icons or change packages.
 - [Changelog](https://vadivam.praveenjuge.com/changelog.md): release notes, newest first.
 - [llms.txt](https://vadivam.praveenjuge.com/llms.txt): every page with a one-line summary; [llms-full.txt](https://vadivam.praveenjuge.com/llms-full.txt) has every page in one file.

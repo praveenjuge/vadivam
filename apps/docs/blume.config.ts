@@ -62,6 +62,7 @@ export default defineConfig({
       { href: "/docs/dynamic-icons", label: "Dynamic icons", icon: "shuffle" },
       { href: "/docs/react", label: "React", icon: "code" },
       { href: "/docs/core", label: "Core SVG", icon: "file-code" },
+      { href: "/docs/design-guide", label: "Design guide", icon: "pen-tool" },
       {
         href: "/docs/contributing",
         label: "Contributing",

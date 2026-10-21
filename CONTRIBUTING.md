@@ -13,7 +13,7 @@ Keep pull requests focused and describe any visible or package API changes.
 
 ## Icon changes
 
-Keep every icon at `24x24`, outline-only, and compatible with the existing stroke conventions. Normalize and validate source SVGs before submitting changes:
+Draw every icon to the [design guide](https://vadivam.praveenjuge.com/docs/design-guide), which covers the canvas, stroke, pixel grid, keyline shapes, corner radii, spacing, naming, and what `icons:check` rejects. Normalize and validate source SVGs before submitting changes:
 
 ```sh
 bun run icons:optimize

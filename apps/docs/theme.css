@@ -6,3 +6,66 @@
     @apply relative grid aspect-square min-w-0 cursor-pointer place-items-center rounded-md text-foreground no-underline hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&>span]:absolute [&>span]:inset-0 [&>span]:grid [&>span]:cursor-pointer [&>span]:place-items-center [&_svg]:size-6 aria-[current=true]:bg-accent/10 aria-[current=true]:text-accent aria-[current=true]:ring-1 aria-[current=true]:ring-accent;
   }
 }
+
+/* Inline diagrams on /docs/design-guide. Each is a 24-unit icon canvas drawn
+   with theme tokens, so the grid and keylines follow light and dark mode.
+   These rules stay unlayered so they win over the prose margins on figure,
+   svg, and figcaption. */
+.guide-figures {
+  @apply my-6 flex flex-wrap gap-x-6 gap-y-5;
+}
+.guide-figures > .guide-figure {
+  @apply m-0 w-32 text-xs leading-snug text-muted-foreground;
+}
+.guide-figure > svg {
+  @apply m-0 block size-32 overflow-visible text-foreground;
+}
+.guide-figure > figcaption {
+  @apply mt-2 mb-0 text-xs leading-snug text-muted-foreground;
+}
+.guide-figure code {
+  @apply whitespace-nowrap;
+}
+/* vector-effect does not inherit, so set it on the keyline's shapes too. */
+.guide-grid,
+.guide-keyline,
+.guide-keyline > *,
+.guide-centerline {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+.guide-grid {
+  stroke: var(--color-border);
+  stroke-width: 1px;
+}
+.guide-padding {
+  fill: var(--color-accent);
+  fill-opacity: 0.2;
+}
+.guide-keyline {
+  stroke: var(--color-accent);
+  stroke-width: 1.5px;
+  stroke-dasharray: 4 3;
+}
+.guide-centerline {
+  stroke: var(--color-accent);
+  stroke-width: 1.5px;
+}
+.guide-icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.guide-gap {
+  fill: var(--color-accent);
+  fill-opacity: 0.35;
+}
+.guide-pixel {
+  fill: currentColor;
+  fill-opacity: 0.85;
+}
+.guide-pixel-half {
+  fill-opacity: 0.42;
+}
