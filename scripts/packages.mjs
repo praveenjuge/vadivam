@@ -71,7 +71,18 @@ export const publishablePackages = [
     keywords: ["preact", "preact-icons"],
     readmeSearchPhrase: "Tree-shakeable 24px outline SVG icons for Preact",
   },
+  {
+    name: "vadivam-mcp",
+    directory: "packages/vadivam-mcp",
+    description: "MCP server for AI agents to search Vadivam's 24px outline icons and get SVG or framework code.",
+    documentation: "/docs/mcp",
+    keywords: ["mcp", "mcp-server", "model-context-protocol", "ai-agents"],
+    readmeSearchPhrase: "An MCP server for searching 24px outline icons",
+  },
 ];
+
+// MCP Registry metadata published from the MCP server package's directory.
+export const mcpServerManifest = "packages/vadivam-mcp/server.json";
 
 export const packageMetadata = {
   author: "Praveen Juge",

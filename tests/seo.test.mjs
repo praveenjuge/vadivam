@@ -276,7 +276,11 @@ describe("website SEO", () => {
     const config = JSON.parse(
       readFileSync(path.join(serverDir, "wrangler.json"), "utf8"),
     );
-    expect(config.main).toBe("blume-worker.mjs");
+    // The Vadivam entry answers /mcp and delegates everything else to Blume's wrapper.
+    expect(config.main).toBe("vadivam-worker.mjs");
+    const entry = readFileSync(path.join(serverDir, config.main), "utf8");
+    expect(entry).toContain('from "./blume-worker.mjs"');
+    expect(entry).toContain('"/mcp"');
     const wrapper = readFileSync(
       path.join(serverDir, "blume-worker.mjs"),
       "utf8",

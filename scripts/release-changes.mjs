@@ -2,9 +2,12 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const exactPackageInputs = new Set([
+  "apps/docs/skills/vadivam-icons/SKILL.md",
+  "metadata/lucide.json",
   "scripts/font-codepoints.json",
   "scripts/icons.mjs",
   "scripts/packages.mjs",
+  "scripts/snippets.mjs",
 ]);
 
 export function isReleasablePath(path) {

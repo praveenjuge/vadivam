@@ -9,6 +9,8 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - `packages/vadivam-react` publishes generated React components.
 - `packages/vadivam-react-native` publishes generated React Native components.
 - `packages/vadivam-{vue,svelte,solid,angular,astro,preact}` publish generated native framework components.
+- `packages/vadivam-mcp` publishes the MCP server for AI agents (stdio CLI plus `createVadivamServer()`); its hand-written source is `packages/vadivam-mcp/src`, and `dist` adds generated icon data and `scripts/snippets.mjs`. `packages/vadivam-mcp/server.json` is its MCP Registry entry.
+- The docs Worker entry `apps/docs/worker/index.mjs` serves the same MCP server at `/mcp` and delegates every other request to Blume's Worker; `scripts/docs-worker.mjs` bundles it during the docs build.
 - Generated package/web assets come from `bun run icons:build`; do not edit generated output by hand.
 
 ## Setup Commands
@@ -20,6 +22,8 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - Test the raw SVG package: `bun run test:vadivam`
 - Test the React package: `bun run test:vadivam-react`
 - Test the React Native package: `bun run test:vadivam-react-native`
+- Test the MCP server package: `bun run test:vadivam-mcp`
+- Smoke-test an MCP endpoint: `bun run mcp:smoke <url>` (for `/mcp` locally, run `bun run docs:build`, then `bunx wrangler dev`; `bun run dev` does not serve `/mcp`)
 - Run the React render/SSR/exports unit suite only: `bun run test:react:unit`
 - Build and browser-test all framework integration apps: `bun run test:integration`
 - React Native compatibility is verified by the minimal Expo integration app for Android and iOS.
@@ -53,9 +57,9 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 
 ## Release Instructions
 
-- Keep the root package and every entry in `scripts/packages.mjs` on one synchronized version.
+- Keep the root package, every entry in `scripts/packages.mjs`, and `packages/vadivam-mcp/server.json` on one synchronized version.
 - Release by committing the version bump and pushing a matching tag such as `v0.0.3`.
-- The `Release` workflow tests, packs, publishes, and verifies all nine npm packages through npm Trusted Publishing, then creates the matching GitHub Release.
+- The `Release` workflow tests, packs, publishes, and verifies all ten npm packages through npm Trusted Publishing, publishes `packages/vadivam-mcp/server.json` to the MCP Registry, then creates the matching GitHub Release.
 - Do not publish manually unless the user explicitly asks.
 
 ## Security Notes

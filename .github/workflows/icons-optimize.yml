@@ -119,7 +119,7 @@ jobs:
         run: |
           version=$(bun scripts/bump-version.mjs)
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          git add package.json packages/*/package.json apps/figma-plugin/package.json README.md packages/*/README.md
+          git add package.json packages/*/package.json packages/vadivam-mcp/server.json apps/figma-plugin/package.json README.md packages/*/README.md
           git commit -m "chore(release): v$version"
 
       - name: Test core
