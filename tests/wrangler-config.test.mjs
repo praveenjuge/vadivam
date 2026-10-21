@@ -127,5 +127,10 @@ describe("docs Worker entry", () => {
     expect(runsWorkerFirst(["/*", "!/*.md"], "/mcp")).toBe(true);
     expect(runsWorkerFirst(["/*", "!/*.md"], "/index.md")).toBe(false);
     expect(runsWorkerFirst(["/docs/*"], "/mcp")).toBe(false);
+    expect(runsWorkerFirst(["/mcp"], "/mcp")).toBe(true);
+    expect(runsWorkerFirst(["/mcp"], "/mcp/extra")).toBe(false);
+    expect(runsWorkerFirst(["/*", "!/r/*"], "/r/activity.json")).toBe(false);
+    expect(runsWorkerFirst(["/*", "!/*.md"], "/md")).toBe(true);
+    expect(runsWorkerFirst(["/*", "!/api/*/pages.json"], "/api/docs/pages.json")).toBe(false);
   });
 });

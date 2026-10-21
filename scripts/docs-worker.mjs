@@ -33,15 +33,25 @@ export function withWorkerEntry(config) {
   return next;
 }
 
-function routePattern(rule) {
-  const source = rule.replace(/^!/, "").replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*");
-  return new RegExp(`^${source}$`);
+/** Whether `pathname` matches a Wrangler route glob, where `*` matches any run of characters. */
+function matchesRoute(rule, pathname) {
+  const [first = "", ...rest] = rule.replace(/^!/, "").split("*");
+  if (!pathname.startsWith(first)) return false;
+  if (rest.length === 0) return pathname === first;
+  let index = first.length;
+  for (const [position, part] of rest.entries()) {
+    if (position === rest.length - 1) return pathname.length - part.length >= index && pathname.endsWith(part);
+    const found = pathname.indexOf(part, index);
+    if (found < 0) return false;
+    index = found + part.length;
+  }
+  return false;
 }
 
 /** Whether `pathname` reaches the Worker before static assets under these rules. */
 export function runsWorkerFirst(routes, pathname) {
-  const included = routes.some((rule) => !rule.startsWith("!") && routePattern(rule).test(pathname));
-  const excluded = routes.some((rule) => rule.startsWith("!") && routePattern(rule).test(pathname));
+  const included = routes.some((rule) => !rule.startsWith("!") && matchesRoute(rule, pathname));
+  const excluded = routes.some((rule) => rule.startsWith("!") && matchesRoute(rule, pathname));
   return included && !excluded;
 }
 

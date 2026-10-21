@@ -312,10 +312,19 @@ export function renderPreviews(root: ParentNode, icon: IconRef, settings: IconSe
     const pixels = Number(preview.dataset.iconPreview) || settings.size;
     // A zoomed preview magnifies the icon at the chosen size; a sized preview
     // renders it at that size, so `absoluteStrokeWidth` adjusts its stroke.
-    preview.innerHTML = "zoom" in preview.dataset
+    const markup = "zoom" in preview.dataset
       ? customizeSvg(icon.svg, settings)
           .replace(/ width="[^"]*"/, ` width="${pixels}"`)
           .replace(/ height="[^"]*"/, ` height="${pixels}"`)
       : customizeSvg(icon.svg, { ...settings, size: pixels });
+    // Parse as SVG rather than assigning HTML, so URL-provided settings can
+    // only ever become attribute values of this one element.
+    svgParser ??= new DOMParser();
+    const svg = svgParser.parseFromString(markup, "image/svg+xml").documentElement;
+    preview.replaceChildren(document.importNode(svg, true));
   }
 }
+
+// Created on first use: this module is also imported at build time, where
+// there is no DOM.
+let svgParser: DOMParser | undefined;
