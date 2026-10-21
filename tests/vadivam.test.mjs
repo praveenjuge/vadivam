@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   Activity,
+  categories,
   createElement,
   createIcons,
   icons,
@@ -16,6 +17,16 @@ describe("vadivam package", () => {
     expect(manifest.length).toBeGreaterThan(0);
     expect(iconNames).toHaveLength(manifest.length);
     expect(iconsByName.activity.componentName).toBe("Activity");
+  });
+
+  test("ships Lucide tags and categories in the manifest", () => {
+    const categoryIds = new Set(categories.map((category) => category.id));
+    expect(categories.find((category) => category.id === "arrows")?.title).toBe("Arrows");
+    expect(iconsByName.activity.tags).toContain("pulse");
+    for (const icon of manifest) {
+      expect(icon.categories.length).toBeGreaterThan(0);
+      for (const id of icon.categories) expect(categoryIds.has(id)).toBe(true);
+    }
   });
 
   test("resolves raw SVG and icon-node subpath exports", async () => {

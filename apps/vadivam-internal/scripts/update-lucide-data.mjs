@@ -1,6 +1,5 @@
-import { execFileSync } from "node:child_process";
-import { readdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
+import { writeFile } from "node:fs/promises";
+import { readLucideCheckout, writeLucideMetadata } from "../../../scripts/lucide-metadata.mjs";
 import { decodeStringLiteral, rankLucideIcons } from "./lucide-data.ts";
 
 // Lucide 1.25 renamed this canonical SVG without retaining alias metadata.
@@ -11,18 +10,6 @@ const POPULARITY_RANKING = "Lucide icon-page visitors over the last 12 months";
 const checkout = process.argv[2];
 if (!checkout) {
   throw new Error("Usage: bun run update:lucide-data -- /path/to/lucide-checkout");
-}
-
-function checkoutVersion(directory) {
-  try {
-    return execFileSync(
-      "git",
-      ["-C", directory, "describe", "--tags", "--exact-match"],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
-    ).trim().replace(/^v/, "");
-  } catch {
-    throw new Error("Lucide checkout must point to an exact release tag");
-  }
 }
 
 async function fetchText(url) {
@@ -63,45 +50,12 @@ async function fetchLucidePopularity() {
   return popularity;
 }
 
-const iconsDirectory = path.resolve(checkout, "icons");
-const entries = await readdir(iconsDirectory, { withFileTypes: true });
-const canonicalNames = entries
-  .filter((entry) => entry.isFile() && entry.name.endsWith(".svg"))
-  .map((entry) => entry.name.slice(0, -4))
-  .sort();
-const canonicalNameSet = new Set(canonicalNames);
-const deprecatedAliases = new Map(Object.entries(knownDeprecatedAliases));
-const iconTags = new Map(canonicalNames.map((name) => [name, []]));
-
-for (const entry of entries) {
-  if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-  const canonicalName = entry.name.slice(0, -5);
-  if (!canonicalNameSet.has(canonicalName)) {
-    throw new Error(`Lucide metadata has no matching SVG: ${entry.name}`);
-  }
-  const metadata = JSON.parse(
-    await readFile(path.join(iconsDirectory, entry.name), "utf8"),
-  );
-  const tags = metadata.tags ?? [];
-  if (
-    !Array.isArray(tags) ||
-    tags.some((tag) => typeof tag !== "string" || tag.length === 0 || tag.length > 80)
-  ) {
-    throw new Error(`Lucide metadata has invalid tags: ${entry.name}`);
-  }
-  iconTags.set(canonicalName, [...new Set(tags.map((tag) => tag.trim().toLowerCase()))]);
-  for (const alias of metadata.aliases ?? []) {
-    if (alias.deprecated !== true) continue;
-    if (canonicalNameSet.has(alias.name)) {
-      throw new Error(`Deprecated Lucide alias is also canonical: ${alias.name}`);
-    }
-    const previous = deprecatedAliases.get(alias.name);
-    if (previous && previous !== canonicalName) {
-      throw new Error(`Ambiguous deprecated Lucide alias: ${alias.name}`);
-    }
-    deprecatedAliases.set(alias.name, canonicalName);
-  }
-}
+const catalog = await readLucideCheckout(checkout);
+const canonicalNames = catalog.names;
+const deprecatedAliases = new Map([
+  ...Object.entries(knownDeprecatedAliases),
+  ...catalog.deprecatedAliases,
+]);
 
 const { icons: rankings, unlisted } = rankLucideIcons(
   canonicalNames,
@@ -114,7 +68,7 @@ const sortedAliases = Object.fromEntries(
   [...deprecatedAliases].sort(([left], [right]) => left.localeCompare(right)),
 );
 const rankingCatalog = {
-  lucideVersion: checkoutVersion(path.resolve(checkout)),
+  lucideVersion: catalog.version,
   source: LUCIDE_ICONS_URL,
   retrievedAt: new Date().toISOString(),
   ranking: POPULARITY_RANKING,
@@ -129,10 +83,7 @@ await Promise.all([
     new URL("lucide-deprecated-aliases.json", dataDirectory),
     `${JSON.stringify(sortedAliases, null, 2)}\n`,
   ),
-  writeFile(
-    new URL("lucide-icon-tags.json", dataDirectory),
-    `${JSON.stringify(Object.fromEntries(iconTags))}\n`,
-  ),
+  writeLucideMetadata(catalog),
   writeFile(
     new URL("lucide-icon-rankings.json", dataDirectory),
     `${JSON.stringify(rankingCatalog)}\n`,
@@ -140,7 +91,7 @@ await Promise.all([
 ]);
 
 console.log(
-  `Updated Lucide ${rankingCatalog.lucideVersion}: ${canonicalNames.length} canonical names, ${deprecatedAliases.size} deprecated aliases, tags, and official popularity rankings`,
+  `Updated Lucide ${rankingCatalog.lucideVersion}: ${canonicalNames.length} canonical names, ${deprecatedAliases.size} deprecated aliases, tags, categories, and official popularity rankings`,
 );
 if (unlisted.length > 0) {
   console.log(`Not on lucide.dev yet, ranked with zero popularity: ${unlisted.join(", ")}`);

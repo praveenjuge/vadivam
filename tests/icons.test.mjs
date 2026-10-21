@@ -5,6 +5,7 @@ import {
   readIcons,
   shuffleUnique,
   updateIconCountMarkers,
+  validateIconMetadata,
   validateLucideIconNames,
   validateSvgContent,
 } from "../scripts/icons.mjs";
@@ -132,6 +133,18 @@ describe("icon validation", () => {
     expect(() => validateLucideIconNames(["columns.svg", "custom.svg"], catalog)).toThrow(
       "Deprecated or non-canonical icon names for Lucide 1.60.0: columns.svg, custom.svg",
     );
+  });
+
+  test("requires tags and known categories for exactly the shipped icons", () => {
+    const metadata = {
+      categories: { arrows: { title: "Arrows" } },
+      icons: { check: { tags: ["done"], categories: ["arrows"] } },
+    };
+    expect(() => validateIconMetadata(["check"], metadata)).not.toThrow();
+    expect(() => validateIconMetadata(["check", "x"], metadata)).toThrow("has no entry for: x");
+    expect(() => validateIconMetadata([], metadata)).toThrow("lists icons with no SVG: check");
+    metadata.icons.check.categories = ["unknown"];
+    expect(() => validateIconMetadata(["check"], metadata)).toThrow("needs at least one known category");
   });
 
   test("updates every marked icon count without changing unrelated numbers", () => {

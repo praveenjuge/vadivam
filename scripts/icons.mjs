@@ -43,7 +43,10 @@ const webIconsDir = path.join(root, "apps/docs/public/icons");
 const previewPath = path.join(root, "apps/docs/public/preview.png");
 const ogPath = path.join(root, "apps/docs/public/og.png");
 const fontCodepointsPath = path.join(root, "scripts/font-codepoints.json");
-const lucideVersion = "1.60.0";
+const lucideMetadata = JSON.parse(
+  await readFile(path.join(root, "metadata/lucide.json"), "utf8"),
+);
+const lucideVersion = lucideMetadata.lucideVersion;
 const lucideTreeUrl = "https://api.github.com/repos/lucide-icons/lucide/git/trees";
 const iconCountFiles = [
   path.join(root, "README.md"),
@@ -191,6 +194,31 @@ export function validateLucideIconNames(fileNames, catalog) {
     `Deprecated or non-canonical icon names for Lucide ${catalog.version}: ${invalid.join(", ")}. Rename them to current canonical Lucide names`,
   );
 }
+
+// Tags and categories come from Lucide's metadata for the pinned release, so
+// each icon's search terms match the canonical name it is drawn for.
+export function validateIconMetadata(names, metadata = lucideMetadata) {
+  const known = new Set(names);
+  const missing = names.filter((name) => !metadata.icons[name]);
+  const orphaned = Object.keys(metadata.icons).filter((name) => !known.has(name));
+  assert(missing.length === 0, `metadata/lucide.json has no entry for: ${missing.join(", ")}`);
+  assert(orphaned.length === 0, `metadata/lucide.json lists icons with no SVG: ${orphaned.join(", ")}`);
+  for (const name of names) {
+    const { tags, categories } = metadata.icons[name];
+    assert(
+      Array.isArray(tags) && tags.every((tag) => typeof tag === "string" && tag.length > 0),
+      `metadata/lucide.json: ${name} has invalid tags`,
+    );
+    assert(
+      Array.isArray(categories) && categories.length > 0 && categories.every((id) => metadata.categories[id]),
+      `metadata/lucide.json: ${name} needs at least one known category`,
+    );
+  }
+}
+
+export const iconCategories = Object.entries(lucideMetadata.categories).map(
+  ([id, { title, description }]) => ({ id, title, ...(description && { description }) }),
+);
 
 function parseSvg(svg, file = "inline.svg") {
   const xmlCheck = XMLValidator.validate(svg);
@@ -351,10 +379,13 @@ export async function readIcons() {
       componentName: pascalCase(name),
       fileName,
       svgPath: `icons/${fileName}`,
+      tags: lucideMetadata.icons[name]?.tags ?? [],
+      categories: lucideMetadata.icons[name]?.categories ?? [],
       svg,
       iconNode,
     });
   }
+  validateIconMetadata(icons.map((icon) => icon.name));
   return icons;
 }
 
@@ -403,6 +434,7 @@ export async function checkIcons() {
       fileName,
     );
   }
+  validateIconMetadata(files.map((fileName) => fileName.replace(/\.svg$/, "")));
   const lucideCatalog = await fetchPinnedLucideCatalog();
   validateLucideIconNames(files, lucideCatalog);
   await synchronizeIconCounts(files.length, { check: true });
@@ -531,19 +563,19 @@ export default createIcons;
   const manifest = JSON.stringify(icons, null, 2);
   await writeFile(
     path.join(rawDist, "manifest.js"),
-    `export const icons = ${manifest};\nexport const iconNames = icons.map((icon) => icon.name);\nexport const iconsByName = Object.fromEntries(icons.map((icon) => [icon.name, icon]));\nexport default icons;\n`,
+    `export const icons = ${manifest};\nexport const iconNames = icons.map((icon) => icon.name);\nexport const iconsByName = Object.fromEntries(icons.map((icon) => [icon.name, icon]));\nexport const categories = ${JSON.stringify(iconCategories, null, 2)};\nexport default icons;\n`,
   );
   await writeFile(
     path.join(rawDist, "manifest.d.ts"),
-    `import type { IconName, IconNode } from "./types.js";\nexport interface VadivamIconMetadata {\n  name: IconName;\n  componentName: string;\n  fileName: \`${"${IconName}"}.svg\`;\n  svgPath: \`icons/${"${IconName}"}.svg\`;\n  svg: string;\n  iconNode: IconNode;\n}\nexport declare const icons: readonly VadivamIconMetadata[];\nexport declare const iconNames: readonly IconName[];\nexport declare const iconsByName: Record<IconName, VadivamIconMetadata>;\nexport default icons;\n`,
+    `import type { IconName, IconNode } from "./types.js";\nexport interface VadivamIconMetadata {\n  name: IconName;\n  componentName: string;\n  fileName: \`${"${IconName}"}.svg\`;\n  svgPath: \`icons/${"${IconName}"}.svg\`;\n  /** Search terms from Lucide's metadata for this icon. */\n  tags: readonly string[];\n  /** Ids from \`categories\`. */\n  categories: readonly IconCategoryId[];\n  svg: string;\n  iconNode: IconNode;\n}\nexport type IconCategoryId = ${iconCategories.map((category) => JSON.stringify(category.id)).join(" | ")};\nexport interface VadivamIconCategory {\n  id: IconCategoryId;\n  title: string;\n  description?: string;\n}\nexport declare const icons: readonly VadivamIconMetadata[];\nexport declare const iconNames: readonly IconName[];\nexport declare const iconsByName: Record<IconName, VadivamIconMetadata>;\nexport declare const categories: readonly VadivamIconCategory[];\nexport default icons;\n`,
   );
   await writeFile(
     path.join(rawDist, "index.js"),
-    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\nexport { icons as manifest, iconNames, iconsByName } from "./manifest.js";\n${rawNamedExports}\n`,
+    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\nexport { icons as manifest, iconNames, iconsByName, categories } from "./manifest.js";\n${rawNamedExports}\n`,
   );
   await writeFile(
     path.join(rawDist, "index.d.ts"),
-    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\nexport { icons as manifest, iconNames, iconsByName } from "./manifest.js";\n${rawNamedExports}\nexport type { CreateIconsOptions } from "./createIcons.js";\nexport type { VadivamIconMetadata } from "./manifest.js";\nexport type { IconName, IconNode, Icons, SVGElementType, SVGProps } from "./types.js";\n`,
+    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\nexport { icons as manifest, iconNames, iconsByName, categories } from "./manifest.js";\n${rawNamedExports}\nexport type { CreateIconsOptions } from "./createIcons.js";\nexport type { IconCategoryId, VadivamIconCategory, VadivamIconMetadata } from "./manifest.js";\nexport type { IconName, IconNode, Icons, SVGElementType, SVGProps } from "./types.js";\n`,
   );
   await buildStaticAssets(icons, {
     iconsDirectory: iconsDir,

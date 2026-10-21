@@ -19,6 +19,7 @@
     "icons:optimize": "bun scripts/icons.mjs optimize",
     "icons:check": "bun scripts/icons.mjs check",
     "icons:build": "bun scripts/icons.mjs build",
+    "icons:metadata": "bun scripts/lucide-metadata.mjs",
     "icons:font-codepoints": "bun scripts/icons.mjs font-codepoints",
     "icons:preview": "bun scripts/icons.mjs preview",
     "icons:og": "bun scripts/icons.mjs og",
