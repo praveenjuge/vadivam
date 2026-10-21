@@ -1,0 +1,214 @@
+---
+title: Design guide
+description: The canvas, stroke, pixel grid, keyline shapes, corner radii, spacing, and naming rules every Vadivam icon follows, measured from the full set.
+related:
+  - /docs/contributing
+  - /docs/usage
+  - /docs/core
+search:
+  keywords: [icon design, keyline, pixel grid, corner radius, stroke, padding, svg rules]
+---
+
+These rules describe how the Vadivam icons are drawn. The numbers come from measuring every icon in `icons/` with `bun scripts/icon-geometry.mjs`. Where a rule is not met by every icon, the share that meets it is given. Rules marked **Checked** fail `bun run icons:check`; the rest are reviewed by eye.
+
+## Principles
+
+- **One grid.** Every icon is drawn on the same 24×24 canvas with the same 2px stroke, so icons line up and match in weight when they sit next to each other.
+- **Crisp at 24px.** Straight edges land on whole pixels at 1×, so the stroke renders as solid pixels rather than a blur.
+- **Soft, generous shapes.** Base shapes fill the canvas and use large corner radii. Vadivam's square is 20×20 with a 6px radius, where Lucide's is 18×18 with 2px.
+- **Lucide's vocabulary, redrawn.** Every icon is a new drawing of a Lucide icon under the same name, so a Lucide name works in Vadivam unchanged.
+- **Clarity over rules.** When a rule hurts how readable an icon is, readability wins. The exceptions below are listed by name.
+
+## Canvas and live area
+
+<Visibility for="web">
+<div className="guide-figures">
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="Empty 24 by 24 canvas with the 1px padding shaded and the 2 to 22 keyline dashed"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><path className="guide-padding" fill-rule="evenodd" d="M0 0h24v24H0zM1 1v22h22V1z"/><g className="guide-keyline"><rect x="2" y="2" width="20" height="20" rx="0"/></g></svg><figcaption>24×24 canvas, 1px padding, centerlines inside 2–22</figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The house icon on the grid; its roof reaches the padding line"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><path className="guide-padding" fill-rule="evenodd" d="M0 0h24v24H0zM1 1v22h22V1z"/><g className="guide-icon"><path d="M5.4 22C4.074 22 3 20.911 3 19.567v-9.78c0-.739.332-1.439.9-1.9l6.6-5.353a2.37 2.37 0 0 1 3 0l6.599 5.353c.57.461.901 1.161.901 1.9v9.78C21 20.91 19.926 22 18.6 22z"/><path d="M9 22v-6.6a2.4 2.4 0 0 1 2.4-2.4h1.2a2.4 2.4 0 0 1 2.4 2.4V22"/></g></svg><figcaption><code>house</code> reaches 1 and 23 vertically</figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The search icon on the grid, filling the live area"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><path className="guide-padding" fill-rule="evenodd" d="M0 0h24v24H0zM1 1v22h22V1z"/><g className="guide-icon"><path d="M18.144 18.15 22 22m-1.218-10.625c0 2.486-.99 4.871-2.75 6.63a9.4 9.4 0 0 1-13.281 0 9.367 9.367 0 0 1 0-13.26 9.4 9.4 0 0 1 13.28 0 9.37 9.37 0 0 1 2.75 6.63"/></g></svg><figcaption><code>search</code> spans 1–23 both ways</figcaption></figure>
+</div>
+</Visibility>
+
+- **Checked.** The canvas is `24×24` with `viewBox="0 0 24 24"`.
+- **Checked.** Ink stays on the canvas. With round caps and joins, a 2px stroke reaches 1px past its centerline in every direction, so no coordinate may sit closer than 1px to an edge. All 1,899 icons pass.
+- Keep 1px of padding: ink stays inside 1–23, so centerlines stay inside 2–22. 1,896 of 1,899 icons (99.8%) do. The exceptions reach 0.16–0.25px into the padding: `columns-3-cog`, `heading-6`, and `message-circle-question-mark`.
+- Use the live area. 82.5% of icons reach the padding line on at least one side, and the median icon's ink is 22px across its larger dimension. Only 11.7% stay inside 2–22.
+- Center the drawing. In 98.9% of icons, the center of the ink's bounding box is within 0.5px of (12, 12). Asymmetric icons may shift for optical balance.
+
+## Stroke
+
+- **Checked.** Draw with a single `2px` stroke, `stroke="currentColor"`, `stroke-linecap="round"`, and `stroke-linejoin="round"`, all set once on the root `<svg>`.
+- Keep the stroke centered on the path, which is how SVG renders it. Draw open centerlines and never outline a stroke into a filled shape.
+- **Checked.** A path with more than 8 closed subpaths is rejected, since that usually means outlined stroke geometry. The most in any icon today is 6.
+- **Checked.** No fills: the root sets `fill="none"`, and source artwork with any other `fill` is rejected before it is optimized.
+- Do not mix stroke widths or emulate a thicker line with parallel strokes. Consumers change the weight with `strokeWidth`; see [Usage](/docs/usage).
+
+## Pixel grid alignment
+
+<Visibility for="web">
+<div className="guide-figures">
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="A 2px stroke centered on y 7 fills pixel rows 6 and 7 completely"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><rect className="guide-pixel" x="3" y="6" width="18" height="1"/><rect className="guide-pixel" x="3" y="7" width="18" height="1"/><path className="guide-centerline" d="M3 7h18"/><rect className="guide-pixel" x="3" y="16" width="18" height="1"/><rect className="guide-pixel" x="3" y="17" width="18" height="1"/><path className="guide-centerline" d="M3 17h18"/></svg><figcaption>Centerline on y = 7: two solid pixel rows</figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="A 2px stroke centered on y 7.5 covers three pixel rows, the outer two at half strength"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><rect className="guide-pixel guide-pixel-half" x="3" y="6" width="18" height="1"/><rect className="guide-pixel" x="3" y="7" width="18" height="1"/><rect className="guide-pixel guide-pixel-half" x="3" y="8" width="18" height="1"/><path className="guide-centerline" d="M3 7.5h18"/><rect className="guide-pixel guide-pixel-half" x="3" y="15" width="18" height="1"/><rect className="guide-pixel" x="3" y="16" width="18" height="1"/><rect className="guide-pixel guide-pixel-half" x="3" y="17" width="18" height="1"/><path className="guide-centerline" d="M3 16.5h18"/></svg><figcaption>Centerline on y = 7.5: three soft rows</figcaption></figure>
+</div>
+</Visibility>
+
+A 2px stroke centered on a whole-number coordinate covers exactly two pixel rows at 24px, so it renders solid. Centered on a half pixel, the same stroke covers one full row and two half rows, and renders blurred. So, for crisp edges:
+
+- Put horizontal and vertical lines on whole-pixel coordinates. 93.6% of the set's 8,816 horizontal and vertical straight segments do (94.5% of those at least 2px long). In 86.7% of icons, every one does.
+- Start rectangles on whole pixels: 95.7% of rectangle corners do.
+- Center circles on whole pixels where you can (73.0%), or on half pixels (13.6%) when an odd-sized detail needs it.
+- Let curves and diagonals follow the shape. Only 58.3% of all vertices are on whole pixels, because arc and curve endpoints land wherever the shape puts them. Of 3,258 diagonal segments, 40% run at 45°.
+- Path data keeps at most 3 decimal places. `bun run icons:optimize` rounds it.
+
+## Keyline shapes
+
+<Visibility for="web">
+<div className="guide-figures">
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="Circle keyline: radius 10 centered on 12, 12"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><g className="guide-keyline"><rect x="2" y="2" width="20" height="20" rx="0"/></g><g className="guide-icon"><path d="M2 12a10 10 0 0 1 20 0c0 2.626-1.072 5.214-2.929 7.071A10.1 10.1 0 0 1 12 22a10.1 10.1 0 0 1-7.071-2.929A10.1 10.1 0 0 1 2 12"/></g></svg><figcaption>Circle: r 10 at (12, 12)</figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="Square keyline: 20 by 20 from 2, 2 with a 6px corner radius"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><g className="guide-keyline"><rect x="2" y="2" width="20" height="20" rx="0"/></g><g className="guide-icon"><path d="M8 22h8a6 6 0 0 0 6-6V8a6 6 0 0 0-6-6H8a6 6 0 0 0-6 6v8a6 6 0 0 0 6 6"/></g></svg><figcaption>Square: 20×20, r 6</figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="Portrait keyline: 14 by 20 from 5, 2 with a 4px corner radius"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><g className="guide-keyline"><rect x="2" y="2" width="20" height="20" rx="0"/></g><g className="guide-icon"><path d="M19 6v12a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4"/></g></svg><figcaption>Portrait: 14×20, r 4</figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="Landscape keyline: 20 by 14 from 2, 5 with a 4px corner radius"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><g className="guide-keyline"><rect x="2" y="2" width="20" height="20" rx="0"/></g><g className="guide-icon"><path d="M6 5h12a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V9a4 4 0 0 1 4-4"/></g></svg><figcaption>Landscape: 20×14, r 4</figcaption></figure>
+</div>
+</Visibility>
+
+Start from these base shapes. Each is drawn as its own icon, so it can be checked against the set:
+
+| Shape | Geometry | Defined by | Measured use |
+| --- | --- | --- | --- |
+| Circle | r 10 at (12, 12) | [`circle`](/icons/circle) | 74 full circles, all centered on (12, 12) |
+| Square | 20×20 at (2, 2), r 6 | [`square`](/icons/square) | 73 rectangles at 20×20, 71 of them with r 6 |
+| Portrait | 14×20 at (5, 2), r 4 | [`rectangle-vertical`](/icons/rectangle-vertical) | 14 rectangles at 14×20, at r 4 or r 3 |
+| Landscape | 20×14 at (2, 5), r 4 | [`rectangle-horizontal`](/icons/rectangle-horizontal) | 4 rectangles at 20×14 |
+
+Landscape frames usually need more height than 14px. The common alternatives are 20×18 at (2, 4) with r 6, used 11 times (the `calendar` family), and 16×12 at (2, 6) with r 4, used 8 times.
+
+Small circles use radius 2 (94 circles), 3 (84), 2.5 (43), 1 (37), or 3.5 (35).
+
+## Corner radius
+
+<Visibility for="web">
+<div className="guide-figures">
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The square icon with its 6px corner radius traced as a dashed circle"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><g className="guide-icon"><path d="M8 22h8a6 6 0 0 0 6-6V8a6 6 0 0 0-6-6H8a6 6 0 0 0-6 6v8a6 6 0 0 0 6 6"/></g><g className="guide-keyline"><circle cx="8" cy="8" r="6"/></g></svg><figcaption>20px side, r 6 in <code>square</code></figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The server icon, a 14 by 20 frame with a 4px corner radius traced as a dashed circle"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><g className="guide-icon"><path d="M9 2h6a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4m0 4h6m-6 4h6m-3 7h.01"/></g><g className="guide-keyline"><circle cx="9" cy="6" r="4"/></g></svg><figcaption>14px side, r 4 in <code>server</code></figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The layout-grid icon, four 8 by 8 tiles with a 2.4px corner radius traced as a dashed circle"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><g className="guide-icon"><path d="M4.4 10h3.2A2.4 2.4 0 0 0 10 7.6V4.4A2.4 2.4 0 0 0 7.6 2H4.4A2.4 2.4 0 0 0 2 4.4v3.2A2.4 2.4 0 0 0 4.4 10m0 12h3.2a2.4 2.4 0 0 0 2.4-2.4v-3.2A2.4 2.4 0 0 0 7.6 14H4.4A2.4 2.4 0 0 0 2 16.4v3.2A2.4 2.4 0 0 0 4.4 22m12-12h3.2A2.4 2.4 0 0 0 22 7.6V4.4A2.4 2.4 0 0 0 19.6 2h-3.2A2.4 2.4 0 0 0 14 4.4v3.2a2.4 2.4 0 0 0 2.4 2.4m0 12h3.2a2.4 2.4 0 0 0 2.4-2.4v-3.2a2.4 2.4 0 0 0-2.4-2.4h-3.2a2.4 2.4 0 0 0-2.4 2.4v3.2a2.4 2.4 0 0 0 2.4 2.4"/></g><g className="guide-keyline"><circle cx="4.4" cy="4.4" r="2.4"/></g></svg><figcaption>8px side, r 2.4 in <code>layout-grid</code></figcaption></figure>
+</div>
+</Visibility>
+
+- Round every rectangle. None of the 299 axis-aligned rectangles in the set has a sharp corner.
+- Make the radius about 30% of the rectangle's shorter side, on a 0.5px step where you can. The median ratio is 0.30; 80% of rectangles fall between 0.25 and 0.50.
+- For sides of 8px or more, the common radii are 6 (83 rectangles), 4 (36), 3 (32), and 2.5 (24).
+- For sides under 8px, the common radii are 2 (40), 2.5 (20), and 1.5 (15). A 4px-wide bar becomes a pill with r 2.
+- Use arcs rather than approximating curves where a corner is circular. The set has 6,742 circular arc commands with a median radius of 3.5.
+
+Lucide uses 2px corners on shapes 8px and up and 1px below. Vadivam's larger radii are what give it its rounder look, so don't copy Lucide's corners.
+
+## Spacing between elements
+
+<Visibility for="web">
+<div className="guide-figures">
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The layout-grid icon with the 2px gap between two tiles highlighted"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><rect className="guide-gap" x="10" y="4.4" width="4" height="3.2"/><g className="guide-icon"><path d="M4.4 10h3.2A2.4 2.4 0 0 0 10 7.6V4.4A2.4 2.4 0 0 0 7.6 2H4.4A2.4 2.4 0 0 0 2 4.4v3.2A2.4 2.4 0 0 0 4.4 10m0 12h3.2a2.4 2.4 0 0 0 2.4-2.4v-3.2A2.4 2.4 0 0 0 7.6 14H4.4A2.4 2.4 0 0 0 2 16.4v3.2A2.4 2.4 0 0 0 4.4 22m12-12h3.2A2.4 2.4 0 0 0 22 7.6V4.4A2.4 2.4 0 0 0 19.6 2h-3.2A2.4 2.4 0 0 0 14 4.4v3.2a2.4 2.4 0 0 0 2.4 2.4m0 12h3.2a2.4 2.4 0 0 0 2.4-2.4v-3.2a2.4 2.4 0 0 0-2.4-2.4h-3.2a2.4 2.4 0 0 0-2.4 2.4v3.2a2.4 2.4 0 0 0 2.4 2.4"/></g></svg><figcaption>2px gap in <code>layout-grid</code></figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The server icon with the 2px gap between the frame and the first rule highlighted"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><rect className="guide-gap" x="9" y="2" width="6" height="4"/><g className="guide-icon"><path d="M9 2h6a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4m0 4h6m-6 4h6m-3 7h.01"/></g></svg><figcaption>2px gap in <code>server</code></figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The circle-alert icon with the 1.5px gap between the bar and the dot highlighted"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><rect className="guide-gap" x="11" y="13" width="2" height="3.444"/><g className="guide-icon"><path d="M2 12a10 10 0 0 1 20 0c0 2.626-1.072 5.214-2.929 7.071A10.1 10.1 0 0 1 12 22a10.1 10.1 0 0 1-7.071-2.929A10.1 10.1 0 0 1 2 12m10 1V7m0 10v-.556"/></g></svg><figcaption>1.5px gap in <code>circle-alert</code></figcaption></figure>
+</div>
+</Visibility>
+
+Separate parts of an icon either join or leave a readable gap:
+
+- Leave a 2px gap between separate elements by default. In the set, 73.4% of separate parts that come within 6px of each other keep at least 2px; 2px is the most common gap (2,099 pairs).
+- Never go below 1.5px. 1.5px is the second most common gap (1,535 pairs), used where 2px doesn't fit, such as the dot under a bar. In 85.5% of icons, every gap is at least 1.5px.
+- Don't leave a near miss. If two strokes come closer than 1.5px, join them. 63 icons, including `image`, `earth`, and `train-front-tunnel`, have a stroke ending 0.3–2px short of another, so the strokes merge into a blob without meeting.
+
+These figures measure the gap between separate subpaths: their centerline distance minus the 2px stroke. Gaps within a single subpath, such as between the turns of a spiral, are not measured.
+
+## Visual weight and consistency
+
+<Visibility for="web">
+<div className="guide-figures">
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The circle icon, covering 21.7 percent of the canvas"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><g className="guide-icon"><path d="M2 12a10 10 0 0 1 20 0c0 2.626-1.072 5.214-2.929 7.071A10.1 10.1 0 0 1 12 22a10.1 10.1 0 0 1-7.071-2.929A10.1 10.1 0 0 1 2 12"/></g></svg><figcaption>21.7% ink in <code>circle</code></figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The square icon, covering 24.2 percent of the canvas"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><g className="guide-icon"><path d="M8 22h8a6 6 0 0 0 6-6V8a6 6 0 0 0-6-6H8a6 6 0 0 0-6 6v8a6 6 0 0 0 6 6"/></g></svg><figcaption>24.2% ink in <code>square</code></figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The bell icon, covering 23.1 percent of the canvas"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><g className="guide-icon"><path d="M15.34 17.726H8.659m6.683 0c0 5.699-6.683 5.699-6.683 0m6.683 0c1.801 0 8.053.263 4.674-3.15C15.32 10.986 21 2 11.999 2s-3.318 8.986-8.013 12.576c-3.38 3.412 2.869 3.15 4.672 3.15"/></g></svg><figcaption>23.1% ink in <code>bell</code></figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The house icon, covering 29.5 percent of the canvas"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><g className="guide-icon"><path d="M5.4 22C4.074 22 3 20.911 3 19.567v-9.78c0-.739.332-1.439.9-1.9l6.6-5.353a2.37 2.37 0 0 1 3 0l6.599 5.353c.57.461.901 1.161.901 1.9v9.78C21 20.91 19.926 22 18.6 22z"/><path d="M9 22v-6.6a2.4 2.4 0 0 1 2.4-2.4h1.2a2.4 2.4 0 0 1 2.4 2.4V22"/></g></svg><figcaption>29.5% ink in <code>house</code></figcaption></figure>
+</div>
+</Visibility>
+
+Compare a new icon with `circle` and `square` at 24px. Its ink should look about as dark as theirs.
+
+- `circle` covers 21.7% of the canvas with ink and `square` 24.2%. Across the set, the median is 26.3%, and 90% of icons fall between 15.5% and 36.2%.
+- Icons above about 36% (`grid-3x3`, `fence`, and `table-columns-split` are around 44–46%) are as dense as an icon should get. Simplify before going further.
+- Reuse base shapes exactly. `square-plus` draws the `square` frame unchanged, and so do 49 of the 78 `square-*` icons. 33 of the 48 `circle-*` icons contain the full r 10 circle. The rest break the frame for dashes or to make room for a badge, but keep its geometry.
+- Put modifiers, such as a plus or a slash, in the same place and at the same size across a family.
+- Keep icons simple. The median icon is 1 `<path>` with 4 subpaths and 12 segments. 1,349 icons use 1 path, 525 use 2, 24 use 3, and 1 uses 4. The most complex has 33 subpaths.
+
+## Naming
+
+- **Checked.** Every file name is a current canonical Lucide name from the pinned release, recorded as `lucideVersion` in `metadata/lucide.json` (currently 1.60.0). Deprecated aliases are rejected: use `circle-alert`, not `alert-circle`.
+- **Checked.** Names are lowercase kebab-case: letters and digits separated by single hyphens.
+- **Checked.** Every icon has tags and at least one known category in `metadata/lucide.json`, taken from Lucide's metadata for the same name.
+- Component names are the PascalCase form of the file name, generated by the build: `circle-alert.svg` becomes `CircleAlert`. Never name a component by hand.
+
+## What's not allowed
+
+`bun run icons:check` and `bun run icons:optimize` reject an SVG that breaks any of these rules:
+
+- **Root.** The root `<svg>` has exactly `xmlns="http://www.w3.org/2000/svg"`, `width="24"`, `height="24"`, `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `stroke-width="2"`, `stroke-linecap="round"`, and `stroke-linejoin="round"`. Any other root attribute, such as `class`, `id`, or `style`, is rejected.
+- **Elements.** Only `<path>`, `<circle>`, `<line>`, `<polyline>`, `<polygon>`, `<rect>`, and `<ellipse>` are allowed. That rules out `<a>`, `<clipPath>`, `<defs>`, `<filter>`, `<foreignObject>`, `<g>`, `<image>`, `<linearGradient>`, `<mask>`, `<pattern>`, `<radialGradient>`, `<script>`, `<style>`, `<symbol>`, `<text>`, `<use>`, and any other element. Every icon in the set uses only `<path>`.
+- **Attributes.** Each element carries geometry only: `d` on a path; `cx`, `cy`, and `r` on a circle; `x1`, `y1`, `x2`, and `y2` on a line; `points` on a polyline or polygon; `x`, `y`, `width`, `height`, `rx`, and `ry` on a rect; and `cx`, `cy`, `rx`, and `ry` on an ellipse. No `fill`, `stroke`, `transform`, `opacity`, `style`, `class`, `id`, or event handlers.
+- **Geometry.** Every element needs geometry. An icon needs at least one drawable element. Path data must parse. A single path may hold at most 8 closed subpaths. The stroke must stay on the canvas.
+- **Fills.** Source artwork with a `fill` other than `none` is rejected before optimization, so outlined Figma exports never reach the set.
+- **Files.** File names must be canonical Lucide names in lowercase kebab-case, with an entry in `metadata/lucide.json`.
+
+Treat every SVG as untrusted input: these checks run before anything is published or deployed.
+
+## Accessibility
+
+An icon is either decorative or meaningful. It is decorative when it repeats nearby text, such as an icon next to a button label. It is meaningful when it carries information on its own, such as an icon-only button or a status indicator.
+
+- Hide decorative icons from assistive technology. The web framework components add `aria-hidden="true"` when no title or accessible attribute is given.
+- Give a meaningful icon a name with `title`, `aria-label`, or, in React Native, `accessibilityLabel`. Name an icon-only button on the button itself.
+- Don't rely on an icon's shape or color alone to carry state.
+
+See [Usage: accessibility](/docs/usage#accessibility) for examples in each framework.
+
+## Workflow
+
+<Steps>
+  <Step title="Draw in the Figma source file">
+
+Each icon is a top-level 24×24 frame named after its Lucide name, on a 2px grid. Draw centerline strokes on the frame. Don't flatten or outline them. The internal Figma plugin (`apps/vadivam-internal`) creates frames for missing names and replaces artwork from SVG files. Its **Audit** tab checks every frame for a canonical name, 24×24 size, no background fill or layout guides, stroke-only artwork, zero corner radius, a 2px stroke, round caps and joins, and zero rotation.
+
+  </Step>
+  <Step title="Export to icons/">
+
+Export the frame as SVG into the root `icons/` folder, replacing the existing file of the same name. Generated package and website files are rebuilt from this folder; never edit them by hand.
+
+  </Step>
+  <Step title="Normalize">
+
+```sh
+bun run icons:optimize
+```
+
+This optimizes each SVG in place with SVGO, rewrites the root attributes, and strips stroke and fill attributes from the elements.
+
+  </Step>
+  <Step title="Validate">
+
+```sh
+bun run icons:check
+```
+
+This runs every **Checked** rule on this page and confirms the names against the pinned Lucide release.
+
+  </Step>
+  <Step title="Review by eye">
+
+Compare the icon with `circle`, `square`, and its family at 24px and at 1×, against the rules that are not checked automatically: padding, grid alignment, keylines, corner radius, gaps, and weight. To see where the icon sits in the set's distributions, run:
+
+```sh
+bun scripts/icon-geometry.mjs
+```
+
+  </Step>
+</Steps>
+
+See [Contributing](/docs/contributing) for setup, tests, and pull requests.

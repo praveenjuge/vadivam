@@ -33,8 +33,9 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - Add or replace SVGs only in the root `icons/` folder.
 - Normalize SVGs in place with `bun run icons:optimize`.
 - Validate without writing files with `bun run icons:check`.
-- Keep every icon `24x24` with `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `stroke-width="2"`, and round caps/joins.
-- Keep icons outline-only. Do not add fills, gradients, masks, scripts, inline styles, external references, or unsafe SVG features.
+- Follow the design guide at `apps/docs/docs/(design)/01-design-guide.mdx` (published at `/docs/design-guide`): 24x24 canvas, 1px padding, one 2px centered `currentColor` stroke with round caps/joins, whole-pixel horizontal and vertical lines, the `circle`/`square` keylines, corner radii, and gaps of at least 1.5px.
+- Keep icons outline-only. Do not add fills, gradients, masks, scripts, inline styles, external references, or unsafe SVG features; `validateSvgContent` in `scripts/icons.mjs` is the source of truth for what is rejected.
+- When a guide rule becomes machine-checkable and every icon passes, enforce it in `scripts/icons.mjs` and update the guide. `bun scripts/icon-geometry.mjs` reports the measurements the guide quotes.
 
 ## Code Style
 

@@ -1,11 +1,12 @@
 ---
-title: Contributing and icon guidelines
-description: Set up the Vadivam monorepo, contribute safe and consistent 24px outline icons, and validate package or documentation changes.
+title: Contributing
+description: Set up the Vadivam monorepo, add or update icons through the Figma and SVG workflow, and validate package or documentation changes.
 related:
+  - /docs/design-guide
   - /docs/core
   - /docs/ai-agents
 search:
-  keywords: [figma, svg guidelines, pull request]
+  keywords: [figma, pull request, icons:optimize, icons:check]
 ---
 
 Vadivam is a Bun monorepo. Source SVGs in the root `icons/` directory are canonical; package distributions and website assets are generated and must not be edited by hand.
@@ -41,16 +42,7 @@ Keep pull requests focused and describe visible changes and package API changes.
 
 ## Add or update an icon
 
-Add or replace only the source SVG in `icons/`. Every icon must use:
-
-- a `24x24` canvas and `viewBox="0 0 24 24"`
-- `fill="none"`
-- `stroke="currentColor"`
-- `stroke-width="2"`
-- round stroke caps and joins
-- outline geometry consistent with the existing set
-
-Do not add fills, gradients, masks, scripts, inline styles, external references, or other unsafe SVG features.
+Add or replace only the source SVG in `icons/`, named after the icon's current Lucide name. Draw it to the [design guide](/docs/design-guide): it covers the canvas, stroke, pixel grid, keyline shapes, corner radii, spacing, and everything `icons:check` rejects.
 
 <Steps>
   <Step title="Normalize the source SVGs">
