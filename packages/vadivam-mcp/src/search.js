@@ -78,7 +78,9 @@ function tokenScore(icon, terms, token) {
  */
 export function scoreIcon(icon, query) {
   const tokens = tokenize(query);
-  if (tokens.length === 0) return 0;
+  // Symbol-only queries (`€`, `->|`, `@`) have no word tokens, but Lucide
+  // ships them as tags, so match them exactly.
+  if (tokens.length === 0) return icon.tags.includes(normalize(query)) ? 250 : 0;
   const phrase = tokens.join("-");
   if (icon.name === phrase || icon.componentName.toLowerCase() === tokens.join("")) {
     return 10_000;
@@ -126,7 +128,7 @@ export function searchIcons(query, { limit = 20, category } = {}) {
     pool = icons.filter((icon) => icon.categories.includes(categoryId));
   }
   let ranked;
-  if (tokenize(query).length === 0) {
+  if (normalize(query) === "") {
     // Browsing a category: alphabetical.
     ranked = categoryId
       ? [...pool].sort((a, b) => a.name.localeCompare(b.name)).map((icon) => ({ icon }))

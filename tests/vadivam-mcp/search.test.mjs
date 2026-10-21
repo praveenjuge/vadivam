@@ -56,6 +56,12 @@ describe("search_icons ranking", () => {
     expect(results.indexOf("delete")).toBe(0);
   });
 
+  test("symbol-only tags match exactly", () => {
+    expect(names(searchIcons("->|"))).toContain("arrow-right-to-line");
+    expect(names(searchIcons("@"))).toContain("at-sign");
+    expect(names(searchIcons("  "))).toEqual([]);
+  });
+
   test("tags rank above category titles", () => {
     const icon = icons.find((candidate) => candidate.tags.includes("weather"));
     const results = searchIcons("weather", { limit: 100 }).results;
