@@ -127,6 +127,11 @@ describe("shadcn registry generator", () => {
     expect(() => iconItem(node({ "on-load": "x" }))).toThrow(/Unsafe path attribute/);
   });
 
+  test("accepts the <line> geometry attributes icons:check allows", () => {
+    const item = iconItem({ ...activity, iconNode: [["line", { x1: "4", y1: "12", x2: "20", y2: "12" }]] });
+    expect(item.files[0].content).toContain('<line x1="4" y1="12" x2="20" y2="12" />');
+  });
+
   test("refuses icon names that collide with registry files", () => {
     for (const name of [baseItemName, "registry"]) {
       expect(() => registryItems([{ ...activity, name }])).toThrow(/collides/);

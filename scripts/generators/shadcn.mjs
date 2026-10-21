@@ -67,7 +67,7 @@ function jsxElement([tag, attrs]) {
     .filter(([name]) => name !== "key")
     .map(([name, value]) => {
       const text = String(value);
-      if (!/^[a-z][a-zA-Z]*$/.test(name) || /["{}<>\\]/.test(text)) {
+      if (!/^[a-z][a-zA-Z0-9]*$/.test(name) || /["{}<>\\]/.test(text)) {
         throw new Error(`Unsafe ${tag} attribute for the shadcn registry: ${name}`);
       }
       return ` ${name}="${text}"`;

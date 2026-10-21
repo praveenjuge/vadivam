@@ -881,13 +881,21 @@ const structuredData = site
         if (dragStart === null) return;
         drawer.style.transform = `translateY(${Math.max(0, event.clientY - dragStart)}px)`;
       }, { signal });
-      addEventListener("pointerup", (event) => {
-        if (dragStart === null) return;
-        const distance = event.clientY - dragStart;
+      const endDrag = () => {
         dragStart = null;
         drawer.style.transition = "";
         drawer.style.transform = "";
+      };
+      addEventListener("pointerup", (event) => {
+        if (dragStart === null) return;
+        const distance = event.clientY - dragStart;
+        endDrag();
         if (distance > 80) closeDrawer();
+      }, { signal });
+      // The browser cancels the pointer when it takes the touch over as a
+      // scroll; reset without closing so no stale drag follows later touches.
+      addEventListener("pointercancel", () => {
+        if (dragStart !== null) endDrag();
       }, { signal });
 
       // Customizer: shared with icon pages through localStorage. The grid

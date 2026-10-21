@@ -58,23 +58,8 @@ jobs:
         run: bun run icons:build && bun run figma-plugin:build
 
       - name: Publish and verify packages
+        id: npm-publish
         run: bun run release:publish
-
-      # The registry checks that the npm package carries the matching mcpName,
-      # so this runs only after npm serves the new vadivam-mcp version.
-      - name: Publish MCP server to the MCP Registry
-        working-directory: packages/vadivam-mcp
-        env:
-          TAG_NAME: ${{ github.ref_name }}
-        run: |
-          version="${TAG_NAME#v}"
-          if curl -fsS -o /dev/null "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.praveenjuge%2Fvadivam/versions/$version"; then
-            echo "io.github.praveenjuge/vadivam $version is already in the MCP Registry."
-            exit 0
-          fi
-          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz -C "$RUNNER_TEMP" mcp-publisher
-          "$RUNNER_TEMP/mcp-publisher" login github-oidc
-          "$RUNNER_TEMP/mcp-publisher" publish
 
       - name: Package Figma plugin
         env:
@@ -95,3 +80,23 @@ jobs:
           previous_tag=$(git describe --tags --abbrev=0 "$TAG_NAME^" 2>/dev/null || true)
           bun scripts/release-notes.mjs "$previous_tag" "$TAG_NAME" > release-notes.md
           gh release create "$TAG_NAME" "vadivam-figma-${TAG_NAME}.zip#Vadivam Icons for Figma" --title "$TAG_NAME" --notes-file release-notes.md --generate-notes --verify-tag
+
+      # The registry checks that the npm package carries the matching mcpName,
+      # so this runs only after npm serves the new vadivam-mcp version. It runs
+      # last so a registry outage can't hold back the GitHub release, but still
+      # runs when a re-run's GitHub release step fails because the release
+      # exists; it skips a version the registry already has.
+      - name: Publish MCP server to the MCP Registry
+        if: ${{ !cancelled() && steps.npm-publish.outcome == 'success' }}
+        working-directory: packages/vadivam-mcp
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          version="${TAG_NAME#v}"
+          if curl -fsS -o /dev/null "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.praveenjuge%2Fvadivam/versions/$version"; then
+            echo "io.github.praveenjuge/vadivam $version is already in the MCP Registry."
+            exit 0
+          fi
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz -C "$RUNNER_TEMP" mcp-publisher
+          "$RUNNER_TEMP/mcp-publisher" login github-oidc
+          "$RUNNER_TEMP/mcp-publisher" publish
