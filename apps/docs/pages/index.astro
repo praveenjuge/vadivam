@@ -2,7 +2,6 @@
 import PageLayout from "blume/components/layout/PageLayout.astro";
 import Icon from "blume/components/Icon.astro";
 import GithubInfo from "blume/components/content/GithubInfo.astro";
-import Tooltip from "blume/components/content/Tooltip.astro";
 import data from "blume:data";
 import { highlightCode } from "blume/markdown";
 import { icons, iconsByName } from "vadivam/manifest";
@@ -299,13 +298,17 @@ const structuredData = site
               data-component={icon.componentName}
               aria-label={`View ${icon.componentName} icon`}
             >
-              <Tooltip tip={icon.name}>
-                <span class="grid place-items-center [&>svg]:size-6" aria-hidden="true" set:html={icon.svg} />
-              </Tooltip>
+              <span aria-hidden="true" set:html={icon.svg} />
             </a>
           ))
         }
       </div>
+      <div
+        class="pointer-events-none fixed z-50 w-max rounded-blume border border-border bg-background px-3 py-2 font-sans text-sm leading-5 text-muted-foreground shadow-lg"
+        id="iconTooltip"
+        role="tooltip"
+        hidden
+      ></div>
 
       <p class="py-12 text-center text-sm text-muted-foreground" id="emptyState" hidden>No icons match that search.</p>
     </section>
@@ -408,7 +411,8 @@ const structuredData = site
     const grid = document.querySelector<HTMLElement>("#iconGrid");
     const cards = Array.from(document.querySelectorAll<HTMLAnchorElement>(".icon-card"));
     const emptyState = document.querySelector<HTMLElement>("#emptyState");
-    const drawer = document.querySelector<HTMLElement>("#iconDrawer");
+    const tooltip = document.querySelector<HTMLElement>("#iconTooltip");
+    const drawer =document.querySelector<HTMLElement>("#iconDrawer");
     const drawerPreview = document.querySelector<HTMLElement>("#drawerPreview");
     const drawerName = document.querySelector<HTMLElement>("#drawerName");
     const drawerComponent = document.querySelector<HTMLElement>("#drawerComponent");
@@ -421,6 +425,7 @@ const structuredData = site
     let selected: HTMLAnchorElement | null = null;
     let activeTab = "react";
     let statusTimer: ReturnType<typeof setTimeout> | undefined;
+    let tooltipCard: HTMLAnchorElement | null = null;
 
     // Rebuilt from the tile's inline paths; the build checks this matches the manifest.
     const svgMarkup = (card: HTMLAnchorElement | null) => {
@@ -593,6 +598,45 @@ const structuredData = site
     }
     syncClearButton();
 
+    // One shared tooltip instead of one per tile keeps the homepage under the
+    // 2 MB crawl limit. It stays inside the viewport and Escape hides it (WCAG 1.4.13).
+    const hideTooltip = () => {
+      tooltipCard?.removeAttribute("aria-describedby");
+      tooltipCard = null;
+      if (tooltip) tooltip.hidden = true;
+    };
+
+    const showTooltip = (card: HTMLAnchorElement) => {
+      if (!tooltip || card === tooltipCard) return;
+      hideTooltip();
+      tooltip.textContent = card.dataset.name ?? "";
+      tooltip.hidden = false;
+      const margin = 8;
+      const target = card.getBoundingClientRect();
+      const { width, height } = tooltip.getBoundingClientRect();
+      const maxLeft = document.documentElement.clientWidth - margin - width;
+      const above = target.top - height - margin;
+      tooltip.style.left = `${Math.max(margin, Math.min(target.left + target.width / 2 - width / 2, maxLeft))}px`;
+      tooltip.style.top = `${above >= 0 ? above : target.bottom + margin}px`;
+      card.setAttribute("aria-describedby", tooltip.id);
+      tooltipCard = card;
+    };
+
+    const cardFrom = (event: Event) => (event.target as HTMLElement).closest<HTMLAnchorElement>(".icon-card");
+
+    grid?.addEventListener("pointerover", (event) => {
+      if ((event as PointerEvent).pointerType === "touch") return;
+      const card = cardFrom(event);
+      if (card) showTooltip(card);
+      else hideTooltip();
+    });
+    grid?.addEventListener("pointerleave", hideTooltip);
+    grid?.addEventListener("focusin", (event) => {
+      const card = cardFrom(event);
+      if (card) showTooltip(card);
+    });
+    grid?.addEventListener("focusout", hideTooltip);
+    window.addEventListener("scroll", hideTooltip, { passive: true });
 
     grid?.addEventListener("click", (event) => {
       const mouse = event as MouseEvent;
@@ -621,7 +665,9 @@ const structuredData = site
     drawerClose?.addEventListener("click", closeDrawer);
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") closeDrawer();
+      if (event.key !== "Escape") return;
+      hideTooltip();
+      closeDrawer();
     });
 
     window.addEventListener("resize", syncClearance);
