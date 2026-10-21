@@ -1,0 +1,8 @@
+/* The homepage renders one tile per icon. Its utilities live here once instead of
+   being repeated in every tile's class attribute, which keeps the page's HTML
+   under the 2 MB crawl limit as the icon set grows. */
+@layer components {
+  .icon-card {
+    @apply relative grid aspect-square min-w-0 cursor-pointer place-items-center rounded-md text-foreground no-underline hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&>span]:absolute [&>span]:inset-0 [&>span]:grid [&>span]:cursor-pointer [&>span]:place-items-center aria-[current=true]:bg-accent/10 aria-[current=true]:text-accent aria-[current=true]:ring-1 aria-[current=true]:ring-accent;
+  }
+}

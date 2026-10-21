@@ -117,6 +117,8 @@ for (const tab of codeTabs) {
 // The SVG tab shows raw markup. Every icon shares one normalized wrapper and only
 // its `<path d="…">` values differ, so highlight one shell per path-count and let
 // the client substitute the real path data.
+const SVG_OPEN_TAG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
 const svgPathCounts = [...new Set(icons.map((icon) => (icon.svg.match(/ d="/g) ?? []).length))]
   .filter((count) => count > 0)
   .sort((a, b) => a - b);
@@ -125,8 +127,17 @@ for (const count of svgPathCounts) {
   // Match the manifest's exact markup (all paths on one line, no indent) so the
   // highlighted view is identical to what the "Copy SVG" action yields.
   const paths = Array.from({ length: count }, (_, index) => `<path d="__D${index + 1}__"/>`).join("");
-  const shell = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n${paths}\n</svg>`;
+  const shell = `${SVG_OPEN_TAG}\n${paths}\n</svg>`;
   svgSnippets[count] = await highlightCode(shell, "html", { icons: false, themes: highlightThemes });
+}
+
+// Tiles don't carry a second copy of their SVG; the client rebuilds it from the
+// tile's inline paths. Fail the build if that would not match the manifest exactly.
+for (const icon of icons) {
+  const paths = Array.from(icon.svg.matchAll(/ d="([^"]*)"/g), (match) => `<path d="${match[1]}"/>`).join("");
+  if (`${SVG_OPEN_TAG}\n${paths}\n</svg>\n` !== icon.svg) {
+    throw new Error(`${icon.name}.svg can't be rebuilt from its paths`);
+  }
 }
 
 // Serialize for the inline island. `</` is escaped so no substring can close the
@@ -135,6 +146,7 @@ const highlightedSnippets = JSON.stringify({
   placeholder: SNIPPET_PLACEHOLDER,
   tabs: tabSnippets,
   svg: svgSnippets,
+  svgOpenTag: SVG_OPEN_TAG,
 }).replaceAll("</", "<\\/");
 
 // PageLayout's built-in JSON-LD is disabled so this page can declare the site
@@ -281,11 +293,10 @@ const structuredData = site
         {
           icons.map((icon) => (
             <a
-              class="icon-card group relative grid aspect-square min-w-0 cursor-pointer place-items-center rounded-md text-foreground no-underline hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&>span]:absolute [&>span]:inset-0 [&>span]:grid [&>span]:cursor-pointer [&>span]:place-items-center aria-[current=true]:bg-accent/10 aria-[current=true]:text-accent aria-[current=true]:ring-1 aria-[current=true]:ring-accent"
+              class="icon-card"
               href={`/icons/${icon.name}`}
               data-name={icon.name}
               data-component={icon.componentName}
-              data-svg={icon.svg}
               aria-label={`View ${icon.componentName} icon`}
             >
               <Tooltip tip={icon.name}>
@@ -411,10 +422,16 @@ const structuredData = site
     let activeTab = "react";
     let statusTimer: ReturnType<typeof setTimeout> | undefined;
 
+    // Rebuilt from the tile's inline paths; the build checks this matches the manifest.
+    const svgMarkup = (card: HTMLAnchorElement | null) => {
+      const paths = Array.from(card?.querySelectorAll("svg path") ?? [], (path) => `<path d="${path.getAttribute("d")}"/>`);
+      return paths.length > 0 ? `${highlightData.svgOpenTag}\n${paths.join("")}\n</svg>\n` : "";
+    };
+
     const getData = () => ({
       name: selected?.dataset.name ?? "",
       component: selected?.dataset.component ?? "",
-      svg: selected?.dataset.svg ?? "",
+      svg: svgMarkup(selected),
     });
 
     // Plain-text snippet, used for the copy-to-clipboard action.
@@ -449,12 +466,14 @@ const structuredData = site
       placeholder: string;
       tabs: Record<string, string>;
       svg: Record<string, string>;
+      svgOpenTag: string;
     } = (() => {
       const raw = document.getElementById("snippetHighlight")?.textContent;
+      const empty = { placeholder: "", tabs: {}, svg: {}, svgOpenTag: "" };
       try {
-        return raw ? JSON.parse(raw) : { placeholder: "", tabs: {}, svg: {} };
+        return raw ? JSON.parse(raw) : empty;
       } catch {
-        return { placeholder: "", tabs: {}, svg: {} };
+        return empty;
       }
     })();
 
