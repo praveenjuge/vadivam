@@ -122,6 +122,7 @@ See [Usage](https://vadivam.praveenjuge.com/docs/usage.md#accessibility).
 ## Where to look
 
 - [Icon catalog](https://vadivam.praveenjuge.com/): browse every icon; each is also served at `https://vadivam.praveenjuge.com/icons/<kebab-name>.svg`.
+- [shadcn/ui](https://vadivam.praveenjuge.com/docs/shadcn.md): `npx shadcn@latest add https://vadivam.praveenjuge.com/r/<kebab-name>.json` copies a self-contained React icon component into the project.
 - [AI agents](https://vadivam.praveenjuge.com/docs/ai-agents.md): how agents should consume Vadivam.
 - [Contributing](https://vadivam.praveenjuge.com/docs/contributing.md): add icons or change packages.
 - [Changelog](https://vadivam.praveenjuge.com/changelog.md): release notes, newest first.

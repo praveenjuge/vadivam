@@ -12,6 +12,7 @@ const corePhases = [
   ["Public Figma plugin", "test:figma-plugin"],
   ["Package generation", "icons:build"],
   ["Package validation", "packages:check:built"],
+  ["shadcn registry", "test:shadcn:built"],
   ["Documentation types", null, ["run", "--cwd", "apps/docs", "check"]],
   ["Documentation links", null, ["run", "--cwd", "apps/docs", "validate"]],
   ["Documentation build and SEO", "test:seo:built"],

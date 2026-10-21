@@ -168,6 +168,10 @@ export function iconifySnippet(name) {
   return `vadivam:${name}`;
 }
 
+export function shadcnItemUrl(name, baseUrl = siteUrl) {
+  return `${baseUrl}/r/${name}.json`;
+}
+
 export function shadcnAddCommand(name) {
-  return `npx shadcn@latest add ${siteUrl}/r/${name}.json`;
+  return `npx shadcn@latest add ${shadcnItemUrl(name)}`;
 }

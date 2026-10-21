@@ -1,0 +1,92 @@
+---
+title: shadcn/ui
+description: Add any Vadivam icon to a shadcn/ui project as a self-contained React component with the shadcn CLI, by URL or through the @vadivam registry namespace.
+seo:
+  title: shadcn/ui Registry – Vadivam Icon Components
+related:
+  - /docs/react
+  - /docs/installation
+  - /docs/usage
+search:
+  boost: 1.5
+  keywords: [shadcn, shadcn/ui, registry, components.json, npx shadcn add, copy paste]
+---
+
+Every Vadivam icon is published as a shadcn/ui registry item. The shadcn CLI copies the component source into your project, so there is no npm dependency and you own the code.
+
+## Add an icon by URL
+
+```sh
+npx shadcn@latest add https://vadivam.praveenjuge.com/r/arrow-right.json
+```
+
+Replace `arrow-right` with any kebab-case icon name from the [icon catalog](/). Pass several URLs to add several icons at once.
+
+## Use the @vadivam namespace
+
+<Steps>
+  <Step title="Register the namespace">
+
+Add the registry to `components.json`:
+
+```json
+{
+  "registries": {
+    "@vadivam": "https://vadivam.praveenjuge.com/r/{name}.json"
+  }
+}
+```
+
+  </Step>
+  <Step title="Add icons by name">
+
+```sh
+npx shadcn@latest add @vadivam/arrow-right @vadivam/search
+```
+
+  </Step>
+  <Step title="Search the registry">
+
+```sh
+npx shadcn@latest search @vadivam -q arrow
+```
+
+Search matches icon names and descriptions, which include each icon's tags. The full index is at `https://vadivam.praveenjuge.com/r/registry.json`.
+
+  </Step>
+</Steps>
+
+## What gets installed
+
+Each icon installs one file into your components alias, plus a shared base component the first time:
+
+```txt
+components/icons/arrow-right.tsx
+components/icons/vadivam-icon.tsx
+```
+
+The icon file only holds its path data and passes it to `VadivamIcon`:
+
+```tsx
+import { ArrowRight } from "@/components/icons/arrow-right";
+
+export function Next() {
+  return <ArrowRight size={20} strokeWidth={1.5} aria-label="Next" />;
+}
+```
+
+Each file exports the component by name (`ArrowRight`), with an `Icon` suffix (`ArrowRightIcon`), and as the default export.
+
+| Prop                  | Default          | Notes                                                            |
+| --------------------- | ---------------- | ---------------------------------------------------------------- |
+| `size`                | `24`             | Sets `width` and `height`.                                       |
+| `color`               | `"currentColor"` | Sets the stroke color.                                           |
+| `strokeWidth`         | `2`              | Stroke width in the 24px grid.                                   |
+| `absoluteStrokeWidth` | `false`          | Keeps the rendered stroke width constant when `size` changes.    |
+| `title`               | –                | Adds a `<title>` and `role="img"`.                               |
+
+Icons are `aria-hidden="true"` unless you pass `title`, an `aria-*` label, or a `role`. All other SVG props, including `className` and `ref` (React 19), are passed to the `<svg>`. Edit `vadivam-icon.tsx` to change defaults for every installed icon.
+
+## When to use the package instead
+
+Use [`vadivam-react`](/docs/react) when you need many icons, `VadivamProvider` defaults, or [dynamic icons](/docs/dynamic-icons) by runtime name. Package updates pick up redrawn icons automatically; registry files only change when you run `shadcn add` again with `--overwrite`.

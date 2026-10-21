@@ -9,6 +9,7 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - `packages/vadivam-react` publishes generated React components.
 - `packages/vadivam-react-native` publishes generated React Native components.
 - `packages/vadivam-{vue,svelte,solid,angular,astro,preact}` publish generated native framework components.
+- `apps/docs/public/r/` is the generated shadcn/ui registry (`registry.json` plus one item per icon and the shared `vadivam-icon` base), served at `/r/`.
 - Generated package/web assets come from `bun run icons:build`; do not edit generated output by hand.
 
 ## Setup Commands
@@ -21,6 +22,7 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - Test the React package: `bun run test:vadivam-react`
 - Test the React Native package: `bun run test:vadivam-react-native`
 - Run the React render/SSR/exports unit suite only: `bun run test:react:unit`
+- Test the shadcn/ui registry (schemas plus a real `shadcn add` into a scratch project): `bun run test:shadcn`
 - Build and browser-test all framework integration apps: `bun run test:integration`
 - React Native compatibility is verified by the minimal Expo integration app for Android and iOS.
 - Build and deploy the Cloudflare server Worker: `bun run deploy`

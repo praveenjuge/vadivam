@@ -23,10 +23,9 @@
   "triggers": {},
   "assets": {
     "html_handling": "drop-trailing-slash",
-    "binding": "ASSETS",
-    "directory": "apps/docs/dist/client",
     "run_worker_first": [
       "/*",
+      "!/r/*",
       "!/_astro/*",
       "!/*.md",
       "!/*.mdx",
@@ -38,7 +37,9 @@
       "!/openapi.json",
       "!/api/docs/pages.json",
       "!/api/docs/navigation.json"
-    ]
+    ],
+    "binding": "ASSETS",
+    "directory": "apps/docs/dist/client"
   },
   "workers_dev": false,
   "preview_urls": false,

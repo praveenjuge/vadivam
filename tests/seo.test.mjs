@@ -311,4 +311,17 @@ describe("website SEO", () => {
       expect(rules).toContain(raw);
     }
   });
+
+  test("shadcn registry ships as static JSON with CORS headers", () => {
+    const rules = JSON.parse(
+      readFileSync(path.join(root, "apps/docs/dist/server/wrangler.json"), "utf8"),
+    ).assets?.run_worker_first;
+    expect(rules).toContain("!/r/*");
+    const registry = JSON.parse(readDist("r", "registry.json"));
+    expect(registry.items).toHaveLength(icons.length + 1);
+    expect(JSON.parse(readDist("r", "activity.json")).name).toBe("activity");
+    expect(readDist("_headers")).toMatch(
+      /^\/r\/\*\n {2}Access-Control-Allow-Origin: \*$/m,
+    );
+  });
 });

@@ -8,6 +8,7 @@ dist
 packages/*/dist
 packages/vadivam-angular/.generated
 apps/docs/public/icons
+apps/docs/public/r
 
 # Integration test apps (build artifacts; per-app bun.lock IS tracked)
 tests/integration/*/node_modules
