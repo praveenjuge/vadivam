@@ -433,12 +433,14 @@ const structuredData = site
         clone?: HTMLAnchorElement;
         name: string;
         words: string;
+        /** The name without hyphens, so component names like `ArrowUp` match. */
+        compact: string;
         tags: string[];
         categories: string[];
       };
       const entries: Entry[] = cards.map((card) => {
         const name = card.dataset.name ?? "";
-        return { card, name, words: name.replaceAll("-", " "), tags: [], categories: [] };
+        return { card, name, words: name.replaceAll("-", " "), compact: name.replaceAll("-", ""), tags: [], categories: [] };
       });
       const entryByName = new Map(entries.map((entry) => [entry.name, entry]));
       let categoryTitles: Record<string, string> = {};
@@ -463,9 +465,9 @@ const structuredData = site
 
       // Lower rank sorts first: exact name, name prefix, name word, tag, category.
       const termRank = (entry: Entry, term: string) => {
-        if (entry.name === term) return 0;
-        if (entry.name.startsWith(term)) return 1;
-        if (entry.words.includes(term)) return 2;
+        if (entry.name === term || entry.compact === term) return 0;
+        if (entry.name.startsWith(term) || entry.compact.startsWith(term)) return 1;
+        if (entry.words.includes(term) || entry.compact.includes(term)) return 2;
         if (entry.tags.some((tag) => tag.startsWith(term))) return 3;
         if (entry.tags.some((tag) => tag.includes(term))) return 4;
         if (entry.categories.some((id) => (categoryTitles[id] ?? id).toLowerCase().includes(term))) return 5;
@@ -525,10 +527,6 @@ const structuredData = site
         },
         { rootMargin: "800px 0px" },
       );
-
-      const flushResults = () => {
-        if (matches) renderBatch(matches.length);
-      };
 
       // Set by the drawer: keeps its selection on the tile that's on screen.
       let afterFilter = () => {};
@@ -706,18 +704,18 @@ const structuredData = site
         for (const button of tabButtons) button.setAttribute("aria-selected", String(button.dataset.tab === activeTab));
       };
 
-      // Prev/next follow what's on screen: the ranked matches, or the full grid.
-      const visibleCards = () => {
-        if (!matches) return cards;
-        flushResults();
-        return matches.map(cloneOf);
+      // Prev/next follow what's on screen (the ranked matches, or the full
+      // grid) by entry, so they never force unrendered matches into the DOM.
+      const visibleEntries = () => matches ?? entries;
+      const selectedIndex = () => {
+        const entry = selected ? entryByName.get(selected.dataset.name ?? "") : undefined;
+        return entry ? visibleEntries().indexOf(entry) : -1;
       };
 
       const syncNavigation = () => {
-        const visible = visibleCards();
-        const index = selected ? visible.indexOf(selected) : -1;
+        const index = selectedIndex();
         document.querySelector<HTMLButtonElement>("#drawerPrev")!.disabled = index <= 0;
-        document.querySelector<HTMLButtonElement>("#drawerNext")!.disabled = index < 0 || index >= visible.length - 1;
+        document.querySelector<HTMLButtonElement>("#drawerNext")!.disabled = index < 0 || index >= visibleEntries().length - 1;
       };
 
       const select = (card: HTMLAnchorElement) => {
@@ -778,9 +776,12 @@ const structuredData = site
       };
 
       const step = (direction: 1 | -1) => {
-        const visible = visibleCards();
-        const next = visible[(selected ? visible.indexOf(selected) : -1) + direction];
-        if (!next) return;
+        const index = selectedIndex() + direction;
+        const entry = visibleEntries()[index];
+        if (!entry) return;
+        // Render matches only up to the one being stepped to.
+        if (matches && index >= renderedCount) renderBatch(index - renderedCount + 1);
+        const next = matches ? cloneOf(entry) : entry.card;
         openDrawer(next);
         next.scrollIntoView({ block: "nearest" });
         if (browser.contains(document.activeElement)) next.focus({ preventScroll: true });

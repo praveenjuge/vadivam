@@ -66,7 +66,10 @@ function readUrlSettings(): Partial<IconSettings> {
  * which win over the stored values on load.
  */
 export function createSettingsStore({ url = false } = {}) {
-  let settings: IconSettings = resolveOptions({ ...readStoredSettings(), ...(url ? readUrlSettings() : {}) });
+  // A shared link carries the sender's non-default settings, so the values it
+  // leaves out are defaults, not the recipient's saved settings.
+  const linked = url ? readUrlSettings() : {};
+  let settings: IconSettings = resolveOptions(Object.keys(linked).length > 0 ? linked : readStoredSettings());
   const listeners = new Set<(settings: IconSettings) => void>();
 
   const syncUrl = () => {

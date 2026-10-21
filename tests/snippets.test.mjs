@@ -27,7 +27,7 @@ describe("copy formats", () => {
 
   test("custom settings use each framework's prop syntax", () => {
     expect(propsSource("react", custom)).toBe(' size={32} color="#e11d48" strokeWidth={1.5} absoluteStrokeWidth');
-    expect(propsSource("vue", custom)).toBe(' :size="32" color="#e11d48" :stroke-width="1.5" absolute-stroke-width');
+    expect(propsSource("vue", custom)).toBe(' :size="32" color="#e11d48" :stroke-width="1.5" :absolute-stroke-width="true"');
     expect(propsSource("angular", custom)).toBe(' [size]="32" color="#e11d48" [strokeWidth]="1.5" [absoluteStrokeWidth]="true"');
   });
 

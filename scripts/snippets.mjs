@@ -63,7 +63,9 @@ export function propsSource(frameworkId, options) {
   return props
     .map(([name, value]) => {
       if (frameworkId === "vue") {
-        if (value === true) return kebab(name);
+        // The generated Vue components declare plain props, so a bare
+        // attribute would arrive as "" rather than true.
+        if (value === true) return `:${kebab(name)}="true"`;
         return typeof value === "number" ? `:${kebab(name)}="${value}"` : `${kebab(name)}="${value}"`;
       }
       if (frameworkId === "angular") {
