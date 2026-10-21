@@ -1,6 +1,6 @@
 ---
 name: vadivam-icons
-description: "Use Vadivam, an open-source set of pixel-perfect 24px outline icons, as SVG assets, SVG strings, a sprite, an icon font, or components for React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact. Use when a task installs or imports a vadivam package (vadivam, vadivam-react, vadivam-react-native, vadivam-vue, vadivam-svelte, vadivam-solid, vadivam-angular, vadivam-astro, vadivam-preact), sizes, colors, or labels Vadivam icons, renders an icon from a runtime name with DynamicIcon or iconNames, sets shared defaults with VadivamProvider or provideVadivamConfig, or contributes icons to Vadivam."
+description: "Use Vadivam, an open-source set of pixel-perfect 24px outline icons, as SVG assets, SVG strings, a sprite, an icon font, or components for React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact. Use when a task picks an icon by meaning (search by name, tag, or category), installs or imports a vadivam package (vadivam, vadivam-react, vadivam-react-native, vadivam-vue, vadivam-svelte, vadivam-solid, vadivam-angular, vadivam-astro, vadivam-preact), sets up the vadivam-mcp MCP server, adds an icon through the shadcn registry, sizes, colors, or labels Vadivam icons, renders an icon from a runtime name with DynamicIcon or iconNames, sets shared defaults with VadivamProvider or provideVadivamConfig, or contributes icons to Vadivam."
 ---
 
 # Vadivam Icons
@@ -39,6 +39,35 @@ Peer ranges: React 18 or newer; React Native 0.71+ with React 18–19 and `react
 - **Core icon nodes**: named exports of `vadivam` are icon-node arrays, not DOM elements or SVG strings. [Core SVG and JavaScript](https://vadivam.praveenjuge.com/docs/core.md)
 
 ## Common tasks
+
+### Find the right icon
+
+Never guess an icon name. Names follow Lucide (`trash`, `arrow-right`, `circle-check`), and every icon carries Lucide's search `tags` (synonyms) and `categories`.
+
+- With the MCP server connected, call `search_icons` with a few words (`{ "query": "delete" }`, optionally `"category": "arrows"`), then `get_icon` with the chosen name and a `format` such as `react` or `svg`. `list_categories` lists category ids.
+- Without it, search the manifest:
+
+  ```ts
+  import { categories, icons } from "vadivam/manifest";
+
+  const matches = icons.filter(
+    (icon) => icon.name.includes("trash") || icon.tags.includes("delete"),
+  );
+  const arrows = icons.filter((icon) => icon.categories.includes("arrows"));
+  ```
+
+- Or browse `https://vadivam.praveenjuge.com/` and open `https://vadivam.praveenjuge.com/icons/<name>`.
+
+### Connect the MCP server
+
+The MCP server exposes `search_icons`, `get_icon`, `list_categories`, and `get_usage`. Use the hosted endpoint, or run the `vadivam-mcp` package over stdio (it bundles the icon data and works offline):
+
+```sh
+claude mcp add --transport http vadivam https://vadivam.praveenjuge.com/mcp
+claude mcp add vadivam -- npx -y vadivam-mcp
+```
+
+Cursor uses `{ "mcpServers": { "vadivam": { "url": "https://vadivam.praveenjuge.com/mcp" } } }` in `.cursor/mcp.json`; VS Code uses `{ "servers": { "vadivam": { "type": "http", "url": "https://vadivam.praveenjuge.com/mcp" } } }` in `.vscode/mcp.json`. See [MCP server](https://vadivam.praveenjuge.com/docs/mcp.md).
 
 ### Render a known icon
 
@@ -97,7 +126,17 @@ import { Activity, createElement } from "vadivam"; // icon node
 const svg = createElement(Activity, { width: 20, height: 20, "aria-label": "Activity" });
 ```
 
-`createIcons({ icons: { Activity, Search } })` replaces `<i data-vadivam="activity">` placeholders. `vadivam/sprite.svg` and `vadivam/font/vadivam.css` provide a sprite and a WOFF2 icon font. `vadivam/manifest` exports `iconNames`, `icons`, and `iconsByName`. See [Core SVG and JavaScript](https://vadivam.praveenjuge.com/docs/core.md).
+`createIcons({ icons: { Activity, Search } })` replaces `<i data-vadivam="activity">` placeholders. `vadivam/sprite.svg` and `vadivam/font/vadivam.css` provide a sprite and a WOFF2 icon font. `vadivam/manifest` exports `iconNames`, `icons` (with `tags` and `categories`), `iconsByName`, and `categories`. See [Core SVG and JavaScript](https://vadivam.praveenjuge.com/docs/core.md).
+
+### Add an icon with shadcn
+
+Projects that use the shadcn CLI can add one icon as a local component file from the Vadivam registry:
+
+```sh
+npx shadcn@latest add https://vadivam.praveenjuge.com/r/activity.json
+```
+
+Replace `activity` with any icon name. Prefer the `vadivam-react` package when the project uses many icons.
 
 ### Label or hide an icon
 
@@ -125,6 +164,7 @@ See [Usage](https://vadivam.praveenjuge.com/docs/usage.md#accessibility).
 - [shadcn/ui](https://vadivam.praveenjuge.com/docs/shadcn.md): `npx shadcn@latest add https://vadivam.praveenjuge.com/r/<kebab-name>.json` copies a self-contained React icon component into the project.
 - [AI agents](https://vadivam.praveenjuge.com/docs/ai-agents.md): how agents should consume Vadivam.
 - [Design guide](https://vadivam.praveenjuge.com/docs/design-guide.md): the drawing rules every icon follows.
+- [MCP server](https://vadivam.praveenjuge.com/docs/mcp.md): tools, hosted endpoint, and local setup.
 - [Contributing](https://vadivam.praveenjuge.com/docs/contributing.md): add icons or change packages.
 - [Changelog](https://vadivam.praveenjuge.com/changelog.md): release notes, newest first.
 - [llms.txt](https://vadivam.praveenjuge.com/llms.txt): every page with a one-line summary; [llms-full.txt](https://vadivam.praveenjuge.com/llms-full.txt) has every page in one file.

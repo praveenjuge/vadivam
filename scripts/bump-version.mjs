@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { packageDirectories } from "./packages.mjs";
+import { mcpServerManifest, packageDirectories } from "./packages.mjs";
 
 const files = [
   "package.json",
@@ -22,6 +22,11 @@ for (const file of files) {
   pkg.version = next;
   await writeFile(file, `${JSON.stringify(pkg, null, 2)}\n`);
 }
+
+const server = JSON.parse(await readFile(mcpServerManifest, "utf8"));
+server.version = next;
+for (const entry of server.packages) entry.version = next;
+await writeFile(mcpServerManifest, `${JSON.stringify(server, null, 2)}\n`);
 
 // Bust GitHub Camo and npm README image caches by versioning the preview URL.
 const previewPattern = /preview\.png(?:\?v=[^)\s"']+)?/g;

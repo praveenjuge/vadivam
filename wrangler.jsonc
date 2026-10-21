@@ -13,7 +13,7 @@
     }
   ],
   "name": "vadivam",
-  "main": "apps/docs/dist/server/blume-worker.mjs",
+  "main": "apps/docs/dist/server/vadivam-worker.mjs",
   "routes": [
     {
       "pattern": "vadivam.praveenjuge.com",

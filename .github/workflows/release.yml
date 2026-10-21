@@ -60,6 +60,22 @@ jobs:
       - name: Publish and verify packages
         run: bun run release:publish
 
+      # The registry checks that the npm package carries the matching mcpName,
+      # so this runs only after npm serves the new vadivam-mcp version.
+      - name: Publish MCP server to the MCP Registry
+        working-directory: packages/vadivam-mcp
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          version="${TAG_NAME#v}"
+          if curl -fsS -o /dev/null "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.praveenjuge%2Fvadivam/versions/$version"; then
+            echo "io.github.praveenjuge/vadivam $version is already in the MCP Registry."
+            exit 0
+          fi
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz -C "$RUNNER_TEMP" mcp-publisher
+          "$RUNNER_TEMP/mcp-publisher" login github-oidc
+          "$RUNNER_TEMP/mcp-publisher" publish
+
       - name: Package Figma plugin
         env:
           TAG_NAME: ${{ github.ref_name }}

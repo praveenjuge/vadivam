@@ -14,6 +14,7 @@ import { optimize } from "svgo";
 import { Resvg } from "@resvg/resvg-js";
 import { buildAngularPackage } from "./generators/angular.mjs";
 import { buildAstroPackage } from "./generators/astro.mjs";
+import { buildMcpPackage } from "./generators/mcp.mjs";
 import { buildPreactPackage } from "./generators/preact.mjs";
 import { buildReactNativePackage } from "./generators/react-native.mjs";
 import { buildShadcnRegistry } from "./generators/shadcn.mjs";
@@ -41,6 +42,9 @@ const solidDist = path.join(root, "packages/vadivam-solid/dist");
 const angularPackage = path.join(root, "packages/vadivam-angular");
 const astroDist = path.join(root, "packages/vadivam-astro/dist");
 const preactDist = path.join(root, "packages/vadivam-preact/dist");
+const mcpPackage = path.join(root, "packages/vadivam-mcp");
+const skillSource = path.join(root, "apps/docs/skills/vadivam-icons/SKILL.md");
+const rawSkills = path.join(root, "packages/vadivam/skills");
 const webIconsDir = path.join(root, "apps/docs/public/icons");
 const shadcnRegistryDir = path.join(root, "apps/docs/public/r");
 const previewPath = path.join(root, "apps/docs/public/preview.png");
@@ -620,6 +624,10 @@ export default createIcons;
     registryPath: fontCodepointsPath,
     root,
   });
+  // The docs site serves the same skill at /skill.md; ship one copy with the package.
+  await rm(rawSkills, { recursive: true, force: true });
+  await mkdir(path.join(rawSkills, "vadivam-icons"), { recursive: true });
+  await copyFile(skillSource, path.join(rawSkills, "vadivam-icons/SKILL.md"));
 }
 
 async function buildReactPackage(icons) {
@@ -919,6 +927,7 @@ export async function build() {
   await buildAngularPackage(icons, angularPackage, root);
   await buildAstroPackage(icons, astroDist);
   await buildPreactPackage(icons, preactDist);
+  await buildMcpPackage(icons, iconCategories, { packageDirectory: mcpPackage, root });
   await buildWebAssets(icons);
   await buildShadcnRegistry(icons, shadcnRegistryDir);
   console.log(`Built packages and web assets for ${icons.length} icons.`);
