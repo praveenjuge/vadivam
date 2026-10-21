@@ -1,12 +1,15 @@
 ---
 import PageLayout from "blume/components/layout/PageLayout.astro";
-import Icon from "blume/components/Icon.astro";
 import GithubInfo from "blume/components/content/GithubInfo.astro";
 import data from "blume:data";
-import { highlightCode } from "blume/markdown";
-import { icons, iconsByName } from "vadivam/manifest";
+import { categories, icons, iconsByName } from "vadivam/manifest";
 import { iconLastmods } from "../../../scripts/icon-lastmods.mjs";
+import { frameworks } from "../../../scripts/snippets.mjs";
 import pkg from "../../../package.json";
+import ActionMenus from "./_lib/ActionMenus.astro";
+import Customizer from "./_lib/Customizer.astro";
+import VIcon from "./_lib/VIcon.astro";
+import { SVG_OPEN_TAG, buildSnippetTemplates, serializeForScript } from "./_lib/snippet-templates";
 
 const { config } = data;
 
@@ -50,103 +53,41 @@ const links: ProjectLink[] = [
   { href: "https://twitter.com/praveenjuge", label: "Twitter", title: "Praveen Juge on Twitter", icon: twitterIcon },
 ];
 
-const codeTabs = [
-  { id: "react", label: "React" },
-  { id: "react-native", label: "React Native" },
-  { id: "vue", label: "Vue" },
-  { id: "svelte", label: "Svelte" },
-  { id: "solid", label: "Solid" },
-  { id: "preact", label: "Preact" },
-  { id: "astro", label: "Astro" },
-  { id: "angular", label: "Angular" },
-  { id: "svg", label: "SVG" },
-];
+const codeTabs = [...frameworks.map(({ id, label }) => ({ id, label })), { id: "svg", label: "SVG" }];
 
 const chipClass =
   "inline-flex flex-none items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs text-foreground no-underline transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const iconButtonClass =
+  "grid size-7 flex-none place-items-center rounded-md border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 disabled:hover:bg-transparent";
+const smallCopyClass =
+  "grid size-5 flex-none place-items-center rounded border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
 // The vadivam "search" and "x" icons used as affordances in the search field.
 // Their stroke follows `currentColor`, so the wrapper's text color styles them.
 const searchIconSvg = iconsByName.search?.svg ?? "";
 const clearIconSvg = iconsByName.x?.svg ?? "";
 
-// Pre-highlight each framework snippet once, with a placeholder component name
-// the drawer swaps for the real one on the client. One highlighted template per
-// framework (instead of per icon) keeps the page light while the snippet picks
-// up the same Shiki theme as the icon detail pages.
-const SNIPPET_PLACEHOLDER = "VadivamIcon";
-const snippetTemplate = (tab: string, name: string): { lang: string; code: string } | null => {
-  switch (tab) {
-    case "react":
-      return { lang: "tsx", code: `import { ${name} } from "vadivam-react";\n\n<${name} />` };
-    case "react-native":
-      return { lang: "tsx", code: `import { ${name} } from "vadivam-react-native";\n\n<${name} />` };
-    case "solid":
-      return { lang: "tsx", code: `import { ${name} } from "vadivam-solid";\n\n<${name} />` };
-    case "preact":
-      return { lang: "tsx", code: `import { ${name} } from "vadivam-preact";\n\n<${name} />` };
-    case "vue":
-      return {
-        lang: "vue",
-        code: `<script setup>\nimport { ${name} } from "vadivam-vue";\n<\/script>\n\n<template>\n  <${name} />\n</template>`,
-      };
-    case "svelte":
-      return { lang: "svelte", code: `<script>\n  import { ${name} } from "vadivam-svelte";\n<\/script>\n\n<${name} />` };
-    case "astro":
-      return { lang: "astro", code: `---\nimport { ${name} } from "vadivam-astro";\n---\n\n<${name} />` };
-    case "angular":
-      return { lang: "ts", code: `import { ${name} } from "vadivam-angular";\n\n<svg vadivam${name}></svg>` };
-    default:
-      return null;
-  }
-};
-
-const highlightThemes = config.codeThemes;
-const tabSnippets: Record<string, string> = {};
-for (const tab of codeTabs) {
-  const template = snippetTemplate(tab.id, SNIPPET_PLACEHOLDER);
-  if (template) {
-    tabSnippets[tab.id] = await highlightCode(template.code, template.lang, {
-      icons: false,
-      themes: highlightThemes,
-    });
-  }
+// Category filter options, largest first after "All".
+const categoryCounts = new Map<string, number>();
+for (const icon of icons) {
+  for (const id of icon.categories) categoryCounts.set(id, (categoryCounts.get(id) ?? 0) + 1);
 }
+const categoryOptions = [...categories].sort((left, right) => left.title.localeCompare(right.title));
 
-// The SVG tab shows raw markup. Every icon shares one normalized wrapper and only
-// its `<path d="…">` values differ, so highlight one shell per path-count and let
-// the client substitute the real path data.
-const SVG_OPEN_TAG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
-const svgPathCounts = [...new Set(icons.map((icon) => (icon.svg.match(/ d="/g) ?? []).length))]
-  .filter((count) => count > 0)
-  .sort((a, b) => a - b);
-const svgSnippets: Record<number, string> = {};
-for (const count of svgPathCounts) {
-  // Match the manifest's exact markup (all paths on one line, no indent) so the
-  // highlighted view is identical to what the "Copy SVG" action yields.
-  const paths = Array.from({ length: count }, (_, index) => `<path d="__D${index + 1}__"/>`).join("");
-  const shell = `${SVG_OPEN_TAG}\n${paths}\n</svg>`;
-  svgSnippets[count] = await highlightCode(shell, "html", { icons: false, themes: highlightThemes });
-}
-
-// Tiles don't carry a second copy of their SVG; the client rebuilds it from the
-// tile's inline paths. Fail the build if that would not match the manifest exactly.
+// Tiles carry only their path data; size, stroke, and caps come from CSS, and
+// the client rebuilds each icon's SVG from these paths. Fail the build if that
+// would not reproduce the manifest exactly.
+const tilePaths = new Map<string, string>();
 for (const icon of icons) {
   const paths = Array.from(icon.svg.matchAll(/ d="([^"]*)"/g), (match) => `<path d="${match[1]}"/>`).join("");
   if (`${SVG_OPEN_TAG}\n${paths}\n</svg>\n` !== icon.svg) {
     throw new Error(`${icon.name}.svg can't be rebuilt from its paths`);
   }
+  tilePaths.set(icon.name, paths);
 }
 
-// Serialize for the inline island. `</` is escaped so no substring can close the
-// surrounding <script> tag early; JSON's `\/` decodes back on parse.
-const highlightedSnippets = JSON.stringify({
-  placeholder: SNIPPET_PLACEHOLDER,
-  tabs: tabSnippets,
-  svg: svgSnippets,
-  svgOpenTag: SVG_OPEN_TAG,
-}).replaceAll("</", "<\\/");
+const pathCounts = [...new Set(icons.map((icon) => (icon.svg.match(/ d="/g) ?? []).length))].filter((count) => count > 0);
+const snippetTemplates = serializeForScript(await buildSnippetTemplates(config.codeThemes, pathCounts));
 
 // PageLayout's built-in JSON-LD is disabled so this page can declare the site
 // identity plus the library's software entity in one graph.
@@ -261,8 +202,8 @@ const structuredData = site
     </nav>
 
     <section aria-label="Icon library">
-      <div class="pb-3">
-        <div class="relative">
+      <div class="flex flex-col gap-2 pb-3 sm:flex-row">
+        <div class="relative min-w-0 flex-1">
           <span
             class="pointer-events-none absolute inset-y-0 start-0 grid w-10 place-items-center text-muted-foreground [&>svg]:size-4"
             aria-hidden="true"
@@ -272,8 +213,9 @@ const structuredData = site
             class="w-full rounded-full border border-border bg-transparent py-2 ps-10 pe-10 text-base text-foreground outline-none placeholder:text-muted-foreground focus:border-accent focus-visible:outline-none md:text-sm [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
             id="iconSearch"
             type="search"
-            placeholder="Search icons…"
+            placeholder="Search icons by name or tag…"
             aria-label="Search icons"
+            aria-describedby="resultCount"
             autocomplete="off"
             spellcheck="false"
           />
@@ -286,22 +228,30 @@ const structuredData = site
             set:html={clearIconSvg}
           />
         </div>
+        <select
+          class="rounded-full border border-border bg-background py-2 ps-4 pe-8 text-base text-foreground outline-none focus:border-accent md:text-sm"
+          id="iconCategory"
+          aria-label="Filter by category"
+        >
+          <option value="">All categories</option>
+          {categoryOptions.map((category) => (
+            <option value={category.id}>{category.title} ({categoryCounts.get(category.id) ?? 0})</option>
+          ))}
+        </select>
       </div>
+      <p class="m-0 pb-2 text-xs text-muted-foreground" id="resultCount" aria-live="polite">{icons.length} icons</p>
 
-      <div class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-24" id="iconGrid">
+      <div id="iconBrowser">
+      <div class="icon-grid grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-24" id="iconGrid">
         {
           icons.map((icon) => (
-            <a
-              class="icon-card"
-              href={`/icons/${icon.name}`}
-              data-name={icon.name}
-              data-component={icon.componentName}
-              aria-label={`View ${icon.componentName} icon`}
-            >
-              <span aria-hidden="true" set:html={icon.svg} />
+            <a class="icon-card" href={`/icons/${icon.name}`} data-name={icon.name} aria-label={`View ${icon.componentName} icon`}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" set:html={tilePaths.get(icon.name)} />
             </a>
           ))
         }
+      </div>
+      <div class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-24" id="iconResults" aria-label="Search results" hidden></div>
       </div>
       <div
         class="pointer-events-none fixed z-50 w-max rounded-blume border border-border bg-background px-3 py-2 font-sans text-sm leading-5 text-muted-foreground shadow-lg"
@@ -315,86 +265,103 @@ const structuredData = site
   </main>
 
   <aside
-    class="fixed inset-x-0 bottom-0 z-40 translate-y-full border-t border-border bg-background/95 text-foreground shadow-[0_-12px_40px_rgb(0_0_0/0.1)] backdrop-blur-lg transition-transform duration-200 ease-out data-[open]:translate-y-0 motion-reduce:transition-none"
+    class="fixed inset-x-0 bottom-0 z-40 translate-y-full border-t border-border bg-background text-foreground shadow-[0_-12px_40px_rgb(0_0_0/0.1)] transition-transform duration-200 ease-out data-[open]:translate-y-0 motion-reduce:transition-none"
     id="iconDrawer"
     aria-labelledby="drawerName"
-    aria-hidden="true"
+    inert
   >
-    <div class="flex max-h-[70dvh] w-full flex-col gap-2.5 overflow-y-auto px-4 py-2.5 md:px-6">
-      <div class="flex items-center gap-3">
-        <div class="grid size-9 flex-none place-items-center rounded-md bg-accent/10 text-accent [&>svg]:size-5" id="drawerPreview" aria-hidden="true"></div>
-        <div class="mr-auto grid min-w-0 gap-0.5">
-          <div class="flex items-center gap-1">
-            <h2 class="m-0 truncate text-sm font-semibold leading-tight" id="drawerName"></h2>
-            <button
-              class="grid size-5 flex-none place-items-center rounded border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              type="button"
-              data-action="copy-name"
-              aria-label="Copy icon name"
-            ><Icon icon="copy" size={13} /></button>
+    <div class="flex max-h-[min(85dvh,30rem)] w-full flex-col">
+      <div class="grid touch-none place-items-center pt-2 md:hidden" id="drawerHandle" aria-hidden="true">
+        <span class="h-1 w-10 rounded-full bg-border"></span>
+      </div>
+
+      <header class="flex touch-pan-y items-center gap-3 px-4 py-2.5 md:px-6" id="drawerHeader">
+        <div class="grid size-10 flex-none place-items-center rounded-md bg-accent/10 text-accent" data-icon-preview="24" aria-hidden="true"></div>
+        <div class="grid min-w-0 flex-1 gap-0.5">
+          <div class="flex min-w-0 items-center gap-1">
+            <h2 class="m-0 truncate text-sm font-semibold leading-tight outline-none" id="drawerName" tabindex="-1"></h2>
+            <button class={smallCopyClass} type="button" data-action="copy-name" aria-label="Copy icon name"><VIcon name="copy" size={13} /></button>
           </div>
-          <div class="flex items-center gap-1">
+          <div class="flex min-w-0 items-center gap-1">
             <p class="m-0 truncate font-mono text-xs text-muted-foreground" id="drawerComponent"></p>
-            <button
-              class="grid size-5 flex-none place-items-center rounded border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              type="button"
-              data-action="copy-component"
-              aria-label="Copy component name"
-            ><Icon icon="copy" size={13} /></button>
+            <button class={smallCopyClass} type="button" data-action="copy-component" aria-label="Copy component name"><VIcon name="copy" size={13} /></button>
           </div>
         </div>
-        <button
-          class="grid size-7 flex-none place-items-center rounded-md border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          id="drawerClose"
-          type="button"
-          aria-label="Close"
-        ><Icon icon="x" size={18} /></button>
-      </div>
+        <div class="flex flex-none items-center gap-0.5">
+          <button class={iconButtonClass} type="button" id="drawerPrev" aria-label="Previous icon" aria-keyshortcuts="ArrowLeft"><VIcon name="chevron-left" size={18} /></button>
+          <button class={iconButtonClass} type="button" id="drawerNext" aria-label="Next icon" aria-keyshortcuts="ArrowRight"><VIcon name="chevron-right" size={18} /></button>
+          <a class:list={[iconButtonClass, "no-underline"]} id="drawerOpenPage" href="#" aria-label="Open icon page"><VIcon name="arrow-up-right" size={18} /></a>
+          <button class={iconButtonClass} type="button" id="drawerClose" aria-label="Close" aria-keyshortcuts="Escape"><VIcon name="x" size={18} /></button>
+        </div>
+      </header>
 
-      <div class="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Framework snippet">
-        {
-          codeTabs.map((tab, index) => (
+      <div class="grid min-h-0 flex-1 overflow-y-auto border-t border-border md:grid-cols-[minmax(0,1fr)_17rem] md:overflow-hidden lg:grid-cols-[minmax(0,1fr)_17rem_17rem]">
+        <section class="order-2 grid min-w-0 content-start gap-2.5 px-4 py-3 md:order-1 md:overflow-y-auto md:px-6" aria-label="Code">
+          <div class="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Framework snippet">
+            {
+              codeTabs.map((tab, index) => (
+                <button
+                  class="flex-none rounded-md border border-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-selected:border-accent aria-selected:bg-accent aria-selected:text-accent-foreground"
+                  type="button"
+                  role="tab"
+                  data-tab={tab.id}
+                  aria-selected={index === 0 ? "true" : "false"}
+                  aria-controls="drawerCode"
+                >
+                  {tab.label}
+                </button>
+              ))
+            }
+          </div>
+          <div class="relative min-w-0">
+            <div class="prose max-w-none" id="drawerCode" role="tabpanel"></div>
             <button
-              class="flex-none rounded-md border border-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-selected:border-accent aria-selected:bg-accent aria-selected:text-accent-foreground"
+              class="absolute end-1.5 top-1.5 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[0.68rem] transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               type="button"
-              role="tab"
-              data-tab={tab.id}
-              aria-selected={index === 0 ? "true" : "false"}
-            >
-              {tab.label}
-            </button>
-          ))
-        }
-      </div>
+              data-action="copy-code"
+            ><VIcon name="copy" size={12} /><span>Copy</span></button>
+          </div>
+          <dl class="m-0 grid gap-1.5 text-xs" id="drawerMeta">
+            <div class="flex flex-wrap items-baseline gap-1.5">
+              <dt class="text-muted-foreground">Categories</dt>
+              <dd class="m-0 flex flex-wrap gap-1" id="drawerCategories"></dd>
+            </div>
+            <div class="flex flex-wrap items-baseline gap-1.5">
+              <dt class="text-muted-foreground">Tags</dt>
+              <dd class="m-0 flex flex-wrap gap-1" id="drawerTags"></dd>
+            </div>
+          </dl>
+        </section>
 
-      <div class="relative min-w-0">
-        <div class="prose max-w-none" id="drawerCode"></div>
-        <button
-          class="absolute end-1.5 top-1.5 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[0.68rem] transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          type="button"
-          data-action="copy-code"
-          id="drawerCopyCode"
-        ><Icon icon="copy" size={12} /><span>Copy</span></button>
+        <section class="order-1 grid content-start gap-3 border-b border-border px-4 py-3 md:order-2 md:overflow-y-auto md:border-b-0 md:border-l lg:contents" aria-label="Customize and export">
+          <div class="grid content-start gap-3 lg:order-2 lg:overflow-y-auto lg:border-l lg:border-border lg:px-4 lg:py-3">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button
+              class="inline-flex items-center gap-1.5 rounded-md border border-accent bg-accent px-2.5 py-1.5 text-xs text-accent-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              type="button"
+              data-action="copy-svg"
+            ><VIcon name="code" size={14} /><span>Copy SVG</span></button>
+            <ActionMenus id="drawerMenu" />
+            <span class="text-xs text-muted-foreground" id="drawerStatus" aria-live="polite"></span>
+          </div>
+          <div class="flex items-end justify-between gap-2 rounded-md border border-border px-3 py-2.5 text-foreground" aria-label="Size previews">
+            {[16, 20, 24, 32, 48].map((size) => (
+              <div class="grid justify-items-center gap-1">
+                <div class="grid place-items-center" data-icon-preview={size}></div>
+                <span class="font-mono text-[0.65rem] text-muted-foreground">{size}</span>
+              </div>
+            ))}
+          </div>
+          </div>
+          <details class="group lg:order-3 lg:overflow-y-auto lg:border-l lg:border-border lg:px-4 lg:py-3" id="drawerCustomize">
+            <summary class="flex cursor-pointer list-none items-center justify-between text-xs font-medium text-foreground [&::-webkit-details-marker]:hidden">
+              Customize
+              <span class="text-muted-foreground transition-transform group-open:rotate-180"><VIcon name="chevron-down" size={14} /></span>
+            </summary>
+            <Customizer compact class="pt-3" />
+          </details>
+        </section>
       </div>
-
-      <div class="flex flex-wrap items-center gap-1.5">
-        <button
-          class="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          type="button"
-          data-action="download"
-        ><Icon icon="download" size={14} /><span>Download SVG</span></button>
-        <button
-          class="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          type="button"
-          data-action="copy-svg"
-        ><Icon icon="code" size={14} /><span>Copy SVG</span></button>
-        <a
-          class="ml-auto inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-foreground no-underline transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          id="drawerOpenPage"
-          href="#"
-        ><span>Open page</span><Icon icon="arrow-up-right" size={14} /></a>
-      </div>
-      <p class="sr-only" id="drawerStatus" aria-live="polite"></p>
     </div>
   </aside>
 
@@ -402,307 +369,533 @@ const structuredData = site
     <GithubInfo />
   </footer>
 
-  <script is:inline type="application/json" id="snippetHighlight" set:html={highlightedSnippets}></script>
+  <script is:inline type="application/json" id="snippetTemplates" set:html={snippetTemplates}></script>
+  <script is:inline type="application/json" id="siteVersion" set:html={JSON.stringify(pkg.version)}></script>
 
   <script>
-    const explorer = document.querySelector<HTMLElement>("#iconExplorer");
-    const search = document.querySelector<HTMLInputElement>("#iconSearch");
-    const searchClear = document.querySelector<HTMLButtonElement>("#iconSearchClear");
-    const grid = document.querySelector<HTMLElement>("#iconGrid");
-    const cards = Array.from(document.querySelectorAll<HTMLAnchorElement>(".icon-card"));
-    const emptyState = document.querySelector<HTMLElement>("#emptyState");
-    const tooltip = document.querySelector<HTMLElement>("#iconTooltip");
-    const drawer =document.querySelector<HTMLElement>("#iconDrawer");
-    const drawerPreview = document.querySelector<HTMLElement>("#drawerPreview");
-    const drawerName = document.querySelector<HTMLElement>("#drawerName");
-    const drawerComponent = document.querySelector<HTMLElement>("#drawerComponent");
-    const drawerStatus = document.querySelector<HTMLElement>("#drawerStatus");
-    const drawerClose = document.querySelector<HTMLButtonElement>("#drawerClose");
-    const drawerCode = document.querySelector<HTMLElement>("#drawerCode");
-    const drawerOpenPage = document.querySelector<HTMLAnchorElement>("#drawerOpenPage");
-    const tabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    import {
+      bindCustomizer,
+      createSettingsStore,
+      readTemplates,
+      renderPreviews,
+      runAction,
+      snippetHtml,
+      snippetText,
+      copyText,
+      wireMenus,
+      type IconRef,
+    } from "./_lib/icon-tools";
+    import { iconDefaults } from "../../../scripts/snippets.mjs";
 
-    let selected: HTMLAnchorElement | null = null;
-    let activeTab = "react";
-    let statusTimer: ReturnType<typeof setTimeout> | undefined;
-    let tooltipCard: HTMLAnchorElement | null = null;
+    // Astro's client router swaps pages without reloading, and a bundled
+    // script runs only once, so set the page up on every page load and tear
+    // down the window and document listeners before the next swap.
+    document.addEventListener("astro:page-load", () => {
+      if (!document.querySelector("#iconExplorer")) return;
+      const lifecycle = new AbortController();
+      const { signal } = lifecycle;
+      document.addEventListener("astro:before-swap", () => lifecycle.abort(), { once: true });
 
-    // Rebuilt from the tile's inline paths; the build checks this matches the manifest.
-    const svgMarkup = (card: HTMLAnchorElement | null) => {
-      const paths = Array.from(card?.querySelectorAll("svg path") ?? [], (path) => `<path d="${path.getAttribute("d")}"/>`);
-      return paths.length > 0 ? `${highlightData.svgOpenTag}\n${paths.join("")}\n</svg>\n` : "";
-    };
+      const explorer = document.querySelector<HTMLElement>("#iconExplorer")!;
+      const search = document.querySelector<HTMLInputElement>("#iconSearch")!;
+      const searchClear = document.querySelector<HTMLButtonElement>("#iconSearchClear")!;
+      const categorySelect = document.querySelector<HTMLSelectElement>("#iconCategory")!;
+      const resultCount = document.querySelector<HTMLElement>("#resultCount")!;
+      const browser = document.querySelector<HTMLElement>("#iconBrowser")!;
+      const grid = document.querySelector<HTMLElement>("#iconGrid")!;
+      const results = document.querySelector<HTMLElement>("#iconResults")!;
+      const emptyState = document.querySelector<HTMLElement>("#emptyState")!;
+      const tooltip = document.querySelector<HTMLElement>("#iconTooltip")!;
+      const drawer = document.querySelector<HTMLElement>("#iconDrawer")!;
+      const drawerName = document.querySelector<HTMLElement>("#drawerName")!;
+      const drawerComponent = document.querySelector<HTMLElement>("#drawerComponent")!;
+      const drawerStatus = document.querySelector<HTMLElement>("#drawerStatus")!;
+      const drawerCode = document.querySelector<HTMLElement>("#drawerCode")!;
+      const drawerOpenPage = document.querySelector<HTMLAnchorElement>("#drawerOpenPage")!;
+      const drawerCategories = document.querySelector<HTMLElement>("#drawerCategories")!;
+      const drawerTags = document.querySelector<HTMLElement>("#drawerTags")!;
+      const drawerCustomize = document.querySelector<HTMLDetailsElement>("#drawerCustomize")!;
+      const tabButtons = Array.from(drawer.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+      const cards = Array.from(grid.querySelectorAll<HTMLAnchorElement>(".icon-card"));
 
-    const getData = () => ({
-      name: selected?.dataset.name ?? "",
-      component: selected?.dataset.component ?? "",
-      svg: svgMarkup(selected),
-    });
+      const templates = readTemplates("snippetTemplates");
+      const version = JSON.parse(document.getElementById("siteVersion")?.textContent ?? '""');
+      const store = createSettingsStore();
+      const tabKey = "vadivam:tab";
 
-    // Plain-text snippet, used for the copy-to-clipboard action.
-    const snippet = (tab: string, component: string, svg: string) => {
-      switch (tab) {
-        case "react":
-          return `import { ${component} } from "vadivam-react";\n\n<${component} />`;
-        case "react-native":
-          return `import { ${component} } from "vadivam-react-native";\n\n<${component} />`;
-        case "solid":
-          return `import { ${component} } from "vadivam-solid";\n\n<${component} />`;
-        case "preact":
-          return `import { ${component} } from "vadivam-preact";\n\n<${component} />`;
-        case "vue":
-          return `<script setup>\nimport { ${component} } from "vadivam-vue";\n<\/script>\n\n<template>\n  <${component} />\n</template>`;
-        case "svelte":
-          return `<script>\n  import { ${component} } from "vadivam-svelte";\n<\/script>\n\n<${component} />`;
-        case "astro":
-          return `---\nimport { ${component} } from "vadivam-astro";\n---\n\n<${component} />`;
-        case "angular":
-          return `import { ${component} } from "vadivam-angular";\n\n<svg vadivam${component}></svg>`;
-        default:
-          return svg;
-      }
-    };
+      const pascalCase = (name: string) =>
+        name.split("-").filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("");
 
-    // Shiki-highlighted templates rendered at build time (see the page frontmatter).
-    // Framework tabs carry a placeholder component name; the SVG tab is keyed by
-    // path-count with `__Dn__` placeholders. Both are swapped for the selected
-    // icon's real values here so the markup stays a single lightweight template.
-    const highlightData: {
-      placeholder: string;
-      tabs: Record<string, string>;
-      svg: Record<string, string>;
-      svgOpenTag: string;
-    } = (() => {
-      const raw = document.getElementById("snippetHighlight")?.textContent;
-      const empty = { placeholder: "", tabs: {}, svg: {}, svgOpenTag: "" };
-      try {
-        return raw ? JSON.parse(raw) : empty;
-      } catch {
-        return empty;
-      }
-    })();
-
-    const escapeHtml = (value: string) =>
-      value.replace(/[&<>]/g, (char) => (char === "&" ? "&amp;" : char === "<" ? "&lt;" : "&gt;"));
-
-    const highlightedSnippet = (tab: string, component: string, svg: string) => {
-      if (tab === "svg") {
-        const paths = Array.from(svg.matchAll(/ d="([^"]*)"/g), (match) => match[1]);
-        const template = highlightData.svg[String(paths.length)];
-        if (!template) return `<pre class="astro-code"><code>${escapeHtml(svg)}</code></pre>`;
-        return paths.reduce((html, d, index) => html.split(`__D${index + 1}__`).join(d), template);
-      }
-      const template = highlightData.tabs[tab];
-      if (!template) return `<pre class="astro-code"><code>${escapeHtml(snippet(tab, component, svg))}</code></pre>`;
-      return template.split(highlightData.placeholder).join(component);
-    };
-
-    const setStatus = (message: string) => {
-      if (!drawerStatus) return;
-      drawerStatus.textContent = message;
-      clearTimeout(statusTimer);
-      statusTimer = setTimeout(() => {
-        if (drawerStatus) drawerStatus.textContent = "";
-      }, 2000);
-    };
-
-    const copy = (value: string, message: string) => {
-      navigator.clipboard.writeText(value).then(() => setStatus(message));
-    };
-
-    const renderCode = () => {
-      if (!drawerCode || !selected) return;
-      const { component, svg } = getData();
-      drawerCode.innerHTML = highlightedSnippet(activeTab, component, svg);
-    };
-
-    const syncClearance = () => {
-      if (!drawer) return;
-      const open = drawer.hasAttribute("data-open");
-      const height = open ? drawer.getBoundingClientRect().height : 0;
-      explorer?.style.setProperty("padding-bottom", open ? `${height + 24}px` : "");
-    };
-
-    const openDrawer = (card: HTMLAnchorElement) => {
-      if (!drawer) return;
-
-      for (const item of cards) item.setAttribute("aria-current", String(item === card));
-      selected = card;
-
-      const { name, component, svg } = getData();
-      if (drawerPreview) drawerPreview.innerHTML = svg;
-      if (drawerName) drawerName.textContent = name;
-      if (drawerComponent) drawerComponent.textContent = component;
-      if (drawerOpenPage) drawerOpenPage.href = `/icons/${name}`;
-
-      renderCode();
-
-      drawer.hidden = false;
-      drawer.setAttribute("data-open", "");
-      drawer.setAttribute("aria-hidden", "false");
-      requestAnimationFrame(syncClearance);
-    };
-
-    const closeDrawer = () => {
-      if (!drawer) return;
-      drawer.removeAttribute("data-open");
-      drawer.setAttribute("aria-hidden", "true");
-      for (const item of cards) item.setAttribute("aria-current", "false");
-      selected = null;
-      syncClearance();
-    };
-
-    const applyFilter = (raw: string) => {
-      const query = raw.trim().toLowerCase();
-      for (const card of cards) {
-        const name = card.dataset.name?.toLowerCase() ?? "";
-        const component = card.dataset.component?.toLowerCase() ?? "";
-        card.hidden = !(name.includes(query) || component.includes(query));
-      }
-      if (emptyState) emptyState.hidden = cards.some((card) => !card.hidden);
-    };
-
-    const syncSearchUrl = (value: string) => {
-      const url = new URL(window.location.href);
-      const trimmed = value.trim();
-      if (trimmed) url.searchParams.set("q", trimmed);
-      else url.searchParams.delete("q");
-      history.replaceState(null, "", url);
-    };
-
-    const syncClearButton = () => {
-      if (!searchClear || !search) return;
-      searchClear.hidden = search.value.length === 0;
-    };
-
-    search?.addEventListener("input", () => {
-      applyFilter(search.value);
-      syncSearchUrl(search.value);
-      syncClearButton();
-    });
-
-    searchClear?.addEventListener("click", () => {
-      if (!search) return;
-      search.value = "";
-      applyFilter("");
-      syncSearchUrl("");
-      syncClearButton();
-      search.focus();
-    });
-
-    // Deep-link: `/?q=term` pre-fills and filters.
-    const initialQuery = new URLSearchParams(window.location.search).get("q");
-    if (initialQuery && search) {
-      search.value = initialQuery;
-      applyFilter(initialQuery);
-    }
-    syncClearButton();
-
-    // One shared tooltip instead of one per tile keeps the homepage under the
-    // 2 MB crawl limit. It stays inside the viewport and Escape hides it (WCAG 1.4.13).
-    const hideTooltip = () => {
-      tooltipCard?.removeAttribute("aria-describedby");
-      tooltipCard = null;
-      if (tooltip) tooltip.hidden = true;
-    };
-
-    const showTooltip = (card: HTMLAnchorElement) => {
-      if (!tooltip || card === tooltipCard) return;
-      hideTooltip();
-      tooltip.textContent = card.dataset.name ?? "";
-      tooltip.hidden = false;
-      const margin = 8;
-      const target = card.getBoundingClientRect();
-      const { width, height } = tooltip.getBoundingClientRect();
-      const maxLeft = document.documentElement.clientWidth - margin - width;
-      const above = target.top - height - margin;
-      tooltip.style.left = `${Math.max(margin, Math.min(target.left + target.width / 2 - width / 2, maxLeft))}px`;
-      tooltip.style.top = `${above >= 0 ? above : target.bottom + margin}px`;
-      card.setAttribute("aria-describedby", tooltip.id);
-      tooltipCard = card;
-    };
-
-    const cardFrom = (event: Event) => (event.target as HTMLElement).closest<HTMLAnchorElement>(".icon-card");
-
-    grid?.addEventListener("pointerover", (event) => {
-      if ((event as PointerEvent).pointerType === "touch") return;
-      const card = cardFrom(event);
-      if (card) showTooltip(card);
-      else hideTooltip();
-    });
-    grid?.addEventListener("pointerleave", hideTooltip);
-    grid?.addEventListener("focusin", (event) => {
-      const card = cardFrom(event);
-      if (card) showTooltip(card);
-    });
-    grid?.addEventListener("focusout", hideTooltip);
-    window.addEventListener("scroll", hideTooltip, { passive: true });
-
-    grid?.addEventListener("click", (event) => {
-      const mouse = event as MouseEvent;
-      // Let modified clicks (new tab/window) and non-primary buttons follow the
-      // real /icons/<name> link; only plain left-click opens the drawer.
-      if (mouse.metaKey || mouse.ctrlKey || mouse.shiftKey || mouse.altKey || mouse.button !== 0) {
-        return;
-      }
-      const card = (event.target as HTMLElement).closest<HTMLAnchorElement>(".icon-card");
-      if (!card) return;
-      event.preventDefault();
-      openDrawer(card);
-    });
-
-    for (const tab of tabButtons) {
-      tab.addEventListener("click", () => {
-        activeTab = tab.dataset.tab ?? "react";
-        for (const button of tabButtons) {
-          button.setAttribute("aria-selected", String(button === tab));
-        }
-        renderCode();
-        requestAnimationFrame(syncClearance);
+      // ---- Search index -------------------------------------------------------
+      // Names are in the HTML; tags and categories load on first search intent.
+      type Entry = {
+        card: HTMLAnchorElement;
+        clone?: HTMLAnchorElement;
+        name: string;
+        words: string;
+        tags: string[];
+        categories: string[];
+      };
+      const entries: Entry[] = cards.map((card) => {
+        const name = card.dataset.name ?? "";
+        return { card, name, words: name.replaceAll("-", " "), tags: [], categories: [] };
       });
-    }
+      const entryByName = new Map(entries.map((entry) => [entry.name, entry]));
+      let categoryTitles: Record<string, string> = {};
+      let indexPromise: Promise<void> | null = null;
 
-    drawerClose?.addEventListener("click", closeDrawer);
+      const loadIndex = () =>
+        (indexPromise ??= fetch("/icons/index.json")
+          .then((response) => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
+          .then((index: { categories: Record<string, string>; icons: [string, string, string][] }) => {
+            categoryTitles = index.categories;
+            for (const [name, tags, categories] of index.icons) {
+              const entry = entryByName.get(name);
+              if (!entry) continue;
+              entry.tags = tags ? tags.split("|") : [];
+              entry.categories = categories ? categories.split(" ") : [];
+            }
+          })
+          .catch(() => {
+            // Name search keeps working without the index; retry on next intent.
+            indexPromise = null;
+          }));
 
-    document.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape") return;
-      hideTooltip();
-      closeDrawer();
-    });
+      // Lower rank sorts first: exact name, name prefix, name word, tag, category.
+      const termRank = (entry: Entry, term: string) => {
+        if (entry.name === term) return 0;
+        if (entry.name.startsWith(term)) return 1;
+        if (entry.words.includes(term)) return 2;
+        if (entry.tags.some((tag) => tag.startsWith(term))) return 3;
+        if (entry.tags.some((tag) => tag.includes(term))) return 4;
+        if (entry.categories.some((id) => (categoryTitles[id] ?? id).toLowerCase().includes(term))) return 5;
+        return -1;
+      };
 
-    window.addEventListener("resize", syncClearance);
-
-    drawer?.addEventListener("click", (event) => {
-      const action = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-action]");
-      if (!action || !selected) return;
-
-      const { name, component, svg } = getData();
-
-      switch (action.dataset.action) {
-        case "download": {
-          const blob = new Blob([svg], { type: "image/svg+xml" });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `${name}.svg`;
-          link.click();
-          URL.revokeObjectURL(url);
-          setStatus(`Downloaded ${name}.svg`);
-          break;
+      const rankEntry = (entry: Entry, terms: string[], category: string) => {
+        if (category && !entry.categories.includes(category)) return -1;
+        if (terms.length === 0) return 0;
+        const joined = terms.join("-");
+        if (terms.length > 1 && entry.name.includes(joined)) return entry.name === joined ? 0 : 1;
+        let rank = 0;
+        for (const term of terms) {
+          const termRanked = termRank(entry, term);
+          if (termRanked < 0) return -1;
+          rank = Math.max(rank, termRanked);
         }
-        case "copy-code":
-          copy(snippet(activeTab, component, svg), "Snippet copied.");
-          break;
-        case "copy-svg":
-          copy(svg, "SVG copied.");
-          break;
-        case "copy-name":
-          copy(name, "Name copied.");
-          break;
-        case "copy-component":
-          copy(component, "Component name copied.");
-          break;
+        return rank;
+      };
+
+      // Filtering never touches the full grid: it goes dormant (keeping its
+      // rendering state) and only the matches render into a results grid. More
+      // matches render as the reader scrolls near the end, so a keystroke lays
+      // out tens of tiles instead of all of them.
+      let matches: Entry[] | null = null;
+      let renderedCount = 0;
+      const batchSize = 120;
+      const sentinel = document.createElement("div");
+      sentinel.setAttribute("aria-hidden", "true");
+
+      const cloneOf = (entry: Entry) => {
+        if (!entry.clone) {
+          entry.clone = entry.card.cloneNode(true) as HTMLAnchorElement;
+          entry.clone.setAttribute("aria-current", "false");
+        }
+        return entry.clone;
+      };
+
+      const renderBatch = (size: number) => {
+        if (!matches) return;
+        const fragment = document.createDocumentFragment();
+        const end = Math.min(matches.length, renderedCount + size);
+        for (; renderedCount < end; renderedCount += 1) fragment.append(cloneOf(matches[renderedCount]!));
+        results.append(fragment);
+        if (renderedCount < matches.length) {
+          results.after(sentinel);
+          // Re-observing reports the sentinel's current state, so a sentinel
+          // that is still in view after this batch asks for the next one.
+          sentinelObserver.unobserve(sentinel);
+          sentinelObserver.observe(sentinel);
+        } else sentinel.remove();
+      };
+
+      const sentinelObserver = new IntersectionObserver(
+        (observed) => {
+          if (observed.some((item) => item.isIntersecting)) renderBatch(batchSize);
+        },
+        { rootMargin: "800px 0px" },
+      );
+
+      const flushResults = () => {
+        if (matches) renderBatch(matches.length);
+      };
+
+      let filterFrame = 0;
+      const applyFilter = () => {
+        cancelAnimationFrame(filterFrame);
+        filterFrame = requestAnimationFrame(() => {
+          const terms = search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+          const category = categorySelect.value;
+          if (terms.length === 0 && !category) {
+            matches = null;
+            results.hidden = true;
+            results.replaceChildren();
+            sentinel.remove();
+            grid.classList.remove("is-dormant");
+            emptyState.hidden = true;
+            resultCount.textContent = `${entries.length} icons`;
+            return;
+          }
+          matches = entries
+            .map((entry, index) => ({ entry, index, rank: rankEntry(entry, terms, category) }))
+            .filter(({ rank }) => rank >= 0)
+            .sort((left, right) => left.rank - right.rank || left.index - right.index)
+            .map(({ entry }) => entry);
+          grid.classList.add("is-dormant");
+          results.replaceChildren();
+          renderedCount = 0;
+          results.hidden = matches.length === 0;
+          renderBatch(batchSize);
+          emptyState.hidden = matches.length > 0;
+          resultCount.textContent = `${matches.length} of ${entries.length} icons`;
+        });
+      };
+
+      const syncUrl = () => {
+        const url = new URL(location.href);
+        const query = search.value.trim();
+        if (query) url.searchParams.set("q", query);
+        else url.searchParams.delete("q");
+        if (categorySelect.value) url.searchParams.set("category", categorySelect.value);
+        else url.searchParams.delete("category");
+        history.replaceState(history.state, "", url);
+      };
+
+      const filterNow = () => {
+        searchClear.hidden = search.value.length === 0;
+        applyFilter();
+        syncUrl();
+      };
+
+      for (const eventName of ["focus", "pointerenter"]) {
+        search.addEventListener(eventName, loadIndex, { once: true });
+        categorySelect.addEventListener(eventName, loadIndex, { once: true });
       }
+      search.addEventListener("input", () => {
+        filterNow();
+        if (search.value) loadIndex()?.then(applyFilter);
+      });
+      categorySelect.addEventListener("change", () => {
+        filterNow();
+        loadIndex()?.then(applyFilter);
+      });
+      searchClear.addEventListener("click", () => {
+        search.value = "";
+        filterNow();
+        search.focus();
+      });
+
+      // Deep links: `/?q=term&category=id` pre-fill and filter.
+      const initial = new URLSearchParams(location.search);
+      search.value = initial.get("q") ?? "";
+      if (initial.get("category") && categorySelect.querySelector(`option[value="${CSS.escape(initial.get("category") ?? "")}"]`)) {
+        categorySelect.value = initial.get("category") ?? "";
+      }
+      if (search.value || categorySelect.value) {
+        searchClear.hidden = search.value.length === 0;
+        applyFilter();
+        loadIndex()?.then(applyFilter);
+      }
+
+      // ---- Tooltip ------------------------------------------------------------
+      // One shared tooltip instead of one per tile keeps the homepage under the
+      // 2 MB crawl limit. It stays inside the viewport and Escape hides it (WCAG 1.4.13).
+      let tooltipCard: HTMLAnchorElement | null = null;
+      const hideTooltip = () => {
+        tooltipCard?.removeAttribute("aria-describedby");
+        tooltipCard = null;
+        tooltip.hidden = true;
+      };
+      const showTooltip = (card: HTMLAnchorElement) => {
+        if (card === tooltipCard) return;
+        hideTooltip();
+        tooltip.textContent = card.dataset.name ?? "";
+        tooltip.hidden = false;
+        const margin = 8;
+        const target = card.getBoundingClientRect();
+        const { width, height } = tooltip.getBoundingClientRect();
+        const maxLeft = document.documentElement.clientWidth - margin - width;
+        const above = target.top - height - margin;
+        tooltip.style.left = `${Math.max(margin, Math.min(target.left + target.width / 2 - width / 2, maxLeft))}px`;
+        tooltip.style.top = `${above >= 0 ? above : target.bottom + margin}px`;
+        card.setAttribute("aria-describedby", tooltip.id);
+        tooltipCard = card;
+      };
+      const cardFrom = (event: Event) => (event.target as HTMLElement).closest<HTMLAnchorElement>(".icon-card");
+      browser.addEventListener("pointerover", (event) => {
+        if ((event as PointerEvent).pointerType === "touch") return;
+        const card = cardFrom(event);
+        if (card) showTooltip(card);
+        else hideTooltip();
+      });
+      browser.addEventListener("pointerleave", hideTooltip);
+      browser.addEventListener("focusin", (event) => {
+        const card = cardFrom(event);
+        if (card?.matches(":focus-visible")) showTooltip(card);
+      });
+      browser.addEventListener("focusout", hideTooltip);
+      addEventListener("scroll", hideTooltip, { passive: true, signal });
+
+      // ---- Drawer -------------------------------------------------------------
+      let selected: HTMLAnchorElement | null = null;
+      let activeTab = (() => {
+        try {
+          return localStorage.getItem(tabKey) ?? "react";
+        } catch {
+          return "react";
+        }
+      })();
+      if (!tabButtons.some((button) => button.dataset.tab === activeTab)) activeTab = "react";
+      let statusTimer: ReturnType<typeof setTimeout> | undefined;
+
+      // Rebuilt from the tile's inline paths; the build checks this matches the manifest.
+      const currentIcon = (): IconRef | null => {
+        if (!selected || !templates) return null;
+        const paths = Array.from(selected.querySelectorAll("path"), (path) => `<path d="${path.getAttribute("d")}"/>`);
+        const name = selected.dataset.name ?? "";
+        return { name, component: pascalCase(name), svg: `${templates.svgOpenTag}\n${paths.join("")}\n</svg>\n` };
+      };
+
+      const setStatus = (message: string) => {
+        drawerStatus.textContent = message;
+        clearTimeout(statusTimer);
+        statusTimer = setTimeout(() => (drawerStatus.textContent = ""), 2000);
+      };
+
+      const chip = (label: string, attributes: Record<string, string>) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className =
+          "rounded-full border border-border bg-transparent px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+        button.textContent = label;
+        for (const [key, value] of Object.entries(attributes)) button.setAttribute(key, value);
+        return button;
+      };
+
+      const renderMeta = () => {
+        const entry = selected ? entryByName.get(selected.dataset.name ?? "") : null;
+        if (!entry) return;
+        drawerCategories.replaceChildren(
+          ...entry.categories.map((id) => chip(categoryTitles[id] ?? id, { "data-filter-category": id })),
+        );
+        drawerTags.replaceChildren(...entry.tags.slice(0, 12).map((tag) => chip(tag, { "data-filter-tag": tag })));
+        document.querySelector<HTMLElement>("#drawerMeta")!.hidden = entry.categories.length + entry.tags.length === 0;
+      };
+
+      const render = () => {
+        const icon = currentIcon();
+        if (!icon) return;
+        const settings = store.get();
+        drawerCode.innerHTML = snippetHtml(templates, activeTab, icon, settings);
+        renderPreviews(drawer, icon, settings);
+        for (const button of tabButtons) button.setAttribute("aria-selected", String(button.dataset.tab === activeTab));
+      };
+
+      // Prev/next follow what's on screen: the ranked matches, or the full grid.
+      const visibleCards = () => {
+        if (!matches) return cards;
+        flushResults();
+        return matches.map(cloneOf);
+      };
+
+      const syncNavigation = () => {
+        const visible = visibleCards();
+        const index = selected ? visible.indexOf(selected) : -1;
+        document.querySelector<HTMLButtonElement>("#drawerPrev")!.disabled = index <= 0;
+        document.querySelector<HTMLButtonElement>("#drawerNext")!.disabled = index < 0 || index >= visible.length - 1;
+      };
+
+      const select = (card: HTMLAnchorElement) => {
+        selected?.setAttribute("aria-current", "false");
+        selected = card;
+        card.setAttribute("aria-current", "true");
+        const name = card.dataset.name ?? "";
+        drawerName.textContent = name;
+        drawerComponent.textContent = pascalCase(name);
+        drawerOpenPage.href = `/icons/${name}`;
+        render();
+        renderMeta();
+        loadIndex()?.then(renderMeta);
+        syncNavigation();
+      };
+
+      const iconParam = () => new URLSearchParams(location.search).get("icon");
+      // Replace, never push: Astro's client router owns history entries.
+      const setIconParam = (name: string | null) => {
+        const url = new URL(location.href);
+        if (name) url.searchParams.set("icon", name);
+        else url.searchParams.delete("icon");
+        history.replaceState(history.state, "", url);
+      };
+
+      const openDrawer = (card: HTMLAnchorElement, { updateUrl = true } = {}) => {
+        hideTooltip();
+        select(card);
+        drawer.inert = false;
+        drawer.setAttribute("data-open", "");
+        if (updateUrl) setIconParam(card.dataset.name ?? null);
+      };
+
+      const closeDrawer = ({ updateUrl = true } = {}) => {
+        if (!drawer.hasAttribute("data-open")) return;
+        drawer.removeAttribute("data-open");
+        drawer.inert = true;
+        const card = selected;
+        selected?.setAttribute("aria-current", "false");
+        selected = null;
+        if (updateUrl) setIconParam(null);
+        if (drawer.contains(document.activeElement) || document.activeElement === document.body) card?.focus({ preventScroll: true });
+      };
+
+      const step = (direction: 1 | -1) => {
+        const visible = visibleCards();
+        const next = visible[(selected ? visible.indexOf(selected) : -1) + direction];
+        if (!next) return;
+        openDrawer(next);
+        next.scrollIntoView({ block: "nearest" });
+        if (browser.contains(document.activeElement)) next.focus({ preventScroll: true });
+      };
+
+      browser.addEventListener("click", (event) => {
+        const mouse = event as MouseEvent;
+        // Modified clicks (new tab/window) follow the real /icons/<name> link.
+        if (mouse.metaKey || mouse.ctrlKey || mouse.shiftKey || mouse.altKey || mouse.button !== 0) return;
+        const card = cardFrom(event);
+        if (!card) return;
+        event.preventDefault();
+        openDrawer(card);
+      });
+
+      for (const tab of tabButtons) {
+        tab.addEventListener("click", () => {
+          activeTab = tab.dataset.tab ?? "react";
+          try {
+            localStorage.setItem(tabKey, activeTab);
+          } catch {
+            // Storage can be unavailable; the tab still switches.
+          }
+          render();
+        });
+      }
+
+      document.querySelector("#drawerClose")?.addEventListener("click", () => closeDrawer());
+      document.querySelector("#drawerPrev")?.addEventListener("click", () => step(-1));
+      document.querySelector("#drawerNext")?.addEventListener("click", () => step(1));
+
+      document.addEventListener(
+        "keydown",
+        (event) => {
+          if (event.key === "Escape") {
+            hideTooltip();
+            if (!document.querySelector(":popover-open")) closeDrawer();
+            return;
+          }
+          if (!drawer.hasAttribute("data-open") || event.altKey || event.metaKey || event.ctrlKey) return;
+          const target = event.target as HTMLElement;
+          if (target.closest("input, select, textarea, [contenteditable], [role=tablist], [popover]")) return;
+          if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+            event.preventDefault();
+            step(event.key === "ArrowRight" ? 1 : -1);
+          }
+        },
+        { signal },
+      );
+
+      drawer.addEventListener("click", async (event) => {
+        const target = event.target as HTMLElement;
+        const filterCategory = target.closest<HTMLElement>("[data-filter-category]")?.dataset.filterCategory;
+        const filterTag = target.closest<HTMLElement>("[data-filter-tag]")?.dataset.filterTag;
+        if (filterCategory || filterTag) {
+          if (filterCategory) categorySelect.value = filterCategory;
+          if (filterTag) search.value = filterTag;
+          filterNow();
+          return;
+        }
+        const action = target.closest<HTMLElement>("[data-action]")?.dataset.action;
+        const icon = currentIcon();
+        if (!action || !icon) return;
+        try {
+          if (action === "copy-code") {
+            await copyText(snippetText(activeTab, icon, store.get()));
+            setStatus("Snippet copied.");
+          } else {
+            setStatus(await runAction(action, icon, store.get(), version, drawer));
+          }
+        } catch {
+          setStatus("Couldn't complete that action in this browser.");
+        }
+      });
+
+      wireMenus(drawer);
+
+      // Keep the grid's last rows reachable above the open drawer.
+      const syncClearance = () => {
+        explorer.style.paddingBottom = drawer.hasAttribute("data-open") ? `${drawer.offsetHeight + 24}px` : "";
+      };
+      const resizeObserver = new ResizeObserver(syncClearance);
+      resizeObserver.observe(drawer);
+      const openObserver = new MutationObserver(syncClearance);
+      openObserver.observe(drawer, { attributes: true, attributeFilter: ["data-open"] });
+
+      // Swipe the drawer down to close it on touch screens.
+      let dragStart: number | null = null;
+      const dragZones = [document.querySelector<HTMLElement>("#drawerHandle"), document.querySelector<HTMLElement>("#drawerHeader")];
+      for (const zone of dragZones) {
+        zone?.addEventListener("pointerdown", (event) => {
+          if (event.pointerType !== "touch" || (event.target as HTMLElement).closest("button, a")) return;
+          dragStart = event.clientY;
+          drawer.style.transition = "none";
+        });
+      }
+      addEventListener("pointermove", (event) => {
+        if (dragStart === null) return;
+        drawer.style.transform = `translateY(${Math.max(0, event.clientY - dragStart)}px)`;
+      }, { signal });
+      addEventListener("pointerup", (event) => {
+        if (dragStart === null) return;
+        const distance = event.clientY - dragStart;
+        dragStart = null;
+        drawer.style.transition = "";
+        drawer.style.transform = "";
+        if (distance > 80) closeDrawer();
+      }, { signal });
+
+      // Customizer: shared with icon pages through localStorage. The grid
+      // previews stroke width and color live.
+      const customizer = drawer.querySelector<HTMLElement>("[data-customizer]");
+      if (customizer) bindCustomizer(customizer, store);
+      store.subscribe((settings) => {
+        browser.style.setProperty("--icon-stroke", String(settings.strokeWidth));
+        if (settings.color === iconDefaults.color) browser.style.removeProperty("--icon-color");
+        else browser.style.setProperty("--icon-color", settings.color);
+        render();
+      });
+      const wideScreen = matchMedia("(min-width: 768px)");
+      drawerCustomize.open = wideScreen.matches;
+
+      // Deep link: `/?icon=name` opens the drawer on that icon.
+      const linked = iconParam();
+      const linkedCard = linked ? cards.find((card) => card.dataset.name === linked) : null;
+      if (linkedCard) {
+        openDrawer(linkedCard, { updateUrl: false });
+        linkedCard.scrollIntoView({ block: "center" });
+      }
+
+      signal.addEventListener("abort", () => {
+        sentinelObserver.disconnect();
+        resizeObserver.disconnect();
+        openObserver.disconnect();
+      });
     });
   </script>
 </PageLayout>
@@ -721,7 +914,7 @@ const structuredData = site
      padding here too would double the left inset. */
   #drawerCode.prose pre.astro-code {
     margin: 0;
-    max-height: 8rem;
+    max-height: 9rem;
     min-height: 4.5rem;
     overflow-y: auto;
     padding: 0.5rem 0;
@@ -730,7 +923,13 @@ const structuredData = site
     scrollbar-width: thin;
   }
 
+  /* The end padding leaves room for the copy button over the first line. */
   #drawerCode.prose pre.astro-code > code {
-    padding: 0 0.75rem;
+    padding: 0 4.5rem 0 0.75rem;
+  }
+
+  [popover][data-menu] {
+    position: fixed;
+    inset: auto;
   }
 </style>

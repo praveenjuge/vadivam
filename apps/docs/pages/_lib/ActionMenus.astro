@@ -1,0 +1,52 @@
+---
+// "Copy as" and "Download" menus. Items carry `data-action` names handled by
+// `runAction` in icon-tools.ts; menus open with the native Popover API.
+import VIcon from "./VIcon.astro";
+import { copyFormats } from "./icon-tools";
+
+interface Props {
+  /** Unique per page, so two instances can share a page. */
+  id: string;
+}
+
+const { id } = Astro.props;
+const triggerClass =
+  "inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const menuClass =
+  "m-0 min-w-44 rounded-md border border-border bg-background p-1 text-foreground shadow-lg [position:fixed] [inset:auto]";
+const itemClass =
+  "flex w-full items-center rounded px-2 py-1.5 text-start text-xs transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none";
+const downloads = [
+  { action: "download-svg", label: "SVG" },
+  { action: "download-png-1", label: "PNG 1×" },
+  { action: "download-png-2", label: "PNG 2×" },
+  { action: "download-png-4", label: "PNG 4×" },
+];
+---
+
+<button class={triggerClass} type="button" popovertarget={`${id}-copy`} aria-haspopup="menu">
+  <VIcon name="copy" size={14} /><span>Copy as</span><VIcon name="chevron-down" size={12} />
+</button>
+<div class={menuClass} id={`${id}-copy`} popover data-menu role="menu" aria-label="Copy as">
+  {
+    copyFormats.map((format) => (
+      <button class={itemClass} type="button" role="menuitem" data-action={`copy-${format.id}`}>
+        {format.label}
+      </button>
+    ))
+  }
+  <button class={itemClass} type="button" role="menuitem" data-action="copy-png">PNG image</button>
+</div>
+
+<button class={triggerClass} type="button" popovertarget={`${id}-download`} aria-haspopup="menu">
+  <VIcon name="download" size={14} /><span>Download</span><VIcon name="chevron-down" size={12} />
+</button>
+<div class={menuClass} id={`${id}-download`} popover data-menu role="menu" aria-label="Download">
+  {
+    downloads.map((item) => (
+      <button class={itemClass} type="button" role="menuitem" data-action={item.action}>
+        {item.label}
+      </button>
+    ))
+  }
+</div>

@@ -3,6 +3,31 @@
    under the 2 MB crawl limit as the icon set grows. */
 @layer components {
   .icon-card {
-    @apply relative grid aspect-square min-w-0 cursor-pointer place-items-center rounded-md text-foreground no-underline hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&>span]:absolute [&>span]:inset-0 [&>span]:grid [&>span]:cursor-pointer [&>span]:place-items-center [&_svg]:size-6 aria-[current=true]:bg-accent/10 aria-[current=true]:text-accent aria-[current=true]:ring-1 aria-[current=true]:ring-accent;
+    @apply relative grid aspect-square min-w-0 cursor-pointer place-items-center rounded-md text-foreground no-underline hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-[current=true]:bg-accent/10 aria-[current=true]:text-accent aria-[current=true]:ring-1 aria-[current=true]:ring-accent;
+    /* Off-screen tiles skip layout and paint until they scroll into view. */
+    content-visibility: auto;
+    contain-intrinsic-size: auto 2.75rem;
+  }
+
+  /* While a search shows its results grid, the full grid keeps its rendering
+     state instead of being torn down, so clearing the search is cheap. */
+  .icon-grid.is-dormant {
+    content-visibility: hidden;
+    contain-intrinsic-size: none;
+    height: 0;
+  }
+
+  /* Tiles carry only path data, so the SVG presentation attributes live here
+     once. The drawer's customizer previews stroke width and color through the
+     grid's custom properties. */
+  .icon-card > svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    fill: none;
+    stroke: var(--icon-color, currentColor);
+    stroke-width: var(--icon-stroke, 2);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
   }
 }

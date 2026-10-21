@@ -57,7 +57,8 @@ function changedProps(options) {
 
 const kebab = (name) => name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 
-function propsSource(frameworkId, options) {
+/** The non-default props in one framework's attribute syntax, e.g. ` size={32}`. */
+export function propsSource(frameworkId, options) {
   const props = changedProps(options);
   return props
     .map(([name, value]) => {

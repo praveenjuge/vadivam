@@ -711,6 +711,14 @@ async function buildWebAssets(icons) {
       path.join(webIconsDir, icon.fileName),
     );
   }
+  // The homepage fetches this lazily so tags never weigh down its HTML.
+  await writeFile(
+    path.join(webIconsDir, "index.json"),
+    JSON.stringify({
+      categories: Object.fromEntries(iconCategories.map(({ id, title }) => [id, title])),
+      icons: icons.map((icon) => [icon.name, icon.tags.join("|"), icon.categories.join(" ")]),
+    }),
+  );
 }
 
 export async function buildPreview() {
