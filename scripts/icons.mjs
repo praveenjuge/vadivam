@@ -9,6 +9,7 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
+import { inkBounds } from "./icon-geometry.mjs";
 import { optimize } from "svgo";
 import { Resvg } from "@resvg/resvg-js";
 import { buildAngularPackage } from "./generators/angular.mjs";
@@ -108,6 +109,8 @@ const blockedTags = new Set([
   "use",
 ]);
 const maxClosedSubpathsPerPath = 8;
+const canvasSize = 24;
+const strokeWidth = 2;
 
 async function svgFiles() {
   return (await readdir(iconsDir))
@@ -253,6 +256,7 @@ export function validateSvgContent(svg, file = "inline.svg") {
   }
 
   let count = 0;
+  const shapes = [];
   const visit = (current, parentTag) => {
     for (const [tag, value] of Object.entries(current)) {
       if (tag.startsWith("@_")) continue;
@@ -288,12 +292,43 @@ export function validateSvgContent(svg, file = "inline.svg") {
           Object.keys(item).some((attr) => allowed.has(attr)),
           `${file}: <${tag}> has no geometry`,
         );
+        shapes.push([
+          tag,
+          Object.fromEntries(
+            Object.entries(item)
+              .filter(([attr]) => allowed.has(attr))
+              .map(([attr, attrValue]) => [attr.slice(2), attrValue]),
+          ),
+        ]);
       }
     }
   };
 
   visit(node, "svg");
   assert(count > 0, `${file}: no drawable elements found`);
+  assertInkInsideCanvas(shapes, file);
+}
+
+// With round caps and joins the 2px stroke reaches 1px past the centerline, so
+// every point of the geometry must sit at least 1px inside the canvas edge.
+function assertInkInsideCanvas(shapes, file) {
+  let box;
+  try {
+    box = inkBounds(shapes, strokeWidth);
+  } catch (error) {
+    throw new Error(`${file}: ${error.message}`);
+  }
+  const epsilon = 1e-6;
+  const inside =
+    box.minX >= -epsilon &&
+    box.minY >= -epsilon &&
+    box.maxX <= canvasSize + epsilon &&
+    box.maxY <= canvasSize + epsilon;
+  const format = (value) => Number(value.toFixed(3));
+  assert(
+    inside,
+    `${file}: stroke extends outside the 24x24 canvas (ink spans x ${format(box.minX)} to ${format(box.maxX)}, y ${format(box.minY)} to ${format(box.maxY)}); keep geometry at least 1px from every edge`,
+  );
 }
 
 function assertNoFilledSourceArtwork(svg, file) {
