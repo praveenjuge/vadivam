@@ -53,24 +53,16 @@ for (const icon of icons) {
   tilePaths.set(icon.name, paths);
 }
 
-// A hand-picked row that opens the page with the set's friendliest shapes.
-// Phones show the first eight. Fail the build if one is renamed or removed.
-const heroIcons = [
-  "cat", "rabbit", "bird", "snail", "coffee", "cupcake", "sprout", "rainbow",
-  "turtle", "balloon", "flower", "ghost", "umbrella", "camera", "rocket", "sparkles",
-];
-for (const name of heroIcons) {
-  if (!tilePaths.has(name)) throw new Error(`Hero icon "${name}" is not in the set`);
-}
-// Search placeholder examples, cycled until the visitor types.
+// Search placeholder examples, cycled until the visitor types. Fail the build
+// if one is renamed or removed.
 const searchExamples = ["coffee", "rocket", "cat", "calendar", "heart", "cloud", "settings", "palette"];
 for (const name of searchExamples) {
   if (!tilePaths.has(name)) throw new Error(`Search example "${name}" is not in the set`);
 }
 const iconCount = icons.length.toLocaleString("en-US");
 
-// 120 divides every column count the grid uses (5, 8, 10, 24, and 3–12 with
-// names shown), so chunks stack without ragged rows. See `.icon-chunk`.
+// 120 divides every column count the grid uses (5, 8, 10, 24), so chunks
+// stack without ragged rows. See `.icon-chunk`.
 const chunkSize = 120;
 const chunks = Array.from({ length: Math.ceil(icons.length / chunkSize) }, (_, index) =>
   icons.slice(index * chunkSize, (index + 1) * chunkSize),
@@ -166,28 +158,22 @@ const structuredData = site
           <em class="text-foreground">Vadivam</em> (<span lang="ta">வடிவம்</span>) is Tamil for “shape.” A free, open-source icon
           set made for designers and developers building thoughtful digital experiences.
         </p>
-        <ul class="hero-icons" aria-label="Featured icons">
-          {heroIcons.map((name, index) => (
-            <li style={`--i: ${index}`}>
-              <a href={`/icons/${name}`} aria-label={name} data-hero-icon={name}>
-                <svg viewBox="0 0 24 24" set:html={tilePaths.get(name)?.replaceAll("<path ", '<path pathLength="1" ')} />
-              </a>
-            </li>
-          ))}
-        </ul>
       </div>
 
       <div class="grid min-w-0 gap-2.5 lg:w-[26rem]">
         <div class="flex min-w-0 items-center rounded-lg border border-border bg-muted/40 ps-1 pe-1 text-sm">
           <label class="sr-only" for="installTarget">Package</label>
-          <select
-            class="flex-none cursor-pointer rounded-md border-0 bg-transparent py-1.5 ps-2 pe-6 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
-            id="installTarget"
-          >
-            {installTargets.map((target) => (
-              <option value={target.id} data-package={target.packageName}>{target.label}</option>
-            ))}
-          </select>
+          <span class="group relative flex flex-none">
+            <select
+              class="cursor-pointer appearance-none rounded-md border-0 bg-transparent py-1.5 ps-2 pe-7 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
+              id="installTarget"
+            >
+              {installTargets.map((target) => (
+                <option value={target.id} data-package={target.packageName}>{target.label}</option>
+              ))}
+            </select>
+            <VIcon name="chevron-down" size={14} class="pointer-events-none absolute inset-y-0 end-2 items-center text-muted-foreground group-hover:text-foreground" />
+          </span>
           <span class="h-5 w-px flex-none bg-border" aria-hidden="true"></span>
           <code class="min-w-0 flex-1 truncate bg-transparent px-2.5 py-2 font-mono text-[0.8rem] text-foreground" id="installCommand">npm i vadivam-react</code>
           <button class:list={[iconButtonClass, "data-[copied]:text-accent"]} type="button" id="installCopy" aria-label="Copy install command"><VIcon name="copy" size={15} /></button>
@@ -235,22 +221,19 @@ const structuredData = site
             set:html={clearIconSvg}
           />
         </div>
-        <select
-          class="w-[7.5rem] flex-none rounded-lg border border-border bg-background py-2 ps-3 pe-8 text-base text-foreground outline-none focus:border-accent sm:w-auto md:text-sm"
-          id="iconCategory"
-          aria-label="Filter by category"
-        >
-          <option value="">All</option>
-          {categoryOptions.map((category) => (
-            <option value={category.id}>{category.title} ({categoryCounts.get(category.id) ?? 0})</option>
-          ))}
-        </select>
-        <button
-          class="inline-flex flex-none items-center gap-1.5 self-stretch rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-pressed:border-accent aria-pressed:text-foreground md:text-xs"
-          type="button"
-          id="namesToggle"
-          aria-pressed="false"
-        ><VIcon name="tag" size={14} /><span class="sr-only sm:not-sr-only">Names</span></button>
+        <span class="relative flex w-[7.5rem] flex-none sm:w-auto">
+          <select
+            class="w-full cursor-pointer appearance-none rounded-lg border border-border bg-background py-2 ps-3 pe-9 text-base text-foreground outline-none focus:border-accent md:text-sm"
+            id="iconCategory"
+            aria-label="Filter by category"
+          >
+            <option value="">All</option>
+            {categoryOptions.map((category) => (
+              <option value={category.id}>{category.title} ({categoryCounts.get(category.id) ?? 0})</option>
+            ))}
+          </select>
+          <VIcon name="chevron-down" size={16} class="pointer-events-none absolute inset-y-0 end-3 items-center text-muted-foreground" />
+        </span>
         <p class="sr-only m-0 flex-none text-xs tabular-nums text-muted-foreground lg:not-sr-only" id="resultCount" aria-live="polite">{icons.length} icons</p>
       </div>
 
@@ -428,7 +411,6 @@ const structuredData = site
       const results = document.querySelector<HTMLElement>("#iconResults")!;
       const emptyState = document.querySelector<HTMLElement>("#emptyState")!;
       const emptyQuery = document.querySelector<HTMLElement>("#emptyQuery")!;
-      const namesToggle = document.querySelector<HTMLButtonElement>("#namesToggle")!;
       const installTarget = document.querySelector<HTMLSelectElement>("#installTarget")!;
       const installCommand = document.querySelector<HTMLElement>("#installCommand")!;
       const tooltip = document.querySelector<HTMLElement>("#iconTooltip")!;
@@ -656,31 +638,6 @@ const structuredData = site
         { capture: true, signal },
       );
 
-      // ---- Names --------------------------------------------------------------
-      // Labels come from CSS (`attr(aria-label)`), so toggling adds no nodes.
-      const namesKey = "vadivam:names";
-      const setNames = (on: boolean) => {
-        browser.toggleAttribute("data-names", on);
-        namesToggle.setAttribute("aria-pressed", String(on));
-      };
-      setNames((() => {
-        try {
-          return localStorage.getItem(namesKey) === "true";
-        } catch {
-          return false;
-        }
-      })());
-      namesToggle.addEventListener("click", () => {
-        const on = !browser.hasAttribute("data-names");
-        setNames(on);
-        hideTooltip();
-        try {
-          localStorage.setItem(namesKey, String(on));
-        } catch {
-          // Storage can be unavailable; the toggle still applies to this page.
-        }
-      });
-
       // Deep links: `/?q=term&category=id` pre-fill and filter.
       const initial = new URLSearchParams(location.search);
       search.value = initial.get("q") ?? "";
@@ -719,8 +676,8 @@ const structuredData = site
       };
       const cardFrom = (event: Event) => (event.target as HTMLElement).closest<HTMLAnchorElement>(".icon-chunk > a");
       browser.addEventListener("pointerover", (event) => {
-        // Touch has no hover, and shown names make the tooltip redundant.
-        if ((event as PointerEvent).pointerType === "touch" || browser.hasAttribute("data-names")) return;
+        // Touch has no hover.
+        if ((event as PointerEvent).pointerType === "touch") return;
         const card = cardFrom(event);
         if (card) showTooltip(card);
         else hideTooltip();
@@ -818,18 +775,12 @@ const structuredData = site
 
       // A filter swaps which grid is on screen, so move the selection to the
       // matching tile there (or leave it alone when the icon is filtered out).
-      // Closing returns focus to whatever opened the drawer: a grid tile, or a
-      // hero icon standing in for one. A tile opener follows the selection
-      // across filters, since the tile it named may no longer be on screen.
-      let opener: HTMLElement | null = null;
-
       afterFilter = () => {
         if (!selected) return;
         const entry = entryByName.get(nameOf(selected));
         if (!entry) return;
         const tile = !matches ? entry.card : matches.includes(entry) ? cloneOf(entry) : null;
         if (tile && tile !== selected) {
-          if (opener === selected) opener = tile;
           selected.setAttribute("aria-current", "false");
           tile.setAttribute("aria-current", "true");
           selected = tile;
@@ -846,9 +797,8 @@ const structuredData = site
         history.replaceState(history.state, "", url);
       };
 
-      const openDrawer = (card: HTMLAnchorElement, { updateUrl = true, from = card as HTMLElement } = {}) => {
+      const openDrawer = (card: HTMLAnchorElement, { updateUrl = true } = {}) => {
         hideTooltip();
-        opener = from;
         select(card);
         drawer.inert = false;
         drawer.setAttribute("data-open", "");
@@ -859,12 +809,11 @@ const structuredData = site
         if (!drawer.hasAttribute("data-open")) return;
         drawer.removeAttribute("data-open");
         drawer.inert = true;
-        const returnTo = opener;
-        opener = null;
+        const card = selected;
         selected?.setAttribute("aria-current", "false");
         selected = null;
         if (updateUrl) setIconParam(null);
-        if (drawer.contains(document.activeElement) || document.activeElement === document.body) returnTo?.focus({ preventScroll: true });
+        if (drawer.contains(document.activeElement) || document.activeElement === document.body) card?.focus({ preventScroll: true });
       };
 
       const step = (direction: 1 | -1) => {
@@ -891,18 +840,6 @@ const structuredData = site
         if (!card) return;
         event.preventDefault();
         openDrawer(card);
-      });
-
-      // The hero's featured icons open the same drawer as their grid tiles.
-      explorer.querySelector(".hero-icons")?.addEventListener("click", (event) => {
-        const mouse = event as MouseEvent;
-        if (mouse.metaKey || mouse.ctrlKey || mouse.shiftKey || mouse.altKey || mouse.button !== 0) return;
-        const link = (event.target as HTMLElement).closest<HTMLElement>("[data-hero-icon]");
-        const entry = link ? entryByName.get(link.dataset.heroIcon ?? "") : null;
-        if (!link || !entry) return;
-        event.preventDefault();
-        // While a search is shown, select the icon's visible result tile.
-        openDrawer(matches?.includes(entry) ? cloneOf(entry) : entry.card, { from: link });
       });
 
       // Type example queries into the search placeholder until the visitor
