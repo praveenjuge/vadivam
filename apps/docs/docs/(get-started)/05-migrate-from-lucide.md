@@ -25,7 +25,7 @@ Pass paths to limit the run, such as `npx vadivam migrate-lucide src --write`. I
 - rewrites Lucide imports, dynamic `import()` calls, `require()` calls, and test mocks to the matching Vadivam package
 - maps `/dynamic`, `/dynamicIconImports`, and per-icon paths such as `lucide-react/dist/esm/icons/bell` to their Vadivam equivalents
 - renames `Lucide` identifiers in migrated files: `LucideBell` becomes `VadivamBell`, `LucideProps` becomes `VadivamProps`, and `createLucideIcon` becomes `createVadivamIcon`
-- renames deprecated Lucide aliases to the current name, such as `AlertCircle` to `CircleAlert` and `Home` to `House`
+- imports deprecated Lucide aliases from their current name under the old local name, such as `CircleAlert as AlertCircle` and `House as Home`, so the rest of the file stays as written
 - replaces Lucide dependencies in each `package.json` with the matching Vadivam package
 - changes `data-lucide` attributes to `data-vadivam` and `.lucide` CSS classes to `.vadivam`
 

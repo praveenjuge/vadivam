@@ -52,22 +52,34 @@ describe("migrate-lucide", () => {
     expect(warnings).toEqual([]);
   });
 
-  test("moves deprecated Lucide aliases to canonical names", () => {
+  test("imports deprecated Lucide aliases under their canonical names", () => {
     expect(mapSpecifier("lucide-react/dist/esm/icons/alert-circle")).toEqual({ specifier: "vadivam-react/icons/circle-alert" });
     const source = [
       `import { AlertCircle, AlertTriangleIcon, LucideAlarmCheck, Home as House } from "lucide-react";`,
       `export const Status = () => <><AlertCircle /><AlertTriangleIcon /><LucideAlarmCheck /><House /></>;`,
-      `const label = icons.AlertCircle;`,
     ].join("\n");
     const { text, warnings } = migrateSource(source);
     expect(text).toBe(
       [
-        `import { CircleAlert, TriangleAlertIcon, VadivamAlarmClockCheck, House } from "vadivam-react";`,
-        `export const Status = () => <><CircleAlert /><TriangleAlertIcon /><VadivamAlarmClockCheck /><House /></>;`,
-        `const label = icons.AlertCircle;`,
+        `import { CircleAlert as AlertCircle, TriangleAlertIcon as AlertTriangleIcon, VadivamAlarmClockCheck as VadivamAlarmCheck, House } from "vadivam-react";`,
+        `export const Status = () => <><AlertCircle /><AlertTriangleIcon /><VadivamAlarmCheck /><House /></>;`,
       ].join("\n"),
     );
     expect(warnings).toEqual([]);
+  });
+
+  test("leaves strings, JSX text, and other bindings untouched when renaming aliases", () => {
+    const source = [
+      `import { Home, House, Edit } from "lucide-react";`,
+      `export const Nav = () => <a title="Edit" aria-label={t("Home")}><Home /> Home <House /><Edit /></a>;`,
+    ].join("\n");
+    const { text } = migrateSource(source);
+    expect(text).toBe(
+      [
+        `import { House as Home, House, SquarePen as Edit } from "vadivam-react";`,
+        `export const Nav = () => <a title="Edit" aria-label={t("Home")}><Home /> Home <House /><Edit /></a>;`,
+      ].join("\n"),
+    );
   });
 
   test("leaves files without Lucide imports alone", () => {

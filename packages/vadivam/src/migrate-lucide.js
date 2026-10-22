@@ -101,13 +101,6 @@ const renameIdentifier = (identifier) =>
     ? identifier.replace(/Lucide/g, "Vadivam").replace(/LUCIDE/g, "VADIVAM")
     : identifier;
 
-// The text up to the end of the last import statement, and the rest.
-function splitImports(text) {
-  let end = 0;
-  for (const match of text.matchAll(/\bimport\b[^;]*?\bfrom\s*["'][^"']+["'];?/g)) end = match.index + match[0].length;
-  return [text.slice(0, end), text.slice(end)];
-}
-
 /**
  * Rewrite one source file. Returns the new text, how many edits it made, and
  * warnings for anything left to migrate by hand.
@@ -142,31 +135,20 @@ export function migrateSource(text, { styles = false } = {}) {
       if (renamed !== identifier) changes += 1;
       return renamed;
     });
-    // Deprecated Lucide names move to the canonical name: in the import, and in
-    // the file's uses when the import is not renamed with `as`.
-    const renames = new Map();
+    // A deprecated Lucide name imports the canonical icon under the old local
+    // name (`House as Home`), so the rest of the file, its strings included,
+    // stays as written.
     output = output.replace(namedImportPattern, (statement, names) =>
       statement.replace(names, (list) =>
         list.replace(/((?:type\s+)?)([\w$]+)(\s+as\s+[\w$]+)?/g, (entry, type, imported, local) => {
           const canonical = canonicalExport(imported);
           if (canonical === imported) return entry;
           changes += 1;
-          if (!local) renames.set(imported, canonical);
-          const keep = local && local.replace(/^\s+as\s+/, "") !== canonical ? local : "";
-          return `${type}${canonical}${keep}`;
+          const alias = local ?? ` as ${imported}`;
+          return `${type}${canonical}${alias.replace(/^\s+as\s+/, "") === canonical ? "" : alias}`;
         }),
       ),
     );
-    if (renames.size > 0) {
-      const [head, body] = splitImports(output);
-      // Identifiers not read as a property (`icons.AlertCircle` stays).
-      output = head + body.replace(/(?<![\w$.])[A-Za-z_$][\w$]*/g, (identifier) => {
-        const renamed = renames.get(identifier);
-        if (!renamed) return identifier;
-        changes += 1;
-        return renamed;
-      });
-    }
   }
   // The core package's createIcons() reads data-vadivam instead of data-lucide.
   output = output.replace(/\bdata-lucide(?==)/g, () => {
