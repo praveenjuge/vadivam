@@ -118,7 +118,7 @@
     }
   }
   .hero-icons a {
-    @apply grid aspect-square w-full place-items-center rounded-lg text-foreground no-underline transition-colors hover:bg-muted hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent;
+    @apply grid aspect-square w-full place-items-center rounded-lg text-foreground no-underline transition-colors hover:bg-muted hover:text-accent focus-visible:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent;
   }
   .hero-icons svg {
     width: min(1.75rem, 75%);

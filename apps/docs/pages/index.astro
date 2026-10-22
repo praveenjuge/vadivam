@@ -895,40 +895,53 @@ const structuredData = site
         const mouse = event as MouseEvent;
         if (mouse.metaKey || mouse.ctrlKey || mouse.shiftKey || mouse.altKey || mouse.button !== 0) return;
         const link = (event.target as HTMLElement).closest<HTMLElement>("[data-hero-icon]");
-        const card = link ? entryByName.get(link.dataset.heroIcon ?? "")?.card : null;
-        if (!link || !card) return;
+        const entry = link ? entryByName.get(link.dataset.heroIcon ?? "") : null;
+        if (!link || !entry) return;
         event.preventDefault();
-        openDrawer(card, { from: link });
+        // While a search is shown, select the icon's visible result tile.
+        openDrawer(matches?.includes(entry) ? cloneOf(entry) : entry.card, { from: link });
       });
 
       // Type example queries into the search placeholder until the visitor
-      // focuses or types. Reduced motion keeps the plain placeholder.
+      // first focuses or types (or a filter fills the field), then rest for
+      // good. Reduced motion, at load or switched on later, keeps it plain.
       const examples = search.dataset.examples?.split(" ") ?? [];
-      if (examples.length && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+      if (examples.length && !reducedMotion.matches) {
         const resting = search.placeholder;
         let timer = 0;
+        let stopped = false;
+        const stop = () => {
+          stopped = true;
+          clearTimeout(timer);
+          search.placeholder = resting;
+        };
         const wait = (ms: number, next: () => void) => {
-          timer = window.setTimeout(next, ms);
+          if (!stopped) timer = window.setTimeout(next, ms);
+        };
+        // Shows the first `length` letters of an example, or the resting text at 0.
+        const show = (exampleIndex: number, length: number) => {
+          if (search.value) return stop();
+          const word = examples[exampleIndex % examples.length];
+          search.placeholder = length ? `Try “${word.slice(0, length)}”` : resting;
+          return word;
         };
         const type = (exampleIndex: number, length: number) => {
-          if (document.activeElement === search || search.value) {
-            search.placeholder = resting;
-            wait(1500, () => type(exampleIndex, 1));
-            return;
-          }
-          const word = examples[exampleIndex % examples.length];
-          search.placeholder = `Try “${word.slice(0, length)}”`;
+          const word = show(exampleIndex, length);
+          if (!word) return;
           if (length < word.length) wait(90, () => type(exampleIndex, length + 1));
-          else wait(1800, () => erase(exampleIndex, word.length));
+          else wait(1800, () => erase(exampleIndex, length - 1));
         };
         const erase = (exampleIndex: number, length: number) => {
-          const word = examples[exampleIndex % examples.length];
-          search.placeholder = length > 1 ? `Try “${word.slice(0, length - 1)}”` : resting;
-          if (length > 1) wait(40, () => erase(exampleIndex, length - 1));
+          if (!show(exampleIndex, length)) return;
+          if (length > 0) wait(40, () => erase(exampleIndex, length - 1));
           else wait(1600, () => type(exampleIndex + 1, 1));
         };
-        wait(2400, () => type(0, 1));
-        search.addEventListener("focus", () => (search.placeholder = resting), { signal });
+        if (document.activeElement === search || search.value) stop();
+        else wait(2400, () => type(0, 1));
+        search.addEventListener("focus", stop, { signal });
+        search.addEventListener("input", stop, { signal });
+        reducedMotion.addEventListener("change", (event) => event.matches && stop(), { signal });
         signal.addEventListener("abort", () => clearTimeout(timer));
       }
 
