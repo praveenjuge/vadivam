@@ -63,9 +63,11 @@ function termRank(entry: IconEntry, term: string): number {
     if (entry.name.startsWith(name) || entry.compact.startsWith(compactTerm)) return 1;
     if (entry.words.includes(name) || entry.compact.includes(compactTerm)) return 2;
   }
-  if (entry.tags.some((tag) => tag.startsWith(term))) return 3;
-  if (entry.tags.some((tag) => tag.includes(term))) return 4;
-  if (entry.categoryTitles.some((title) => title.includes(term))) return 5;
+  // The raw term keeps symbol tags like `$`; the cleaned one drops stray punctuation like `sort,`.
+  const words = name && name !== term ? [term, name] : [term];
+  if (entry.tags.some((tag) => words.some((word) => tag.startsWith(word)))) return 3;
+  if (entry.tags.some((tag) => words.some((word) => tag.includes(word)))) return 4;
+  if (entry.categoryTitles.some((title) => words.some((word) => title.includes(word)))) return 5;
 
   const limit = compactTerm.length >= 7 ? 2 : 1;
   if (

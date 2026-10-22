@@ -52,6 +52,8 @@ describe("searchIcons", () => {
   test("finds symbol-only tags instead of treating them as an empty query", () => {
     expect(names("$")).toEqual(["badge-dollar-sign"]);
     expect(names("arrow_down")).toEqual(["arrow-down-0-1"]);
+    expect(names("sort, ascending")).toEqual(["arrow-down-0-1"]);
+    expect(names("garbage.")).toEqual(["trash-2"]);
   });
 
   test("requires every word and joins words into hyphenated names", () => {
