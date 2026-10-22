@@ -188,10 +188,10 @@ const structuredData = site
             set:html={searchIconSvg}
           />
           <input
-            class="peer w-full rounded-lg border border-border bg-background py-2 ps-10 pe-12 text-base text-foreground outline-none placeholder:text-muted-foreground focus:border-accent focus-visible:outline-none md:text-sm [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+            class="peer w-full rounded-lg border border-border bg-background py-2 ps-10 pe-3 text-base text-foreground outline-none placeholder:text-muted-foreground md:pe-12 [&:not(:placeholder-shown)]:pe-10 focus:border-accent focus-visible:outline-none md:text-sm [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
             id="iconSearch"
             type="search"
-            placeholder="Search icons by name or tag"
+            placeholder="Search icons"
             aria-label="Search icons"
             aria-describedby="resultCount"
             aria-keyshortcuts="/"
@@ -209,11 +209,11 @@ const structuredData = site
           />
         </div>
         <select
-          class="w-36 flex-none rounded-lg border border-border bg-background py-2 ps-3 pe-8 text-base text-foreground outline-none focus:border-accent sm:w-auto md:text-sm"
+          class="w-[7.5rem] flex-none rounded-lg border border-border bg-background py-2 ps-3 pe-8 text-base text-foreground outline-none focus:border-accent sm:w-auto md:text-sm"
           id="iconCategory"
           aria-label="Filter by category"
         >
-          <option value="">All categories</option>
+          <option value="">All</option>
           {categoryOptions.map((category) => (
             <option value={category.id}>{category.title} ({categoryCounts.get(category.id) ?? 0})</option>
           ))}
