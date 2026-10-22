@@ -162,7 +162,7 @@ export function migrateSource(text, { styles = false } = {}) {
       // (`VadivamBell as LucideBell`); other identifier uses, but not property
       // reads, take the new name.
       output = output.replace(
-        /\b(?:import|export)\s+(?:type\s+)?(?:[\w$]+\s*,?\s*)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})?\s*from\s*["'][^"']*["']|\bexport\s*\{([^}]*)\}|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|(?<![\w$.])([A-Za-z_$][\w$]*)/g,
+        /\bimport\s+(?:type\s+)?(?:[\w$]+\s*,?\s*)?(?:\*\s+as\s+[\w$]+|\{[^}]*\})?\s*from\s*["'][^"']*["']|\bexport\s+(?:type\s+)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})\s*from\s*["'][^"']*["']|\bexport\s*\{([^}]*)\}|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|(?<![\w$.])([A-Za-z_$][\w$]*)/g,
         (match, exportList, identifier) => {
           if (exportList !== undefined) {
             return match.replace(exportList, (list) =>
