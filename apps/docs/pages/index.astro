@@ -818,12 +818,18 @@ const structuredData = site
 
       // A filter swaps which grid is on screen, so move the selection to the
       // matching tile there (or leave it alone when the icon is filtered out).
+      // Closing returns focus to whatever opened the drawer: a grid tile, or a
+      // hero icon standing in for one. A tile opener follows the selection
+      // across filters, since the tile it named may no longer be on screen.
+      let opener: HTMLElement | null = null;
+
       afterFilter = () => {
         if (!selected) return;
         const entry = entryByName.get(nameOf(selected));
         if (!entry) return;
         const tile = !matches ? entry.card : matches.includes(entry) ? cloneOf(entry) : null;
         if (tile && tile !== selected) {
+          if (opener === selected) opener = tile;
           selected.setAttribute("aria-current", "false");
           tile.setAttribute("aria-current", "true");
           selected = tile;
@@ -840,9 +846,6 @@ const structuredData = site
         history.replaceState(history.state, "", url);
       };
 
-      // Closing returns focus to whatever opened the drawer: a grid tile, or a
-      // hero icon standing in for one.
-      let opener: HTMLElement | null = null;
       const openDrawer = (card: HTMLAnchorElement, { updateUrl = true, from = card as HTMLElement } = {}) => {
         hideTooltip();
         opener = from;
