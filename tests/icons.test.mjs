@@ -119,6 +119,24 @@ describe("icon validation", () => {
     ]);
   });
 
+  test("authenticates GitHub API requests only, when a token is set", async () => {
+    const authorization = {};
+    const fetchImpl = async (url, { headers }) => {
+      authorization[new URL(url).host] = headers.Authorization;
+      if (url.startsWith("https://registry.npmjs.org/")) return Response.json({ version: "1.61.0" });
+      return Response.json({ truncated: false, tree: [{ path: "icons/check.svg" }] });
+    };
+    const previous = process.env.GITHUB_TOKEN;
+    process.env.GITHUB_TOKEN = "test-token";
+    try {
+      await fetchPinnedLucideCatalog(fetchImpl);
+    } finally {
+      if (previous === undefined) delete process.env.GITHUB_TOKEN;
+      else process.env.GITHUB_TOKEN = previous;
+    }
+    expect(authorization).toEqual({ "registry.npmjs.org": undefined, "api.github.com": "Bearer test-token" });
+  });
+
   test("rejects a registry response that does not match the pin", async () => {
     const fetchImpl = async (url) => {
       if (url === "https://registry.npmjs.org/lucide/1.61.0") {

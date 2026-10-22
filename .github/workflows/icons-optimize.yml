@@ -67,6 +67,10 @@ jobs:
         run: bun run icons:optimize
 
       - name: Check icons
+        # Checking names against Lucide reads the GitHub API; anonymous calls
+        # from shared runners get rate-limited.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: bun run icons:check
 
       - name: Render preview

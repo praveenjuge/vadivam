@@ -147,12 +147,16 @@ export function validateIconName(name, file = `${name}.svg`) {
 }
 
 async function fetchJson(url, description, fetchImpl) {
-  const response = await fetchImpl(url, {
-    headers: {
-      Accept: "application/vnd.github+json, application/json",
-      "User-Agent": "vadivam-icon-checker",
-    },
-  });
+  const headers = {
+    Accept: "application/vnd.github+json, application/json",
+    "User-Agent": "vadivam-icon-checker",
+  };
+  // Anonymous GitHub API calls from shared CI runners get rate-limited, so
+  // send the job token when one is set.
+  if (process.env.GITHUB_TOKEN && url.startsWith("https://api.github.com/")) {
+    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  }
+  const response = await fetchImpl(url, { headers });
   assert(response.ok, `Could not fetch ${description}: HTTP ${response.status}`);
   try {
     return await response.json();
