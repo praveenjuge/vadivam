@@ -54,10 +54,10 @@ export function isIconName(value: unknown): value is string {
 // elements that carry only path data (the shape `bun run icons:check` enforces
 // and the homepage build rebuilds icons from). Requiring that exact shape
 // rejects fills, styles, links, scripts, and any other element or attribute.
-const PATH_ELEMENT = /<path d="[MLHVCSQTAZmlhvcsqtaz0-9.,eE+\s-]+"\/>/;
-const CANONICAL_SVG = new RegExp(
-  `^${SVG_OPEN_TAG.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*(?:${PATH_ELEMENT.source})+\\s*</svg>$`,
-);
+// Written out rather than built from SVG_OPEN_TAG so it stays a literal; the
+// canonical-icon test fails if the two ever disagree.
+const CANONICAL_SVG =
+  /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\s*(?:<path d="[MLHVCSQTAZmlhvcsqtaz0-9.,eE+\s-]+"\/>)+\s*<\/svg>$/;
 
 export function validateRemoteSvg(svg: string): string | null {
   if (svg.length === 0 || svg.length > MAX_SVG_LENGTH) return "SVG is empty or too large";
