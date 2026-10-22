@@ -114,16 +114,17 @@ const renameIdentifier = (identifier) =>
 export function migrateSource(text, { styles = false } = {}) {
   const warnings = [];
   let changes = 0;
-  if (styles) {
-    // Lucide renders `lucide lucide-<name>` classes; Vadivam renders `vadivam vadivam-<name>`.
-    const output = text.replace(/\.lucide(?=[\s.,:#[>+~{)-]|$)/g, () => {
+  // Lucide renders `lucide lucide-<name>` classes; Vadivam renders `vadivam vadivam-<name>`.
+  const migrateCss = (css) =>
+    css.replace(/\.lucide(?=[\s.,:#[>+~{)-]|$)/g, () => {
       changes += 1;
       return ".vadivam";
     });
-    return { text: output, changes, warnings };
-  }
+  if (styles) return { text: migrateCss(text), changes, warnings };
   let migrated = false;
-  let output = text.replace(specifierPattern, (match, prefix, quote, specifier) => {
+  // Vue, Svelte, Astro, and HTML files carry their own <style> blocks.
+  let output = text.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi, (match, open, css, close) => `${open}${migrateCss(css)}${close}`);
+  output = output.replace(specifierPattern, (match, prefix, quote, specifier) => {
     const mapped = mapSpecifier(specifier);
     if (!mapped) return match;
     if (mapped.manual) {

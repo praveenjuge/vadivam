@@ -145,6 +145,13 @@ describe("migrate-lucide", () => {
     expect(changes).toBe(2);
   });
 
+  test("renames .lucide classes inside component <style> blocks", () => {
+    const source = `<script setup>\nimport { Bell } from "lucide-vue-next";\n</script>\n<template><Bell class="lucide-big" /></template>\n<style scoped>\n.lucide { stroke-width: 1.5; }\n</style>\n`;
+    expect(migrateSource(source).text).toBe(
+      `<script setup>\nimport { Bell } from "vadivam-vue";\n</script>\n<template><Bell class="lucide-big" /></template>\n<style scoped>\n.vadivam { stroke-width: 1.5; }\n</style>\n`,
+    );
+  });
+
   test("renames dependencies in place and keeps formatting", () => {
     const manifest = `{\n    "dependencies": {\n        "lucide-react": "^0.500.0",\n        "react": "^19.0.0"\n    },\n    "devDependencies": {\n        "lucide-angular": "^1.0.0"\n    }\n}\n`;
     const { text, changes, warnings } = migratePackageJson(manifest, "1.2.3");

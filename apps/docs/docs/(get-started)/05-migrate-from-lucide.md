@@ -27,7 +27,7 @@ Pass paths to limit the run, such as `npx vadivam migrate-lucide src --write`. I
 - renames `Lucide` names imported or required from Lucide, and their uses outside strings (a re-export keeps its public name, as in `VadivamBell as LucideBell`): `LucideBell` becomes `VadivamBell`, `LucideProps` becomes `VadivamProps`, and `createLucideIcon` becomes `createVadivamIcon`
 - imports deprecated Lucide aliases from their current name under the old local name, such as `CircleAlert as AlertCircle` and `House as Home`, so the rest of the file stays as written
 - replaces Lucide dependencies in each `package.json` with the matching Vadivam package
-- changes `data-lucide` attributes to `data-vadivam` and `.lucide` CSS classes to `.vadivam`
+- changes `data-lucide` attributes to `data-vadivam`, and `.lucide` CSS classes to `.vadivam` in stylesheets and component `<style>` blocks
 
 Without `--write` the codemod only lists what would change. Afterwards, reinstall dependencies so your lockfile drops Lucide.
 
