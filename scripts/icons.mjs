@@ -10,6 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { inkBounds } from "./icon-geometry.mjs";
+import { findUnsmoothedCorners, smoothCorners } from "./corner-smoothing.mjs";
 import { optimize } from "svgo";
 import { Resvg } from "@resvg/resvg-js";
 import { buildAngularPackage } from "./generators/angular.mjs";
@@ -283,6 +284,13 @@ export function validateSvgContent(svg, file = "inline.svg") {
             closedSubpaths <= maxClosedSubpathsPerPath,
             `${file}: path has ${closedSubpaths} closed subpaths and looks like expanded stroke geometry; use open centerline strokes`,
           );
+          assertSmoothCorners(pathData, file);
+        }
+        if (tag === "rect") {
+          assert(
+            item["@_rx"] === undefined && item["@_ry"] === undefined,
+            `${file}: <rect> corners cannot carry corner smoothing; draw rounded rectangles as paths`,
+          );
         }
         for (const attr of Object.keys(item)) {
           if (attr.startsWith("@_")) {
@@ -313,6 +321,23 @@ export function validateSvgContent(svg, file = "inline.svg") {
   visit(node, "svg");
   assert(count > 0, `${file}: no drawable elements found`);
   assertInkInsideCanvas(shapes, file);
+}
+
+// Every rounded corner between two straight lines must use the smoothed
+// corner from scripts/corner-smoothing.mjs, never a plain circular arc.
+function assertSmoothCorners(pathData, file) {
+  if (typeof pathData !== "string") return;
+  let corners;
+  try {
+    corners = findUnsmoothedCorners(pathData);
+  } catch (error) {
+    throw new Error(`${file}: ${error.message}`);
+  }
+  const format = (value) => Number(value.toFixed(3));
+  assert(
+    corners.length === 0,
+    `${file}: ${corners.length} rounded corner(s) use a plain circular arc (first near ${format(corners[0]?.x ?? 0)}, ${format(corners[0]?.y ?? 0)}); run bun run icons:optimize to apply 60% corner smoothing`,
+  );
 }
 
 // With round caps and joins the 2px stroke reaches 1px past the centerline, so
@@ -372,28 +397,40 @@ function iconNodeFromSvg(svg, file) {
   return iconNode;
 }
 
-export function normalizeSvg(svg, file) {
-  assertNoFilledSourceArtwork(svg, file);
-  const result = optimize(svg, {
-    path: file,
-    multipass: true,
-    plugins: [
-      {
-        name: "preset-default",
-        params: {
-          overrides: {
-            cleanupIds: false,
-            convertShapeToPath: false,
-          },
+const svgoConfig = {
+  multipass: true,
+  plugins: [
+    {
+      name: "preset-default",
+      params: {
+        overrides: {
+          cleanupIds: false,
+          convertShapeToPath: false,
         },
       },
-    ],
-  });
+    },
+  ],
+};
+
+function optimizeSvg(svg, file) {
+  const result = optimize(svg, { ...svgoConfig, path: file });
   if (result.error) throw new Error(`${file}: ${result.error}`);
-  const open = result.data.match(/<svg\b[^>]*>/);
-  const close = result.data.lastIndexOf("</svg>");
+  return result.data;
+}
+
+export function normalizeSvg(svg, file) {
+  assertNoFilledSourceArtwork(svg, file);
+  // SVGO turns Figma's circular curves into arcs, so rounded corners can be
+  // found and smoothed; a second pass compacts the rewritten path data.
+  const smoothed = optimizeSvg(svg, file).replace(
+    /(<path\b[^>]*\sd=")([^"]*)"/g,
+    (_match, prefix, d) => `${prefix}${smoothCorners(d)}"`,
+  );
+  const optimized = optimizeSvg(smoothed, file);
+  const open = optimized.match(/<svg\b[^>]*>/);
+  const close = optimized.lastIndexOf("</svg>");
   assert(open && close > -1, `${file}: optimized SVG is missing root`);
-  const inner = result.data
+  const inner = optimized
     .slice(open.index + open[0].length, close)
     .replace(
       /\s(?:fill|stroke|stroke-width|stroke-linecap|stroke-linejoin)="[^"]*"/g,

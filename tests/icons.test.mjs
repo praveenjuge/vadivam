@@ -16,6 +16,11 @@ import {
   inkBounds,
   parsePath,
 } from "../scripts/icon-geometry.mjs";
+import {
+  findUnsmoothedCorners,
+  measureCorners,
+  smoothCorners,
+} from "../scripts/corner-smoothing.mjs";
 
 const validSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></svg>`;
 
@@ -211,12 +216,104 @@ describe("icon geometry", () => {
     const [circle] = parsePath("M2 12a10 10 0 0 1 20 0 10 10 0 0 1-20 0");
     expect(detectCircle(circle)).toEqual({ cx: 12, cy: 12, r: 10 });
     const [square] = parsePath("M8 22h8a6 6 0 0 0 6-6V8a6 6 0 0 0-6-6H8a6 6 0 0 0-6 6v8a6 6 0 0 0 6 6");
-    expect(detectRoundedRect(square)).toEqual({ x: 2, y: 2, width: 20, height: 20, r: 6 });
+    expect(detectRoundedRect(square)).toEqual({ x: 2, y: 2, width: 20, height: 20, r: 6, smoothing: 0 });
+    const [smoothed] = parsePath(smoothCorners("M8 22h8a6 6 0 0 0 6-6V8a6 6 0 0 0-6-6H8a6 6 0 0 0-6 6v8a6 6 0 0 0 6 6"));
+    expect(detectRoundedRect(smoothed)).toEqual({ x: 2, y: 2, width: 20, height: 20, r: 6, smoothing: 0.6 });
     expect(inkBounds([["path", { d: "M2 12a10 10 0 0 1 20 0" }]])).toEqual({ minX: 1, minY: 1, maxX: 23, maxY: 13 });
   });
 
   test("classifies grid alignment", () => {
     expect([gridClass(12), gridClass(11.5), gridClass(11.25)]).toEqual(["integer", "half", "other"]);
+  });
+});
+
+// Corner radius r, width w, and height h rectangle drawn as Figma exports it after SVGO.
+const roundedRect = (x, y, w, h, r) =>
+  `M${x + r} ${y}h${w - 2 * r}a${r} ${r} 0 0 1 ${r} ${r}v${h - 2 * r}a${r} ${r} 0 0 1-${r} ${r}h-${w - 2 * r}a${r} ${r} 0 0 1-${r}-${r}v-${h - 2 * r}a${r} ${r} 0 0 1 ${r}-${r}z`;
+
+describe("corner smoothing", () => {
+  test("draws Figma's 60% smoothed corner on the square keyline", () => {
+    const smoothed = smoothCorners("M8 22h8a6 6 0 0 0 6-6V8a6 6 0 0 0-6-6H8a6 6 0 0 0-6 6v8a6 6 0 0 0 6 6");
+    // Figma's construction for r 6 at 60%: the curve starts 9.6px from the
+    // corner, with handles at a = 3.3603 and a + b = 5.0405, and meets the
+    // 36° arc 0.6540px in from the edge.
+    expect(smoothed.startsWith("M11.6 22L12.4 22C15.7603 22 17.4405 22 18.7239 21.346A6 6 0 0 0 21.346 18.7239")).toBe(true);
+    expect(measureCorners(smoothed).map(({ r, smoothing }) => [r, Number(smoothing.toFixed(4))])).toEqual(
+      Array(4).fill([6, 0.6]),
+    );
+  });
+
+  test("is idempotent", () => {
+    const once = smoothCorners(roundedRect(2, 4, 20, 16, 4));
+    expect(once).not.toBe(roundedRect(2, 4, 20, 16, 4));
+    expect(smoothCorners(once)).toBe(once);
+    expect(findUnsmoothedCorners(once)).toEqual([]);
+  });
+
+  test("tightens the radius on edges of 8px or more to keep 60%", () => {
+    const corners = measureCorners(smoothCorners(roundedRect(6, 6, 12, 12, 4)));
+    expect(corners.map(({ r, smoothing }) => [r, Number(smoothing.toFixed(4))])).toEqual(Array(4).fill([3.75, 0.6]));
+  });
+
+  test("keeps the radius on shorter edges and smooths as much as fits", () => {
+    const corners = measureCorners(smoothCorners(roundedRect(9, 9, 6, 6, 2)));
+    expect(corners.map(({ r, smoothing }) => [r, Number(smoothing.toFixed(4))])).toEqual(Array(4).fill([2, 0.5]));
+  });
+
+  test("keeps the radius at corners sharper than 90° so their tip stays put", () => {
+    const d = "m20.816 6.024-6.263 14.093a1.484 1.484 0 0 1-2.832-.438l-.479-4.307a2.96 2.96 0 0 0-2.614-2.614l-4.307-.479a1.484 1.484 0 0 1-.438-2.832l14.093-6.263a2.153 2.153 0 0 1 2.84 2.84";
+    const smoothed = smoothCorners(d);
+    expect(measureCorners(smoothed).length).toBe(4);
+    const before = inkBounds([["path", { d }]]);
+    const after = inkBounds([["path", { d: smoothed }]]);
+    for (const key of ["minX", "minY"]) expect(after[key]).toBeGreaterThanOrEqual(before[key] - 1e-3);
+    for (const key of ["maxX", "maxY"]) expect(after[key]).toBeLessThanOrEqual(before[key] + 1e-3);
+  });
+
+  test("keeps dots drawn as tiny lines", () => {
+    const smoothed = smoothCorners("M9 2h6a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4m3 15h.01");
+    expect(smoothed.endsWith("M12 17L12.01 17")).toBe(true);
+  });
+
+  test("smooths corners of any angle", () => {
+    const d = "M4 20L9.5 10.474A3 3 0 0 1 14.696 10.474L20 19.66";
+    const [corner] = measureCorners(smoothCorners(d));
+    expect(Number(((corner.turn * 180) / Math.PI).toFixed(1))).toBe(120);
+    expect(Number(corner.smoothing.toFixed(4))).toBe(0.6);
+  });
+
+  test.each([
+    ["a circle", "M2 12a10 10 0 0 1 20 0 10 10 0 0 1-20 0"],
+    ["a pill with no straight run beside its arcs", "M8 10h8a2 2 0 0 1 0 4H8a2 2 0 0 1 0-4"],
+    ["a gentle bend", "M7 20v-6a35 35 0 0 1 .117-1.66L8 8"],
+    ["an arc at a free end", "M3 12h6a3 3 0 0 1 3 3"],
+    ["an arc that does not meet its lines tangentially", "M2 2h8a4 4 0 0 1 4 4l6 6"],
+  ])("leaves %s unchanged", (_name, d) => {
+    expect(smoothCorners(d)).toBe(d);
+  });
+
+  test("rejects plain rounded corners and normalization fixes them", () => {
+    const plain = validSvg.replace("M4 12h16", roundedRect(2, 2, 20, 20, 6));
+    expect(() => validateSvgContent(plain, "plain-corners.svg")).toThrow(
+      "plain-corners.svg: 4 rounded corner(s) use a plain circular arc",
+    );
+    const normalized = normalizeSvg(plain, "plain-corners.svg");
+    expect(() => validateSvgContent(normalized, "plain-corners.svg")).not.toThrow();
+    expect(normalizeSvg(normalized, "plain-corners.svg")).toBe(normalized);
+  });
+
+  test("rejects rect elements with rounded corners", () => {
+    const rect = validSvg.replace('<path d="M4 12h16"/>', '<rect x="2" y="2" width="20" height="20" rx="6"/>');
+    expect(() => validateSvgContent(rect, "rect.svg")).toThrow("cannot carry corner smoothing");
+  });
+
+  test("never moves ink outward", () => {
+    for (const d of [roundedRect(2, 2, 20, 20, 6), roundedRect(5, 2, 14, 20, 4), roundedRect(2, 2, 8, 8, 3)]) {
+      const before = inkBounds([["path", { d }]]);
+      const after = inkBounds([["path", { d: smoothCorners(d) }]]);
+      expect(after.minX).toBeGreaterThanOrEqual(before.minX - 1e-9);
+      expect(after.maxY).toBeLessThanOrEqual(before.maxY + 1e-9);
+    }
   });
 });
 

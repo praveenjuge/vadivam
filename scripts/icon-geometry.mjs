@@ -187,7 +187,7 @@ export function parsePath(d) {
 }
 
 // SVG arc endpoint parameterization to center parameterization (SVG 1.1 F.6.5).
-function arcCenter(segment) {
+export function arcCenter(segment) {
   const [x1, y1] = segment.from;
   const [x2, y2] = segment.to;
   let { rx, ry } = segment;
@@ -434,12 +434,17 @@ function roundedRectDistance(x, y, box, r) {
 export function detectRoundedRect(subpath, tolerance = 0.06) {
   if (!subpath.closed && !samePoint(subpath.start, lastPoint(subpath))) return null;
   const straight = subpath.segments.filter((segment) => segment.type === "L" && segmentLength(segment) > 0.05);
-  if (straight.length === 0 || straight.length > 4) return null;
+  if (straight.length > 4) return null;
   const points = subpath.segments.flatMap((segment) => sampleSegment(segment, 32));
   const box = bounds(points);
   const width = box.maxX - box.minX;
   const height = box.maxY - box.minY;
   if (width < 0.5 || height < 0.5) return null;
+  // A smoothed corner can use a whole side, leaving no straight run on it.
+  if (straight.length === 0) {
+    const smoothed = smoothedRectCorners(subpath, box, [width / 2, height / 2], tolerance);
+    return smoothed ? { x: box.minX, y: box.minY, width, height, ...smoothed } : null;
+  }
   // Each straight side lies on the box edge; the gap to the corner is the radius.
   const radii = [];
   for (const { from, to } of straight) {
@@ -453,10 +458,39 @@ export function detectRoundedRect(subpath, tolerance = 0.06) {
   }
   const r = Math.min(...radii);
   if (r < -tolerance || r > Math.min(width, height) / 2 + tolerance) return null;
-  for (const [x, y] of points) {
-    if (Math.abs(roundedRectDistance(x, y, box, Math.max(0, r))) > tolerance) return null;
+  const rect = { x: box.minX, y: box.minY, width, height };
+  if (points.every(([x, y]) => Math.abs(roundedRectDistance(x, y, box, Math.max(0, r))) <= tolerance)) {
+    return { ...rect, r: Math.max(0, r), smoothing: 0 };
   }
-  return { x: box.minX, y: box.minY, width, height, r: Math.max(0, r) };
+  const smoothed = smoothedRectCorners(subpath, box, radii, tolerance);
+  return smoothed ? { ...rect, ...smoothed } : null;
+}
+
+/**
+ * Corners of a rectangle drawn with smoothed corners (cubic, arc, cubic): four
+ * equal arcs, each centered r in from its box corner, whose straight sides stop
+ * (1 + smoothing) × r short of the corner. Returns { r, smoothing } or null.
+ */
+function smoothedRectCorners(subpath, box, gaps, tolerance) {
+  const arcs = subpath.segments.filter((segment) => segment.type === "A");
+  const cubics = subpath.segments.filter((segment) => segment.type === "C");
+  if (arcs.length !== 4 || cubics.length !== 8) return null;
+  const corners = arcs.map((arc) => {
+    const { cx, cy, rx, ry, delta } = arcCenter(arc);
+    return { cx, cy, r: (rx + ry) / 2, smoothing: 1 - Math.abs(delta) / (Math.PI / 2) };
+  });
+  const [{ r, smoothing }] = corners;
+  if (smoothing <= 0 || smoothing >= 1) return null;
+  for (const corner of corners) {
+    if (!near(corner.r, r, 0.01) || !near(corner.smoothing, smoothing, 0.01)) return null;
+    const insetX = Math.min(corner.cx - box.minX, box.maxX - corner.cx);
+    const insetY = Math.min(corner.cy - box.minY, box.maxY - corner.cy);
+    if (!near(insetX, r, tolerance) || !near(insetY, r, tolerance)) return null;
+  }
+  if (gaps.some((gap) => !near(gap, (1 + smoothing) * r, tolerance))) return null;
+  const half = Math.min(box.maxX - box.minX, box.maxY - box.minY) / 2;
+  if ((1 + smoothing) * r > half + tolerance) return null;
+  return { r, smoothing: Math.round(smoothing * 100) / 100 };
 }
 
 /** Shortest distance between two point samples, pruned by their bounding boxes. */
@@ -651,6 +685,17 @@ export async function report(iconsDir) {
     const r = results.find((item) => item.name === name);
     if (r) line(`${name}: ${JSON.stringify({ rects: r.rects.map(({ x, y, width, height, r: radius }) => ({ x, y, width, height, r: radius })), circles: r.circles })}`);
   }
+
+  line("\n## Corner smoothing");
+  const { cornerSmoothing, fullSmoothingEdge, measureCorners } = await import("./corner-smoothing.mjs");
+  const corners = icons.flatMap(({ svg }) => pathDataFromSvg(svg).flatMap((d) => measureCorners(d)));
+  const plain = corners.filter((c) => c.smoothing === 0);
+  const full = corners.filter((c) => near(c.smoothing, cornerSmoothing, 0.01));
+  const reduced = corners.filter((c) => c.smoothing > 0 && !near(c.smoothing, cornerSmoothing, 0.01)).map((c) => c.smoothing).sort((a, b) => a - b);
+  line(`Rounded corners between straight lines: ${corners.length}; at ${cornerSmoothing * 100}% smoothing ${share(full.length, corners.length)}; plain circular arcs ${plain.length}`);
+  line(`Less smoothing where there is no room (edges under ${fullSmoothingEdge}px, corners sharper than 90°): ${reduced.length}; p10 ${percentile(reduced, 10)?.toFixed(2)}, median ${percentile(reduced, 50)?.toFixed(2)}, p90 ${percentile(reduced, 90)?.toFixed(2)}`);
+  line(`Rectangles at full smoothing: ${share(rects.filter((r) => near(r.smoothing, cornerSmoothing, 0.01)).length, rects.length)}`);
+  line(`Corner turn frequency (nearest 15°): ${frequencies(corners.map((c) => (c.turn * 180) / Math.PI), 8, (v) => round(v, 15)).map(([k, v]) => `${k}°: ${v}`).join(", ")}`);
 
   line("\n## Arcs");
   const arcRadii = results.flatMap((r) => r.arcs.filter((a) => near(a.rx, a.ry, 1e-6)).map((a) => a.rx));
