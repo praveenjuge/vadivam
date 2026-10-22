@@ -158,8 +158,10 @@ async function validatePackage({
 
 function validateMcpPackage(manifest, files) {
   const { name } = manifest;
-  if (manifest.bin?.[name] !== "./dist/cli.js") {
-    throw new Error(`${name}: bin must map ${name} to ./dist/cli.js`);
+  // npm publish rewrites "./dist/cli.js" to this form and warns that the bin
+  // "was invalid and removed", so keep the published spelling in package.json.
+  if (manifest.bin?.[name] !== "dist/cli.js") {
+    throw new Error(`${name}: bin must map ${name} to dist/cli.js`);
   }
   for (const file of ["dist/cli.js", "dist/data.js", "dist/index.js", "dist/index.d.ts", "dist/snippets.js"]) {
     if (!files.includes(file)) throw new Error(`${name}: npm tarball is missing ${file}`);

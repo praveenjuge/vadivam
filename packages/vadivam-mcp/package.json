@@ -32,7 +32,7 @@
   "type": "module",
   "sideEffects": false,
   "bin": {
-    "vadivam-mcp": "./dist/cli.js"
+    "vadivam-mcp": "dist/cli.js"
   },
   "files": [
     "dist",
