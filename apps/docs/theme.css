@@ -60,45 +60,6 @@
     stroke-linejoin: round;
     pointer-events: none;
   }
-
-  /* "Show names" labels each tile from its aria-label, so the names cost no
-     extra markup. Tiles get a fixed height and fewer columns. */
-  /* The bottom padding matches the row gap, so chunk boundaries look like
-     ordinary rows and each row reserves exactly 5.25rem. */
-  .icon-browser[data-names] .icon-chunk {
-    @apply grid-cols-3 gap-1 pb-1 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12;
-    contain-intrinsic-size: auto calc(40 * 5.25rem);
-  }
-  @media (width >= 40rem) {
-    .icon-browser[data-names] .icon-chunk {
-      contain-intrinsic-size: auto calc(30 * 5.25rem);
-    }
-  }
-  @media (width >= 48rem) {
-    .icon-browser[data-names] .icon-chunk {
-      contain-intrinsic-size: auto calc(20 * 5.25rem);
-    }
-  }
-  @media (width >= 64rem) {
-    .icon-browser[data-names] .icon-chunk {
-      contain-intrinsic-size: auto calc(15 * 5.25rem);
-    }
-  }
-  @media (width >= 80rem) {
-    .icon-browser[data-names] .icon-chunk {
-      contain-intrinsic-size: auto calc(10 * 5.25rem);
-    }
-  }
-  .icon-browser[data-names] .icon-chunk > a {
-    @apply aspect-auto h-20 content-center gap-2 px-1.5;
-  }
-  .icon-browser[data-names] .icon-chunk > a::after {
-    @apply block w-full truncate text-center font-mono text-[0.65rem] leading-4 text-muted-foreground;
-    content: attr(aria-label);
-  }
-  .icon-browser[data-names] .icon-chunk > a[aria-current="true"]::after {
-    @apply text-accent;
-  }
 }
 
 /* Inline diagrams on /docs/design-guide. Each is a 24-unit icon canvas drawn
