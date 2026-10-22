@@ -23,8 +23,14 @@ export function createEntries(
   }));
 }
 
+// Terms keep their symbols so tags like `$`, `@`, or `->|` stay searchable.
 export function searchTerms(query: string): string[] {
-  return query.toLowerCase().split(/[^a-z0-9-]+/).filter(Boolean);
+  return query.toLowerCase().split(/\s+/).filter(Boolean);
+}
+
+// Names only hold letters, digits, and hyphens, so `arrow_down` and `ArrowDown` still match.
+function nameTerm(term: string): string {
+  return term.replace(/[^a-z0-9-]/g, "");
 }
 
 function distance(left: string, right: string): number {
@@ -50,10 +56,13 @@ function distance(left: string, right: string): number {
 
 // Lower ranks sort first: exact name, name prefix, name word, tag prefix, tag, category, typo.
 function termRank(entry: IconEntry, term: string): number {
-  const compactTerm = term.replace(/-/g, "");
-  if (entry.name === term || entry.compact === compactTerm) return 0;
-  if (entry.name.startsWith(term) || entry.compact.startsWith(compactTerm)) return 1;
-  if (entry.words.includes(term) || entry.compact.includes(compactTerm)) return 2;
+  const name = nameTerm(term);
+  const compactTerm = name.replace(/-/g, "");
+  if (compactTerm) {
+    if (entry.name === name || entry.compact === compactTerm) return 0;
+    if (entry.name.startsWith(name) || entry.compact.startsWith(compactTerm)) return 1;
+    if (entry.words.includes(name) || entry.compact.includes(compactTerm)) return 2;
+  }
   if (entry.tags.some((tag) => tag.startsWith(term))) return 3;
   if (entry.tags.some((tag) => tag.includes(term))) return 4;
   if (entry.categoryTitles.some((title) => title.includes(term))) return 5;
@@ -71,8 +80,8 @@ function termRank(entry: IconEntry, term: string): number {
 
 function rankEntry(entry: IconEntry, terms: readonly string[]): number {
   if (terms.length === 0) return 0;
-  const joined = terms.join("-");
-  if (terms.length > 1 && entry.name.includes(joined)) return entry.name === joined ? 0 : 1;
+  const joined = terms.map(nameTerm).filter(Boolean).join("-");
+  if (terms.length > 1 && joined && entry.name.includes(joined)) return entry.name === joined ? 0 : 1;
   let rank = 0;
   for (const term of terms) {
     const termRanked = termRank(entry, term);

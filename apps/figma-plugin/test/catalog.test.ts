@@ -4,6 +4,7 @@ import { createEntries, searchIcons } from "../src/catalog";
 const entries = createEntries(
   [
     ["arrow-down-0-1", ["sort", "ascending"], ["arrows", "text"]],
+    ["badge-dollar-sign", ["money", "$"], ["finance"]],
     ["search", ["find", "magnifier"], ["text"]],
     ["settings", ["cog", "preferences"], ["account"]],
     ["trash-2", ["garbage", "delete", "remove"], ["files"]],
@@ -13,6 +14,7 @@ const entries = createEntries(
     ["account", "Accounts & access"],
     ["arrows", "Arrows"],
     ["files", "Files"],
+    ["finance", "Finance"],
     ["math", "Math"],
     ["text", "Text formatting"],
   ]),
@@ -22,7 +24,14 @@ const names = (query: string, category?: string) =>
 
 describe("searchIcons", () => {
   test("returns the full catalog in source order for an empty query", () => {
-    expect(names("")).toEqual(["arrow-down-0-1", "search", "settings", "trash-2", "x"]);
+    expect(names("")).toEqual([
+      "arrow-down-0-1",
+      "badge-dollar-sign",
+      "search",
+      "settings",
+      "trash-2",
+      "x",
+    ]);
   });
 
   test("ranks exact, separator-free, prefix, substring, and typo matches", () => {
@@ -38,6 +47,11 @@ describe("searchIcons", () => {
     expect(names("delete")).toEqual(["x", "trash-2"]);
     expect(names("cog")).toEqual(["settings"]);
     expect(names("formatting")).toEqual(["search", "arrow-down-0-1"]);
+  });
+
+  test("finds symbol-only tags instead of treating them as an empty query", () => {
+    expect(names("$")).toEqual(["badge-dollar-sign"]);
+    expect(names("arrow_down")).toEqual(["arrow-down-0-1"]);
   });
 
   test("requires every word and joins words into hyphenated names", () => {
