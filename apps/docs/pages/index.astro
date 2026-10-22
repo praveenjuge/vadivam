@@ -840,8 +840,12 @@ const structuredData = site
         history.replaceState(history.state, "", url);
       };
 
-      const openDrawer = (card: HTMLAnchorElement, { updateUrl = true } = {}) => {
+      // Closing returns focus to whatever opened the drawer: a grid tile, or a
+      // hero icon standing in for one.
+      let opener: HTMLElement | null = null;
+      const openDrawer = (card: HTMLAnchorElement, { updateUrl = true, from = card as HTMLElement } = {}) => {
         hideTooltip();
+        opener = from;
         select(card);
         drawer.inert = false;
         drawer.setAttribute("data-open", "");
@@ -852,11 +856,12 @@ const structuredData = site
         if (!drawer.hasAttribute("data-open")) return;
         drawer.removeAttribute("data-open");
         drawer.inert = true;
-        const card = selected;
+        const returnTo = opener;
+        opener = null;
         selected?.setAttribute("aria-current", "false");
         selected = null;
         if (updateUrl) setIconParam(null);
-        if (drawer.contains(document.activeElement) || document.activeElement === document.body) card?.focus({ preventScroll: true });
+        if (drawer.contains(document.activeElement) || document.activeElement === document.body) returnTo?.focus({ preventScroll: true });
       };
 
       const step = (direction: 1 | -1) => {
@@ -889,11 +894,11 @@ const structuredData = site
       explorer.querySelector(".hero-icons")?.addEventListener("click", (event) => {
         const mouse = event as MouseEvent;
         if (mouse.metaKey || mouse.ctrlKey || mouse.shiftKey || mouse.altKey || mouse.button !== 0) return;
-        const name = (event.target as HTMLElement).closest<HTMLElement>("[data-hero-icon]")?.dataset.heroIcon;
-        const card = name ? entryByName.get(name)?.card : null;
-        if (!card) return;
+        const link = (event.target as HTMLElement).closest<HTMLElement>("[data-hero-icon]");
+        const card = link ? entryByName.get(link.dataset.heroIcon ?? "")?.card : null;
+        if (!link || !card) return;
         event.preventDefault();
-        openDrawer(card);
+        openDrawer(card, { from: link });
       });
 
       // Type example queries into the search placeholder until the visitor
