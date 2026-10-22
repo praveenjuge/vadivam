@@ -61,7 +61,14 @@ const apiExports = new Set([
 ]);
 
 const specifierPattern = /(\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|\brequire\s*\(\s*|\.mock\s*\(\s*)(["'])([^"'\n]+)\2/g;
-const namedImportPattern = /\bimport\s+(?:type\s+)?(?:[\w$]+\s*,\s*)?\{([^}]*)\}\s*from\s*["'](vadivam(?:-[a-z-]+)?)(\/dynamic)?["']/g;
+// Named bindings taken from a Vadivam package: imports, re-exports, and
+// destructured require() calls. `separator` joins a name to its local name.
+const bindingLists = [
+  { kind: "import", separator: " as ", pattern: /\bimport\s+(?:type\s+)?(?:[\w$]+\s*,\s*)?\{([^}]*)\}\s*from\s*["'](vadivam(?:-[a-z-]+)?)(?:\/dynamic)?["']/g },
+  { kind: "export", separator: " as ", pattern: /\bexport\s+(?:type\s+)?\{([^}]*)\}\s*from\s*["'](vadivam(?:-[a-z-]+)?)(?:\/dynamic)?["']/g },
+  { kind: "require", separator: ": ", pattern: /\b(?:const|let|var)\s*\{([^}]*)\}\s*=\s*require\s*\(\s*["'](vadivam(?:-[a-z-]+)?)(?:\/dynamic)?["']\s*\)/g },
+];
+const bindingEntry = /((?:type\s+)?)([\w$]+)(?:\s*(?:\bas\b|:)\s*([\w$]+))?/g;
 
 function splitSpecifier(specifier) {
   const parts = specifier.split("/");
@@ -128,32 +135,39 @@ export function migrateSource(text, { styles = false } = {}) {
     return `${prefix}${quote}${mapped.specifier}${quote}`;
   });
   if (migrated) {
-    // Only bindings imported from Lucide are renamed. `LucideBell` becomes
+    // Only names taken from Lucide are renamed. An imported `LucideBell` becomes
     // `VadivamBell` here and in the file's uses; a deprecated name imports the
     // canonical icon under the old local name (`House as Home`) so the file's
-    // strings and JSX text stay as written.
+    // strings and JSX text stay as written. A re-export keeps its public name
+    // (`VadivamBell as LucideBell`) so the module's importers keep working.
     const renames = new Map();
-    output = output.replace(namedImportPattern, (statement, names) =>
-      statement.replace(names, (list) =>
-        list.replace(/((?:type\s+)?)([\w$]+)(?:\s+as\s+([\w$]+))?/g, (entry, type, imported, local) => {
-          const binding = local ?? renameIdentifier(imported);
-          const exported = canonicalExport(renameIdentifier(imported));
-          if (!local && binding !== imported) renames.set(imported, binding);
-          const next = `${type}${exported}${binding === exported ? "" : ` as ${binding}`}`;
-          if (next !== entry) changes += 1;
-          return next;
-        }),
-      ),
-    );
+    for (const { kind, separator, pattern } of bindingLists) {
+      output = output.replace(pattern, (statement, names) =>
+        statement.replace(names, (list) =>
+          list.replace(bindingEntry, (entry, type, imported, local) => {
+            const binding = local ?? (kind === "export" ? imported : renameIdentifier(imported));
+            const exported = canonicalExport(renameIdentifier(imported));
+            if (!local && binding !== imported) renames.set(imported, binding);
+            const next = `${type}${exported}${binding === exported ? "" : `${separator}${binding}`}`;
+            if (next !== entry) changes += 1;
+            return next;
+          }),
+        ),
+      );
+    }
     if (renames.size > 0) {
-      // Import statements (already rewritten) and quoted strings stay as they
+      // Rewritten import and export statements and quoted strings stay as they
       // are; other identifier uses, but not property reads, take the new name.
-      output = output.replace(/\bimport\s[^;]*?\bfrom\s*["'][^"']*["']|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|(?<![\w$.])([A-Za-z_$][\w$]*)/g, (match, identifier) => {
+      output = output.replace(/\b(?:import|export)\s[^;]*?\bfrom\s*["'][^"']*["']|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|(?<![\w$.])([A-Za-z_$][\w$]*)/g, (match, identifier) => {
         const renamed = identifier && renames.get(identifier);
         if (!renamed) return match;
         changes += 1;
         return renamed;
       });
+    }
+    // A mock factory lists the module's export names, which this can't safely rewrite.
+    if (/\.mock\s*\(\s*["']vadivam[^"']*["']\s*,/.test(output)) {
+      warnings.push("a test mock factory for a Vadivam package: check that its keys use Vadivam export names");
     }
   }
   // The core package's createIcons() reads data-vadivam instead of data-lucide.
@@ -161,12 +175,13 @@ export function migrateSource(text, { styles = false } = {}) {
     changes += 1;
     return "data-vadivam";
   });
-  for (const [, names, packageName] of output.matchAll(namedImportPattern)) {
-    if (packageName === "vadivam-angular") continue;
-    for (const entry of names.split(",")) {
-      const imported = entry.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0]?.trim();
-      if (!imported || iconExports.has(imported) || apiExports.has(imported)) continue;
-      warnings.push(`${imported} from ${packageName}: not a Vadivam export; search https://vadivam.praveenjuge.com/?q=${encodeURIComponent(imported)}`);
+  for (const { pattern } of bindingLists) {
+    for (const [, names, packageName] of output.matchAll(pattern)) {
+      if (packageName === "vadivam-angular") continue;
+      for (const [, , imported] of names.matchAll(bindingEntry)) {
+        if (iconExports.has(imported) || apiExports.has(imported)) continue;
+        warnings.push(`${imported} from ${packageName}: not a Vadivam export; search https://vadivam.praveenjuge.com/?q=${encodeURIComponent(imported)}`);
+      }
     }
   }
   return { text: output, changes, warnings };

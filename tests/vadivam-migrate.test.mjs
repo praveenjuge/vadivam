@@ -99,6 +99,29 @@ describe("migrate-lucide", () => {
     );
   });
 
+  test("re-exports keep their public names and require() bindings are renamed", () => {
+    const source = [
+      `export { LucideBell, Home, type LucideProps } from "lucide-react";`,
+      `const { LucideStar, AlertCircle: Warning } = require("lucide-react");`,
+      `module.exports = [LucideStar, Warning];`,
+    ].join("\n");
+    const { text, warnings } = migrateSource(source);
+    expect(text).toBe(
+      [
+        `export { VadivamBell as LucideBell, House as Home, type VadivamProps as LucideProps } from "vadivam-react";`,
+        `const { VadivamStar, CircleAlert: Warning } = require("vadivam-react");`,
+        `module.exports = [VadivamStar, Warning];`,
+      ].join("\n"),
+    );
+    expect(warnings).toEqual([]);
+  });
+
+  test("warns about mock factories, whose keys it cannot rewrite", () => {
+    const { text, warnings } = migrateSource(`vi.mock("lucide-react", () => ({ LucideBell: () => null }));`);
+    expect(text).toBe(`vi.mock("vadivam-react", () => ({ LucideBell: () => null }));`);
+    expect(warnings).toEqual(["a test mock factory for a Vadivam package: check that its keys use Vadivam export names"]);
+  });
+
   test("leaves files without Lucide imports alone", () => {
     const source = `import { LucideLike } from "./local";\n`;
     expect(migrateSource(source)).toEqual({ text: source, changes: 0, warnings: [] });
