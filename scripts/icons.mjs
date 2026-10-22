@@ -10,7 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { inkBounds } from "./icon-geometry.mjs";
-import { findUnsmoothedCorners, smoothCorners } from "./corner-smoothing.mjs";
+import { findUnsmoothedCorners, reattachEnds, smoothCorners } from "./corner-smoothing.mjs";
 import { optimize } from "svgo";
 import { Resvg } from "@resvg/resvg-js";
 import { buildAngularPackage } from "./generators/angular.mjs";
@@ -422,10 +422,12 @@ export function normalizeSvg(svg, file) {
   assertNoFilledSourceArtwork(svg, file);
   // SVGO turns Figma's circular curves into arcs, so rounded corners can be
   // found and smoothed; a second pass compacts the rewritten path data.
-  const smoothed = optimizeSvg(svg, file).replace(
-    /(<path\b[^>]*\sd=")([^"]*)"/g,
-    (_match, prefix, d) => `${prefix}${smoothCorners(d)}"`,
-  );
+  const pathPattern = /(<path\b[^>]*\sd=")([^"]*)"/g;
+  const first = optimizeSvg(svg, file);
+  const original = [...first.matchAll(pathPattern)].map((match) => match[2]);
+  const smoothedPaths = reattachEnds(original, original.map((d) => smoothCorners(d)));
+  let pathIndex = 0;
+  const smoothed = first.replace(pathPattern, (_match, prefix) => `${prefix}${smoothedPaths[pathIndex++]}"`);
   const optimized = optimizeSvg(smoothed, file);
   const open = optimized.match(/<svg\b[^>]*>/);
   const close = optimized.lastIndexOf("</svg>");

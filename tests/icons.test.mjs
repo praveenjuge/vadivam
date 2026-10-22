@@ -15,10 +15,12 @@ import {
   gridClass,
   inkBounds,
   parsePath,
+  sampleSubpath,
 } from "../scripts/icon-geometry.mjs";
 import {
   findUnsmoothedCorners,
   measureCorners,
+  reattachEnds,
   smoothCorners,
 } from "../scripts/corner-smoothing.mjs";
 
@@ -276,6 +278,23 @@ describe("corner smoothing", () => {
       Array(4).fill([6, 0.6]),
     );
     expect(smoothCorners(smoothed)).toBe(smoothed);
+  });
+
+  test("keeps a stroke that ended on a corner attached to the smoothed curve", () => {
+    // coffee: the handle's bottom line ends on the cup's r6 corner.
+    const cup = "M3 10h14v5a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6z";
+    const handle = "M17 12h1a3 3 0 0 1 0 6h-1.803";
+    const [, attached] = reattachEnds([cup, handle], [smoothCorners(cup), handle]);
+    const end = parsePath(attached)[0].segments.at(-1).to;
+    expect(end[1]).toBe(18);
+    expect(end[0]).toBeCloseTo(16.79, 2);
+    const curve = sampleSubpath(parsePath(smoothCorners(cup))[0], 0.005);
+    expect(Math.min(...curve.map(([x, y]) => Math.hypot(x - end[0], y - end[1])))).toBeLessThan(0.01);
+  });
+
+  test("leaves stroke ends alone when nothing they touch was smoothed", () => {
+    const paths = ["M16 18.072q.027.252-.004.515", "M16 18.072v.208"];
+    expect(reattachEnds(paths, paths)).toEqual(paths);
   });
 
   test("keeps dots drawn as tiny lines", () => {

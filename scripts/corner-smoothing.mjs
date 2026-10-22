@@ -15,7 +15,7 @@
 // smoothing as fits, as Figma does. Corners sharper than 90° always keep their
 // radius, since a tighter radius would push their tip outward.
 
-import { arcCenter, parsePath } from "./icon-geometry.mjs";
+import { arcCenter, parsePath, sampleSubpath } from "./icon-geometry.mjs";
 
 export const cornerSmoothing = 0.6;
 export const fullSmoothingEdge = 8;
@@ -256,6 +256,69 @@ export function smoothCorners(d, { smoothing = cornerSmoothing } = {}) {
   const plans = subpaths.map((subpath) => planSubpath(subpath, smoothing));
   if (!plans.some((plan) => plan.some(Boolean))) return d;
   return serialize(subpaths.map((subpath, index) => rebuildSubpath(subpath, plans[index])));
+}
+
+/**
+ * Smoothing moves a corner's curve, so a stroke that ended on it, like a cup
+ * handle meeting the cup, would end inside or short of the new curve. Slide
+ * each such stroke end along its last straight segment back onto the new
+ * curve. `before` and `after` are an icon's path data, before and after
+ * smoothing, in the same order.
+ */
+export function reattachEnds(before, after) {
+  const flatten = (paths) => paths.flatMap((subpaths, path) => subpaths.map((subpath) => ({ path, subpath })));
+  const oldSubpaths = flatten(before.map((d) => parsePath(d)));
+  const newPaths = after.map((d) => parsePath(d));
+  const newSubpaths = flatten(newPaths);
+  if (oldSubpaths.length !== newSubpaths.length) return after;
+  const oldSamples = oldSubpaths.map(({ subpath }) => sampleSubpath(subpath, 0.02));
+  const newSamples = newSubpaths.map(({ subpath }) => sampleSubpath(subpath, 0.01));
+  const nearest = (point, samples) => Math.min(...samples.map((p) => distance(p, point)));
+  const changed = new Set();
+
+  newSubpaths.forEach(({ path, subpath }, index) => {
+    const { segments } = subpath;
+    if (segments.length === 0 || isCyclic(subpath)) return;
+    const oldSubpath = oldSubpaths[index].subpath;
+    for (const atEnd of [false, true]) {
+      const segment = atEnd ? segments.at(-1) : segments[0];
+      if (segment.type !== "L") continue;
+      const end = atEnd ? segment.to : segment.from;
+      const oldEnd = atEnd ? oldSubpath.segments.at(-1).to : oldSubpath.start;
+      if (distance(end, oldEnd) > 1e-6) continue;
+      // The stroke it ended on: another subpath, in a path smoothing changed,
+      // that it touched before. Gaps under 0.03px are rounding, not a detachment.
+      const target = oldSamples.findIndex(
+        (samples, other) => other !== index && before[newSubpaths[other].path] !== after[newSubpaths[other].path] && nearest(oldEnd, samples) <= 0.02,
+      );
+      if (target < 0 || nearest(end, newSamples[target]) <= 0.03) continue;
+      const anchor = atEnd ? segment.from : segment.to;
+      const direction = unit(sub(end, anchor));
+      // Where the line through this segment crosses the target's new curve, nearest the old end.
+      let best = null;
+      const samples = newSamples[target];
+      for (let i = 1; i < samples.length; i += 1) {
+        const p = samples[i - 1];
+        const q = samples[i];
+        const edge = sub(q, p);
+        const denominator = cross(direction, edge);
+        if (Math.abs(denominator) < 1e-9) continue;
+        const t = cross(sub(p, anchor), edge) / denominator;
+        const s = cross(sub(p, anchor), direction) / denominator;
+        if (s < 0 || s > 1 || t <= 0) continue;
+        const hit = add(anchor, scale(direction, t));
+        if (distance(hit, end) <= 1 && (!best || distance(hit, end) < distance(best, end))) best = hit;
+      }
+      if (!best || distance(best, anchor) < 0.05) continue;
+      if (atEnd) segment.to = best;
+      else {
+        segment.from = best;
+        subpath.start = best;
+      }
+      changed.add(path);
+    }
+  });
+  return after.map((d, path) => (changed.has(path) ? serialize(newPaths[path]) : d));
 }
 
 /** Plain rounded corners that `smoothCorners` would still change, with their vertex and radius. */
