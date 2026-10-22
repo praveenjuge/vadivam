@@ -77,11 +77,10 @@ function createSprite(icons) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" style="position:absolute">${symbols.join("")}</svg>`;
 }
 
-function virtualModulePlugin(specifier, createSource) {
+function virtualModulePlugin(specifier, filter, createSource) {
   return {
     name: specifier,
     setup(pluginBuild) {
-      const filter = new RegExp(`^${specifier}$`);
       pluginBuild.onResolve({ filter }, () => ({ path: specifier, namespace: "vadivam" }));
       pluginBuild.onLoad({ filter: /.*/, namespace: "vadivam" }, async () => ({
         contents: createSource(await sortedIcons()),
@@ -100,7 +99,7 @@ const codeOptions = {
   target: ["es2019"],
   format: "iife",
   minify: !watch,
-  plugins: [virtualModulePlugin("vadivam:catalog", createCatalogSource)],
+  plugins: [virtualModulePlugin("vadivam:catalog", /^vadivam:catalog$/, createCatalogSource)],
   logLevel: "info",
 };
 
@@ -112,7 +111,7 @@ const uiOptions = {
   target: ["es2020"],
   format: "iife",
   minify: !watch,
-  plugins: [virtualModulePlugin("vadivam:ui-catalog", createUiCatalogSource)],
+  plugins: [virtualModulePlugin("vadivam:ui-catalog", /^vadivam:ui-catalog$/, createUiCatalogSource)],
   logLevel: "info",
 };
 
