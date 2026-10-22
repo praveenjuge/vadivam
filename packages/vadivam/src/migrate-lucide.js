@@ -158,11 +158,13 @@ export function migrateSource(text, { styles = false } = {}) {
       ),
     );
     if (renames.size > 0) {
-      const pattern = new RegExp(`(?<![\\w$.])(?:${[...renames.keys()].join("|")})(?![\\w$])`, "g");
       const [head, body] = splitImports(output);
-      output = head + body.replace(pattern, (identifier) => {
+      // Identifiers not read as a property (`icons.AlertCircle` stays).
+      output = head + body.replace(/(?<![\w$.])[A-Za-z_$][\w$]*/g, (identifier) => {
+        const renamed = renames.get(identifier);
+        if (!renamed) return identifier;
         changes += 1;
-        return renames.get(identifier);
+        return renamed;
       });
     }
   }
