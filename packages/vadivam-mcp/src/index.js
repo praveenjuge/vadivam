@@ -2,7 +2,7 @@ import { createMcpHandler } from "@modelcontextprotocol/server";
 import { createVadivamServer } from "./server.js";
 
 export { createVadivamServer, instructions, renderIcon, usageFor } from "./server.js";
-export { closestIconNames, findIcon, searchIcons } from "./search.js";
+export { closestIconNames, findIcon, searchIcons, suggestIcons } from "./search.js";
 export { categories, icons, version } from "./data.js";
 
 /**

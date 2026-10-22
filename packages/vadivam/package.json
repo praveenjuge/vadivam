@@ -26,6 +26,9 @@
     "javascript"
   ],
   "type": "module",
+  "bin": {
+    "vadivam": "dist/cli.js"
+  },
   "sideEffects": [
     "./dist/font/vadivam.css"
   ],

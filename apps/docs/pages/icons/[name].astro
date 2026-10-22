@@ -12,6 +12,7 @@ import VIcon from "../_lib/VIcon.astro";
 import { buildSnippetTemplates, serializeForScript } from "../_lib/snippet-templates";
 import { snippetHtml } from "../_lib/icon-tools";
 import { relatedIcons } from "../_lib/related-icons";
+import { lucideSvg, lucideVersion } from "../_lib/lucide";
 
 export function getStaticPaths() {
   const lastmods = iconLastmods();
@@ -44,6 +45,9 @@ const index = icons.findIndex((item) => item.name === icon.name);
 const previous = icons[index - 1];
 const next = icons[index + 1];
 const related = relatedIcons(icon.name);
+const lucide = lucideSvg(c);
+const sized = (markup: string, size: number) =>
+  markup.replace(/ width="24"/, ` width="${size}"`).replace(/ height="24"/, ` height="${size}"`);
 const primaryCategory = icon.categories[0];
 const updated = lastModified
   ? new Date(`${lastModified}T00:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })
@@ -304,6 +308,48 @@ const structuredData = site
         }
       </div>
     </section>
+
+    {lucide && (
+      <section class="mt-10" aria-labelledby="lucideHeading">
+        <div class="flex flex-wrap items-end justify-between gap-2">
+          <h2 class={sectionClass} id="lucideHeading">Compared with Lucide</h2>
+          <a class="inline-flex items-center gap-1 text-xs text-muted-foreground no-underline hover:text-foreground" href="/docs/migrate-from-lucide">Migrate from Lucide<VIcon name="arrow-right" size={12} /></a>
+        </div>
+        <div class="mt-3 grid grid-cols-3 border-y border-border" id="lucideCompare">
+          <figure class="compare-tile">
+            <div class="compare-stage">
+              <div class="compare-layer" aria-hidden="true" set:html={sized(svg, 160)} />
+              <div class="pixel-grid compare-layer" aria-hidden="true"></div>
+            </div>
+            <div class="compare-sizes" aria-hidden="true" set:html={sized(svg, 24) + sized(svg, 16)} />
+            <figcaption>Vadivam</figcaption>
+          </figure>
+          <figure class="compare-tile">
+            <div class="compare-stage">
+              <div class="compare-layer" aria-hidden="true" set:html={sized(lucide, 160)} />
+              <div class="pixel-grid compare-layer" aria-hidden="true"></div>
+            </div>
+            <div class="compare-sizes" aria-hidden="true" set:html={sized(lucide, 24) + sized(lucide, 16)} />
+            <figcaption>Lucide {lucideVersion}</figcaption>
+          </figure>
+          <figure class="compare-tile">
+            <div class="compare-stage">
+              <div class="compare-layer compare-lucide" aria-hidden="true" set:html={sized(lucide, 160)} />
+              <div class="compare-layer compare-vadivam" aria-hidden="true" set:html={sized(svg, 160)} />
+              <div class="pixel-grid compare-layer" aria-hidden="true"></div>
+            </div>
+            <div class="compare-sizes" aria-hidden="true">
+              <span class="compare-key"><span class="compare-swatch compare-vadivam"></span>Vadivam</span>
+              <span class="compare-key"><span class="compare-swatch compare-lucide"></span>Lucide</span>
+            </div>
+            <figcaption>Overlay</figcaption>
+          </figure>
+        </div>
+        <p class="m-0 mt-2 text-xs text-muted-foreground">
+          Same name, 24px grid, and 2px stroke, so swapping keeps your layout. Lucide drawing © Lucide Contributors, <a class="text-muted-foreground hover:text-foreground" href="https://github.com/lucide-icons/lucide/blob/main/LICENSE">ISC License</a>.
+        </p>
+      </section>
+    )}
 
     {icon.tags.length > 0 && (
       <section class="mt-10" aria-labelledby="tagsHeading">
@@ -577,6 +623,82 @@ const structuredData = site
     color: var(--color-muted-foreground);
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  #iconDetail .compare-tile {
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+    min-width: 0;
+    margin: 0;
+    padding: 1rem 0.5rem;
+  }
+
+  #iconDetail .compare-tile + .compare-tile {
+    border-inline-start: 1px solid var(--color-border);
+  }
+
+  #iconDetail .compare-stage {
+    position: relative;
+    width: 100%;
+    max-width: 10rem;
+    aspect-ratio: 1;
+    margin-inline: auto;
+    color: var(--color-foreground);
+  }
+
+  #iconDetail .compare-layer {
+    position: absolute;
+    inset: 0;
+  }
+
+  #iconDetail .compare-layer > svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  #iconDetail .compare-sizes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem 0.75rem;
+    min-height: 1.5rem;
+    font-size: 0.65rem;
+    color: var(--color-muted-foreground);
+  }
+
+  #iconDetail .compare-sizes > svg {
+    color: var(--color-foreground);
+  }
+
+  #iconDetail .compare-tile figcaption {
+    font-size: 0.75rem;
+    text-align: center;
+    color: var(--color-muted-foreground);
+  }
+
+  /* Vadivam draws in the accent over Lucide's faded drawing. */
+  #iconDetail .compare-vadivam {
+    color: var(--color-accent);
+  }
+
+  #iconDetail .compare-lucide {
+    color: color-mix(in oklab, var(--color-foreground) 35%, transparent);
+  }
+
+  #iconDetail .compare-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+  }
+
+  #iconDetail .compare-swatch {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 9999px;
+    background: currentColor;
   }
 
   #iconDetail .snippet-panel pre.astro-code {

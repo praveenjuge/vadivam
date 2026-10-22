@@ -5,7 +5,7 @@
 Vadivam is a Bun monorepo for a 24px outline icon set.
 
 - `icons/` is the canonical source exported from Figma.
-- `packages/vadivam` publishes optimized raw SVGs and metadata.
+- `packages/vadivam` publishes optimized raw SVGs and metadata, plus the `npx vadivam migrate-lucide` codemod; its hand-written CLI source is `packages/vadivam/src`, copied into `dist` with the generated manifest and Lucide alias map.
 - `packages/vadivam-react` publishes generated React components.
 - `packages/vadivam-react-native` publishes generated React Native components.
 - `packages/vadivam-{vue,svelte,solid,angular,astro,preact}` publish generated native framework components.
@@ -41,6 +41,7 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - Corner smoothing is generated, never hand-drawn: keep corners as circular arcs in Figma and `bun run icons:optimize` applies `scripts/corner-smoothing.mjs`; `icons:check` rejects plain rounded corners.
 - Path cleanup is generated too: `bun run icons:optimize` applies `scripts/path-cleanup.mjs` first, joining strokes Figma split where they meet, removing stray subpaths, and snapping horizontal/vertical lines less than 0.1px off the pixel grid; `icons:check` rejects path data it would still change, and ink that reaches into the 1px padding.
 - Keep icons outline-only. Do not add fills, gradients, masks, scripts, inline styles, external references, or unsafe SVG features; `validateSvgContent` in `scripts/icons.mjs` is the source of truth for what is rejected.
+- When bumping `lucideVersion` in `metadata/lucide.json`, pin the same `lucide` version in `apps/docs/package.json`; icon pages render Lucide's drawing from it for the side-by-side comparison.
 - When a guide rule becomes machine-checkable and every icon passes, enforce it in `scripts/icons.mjs` and update the guide. `bun scripts/icon-geometry.mjs` reports the measurements the guide quotes.
 
 ## Code Style

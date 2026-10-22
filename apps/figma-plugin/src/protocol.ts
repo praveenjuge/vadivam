@@ -7,8 +7,10 @@ export type PluginToUiMessage =
       iconName: string;
       instanceCount: number;
     }
+  | { type: "lucide-selection"; count: number }
   | { type: "error"; message: string };
 
 export type UiToPluginMessage =
   | { type: "choose"; iconName: string }
-  | { type: "confirm-replace"; requestId: string; accepted: boolean };
+  | { type: "confirm-replace"; requestId: string; accepted: boolean }
+  | { type: "swap-lucide" };

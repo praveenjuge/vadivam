@@ -22,6 +22,7 @@ test("renders an accessible glyph grid, filters by tag and category, and sends o
     <main>
       <input id="search" />
       <select id="category"><option value="">All</option></select>
+      <div id="lucide-bar" hidden><span id="lucide-message"></span><button id="lucide-swap"></button></div>
       <div id="results"></div>
       <dialog id="confirm"><form method="dialog"><p id="confirm-message"></p></form></dialog>
     </main>`;
@@ -76,4 +77,26 @@ test("renders an accessible glyph grid, filters by tag and category, and sends o
   );
   expect(search.value).toBe("");
   expect(trash.disabled).toBe(false);
+
+  const lucideBar = document.querySelector<HTMLElement>("#lucide-bar")!;
+  const swap = document.querySelector<HTMLButtonElement>("#lucide-swap")!;
+  const selection = (count: number) =>
+    window.dispatchEvent(
+      new MessageEvent("message", { data: { pluginMessage: { type: "lucide-selection", count } } }),
+    );
+  selection(3);
+  expect(lucideBar.hidden).toBe(false);
+  expect(lucideBar.textContent).toContain("3 Lucide icons selected");
+  swap.click();
+  expect(sent[sent.length - 1]).toEqual({ pluginMessage: { type: "swap-lucide" } });
+  expect(swap.disabled).toBe(true);
+  expect(trash.disabled).toBe(true);
+  window.dispatchEvent(
+    new MessageEvent("message", {
+      data: { pluginMessage: { type: "complete", message: "Swapped 3 Lucide icons for Vadivam" } },
+    }),
+  );
+  expect(swap.disabled).toBe(false);
+  selection(0);
+  expect(lucideBar.hidden).toBe(true);
 });

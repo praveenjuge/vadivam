@@ -17,7 +17,7 @@ button, input, select { font: inherit; }
 
 main {
   display: grid;
-  grid-template-rows: 44px minmax(0, 1fr);
+  grid-template-rows: 44px auto minmax(0, 1fr);
   height: 100vh;
   overflow: hidden;
 }
@@ -49,7 +49,35 @@ input:focus, select:focus {
   box-shadow: 0 0 0 1px var(--figma-color-border-selected);
 }
 
+#lucide-bar {
+  display: flex;
+  grid-row: 2;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 6px 10px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--figma-color-bg-secondary);
+}
+
+#lucide-bar[hidden] { display: none; }
+#lucide-message { min-width: 0; color: var(--muted); }
+
+#lucide-swap {
+  flex: none;
+  height: 24px;
+  padding: 0 10px;
+  color: var(--figma-color-text-onbrand);
+  background: var(--brand);
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#lucide-swap:disabled { cursor: default; opacity: 0.4; }
+
 #results {
+  grid-row: 3;
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   grid-auto-rows: 48px;

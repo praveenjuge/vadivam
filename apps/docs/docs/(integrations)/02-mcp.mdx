@@ -18,11 +18,12 @@ Use the hosted endpoint at `https://vadivam.praveenjuge.com/mcp`, or run the `va
 | Tool              | Input                                                                    | Returns                                                                                       |
 | ----------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
 | `search_icons`    | `query`, optional `limit` (default 20, max 100), optional `category`     | Ranked icons: exact name, then name prefix or word, then tag, then category                   |
-| `get_icon`        | `name`, optional `format`, `size`, `strokeWidth`, `color`, `absoluteStrokeWidth` | The icon as SVG, JSX, a framework snippet, data URI, base64, CSS mask, CDN URL, sprite, font, Iconify id, or shadcn command |
+| `suggest_icons`   | `description`, optional `perConcept` (default 3, max 10)                 | Candidate icons for each thing a UI description mentions, plus the parts nothing matched      |
+| `get_icon`        | `name`, optional `format`, `size`, `strokeWidth`, `color`, `absoluteStrokeWidth` | The icon as SVG, JSX, a framework snippet, data URI, base64, CSS mask, Tailwind class, CDN URL, sprite, font, Iconify id, or shadcn command |
 | `list_categories` | none                                                                     | Every category with its id, title, description, and icon count                                |
 | `get_usage`       | `framework`                                                              | Install command, import example, dynamic icon API, and docs link                              |
 
-`format` accepts `svg`, `jsx`, `react`, `react-native`, `vue`, `svelte`, `solid`, `preact`, `astro`, `angular`, `data-uri`, `base64`, `css-mask`, `cdn`, `sprite`, `font`, `iconify`, and `shadcn`. An unknown icon name returns an error with the five closest real names. Tool results include text and structured content.
+`format` accepts `svg`, `jsx`, `react`, `react-native`, `vue`, `svelte`, `solid`, `preact`, `astro`, `angular`, `data-uri`, `base64`, `css-mask`, `tailwind`, `cdn`, `sprite`, `font`, `iconify`, and `shadcn`. `suggest_icons` splits a description such as "settings sidebar with search, profile, and logout" on commas and joins like "and" or "with", searches each part, and ranks ties by Lucide's popularity. An unknown icon name returns an error with the five closest real names. Tool results include text and structured content.
 
 ## Connect to the hosted server
 

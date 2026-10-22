@@ -16,6 +16,7 @@ import {
   svgBase64,
   svgDataUri,
   svgToJsx,
+  tailwindMaskSnippet,
 } from "../../../../scripts/snippets.mjs";
 import type { SnippetTemplates } from "./snippet-templates";
 
@@ -161,6 +162,7 @@ export const copyFormats: CopyFormat[] = [
   { id: "data-uri", label: "Data URI", value: (icon, settings) => svgDataUri(customizeSvg(icon.svg, settings)) },
   { id: "base64", label: "Base64", value: (icon, settings) => svgBase64(customizeSvg(icon.svg, settings)) },
   { id: "css-mask", label: "CSS mask", value: (icon, settings) => cssMaskSnippet(icon.name, icon.svg, settings) },
+  { id: "tailwind", label: "Tailwind class", value: (icon, settings) => tailwindMaskSnippet(icon.svg, settings) },
   { id: "cdn", label: "CDN URL", value: (icon, _settings, version) => cdnUrl(icon.name, version) },
   { id: "sprite", label: "Sprite <use>", value: (icon) => spriteSnippet(icon.name) },
   { id: "font", label: "Icon font", value: (icon) => fontSnippet(icon.name) },

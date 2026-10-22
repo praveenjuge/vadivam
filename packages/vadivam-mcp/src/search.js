@@ -1,4 +1,4 @@
-import { categories, icons } from "./data.js";
+import { categories, iconRanks, icons } from "./data.js";
 import { siteUrl } from "./snippets.js";
 
 export const iconsByName = new Map(icons.map((icon) => [icon.name, icon]));
@@ -185,4 +185,76 @@ export function closestIconNames(name, limit = 5) {
     }
   }
   return names;
+}
+
+// Words that describe where an icon goes rather than what it shows.
+const fillerWords = new Set([
+  "a", "an", "the", "my", "our", "your", "this", "that", "some", "each", "every",
+  "of", "in", "on", "at", "by", "for", "to", "from", "into", "as",
+  "page", "pages", "screen", "screens", "view", "section", "panel", "button", "buttons",
+  "icon", "icons", "ui", "app", "component", "components", "link", "links", "item", "items",
+  "show", "shows", "showing", "need", "needs", "want", "use", "using",
+]);
+const maxConcepts = 12;
+
+// "notifications" -> "notification", "boxes" -> "box", but not "glass" or "bus".
+const singular = (word) => word.replace(/(?:(?<=(?:x|ch|sh|ss))es|(?<=[^su])s)$/, "");
+
+/**
+ * Ranked icons for one concept. Unlike search_icons, a concept also matches its
+ * singular form, an icon whose name holds every word ranks first (cart ->
+ * shopping-cart before carton), and Lucide's popularity breaks ties.
+ */
+function searchConcept(words, limit) {
+  const variants = [...new Set([words.join(" "), words.map(singular).join(" ")])];
+  return icons
+    .map((icon) => {
+      const nameWords = searchTerms.get(icon).nameWords;
+      const score = Math.max(
+        ...variants.map((variant) => {
+          const value = scoreIcon(icon, variant);
+          return value > 0 && variant.split(" ").every((word) => nameWords.includes(word)) ? value + 3_000 : value;
+        }),
+      );
+      return { icon, score };
+    })
+    .filter(({ score }) => score > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        (iconRanks[a.icon.name] ?? Infinity) - (iconRanks[b.icon.name] ?? Infinity) ||
+        a.icon.name.length - b.icon.name.length ||
+        a.icon.name.localeCompare(b.icon.name),
+    )
+    .slice(0, limit)
+    .map(({ icon }) => iconSummary(icon));
+}
+
+/**
+ * Icons for each thing a UI description mentions. The description is split on
+ * commas, "and", "with", and similar joins; each part is searched as a phrase,
+ * then word by word when the phrase as a whole matches nothing.
+ */
+export function suggestIcons(description, { perConcept = 3 } = {}) {
+  const limit = Math.min(Math.max(Math.trunc(Number(perConcept) || 3), 1), 10);
+  const parts = String(description ?? "")
+    .split(/[,;\n.!?:/|+&()]|\s(?:and|or|with|plus|then|also)\s/i)
+    .map((part) => tokenize(part).filter((word) => !fillerWords.has(word)))
+    .filter((words) => words.length > 0);
+  const concepts = [];
+  const unmatched = [];
+  const seen = new Set();
+  const add = (words) => {
+    const concept = words.join(" ");
+    if (seen.has(concept) || concepts.length >= maxConcepts) return;
+    seen.add(concept);
+    const results = searchConcept(words, limit);
+    if (results.length > 0) concepts.push({ concept, results });
+    else unmatched.push(concept);
+  };
+  for (const words of parts) {
+    if (words.length === 1 || searchConcept(words, 1).length > 0) add(words);
+    else for (const word of words) add([word]);
+  }
+  return { description: String(description ?? ""), concepts, unmatched };
 }

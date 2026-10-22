@@ -19,6 +19,9 @@ const categorySelect = element<HTMLSelectElement>("#category");
 const results = element<HTMLDivElement>("#results");
 const confirmDialog = element<HTMLDialogElement>("#confirm");
 const confirmMessage = element<HTMLParagraphElement>("#confirm-message");
+const lucideBar = element<HTMLDivElement>("#lucide-bar");
+const lucideMessage = element<HTMLSpanElement>("#lucide-message");
+const lucideSwap = element<HTMLButtonElement>("#lucide-swap");
 
 const entries = createEntries(index.icons, new Map(index.categories));
 // Buttons are built once per icon and reused, so a keystroke only moves existing nodes.
@@ -41,6 +44,7 @@ function send(message: UiToPluginMessage): void {
 
 function setPending(value: boolean): void {
   pending = value;
+  lucideSwap.disabled = value;
   for (const button of results.querySelectorAll<HTMLButtonElement>("button")) {
     button.disabled = value;
   }
@@ -144,6 +148,12 @@ results.addEventListener("keydown", (event) => {
   }
 });
 
+lucideSwap.addEventListener("click", () => {
+  if (pending) return;
+  setPending(true);
+  send({ type: "swap-lucide" });
+});
+
 confirmDialog.addEventListener("close", () => {
   if (!confirmationId) return;
   const requestId = confirmationId;
@@ -173,6 +183,9 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
     confirmationId = message.requestId;
     confirmMessage.textContent = `Replace ${message.iconName} and update ${message.instanceCount} instance${message.instanceCount === 1 ? "" : "s"}?`;
     confirmDialog.showModal();
+  } else if (message.type === "lucide-selection") {
+    lucideBar.hidden = message.count === 0;
+    lucideMessage.textContent = `${message.count} Lucide icon${message.count === 1 ? "" : "s"} selected`;
   } else if (message.type === "error") {
     setPending(false);
     search.focus();

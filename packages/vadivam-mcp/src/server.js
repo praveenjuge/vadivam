@@ -16,16 +16,19 @@ import {
   svgBase64,
   svgDataUri,
   svgToJsx,
+  tailwindMaskSnippet,
 } from "./snippets.js";
 import {
   closestIconNames,
   findIcon,
   iconSummary,
   searchIcons,
+  suggestIcons,
 } from "./search.js";
 
 export const instructions = `Vadivam is an open-source set of ${icons.length} pixel-perfect 24px outline icons (the Lucide icon names, redrawn) for SVG, React, React Native, Vue, Svelte, Solid, Preact, Astro, and Angular.
 - Always call search_icons first to find a real icon name; never guess names. Search matches names, tags (synonyms), and categories.
+- To pick icons for a whole screen or feature, call suggest_icons with a short description of the UI; it returns candidates for each thing it mentions.
 - Prefer importing components from the framework package (get_usage, then get_icon with format set to the framework) over pasting raw SVG. Use format "svg" only when no package fits.
 - Icon names are kebab-case (arrow-right); components are PascalCase (ArrowRight).
 - Label meaningful icons (aria-label or title) and hide decorative ones (aria-hidden="true").
@@ -38,6 +41,7 @@ const formatIds = [
   "data-uri",
   "base64",
   "css-mask",
+  "tailwind",
   "cdn",
   "sprite",
   "font",
@@ -95,6 +99,8 @@ export function renderIcon(icon, format = "svg", options = {}) {
       return svgBase64(svg);
     case "css-mask":
       return cssMaskSnippet(icon.name, icon.svg, options);
+    case "tailwind":
+      return tailwindMaskSnippet(icon.svg, options);
     case "cdn":
       return cdnUrl(icon.name, version);
     case "sprite":
@@ -197,11 +203,47 @@ export function createVadivamServer() {
   );
 
   server.registerTool(
+    "suggest_icons",
+    {
+      title: "Suggest icons for a UI",
+      description:
+        "Suggest icons for each thing a UI description mentions, such as \"settings sidebar with search, profile, and logout\". Splits on commas and words like \"and\" or \"with\", then ranks icons per concept. Pick one per concept, then call get_icon.",
+      inputSchema: z.object({
+        description: z
+          .string()
+          .min(1)
+          .max(500)
+          .describe("A short description of the screen, feature, or list of actions that need icons."),
+        perConcept: z.number().int().min(1).max(10).optional().describe("Candidates per concept (default 3, max 10)."),
+      }),
+      outputSchema: z.object({
+        description: z.string(),
+        concepts: z.array(z.object({ concept: z.string(), results: z.array(iconSummarySchema) })),
+        unmatched: z.array(z.string()),
+      }),
+      annotations: readOnly,
+    },
+    async ({ description, perConcept }) => {
+      const result = suggestIcons(description, { perConcept });
+      const lines = result.concepts.map(
+        ({ concept, results }) => `${concept}: ${results.map((icon) => `${icon.name} (${icon.componentName})`).join(", ")}`,
+      );
+      if (result.unmatched.length > 0) {
+        lines.push(`No match for: ${result.unmatched.join(", ")}. Try search_icons with a synonym.`);
+      }
+      return textResult(
+        lines.length > 0 ? lines.join("\n") : "Describe the UI with a few nouns or actions, such as \"search, settings, logout\".",
+        result,
+      );
+    },
+  );
+
+  server.registerTool(
     "get_icon",
     {
       title: "Get icon code",
       description:
-        "Get one icon as SVG, JSX, a framework component snippet, a data URI, CSS mask, CDN URL, sprite, font, Iconify id, or shadcn command. Unknown names return the closest real names.",
+        "Get one icon as SVG, JSX, a framework component snippet, a data URI, CSS mask, Tailwind class, CDN URL, sprite, font, Iconify id, or shadcn command. Unknown names return the closest real names.",
       inputSchema: z.object({
         name: z.string().max(100).describe("Icon name from search_icons, such as \"arrow-right\" (PascalCase also works)."),
         format: z.enum(formatIds).optional().describe("Output format (default \"svg\"). Framework ids return an import snippet."),

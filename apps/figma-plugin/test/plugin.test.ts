@@ -125,6 +125,7 @@ function createHarness() {
       fills: [],
       strokes: [{ type: "SOLID", color: { r: 0, g: 0, b: 0 } }],
       strokeWeight: 2,
+      constraints: { horizontal: "MIN", vertical: "MIN" },
       resize(width: number, height: number) {
         this.width = width;
         this.height = height;
@@ -175,9 +176,61 @@ function createHarness() {
       async getInstancesAsync() {
         return component.instances;
       },
+      createInstance() {
+        return instanceOf(component);
+      },
     });
     for (const child of component.children) child.parent = component;
     return component;
+  }
+
+  // A layer as Lucide's Figma plugin or library leaves it: a square of red,
+  // 1.5px strokes named after the icon.
+  function lucideLayer(type: string, name: string, size = 24) {
+    const child = vector();
+    child.strokes = [{ type: "SOLID", color: { r: 1, g: 0, b: 0 } }];
+    child.strokeWeight = 1.5;
+    const node: any = register({
+      type,
+      name,
+      width: size,
+      height: size,
+      children: [child],
+      instances: [],
+      appendChild(nextChild: any) {
+        nextChild.parent?.children.splice(nextChild.parent.children.indexOf(nextChild), 1);
+        nextChild.parent = node;
+        node.children.push(nextChild);
+      },
+      findAll() {
+        return [...node.children];
+      },
+      async getInstancesAsync() {
+        return node.instances;
+      },
+    });
+    child.parent = node;
+    return node;
+  }
+
+  function container(name: string, children: any[]) {
+    const node: any = register({
+      type: "FRAME",
+      name,
+      width: 320,
+      height: 200,
+      children: [],
+      insertChild(index: number, child: any) {
+        child.parent?.children.splice(child.parent.children.indexOf(child), 1);
+        child.parent = node;
+        node.children.splice(index, 0, child);
+      },
+      findAll() {
+        return [...node.children];
+      },
+    });
+    for (const child of children) node.insertChild(node.children.length, child);
+    return node;
   }
 
   const ui: any = {
@@ -214,6 +267,7 @@ function createHarness() {
     const child = vector();
     const instance: any = register({
       type: "INSTANCE",
+      name: main.name,
       children: [child],
       async getMainComponentAsync() {
         return main;
@@ -227,7 +281,7 @@ function createHarness() {
     return instance;
   }
 
-  return { figmaMock, ui, page, nodes, messages, commits, notifications, instanceOf };
+  return { figmaMock, ui, page, nodes, messages, commits, notifications, instanceOf, lucideLayer, container, register };
 }
 
 async function runPlugin(harness: ReturnType<typeof createHarness>) {
@@ -346,6 +400,68 @@ describe("compiled Figma plugin", () => {
     expect(component.name).toBe("star");
     expect(harness.nodes.has(instance.id)).toBe(false);
     expect(harness.commits).toHaveLength(5);
+  });
+
+  test("finds Lucide icons in the selection and swaps them for Vadivam components", async () => {
+    const harness = createHarness();
+    await runPlugin(harness);
+    expect(latest(harness, "lucide-selection")).toEqual({ type: "lucide-selection", count: 0 });
+
+    await harness.ui.onmessage({ type: "choose", iconName: "search" });
+    const vadivam = harness.page.selection[0];
+    const arrow = harness.lucideLayer("FRAME", "lucide/ArrowRight", 16);
+    const secondArrow = harness.lucideLayer("FRAME", "arrow-right", 20);
+    const home = harness.lucideLayer("GROUP", "home");
+    const digits = harness.lucideLayer("FRAME", "ArrowDown01Icon");
+    const star = harness.lucideLayer("COMPONENT", "star");
+    const starUse = harness.instanceOf(star);
+    const bell = harness.instanceOf({ id: "remote-bell", name: "Bell", instances: [], getPluginData: () => "" });
+    const label = harness.register({ type: "FRAME", name: "search", children: [{ type: "TEXT", name: "Search" }] });
+    const notSquare = harness.lucideLayer("FRAME", "heart");
+    notSquare.width = 40;
+    arrow.x = 12;
+    arrow.layoutGrow = 1;
+    const card = harness.container("Card", [arrow, secondArrow, home, digits, star, starUse, bell, label, notSquare, vadivam]);
+
+    harness.page.selection = [card];
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(latest(harness, "lucide-selection")).toEqual({ type: "lucide-selection", count: 6 });
+
+    const commitsBefore = harness.commits.length;
+    await harness.ui.onmessage({ type: "swap-lucide" });
+    expect(harness.commits).toHaveLength(commitsBefore + 1);
+    expect(latest(harness, "complete")?.message).toBe("Swapped 6 Lucide icons for Vadivam");
+
+    const [arrowComponent, arrowInstance, house, arrowDown, starComponent, starInstance, bellComponent, ...rest] = card.children;
+    expect(arrowComponent).toMatchObject({ type: "COMPONENT", name: "arrow-right", width: 16, height: 16, x: 12, layoutGrow: 1 });
+    expect(JSON.parse(arrowComponent.getPluginData("vadivam")).iconName).toBe("arrow-right");
+    for (const child of arrowComponent.children) {
+      expect(child.strokes).toEqual([{ type: "SOLID", color: { r: 1, g: 0, b: 0 } }]);
+      expect(child.strokeWeight).toBe(1.5);
+      expect(child.constraints).toEqual({ horizontal: "SCALE", vertical: "SCALE" });
+    }
+    expect(arrowInstance.type).toBe("INSTANCE");
+    expect(await arrowInstance.getMainComponentAsync()).toBe(arrowComponent);
+    expect(arrowInstance).toMatchObject({ width: 20, height: 20 });
+    expect(house).toMatchObject({ type: "COMPONENT", name: "house" });
+    expect(arrowDown).toMatchObject({ type: "COMPONENT", name: "arrow-down-0-1" });
+    expect(starComponent).toBe(star);
+    expect(star.name).toBe("star");
+    expect(JSON.parse(star.getPluginData("vadivam")).iconName).toBe("star");
+    expect(star.children.every((child: any) => child.strokeWeight === 1.5)).toBe(true);
+    expect(starInstance).toBe(starUse);
+    expect(bellComponent).toMatchObject({ type: "COMPONENT", name: "bell" });
+    expect(rest).toEqual([label, notSquare, vadivam]);
+    expect(harness.nodes.has(arrow.id)).toBe(false);
+    expect(harness.page.selection).toHaveLength(6);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    harness.page.selection = [card];
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(latest(harness, "lucide-selection")).toEqual({ type: "lucide-selection", count: 0 });
+
+    await harness.ui.onmessage({ type: "swap-lucide" });
+    expect(latest(harness, "error")?.message).toBe("No Lucide icons in the selection");
   });
 
   test("uses the single registered Figma plugin ID", () => {

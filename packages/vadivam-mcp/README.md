@@ -31,7 +31,8 @@ claude mcp add vadivam -- npx -y vadivam-mcp
 | Tool              | What it does                                                                                    |
 | ----------------- | ----------------------------------------------------------------------------------------------- |
 | `search_icons`    | Ranked search over names, tags, and categories, with an optional category filter                |
-| `get_icon`        | One icon as SVG, JSX, a framework snippet, data URI, CSS mask, CDN URL, sprite, font, or shadcn |
+| `suggest_icons`   | Candidate icons for each thing a UI description mentions                                        |
+| `get_icon`        | One icon as SVG, JSX, a framework snippet, data URI, CSS mask, Tailwind class, CDN URL, sprite, font, or shadcn |
 | `list_categories` | Every category with its id, title, description, and icon count                                  |
 | `get_usage`       | Install command, import example, and docs link for a framework package                          |
 

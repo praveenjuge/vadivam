@@ -34,6 +34,7 @@ describe("vadivam-mcp CLI", () => {
           "get_usage",
           "list_categories",
           "search_icons",
+          "suggest_icons",
         ]);
         const found = await client.callTool({ name: "search_icons", arguments: { query: "trash", limit: 1 } });
         expect(found.structuredContent.results[0].name).toBe("trash");
