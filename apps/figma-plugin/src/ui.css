@@ -13,7 +13,7 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 
 main {
   display: grid;
@@ -24,12 +24,14 @@ main {
 
 .search-wrap {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 6px;
   align-items: center;
   padding: 8px;
   border-bottom: 1px solid var(--rule);
 }
 
-input {
+input, select {
   width: 100%;
   height: 28px;
   padding: 0 9px;
@@ -40,7 +42,9 @@ input {
   outline: none;
 }
 
-input:focus {
+select { padding: 0 4px; text-overflow: ellipsis; }
+
+input:focus, select:focus {
   border-color: var(--figma-color-border-selected);
   box-shadow: 0 0 0 1px var(--figma-color-border-selected);
 }
@@ -76,7 +80,16 @@ input:focus {
   outline: none;
 }
 .icon-button:disabled { cursor: default; opacity: 0.4; }
-.icon-button svg { width: 24px; height: 24px; pointer-events: none; }
+.icon-button svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
 
 .empty {
   grid-column: 1 / -1;

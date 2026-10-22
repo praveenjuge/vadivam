@@ -15,7 +15,7 @@ The plugin has six tabs: **Create**, **Replace**, **Arrange**, **Rename**, **Aud
 
 In the **Library** tab, choose **Create library** to generate one `Vadivam Icons` component set from every SVG in the root `icons/` folder. Each canonical icon is a 24×24 variant under the searchable **Icon** property. The component set is a simple white horizontal auto-layout frame with wrapping enabled, exactly 40 icons per row, 24 px padding, and 24 px horizontal and vertical gaps.
 
-The component set includes usage and maintenance documentation linked to the Vadivam site. Every selected variant includes its own description and links directly to its icon page, such as `https://vadivam.praveenjuge.com/icons/align-center-vertical`.
+All library text is short and public facing. The component set has a one-line usage note linked to the Vadivam site. Each variant's description lists its category titles and Lucide search tags from the root `metadata/lucide.json`, and links to its icon page, such as `https://vadivam.praveenjuge.com/icons/align-center-vertical`.
 
 After changing `icons/`, rebuild and run the internal plugin in the library file, then choose **Update library**. Existing main components are updated in place so published instances keep their component identities, new canonical icons are added in alphabetical order, and custom or retired variants are retained. If the page contains multiple plugin-generated sets, select the intended set before updating it.
 

@@ -82,7 +82,7 @@
     },
     "apps/figma-plugin": {
       "name": "@vadivam/figma-plugin",
-      "version": "0.0.58",
+      "version": "0.0.61",
       "devDependencies": {
         "@figma/plugin-typings": "1.142.0",
         "@happy-dom/global-registrator": "^21.0.3",
@@ -103,11 +103,11 @@
     },
     "packages/vadivam": {
       "name": "vadivam",
-      "version": "0.0.58",
+      "version": "0.0.61",
     },
     "packages/vadivam-angular": {
       "name": "vadivam-angular",
-      "version": "0.0.58",
+      "version": "0.0.61",
       "dependencies": {
         "tslib": "^2.8.1",
       },
@@ -118,16 +118,16 @@
     },
     "packages/vadivam-astro": {
       "name": "vadivam-astro",
-      "version": "0.0.58",
+      "version": "0.0.61",
       "peerDependencies": {
         "astro": ">=7 <8",
       },
     },
     "packages/vadivam-mcp": {
       "name": "vadivam-mcp",
-      "version": "0.0.58",
+      "version": "0.0.61",
       "bin": {
-        "vadivam-mcp": "./dist/cli.js",
+        "vadivam-mcp": "dist/cli.js",
       },
       "dependencies": {
         "@modelcontextprotocol/server": "2.3.1",
@@ -136,21 +136,21 @@
     },
     "packages/vadivam-preact": {
       "name": "vadivam-preact",
-      "version": "0.0.58",
+      "version": "0.0.61",
       "peerDependencies": {
         "preact": ">=10.29 <11",
       },
     },
     "packages/vadivam-react": {
       "name": "vadivam-react",
-      "version": "0.0.58",
+      "version": "0.0.61",
       "peerDependencies": {
         "react": ">=18",
       },
     },
     "packages/vadivam-react-native": {
       "name": "vadivam-react-native",
-      "version": "0.0.58",
+      "version": "0.0.61",
       "peerDependencies": {
         "react": ">=18 <20",
         "react-native": ">=0.71",
@@ -159,21 +159,21 @@
     },
     "packages/vadivam-solid": {
       "name": "vadivam-solid",
-      "version": "0.0.58",
+      "version": "0.0.61",
       "peerDependencies": {
         "solid-js": ">=1.9 <2",
       },
     },
     "packages/vadivam-svelte": {
       "name": "vadivam-svelte",
-      "version": "0.0.58",
+      "version": "0.0.61",
       "peerDependencies": {
         "svelte": ">=5.56 <6",
       },
     },
     "packages/vadivam-vue": {
       "name": "vadivam-vue",
-      "version": "0.0.58",
+      "version": "0.0.61",
       "peerDependencies": {
         "vue": ">=3.5 <4",
       },

@@ -2,6 +2,10 @@
 
 Public Figma companion for searching and inserting the canonical Vadivam icon set as editable local components. The catalog is bundled from the repository's validated `icons/` directory and works without network access.
 
+Search matches icon names, Lucide tags, and category titles, the same way the website does, and the category menu narrows the grid. Every inserted component gets a short description listing its categories and tags, plus a link to its icon page, so Figma's asset search finds it by those words too.
+
+The UI previews icons from one SVG sprite parsed with the HTML, keeps search fields precomputed, and renders matches in batches as the grid scrolls. The canvas bundle stores each icon's SVG body without the shared root element.
+
 ## Development
 
 1. Run `bun run figma-plugin:build` from the repository root.
@@ -25,4 +29,4 @@ Use `bun run figma-plugin:dev` while editing and `bun run test:figma-plugin` bef
 - Empty files, auto-layout parents, tagged components with instances, and selected instances.
 - Confirm the plugin requests no permissions and reports no network domains.
 
-The plugin stores only its schema version and canonical icon name on components it creates. It collects no personal data and makes no network requests.
+The plugin stores only its schema version and canonical icon name as plugin data on components it creates. It collects no personal data and makes no network requests.

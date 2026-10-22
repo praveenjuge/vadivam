@@ -710,7 +710,9 @@ describe("compiled Figma plugin", () => {
       fills: [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }],
     });
     expect(componentSet.children).toHaveLength(sourceIconCount);
-    expect(componentSet.descriptionMarkdown).toContain("## Maintain");
+    expect(componentSet.descriptionMarkdown).toBe(
+      `${sourceIconCount} open-source outline icons on a 24 px grid. Pick an icon with the **Icon** property and change the stroke color as needed.`,
+    );
     expect(componentSet.documentationLinks).toEqual([
       { uri: "https://vadivam.praveenjuge.com" },
     ]);
@@ -721,6 +723,14 @@ describe("compiled Figma plugin", () => {
     expect(firstComponent.documentationLinks).toEqual([
       { uri: `https://vadivam.praveenjuge.com/icons/${firstName}` },
     ]);
+    const metadata = JSON.parse(
+      readFileSync(new URL("../../../metadata/lucide.json", import.meta.url), "utf8"),
+    );
+    const { tags, categories } = metadata.icons[firstName];
+    const categoryTitles = categories.map((id: string) => metadata.categories[id].title);
+    expect(firstComponent.descriptionMarkdown).toBe(
+      `24 px outline icon from Vadivam.\n\n**Categories:** ${categoryTitles.join(", ")}\n\n**Tags:** ${tags.join(", ")}`,
+    );
 
     page.selection = [componentSet];
     await ui.onmessage({ type: "sync-library" });

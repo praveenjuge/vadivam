@@ -1,8 +1,12 @@
-import icons from "vadivam:catalog";
-import { searchIcons, type CatalogIcon } from "./catalog";
+import index from "vadivam:ui-catalog";
+import { createEntries, searchIcons, type IconEntry } from "./catalog";
 import type { PluginToUiMessage, UiToPluginMessage } from "./protocol";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+const COLUMNS = 6;
+// About three screens of icons; more render as the list scrolls near its end.
+const BATCH_SIZE = 180;
+const LOAD_MORE_DISTANCE = 480;
 
 function element<T extends Element>(selector: string): T {
   const match = document.querySelector<T>(selector);
@@ -11,16 +15,25 @@ function element<T extends Element>(selector: string): T {
 }
 
 const search = element<HTMLInputElement>("#search");
+const categorySelect = element<HTMLSelectElement>("#category");
 const results = element<HTMLDivElement>("#results");
 const confirmDialog = element<HTMLDialogElement>("#confirm");
 const confirmMessage = element<HTMLParagraphElement>("#confirm-message");
 
-const catalog: CatalogIcon[] = [...icons].sort((left, right) =>
-  left.name.localeCompare(right.name),
-);
-let visible: CatalogIcon[] = [];
+const entries = createEntries(index.icons, new Map(index.categories));
+// Buttons are built once per icon and reused, so a keystroke only moves existing nodes.
+const buttons = new Map<string, HTMLButtonElement>();
+let visible: IconEntry[] = [];
+let renderedCount = 0;
 let pending = false;
 let confirmationId: string | null = null;
+
+for (const [id, title] of index.categories) {
+  const option = document.createElement("option");
+  option.value = id;
+  option.textContent = title;
+  categorySelect.append(option);
+}
 
 function send(message: UiToPluginMessage): void {
   parent.postMessage({ pluginMessage: message }, "*");
@@ -39,60 +52,61 @@ function choose(iconName: string): void {
   send({ type: "choose", iconName });
 }
 
-function iconPreview(icon: CatalogIcon): SVGSVGElement {
+function iconButton(name: string): HTMLButtonElement {
+  let button = buttons.get(name);
+  if (button) return button;
+  button = document.createElement("button");
+  button.type = "button";
+  button.className = "icon-button";
+  button.title = name;
+  button.setAttribute("aria-label", name);
+  button.setAttribute("role", "gridcell");
+  button.dataset.iconName = name;
   const svg = document.createElementNS(SVG_NAMESPACE, "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("fill", "none");
-  svg.setAttribute("stroke", "currentColor");
-  svg.setAttribute("stroke-width", "2");
-  svg.setAttribute("stroke-linecap", "round");
-  svg.setAttribute("stroke-linejoin", "round");
   svg.setAttribute("aria-hidden", "true");
-
-  for (const [tag, attributes] of icon.iconNode) {
-    const geometry = document.createElementNS(SVG_NAMESPACE, tag);
-    for (const [name, value] of Object.entries(attributes)) {
-      if (name !== "key") geometry.setAttribute(name, value);
-    }
-    svg.append(geometry);
-  }
-  return svg;
+  const use = document.createElementNS(SVG_NAMESPACE, "use");
+  use.setAttribute("href", `#i-${name}`);
+  svg.append(use);
+  button.append(svg);
+  buttons.set(name, button);
+  return button;
 }
 
-function render(): void {
-  visible = searchIcons(catalog, search.value);
-  results.replaceChildren();
-  if (visible.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "empty";
-    empty.textContent = "No matching icon. Try a shorter or different name.";
-    results.append(empty);
-    return;
-  }
-
+function renderMore(count = BATCH_SIZE): void {
+  const end = Math.min(visible.length, renderedCount + count);
+  if (end <= renderedCount) return;
   const fragment = document.createDocumentFragment();
-  for (const icon of visible) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "icon-button";
-    button.title = icon.name;
-    button.setAttribute("aria-label", icon.name);
-    button.setAttribute("role", "gridcell");
-    button.dataset.iconName = icon.name;
-    button.append(iconPreview(icon));
-    button.addEventListener("click", () => choose(icon.name));
+  for (; renderedCount < end; renderedCount += 1) {
+    const button = iconButton(visible[renderedCount]!.name);
+    button.disabled = pending;
     fragment.append(button);
   }
   results.append(fragment);
-  setPending(pending);
+}
+
+function render(): void {
+  visible = searchIcons(entries, search.value, categorySelect.value);
+  renderedCount = 0;
+  results.scrollTop = 0;
+  if (visible.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = "No icons match. Try another word or category.";
+    results.replaceChildren(empty);
+    return;
+  }
+  results.replaceChildren();
+  renderMore();
 }
 
 function focusResult(index: number): void {
-  const buttons = [...results.querySelectorAll<HTMLButtonElement>("button")];
-  buttons[Math.max(0, Math.min(index, buttons.length - 1))]?.focus();
+  const target = Math.max(0, Math.min(index, visible.length - 1));
+  if (target >= renderedCount) renderMore(target - renderedCount + BATCH_SIZE);
+  (results.children[target] as HTMLButtonElement | undefined)?.focus();
 }
 
 search.addEventListener("input", render);
+categorySelect.addEventListener("change", render);
 search.addEventListener("keydown", (event) => {
   if (event.key === "ArrowDown" && visible.length > 0) {
     event.preventDefault();
@@ -103,21 +117,30 @@ search.addEventListener("keydown", (event) => {
   }
 });
 
+results.addEventListener("scroll", () => {
+  if (results.scrollHeight - results.scrollTop - results.clientHeight < LOAD_MORE_DISTANCE) {
+    renderMore();
+  }
+});
+
+results.addEventListener("click", (event) => {
+  const button = (event.target as Element).closest<HTMLButtonElement>(".icon-button");
+  if (button?.dataset.iconName) choose(button.dataset.iconName);
+});
+
 results.addEventListener("keydown", (event) => {
-  const target = event.target as HTMLButtonElement;
+  const target = event.target as HTMLElement;
   if (!target.matches("button")) return;
-  const buttons = [...results.querySelectorAll<HTMLButtonElement>("button")];
-  const index = buttons.indexOf(target);
   const movement: Record<string, number> = {
     ArrowLeft: -1,
     ArrowRight: 1,
-    ArrowUp: -6,
-    ArrowDown: 6,
+    ArrowUp: -COLUMNS,
+    ArrowDown: COLUMNS,
   };
   const delta = movement[event.key];
   if (delta !== undefined) {
     event.preventDefault();
-    focusResult(index + delta);
+    focusResult([...results.children].indexOf(target) + delta);
   }
 });
 
@@ -140,8 +163,6 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
   const message = event.data.pluginMessage;
   if (!message) return;
   if (message.type === "catalog") {
-    search.placeholder = "Search icons…";
-    render();
     search.focus();
   } else if (message.type === "complete") {
     setPending(false);
@@ -157,3 +178,5 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
     search.focus();
   }
 };
+
+render();
