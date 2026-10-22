@@ -527,12 +527,15 @@ async function addRemote(sourceValue: unknown): Promise<void> {
 
   const added: string[] = [];
   const components: ComponentNode[] = [];
+  // Read once after the downloads; another plugin run may have added icons meanwhile.
+  const inLibrary = libraryIconNames(componentSet);
   for (const icon of icons) {
-    if (libraryIconNames(componentSet).has(icon.name)) continue;
+    if (inLibrary.has(icon.name)) continue;
     try {
       const component = createLibraryComponent(icon);
       componentSet.appendChild(component);
       components.push(component);
+      inLibrary.add(icon.name);
       added.push(icon.name);
     } catch (error) {
       failed.push({ name: icon.name, reason: messageFromError(error) });
