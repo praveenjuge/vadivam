@@ -509,12 +509,16 @@ const structuredData = site
 
       const renderBatch = (size: number) => {
         if (!matches) return;
-        // Each batch is its own chunk, styled and contained like the full grid's.
-        const chunk = document.createElement("div");
-        chunk.className = "icon-chunk";
+        // Matches render in chunks of `batchSize`, styled and contained like the
+        // full grid's; `.icon-chunk` reserves the height of exactly one batch.
         const end = Math.min(matches.length, renderedCount + size);
-        for (; renderedCount < end; renderedCount += 1) chunk.append(cloneOf(matches[renderedCount]!));
-        results.append(chunk);
+        while (renderedCount < end) {
+          const chunk = document.createElement("div");
+          chunk.className = "icon-chunk";
+          const chunkEnd = Math.min(end, renderedCount + batchSize);
+          for (; renderedCount < chunkEnd; renderedCount += 1) chunk.append(cloneOf(matches[renderedCount]!));
+          results.append(chunk);
+        }
         if (renderedCount < matches.length) {
           results.after(sentinel);
           // Re-observing reports the sentinel's current state, so a sentinel
