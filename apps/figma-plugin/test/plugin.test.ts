@@ -243,6 +243,7 @@ async function runPlugin(harness: ReturnType<typeof createHarness>) {
     Number,
     Error,
     Date,
+    encodeURIComponent,
   });
   await Promise.resolve();
 }
@@ -256,6 +257,7 @@ describe("compiled Figma plugin", () => {
     const output = await startWatchBuild();
     expect(output).toContain("[figma-plugin] watching for changes");
     expect(output).not.toContain("Could not resolve \"vadivam:catalog\"");
+    expect(output).not.toContain("Could not resolve \"vadivam:ui-catalog\"");
   });
 
   test("inserts, replaces, confirms propagation, and isolates selected instances", async () => {
@@ -281,6 +283,16 @@ describe("compiled Figma plugin", () => {
       schema: 1,
       iconName: "search",
     });
+    const metadata = JSON.parse(
+      readFileSync(new URL("../../../metadata/lucide.json", import.meta.url), "utf8"),
+    );
+    const { tags, categories } = metadata.icons.search;
+    const categoryTitles = categories.map((id: string) => metadata.categories[id].title);
+    expect(component.descriptionMarkdown).toContain(`**Categories:** ${categoryTitles.join(", ")}`);
+    expect(component.descriptionMarkdown).toContain(`**Tags:** ${tags.join(", ")}`);
+    expect(component.documentationLinks).toEqual([
+      { uri: "https://vadivam.praveenjuge.com/icons/search" },
+    ]);
     expect(harness.commits).toHaveLength(1);
     expect(harness.notifications[harness.notifications.length - 1]?.message).toBe("Inserted search");
 

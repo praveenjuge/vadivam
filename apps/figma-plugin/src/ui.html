@@ -7,6 +7,7 @@
     <style>/* INJECT_UI_STYLES */</style>
   </head>
   <body>
+    <!-- INJECT_SPRITE -->
     <main>
       <div class="search-wrap">
         <input
@@ -17,6 +18,9 @@
           spellcheck="false"
           aria-label="Search Vadivam icons"
         />
+        <select id="category" aria-label="Filter by category">
+          <option value="">All</option>
+        </select>
       </div>
       <div id="results" role="grid" aria-label="Vadivam icons"></div>
     </main>

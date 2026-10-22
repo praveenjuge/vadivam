@@ -2,17 +2,23 @@ import { build, context } from "esbuild";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readIcons } from "../../../scripts/icons.mjs";
+import { iconCategories, readIcons } from "../../../scripts/icons.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = resolve(root, "dist");
 const iconsRoot = resolve(root, "../../icons");
 const watch = process.argv.includes("--watch");
+const categoryTitles = new Map(iconCategories.map(({ id, title }) => [id, title]));
 
 function createCatalogSource(icons) {
   return `export default ${JSON.stringify(
     icons
-      .map(({ name, svg }) => ({ name, svg }))
+      .map(({ name, svg, tags, categories }) => ({
+        name,
+        svg,
+        tags,
+        categories: categories.map((id) => categoryTitles.get(id)),
+      }))
       .sort((left, right) => left.name.localeCompare(right.name)),
   )};`;
 }

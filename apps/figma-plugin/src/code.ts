@@ -1,5 +1,4 @@
-import icons from "vadivam:catalog";
-import type { CatalogIcon } from "./catalog";
+import icons, { svgRoot } from "vadivam:catalog";
 import type { PluginToUiMessage, UiToPluginMessage } from "./protocol";
 
 const UI_WIDTH = 320;
@@ -7,7 +6,10 @@ const UI_HEIGHT = 480;
 const INSERTION_GAP = 16;
 const PLUGIN_DATA_KEY = "vadivam";
 const PLUGIN_DATA_SCHEMA = 1;
+const DOCUMENTATION_URL = "https://vadivam.praveenjuge.com";
 const catalog = new Map(icons.map((icon) => [icon.name, icon]));
+
+type CatalogIcon = (typeof icons)[number];
 
 interface PendingReplacement {
   requestId: string;
@@ -63,10 +65,26 @@ function taggedIconName(node: BaseNode & PluginDataMixin): string | null {
   }
 }
 
-function tagComponent(component: ComponentNode, name: string): void {
+// Category titles and tags are plain words, so Figma's asset search finds the component by them.
+function iconDescription(icon: CatalogIcon): string {
+  return [
+    "24 px outline icon from Vadivam.",
+    icon.categories.length > 0 ? `**Categories:** ${icon.categories.join(", ")}` : "",
+    icon.tags.length > 0 ? `**Tags:** ${icon.tags.join(", ")}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function tagComponent(component: ComponentNode, icon: CatalogIcon): void {
+  const name = icon.name;
   component.name = name;
   component.setPluginData(PLUGIN_DATA_KEY, iconMetadata(name));
   component.setRelaunchData({ replace: `Replace ${name}` });
+  component.descriptionMarkdown = iconDescription(icon);
+  component.documentationLinks = [
+    { uri: `${DOCUMENTATION_URL}/icons/${encodeURIComponent(name)}` },
+  ];
   component.exportSettings = [
     {
       format: "SVG",
@@ -80,11 +98,15 @@ function tagComponent(component: ComponentNode, name: string): void {
   ];
 }
 
+function iconSvg(icon: CatalogIcon): string {
+  return `${svgRoot}${icon.body}</svg>`;
+}
+
 function createComponent(icon: CatalogIcon): ComponentNode {
-  const frame = figma.createNodeFromSvg(icon.svg);
+  const frame = figma.createNodeFromSvg(iconSvg(icon));
   try {
     const component = figma.createComponentFromNode(frame);
-    tagComponent(component, icon.name);
+    tagComponent(component, icon);
     return component;
   } catch (error) {
     if (!frame.removed) frame.remove();
@@ -199,7 +221,7 @@ figma.on("selectionchange", () => {
 function replaceComponentGlyph(component: ComponentNode, icon: CatalogIcon): void {
   const paint = uniformStrokePaint(component);
   const oldChildren = [...component.children];
-  const source = figma.createNodeFromSvg(icon.svg);
+  const source = figma.createNodeFromSvg(iconSvg(icon));
   const sourceWidth = source.width;
   const sourceHeight = source.height;
   const newChildren = [...source.children];
@@ -218,7 +240,7 @@ function replaceComponentGlyph(component: ComponentNode, icon: CatalogIcon): voi
   }
   for (const child of oldChildren) child.remove();
   source.remove();
-  tagComponent(component, icon.name);
+  tagComponent(component, icon);
   figma.currentPage.selection = [component];
 }
 

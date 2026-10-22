@@ -53,6 +53,7 @@ const catalog: LucideCatalog = parseLucideCatalog(
   resolveLucideIconName,
 );
 const allowedIconNames = new Set(lucideIconNames);
+const libraryIcons = new Map(iconCatalog.map((icon) => [icon.name, icon]));
 
 let settings: PluginSettings = { batchSize: 20, columns: DEFAULT_COLUMNS, tab: "create" };
 let existingSlugs = new Set<string>();
@@ -281,6 +282,18 @@ function taggedLibraryIconName(node: ComponentNode): string | null {
   return data?.kind === "icon" && typeof data.name === "string" ? data.name : null;
 }
 
+// Public copy for the published library; category titles and tags stay plain words for search.
+function libraryIconDescription(name: string): string {
+  const icon = libraryIcons.get(name);
+  return [
+    "24 px outline icon from Vadivam.",
+    icon?.categories.length ? `**Categories:** ${icon.categories.join(", ")}` : "",
+    icon?.tags.length ? `**Tags:** ${icon.tags.join(", ")}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 function tagLibraryComponent(component: ComponentNode, name: string): void {
   component.name = `Icon=${name}`;
   component.resizeWithoutConstraints(ICON_SIZE, ICON_SIZE);
@@ -289,9 +302,9 @@ function tagLibraryComponent(component: ComponentNode, name: string): void {
     pluginData({ kind: "icon", name }),
   );
   component.setRelaunchData({
-    "sync-library": `Update ${name} from the canonical icon catalog`,
+    "sync-library": `Update ${name}`,
   });
-  component.descriptionMarkdown = `**${name}** from Vadivam, an open-source 24 px outline icon set with 2 px strokes.\n\nUse the **Icon** variant property on an instance to choose another glyph. Publish library updates to propagate canonical icon changes everywhere this component is used.`;
+  component.descriptionMarkdown = libraryIconDescription(name);
   component.documentationLinks = [{ uri: iconDocumentationUrl(name) }];
   component.exportSettings = [
     {
@@ -336,9 +349,9 @@ function configureLibrarySet(componentSet: ComponentSetNode): void {
     pluginData({ kind: "library", columns: LIBRARY_COLUMNS }),
   );
   componentSet.setRelaunchData({
-    "sync-library": "Update all icons from the canonical icon catalog",
+    "sync-library": "Update all icons",
   });
-  componentSet.descriptionMarkdown = `# Vadivam Icons\n\n${iconCatalog.length} open-source outline icons on a 24 px grid with 2 px strokes, round caps, and round joins.\n\n## Use\n\n1. Insert an instance of this component set.\n2. Choose a glyph with the **Icon** variant property.\n3. Override the stroke color as needed.\n\n## Maintain\n\nRun **Vadivam Internal** and choose **Update** after the canonical \`icons/\` folder changes. Existing main components update in place so published library updates propagate to their instances. New icons are added and custom variants are retained.`;
+  componentSet.descriptionMarkdown = `${iconCatalog.length} open-source outline icons on a 24 px grid. Pick an icon with the **Icon** property and change the stroke color as needed.`;
   componentSet.documentationLinks = [{ uri: DOCUMENTATION_URL }];
 }
 
