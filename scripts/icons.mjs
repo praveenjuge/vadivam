@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { inkBounds } from "./icon-geometry.mjs";
 import { findUnsmoothedCorners, reattachEnds, smoothCorners } from "./corner-smoothing.mjs";
+import { cleanPaths, gridTolerance } from "./path-cleanup.mjs";
 import { optimize } from "svgo";
 import { Resvg } from "@resvg/resvg-js";
 import { buildAngularPackage } from "./generators/angular.mjs";
@@ -117,6 +118,7 @@ const blockedTags = new Set([
 ]);
 const maxClosedSubpathsPerPath = 8;
 const canvasSize = 24;
+const padding = 1;
 const strokeWidth = 2;
 
 async function svgFiles() {
@@ -145,12 +147,16 @@ export function validateIconName(name, file = `${name}.svg`) {
 }
 
 async function fetchJson(url, description, fetchImpl) {
-  const response = await fetchImpl(url, {
-    headers: {
-      Accept: "application/vnd.github+json, application/json",
-      "User-Agent": "vadivam-icon-checker",
-    },
-  });
+  const headers = {
+    Accept: "application/vnd.github+json, application/json",
+    "User-Agent": "vadivam-icon-checker",
+  };
+  // Anonymous GitHub API calls from shared CI runners get rate-limited, so
+  // send the job token when one is set.
+  if (process.env.GITHUB_TOKEN && url.startsWith("https://api.github.com/")) {
+    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  }
+  const response = await fetchImpl(url, { headers });
   assert(response.ok, `Could not fetch ${description}: HTTP ${response.status}`);
   try {
     return await response.json();
@@ -320,7 +326,8 @@ export function validateSvgContent(svg, file = "inline.svg") {
 
   visit(node, "svg");
   assert(count > 0, `${file}: no drawable elements found`);
-  assertInkInsideCanvas(shapes, file);
+  assertInkInsidePadding(shapes, file);
+  assertCleanPaths(shapes.filter(([tag]) => tag === "path").map(([, attrs]) => attrs.d), file);
 }
 
 // Every rounded corner between two straight lines must use the smoothed
@@ -341,24 +348,43 @@ function assertSmoothCorners(pathData, file) {
 }
 
 // With round caps and joins the 2px stroke reaches 1px past the centerline, so
-// every point of the geometry must sit at least 1px inside the canvas edge.
-function assertInkInsideCanvas(shapes, file) {
+// keeping the ink inside the 1px padding keeps every point of the geometry at
+// least 2px inside the canvas edge.
+function assertInkInsidePadding(shapes, file) {
   let box;
   try {
     box = inkBounds(shapes, strokeWidth);
   } catch (error) {
     throw new Error(`${file}: ${error.message}`);
   }
-  const epsilon = 1e-6;
+  // Path data keeps 3 decimals, so curves may overshoot the padding line by a hair.
+  const epsilon = 0.01;
   const inside =
-    box.minX >= -epsilon &&
-    box.minY >= -epsilon &&
-    box.maxX <= canvasSize + epsilon &&
-    box.maxY <= canvasSize + epsilon;
+    box.minX >= padding - epsilon &&
+    box.minY >= padding - epsilon &&
+    box.maxX <= canvasSize - padding + epsilon &&
+    box.maxY <= canvasSize - padding + epsilon;
   const format = (value) => Number(value.toFixed(3));
   assert(
     inside,
-    `${file}: stroke extends outside the 24x24 canvas (ink spans x ${format(box.minX)} to ${format(box.maxX)}, y ${format(box.minY)} to ${format(box.maxY)}); keep geometry at least 1px from every edge`,
+    `${file}: stroke reaches into the 1px padding (ink spans x ${format(box.minX)} to ${format(box.maxX)}, y ${format(box.minY)} to ${format(box.maxY)}); keep geometry at least 2px from every edge`,
+  );
+}
+
+// Path data must be what bun run icons:optimize writes: no stray subpaths, no
+// strokes split where they meet, and no lines just off the whole-pixel grid.
+function assertCleanPaths(paths, file) {
+  if (paths.length === 0) return;
+  const { debris, joins, merges, snaps } = cleanPaths(paths);
+  const problems = [
+    debris && `${debris} stray subpath(s)`,
+    joins && `${joins} stroke(s) split where they meet`,
+    merges && `${merges} straight line(s) split in pieces`,
+    snaps && `${snaps} line(s) less than ${gridTolerance}px off the whole-pixel grid`,
+  ].filter(Boolean);
+  assert(
+    problems.length === 0,
+    `${file}: ${problems.join(", ")}; run bun run icons:optimize to clean the path data`,
   );
 }
 
@@ -421,13 +447,24 @@ function optimizeSvg(svg, file) {
 export function normalizeSvg(svg, file) {
   assertNoFilledSourceArtwork(svg, file);
   // SVGO turns Figma's circular curves into arcs, so rounded corners can be
-  // found and smoothed; a second pass compacts the rewritten path data.
-  const pathPattern = /(<path\b[^>]*\sd=")([^"]*)"/g;
+  // found and smoothed; a last pass compacts the rewritten path data. Strokes
+  // Figma split apart are joined first, and SVGO runs again on the joined
+  // outline, so smoothing sees whole corners.
+  // Only path data is swapped; every other attribute stays for validation to judge.
+  const pathPattern = /(<path\b[^>]*\sd=")([^"]*)("[^>]*>)/g;
+  const pathData = (content) => [...content.matchAll(pathPattern)].map((match) => match[2]);
+  const replacePaths = (content, paths) => {
+    let index = 0;
+    return content.replace(pathPattern, (match, prefix, d, suffix) => {
+      const next = paths[index++];
+      if (next !== null) return `${prefix}${next}${suffix}`;
+      return suffix.endsWith("/>") ? "" : match;
+    });
+  };
   const first = optimizeSvg(svg, file);
-  const original = [...first.matchAll(pathPattern)].map((match) => match[2]);
-  const smoothedPaths = reattachEnds(original, original.map((d) => smoothCorners(d)));
-  let pathIndex = 0;
-  const smoothed = first.replace(pathPattern, (_match, prefix) => `${prefix}${smoothedPaths[pathIndex++]}"`);
+  const cleaned = optimizeSvg(replacePaths(first, cleanPaths(pathData(first)).paths), file);
+  const original = pathData(cleaned);
+  const smoothed = replacePaths(cleaned, reattachEnds(original, original.map((d) => smoothCorners(d))));
   const optimized = optimizeSvg(smoothed, file);
   const open = optimized.match(/<svg\b[^>]*>/);
   const close = optimized.lastIndexOf("</svg>");

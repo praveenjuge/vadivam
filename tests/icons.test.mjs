@@ -23,6 +23,7 @@ import {
   reattachEnds,
   smoothCorners,
 } from "../scripts/corner-smoothing.mjs";
+import { cleanPaths } from "../scripts/path-cleanup.mjs";
 
 const validSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></svg>`;
 
@@ -36,6 +37,15 @@ describe("icon validation", () => {
     expect(() => normalizeSvg(outlinedExport, "outlined-export.svg")).toThrow(
       "filled artwork cannot be normalized",
     );
+  });
+
+  test.each([
+    ["a dashed stroke", 'stroke-dasharray="2 2"'],
+    ["an opacity", 'opacity=".5"'],
+    ["an inline style", 'style="color:red"'],
+  ])("rejects a path with %s instead of dropping it while normalizing", (_name, attribute) => {
+    const svg = validSvg.replace('<path d="M4 12h16"/>', `<path d="M4 12h16" ${attribute}/>`);
+    expect(() => normalizeSvg(svg, "path-attribute.svg")).toThrow("path-attribute.svg: unsupported path attribute");
   });
 
   test("rejects compound paths that look like expanded strokes", () => {
@@ -60,19 +70,20 @@ describe("icon validation", () => {
     expect(() => validateSvgContent(svg, "invalid-fixture.svg")).toThrow();
   });
 
-  test("accepts geometry that keeps the 2px stroke on the canvas", () => {
-    const edgeToEdge = validSvg.replace("M4 12h16", "M1 1h22v22H1z");
+  test("accepts geometry that keeps the 2px stroke inside the 1px padding", () => {
+    const edgeToEdge = validSvg.replace("M4 12h16", "M2 2h20v20H2z");
     expect(() => validateSvgContent(edgeToEdge, "edge-fixture.svg")).not.toThrow();
   });
 
   test.each([
     ["a path on the canvas edge", validSvg.replace("M4 12h16", "M0 12h24")],
-    ["a curve bulging past the edge", validSvg.replace("M4 12h16", "M2 12a10 10 0 0 1 20 0q0 12 0 12")],
+    ["a path in the padding", validSvg.replace("M4 12h16", "M1.75 12h20")],
+    ["a curve bulging past the padding", validSvg.replace("M4 12h16", "M2 12a10 10 0 0 1 20 0q0 10.5 0 10.5")],
     ["a circle touching the edge", validSvg.replace('<path d="M4 12h16"/>', '<circle cx="12" cy="12" r="11.5"/>')],
-    ["a line past the bottom", validSvg.replace('<path d="M4 12h16"/>', '<line x1="12" y1="2" x2="12" y2="23.5"/>')],
+    ["a line past the bottom", validSvg.replace('<path d="M4 12h16"/>', '<line x1="12" y1="2" x2="12" y2="22.5"/>')],
   ])("rejects %s", (_name, svg) => {
     expect(() => validateSvgContent(svg, "overflow-fixture.svg")).toThrow(
-      "stroke extends outside the 24x24 canvas",
+      "stroke reaches into the 1px padding",
     );
   });
 
@@ -115,6 +126,24 @@ describe("icon validation", () => {
       "https://registry.npmjs.org/lucide/1.61.0",
       "https://api.github.com/repos/lucide-icons/lucide/git/trees/1.61.0?recursive=1",
     ]);
+  });
+
+  test("authenticates GitHub API requests only, when a token is set", async () => {
+    const authorization = {};
+    const fetchImpl = async (url, { headers }) => {
+      authorization[new URL(url).host] = headers.Authorization;
+      if (url.startsWith("https://registry.npmjs.org/")) return Response.json({ version: "1.61.0" });
+      return Response.json({ truncated: false, tree: [{ path: "icons/check.svg" }] });
+    };
+    const previous = process.env.GITHUB_TOKEN;
+    process.env.GITHUB_TOKEN = "test-token";
+    try {
+      await fetchPinnedLucideCatalog(fetchImpl);
+    } finally {
+      if (previous === undefined) delete process.env.GITHUB_TOKEN;
+      else process.env.GITHUB_TOKEN = previous;
+    }
+    expect(authorization).toEqual({ "registry.npmjs.org": undefined, "api.github.com": "Bearer test-token" });
   });
 
   test("rejects a registry response that does not match the pin", async () => {
@@ -352,5 +381,62 @@ describe("OG icon selection", () => {
     expect(shuffled).not.toBe(icons);
     expect(shuffled).toHaveLength(icons.length);
     expect(new Set(shuffled)).toEqual(new Set(icons));
+  });
+});
+
+describe("path cleanup", () => {
+  test("joins strokes that meet into one, preferring the straight continuation", () => {
+    // A T-junction: the bar continues straight through and the stem stays separate.
+    const { paths, joins } = cleanPaths(["M4 6h8M12 6h8M12 6v12"]);
+    expect(joins).toBe(1);
+    expect(paths).toEqual(["M4 6L20 6M12 6L12 18"]);
+  });
+
+  test("reverses a stroke to join it end to end", () => {
+    const { paths } = cleanPaths(["M4 4h8M20 4h-8"]);
+    expect(paths).toEqual(["M4 4L20 4"]);
+    const { paths: curved } = cleanPaths(["M4 12h4M12 8a4 4 0 0 0-4 4"]);
+    expect(curved).toEqual(["M4 12L8 12A4 4 0 0 1 12 8"]);
+  });
+
+  test("joins a loop drawn in pieces and leaves it open where it meets", () => {
+    const { paths } = cleanPaths(["M4 4h16M20 4v16M20 20H4M4 20V4"]);
+    expect(paths).toEqual(["M4 4L20 4L20 20L4 20L4 4"]);
+  });
+
+  test("removes lone movetos and stubs hidden under another stroke", () => {
+    const { paths, debris } = cleanPaths(["M2 9h20M21.916 9h.001M7 7M2 9z"]);
+    expect(debris).toBe(3);
+    expect(paths).toEqual(["M2 9L22 9"]);
+  });
+
+  test("keeps dots drawn as tiny lines", () => {
+    const d = "M4 12h10M18 12h.01";
+    expect(cleanPaths([d])).toEqual({ paths: [d], debris: 0, joins: 0, merges: 0, snaps: 0 });
+  });
+
+  test("snaps lines just off the whole-pixel grid and what meets them", () => {
+    const { paths, snaps } = cleanPaths(["M5.937 4v16M3 5.937h16"]);
+    expect(snaps).toBe(2);
+    expect(paths).toEqual(["M6 4L6 20M3 6L19 6"]);
+  });
+
+  test.each([
+    ["half-pixel lines", "M4 4.5h16"],
+    ["short ticks", "M4 4.95v.5"],
+    ["lines 0.1px or more off the grid", "M4 4.9h16"],
+  ])("leaves %s where they are", (_name, d) => {
+    expect(cleanPaths([d]).snaps).toBe(0);
+  });
+
+  test("rejects unclean path data and normalization cleans it", () => {
+    const split = validSvg.replace("M4 12h16", "M4 12h8m0 0h8M7.95 6v12");
+    expect(() => validateSvgContent(split, "split.svg")).toThrow(
+      "split.svg: 1 stroke(s) split where they meet, 1 straight line(s) split in pieces, 1 line(s) less than 0.1px off the whole-pixel grid; run bun run icons:optimize",
+    );
+    const normalized = normalizeSvg(split, "split.svg");
+    expect(normalized).toContain('<path d="M4 12h16M8 6v12"/>');
+    expect(() => validateSvgContent(normalized, "split.svg")).not.toThrow();
+    expect(normalizeSvg(normalized, "split.svg")).toBe(normalized);
   });
 });
