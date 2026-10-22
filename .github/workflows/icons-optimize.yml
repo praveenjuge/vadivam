@@ -122,14 +122,21 @@ jobs:
           git add package.json packages/*/package.json packages/vadivam-mcp/server.json apps/figma-plugin/package.json README.md packages/*/README.md
           git commit -m "chore(release): v$version"
 
+      # The docs build reads the changelog from GitHub Releases. Anonymous API
+      # calls from shared runners get rate-limited, which drops the changelog
+      # and fails the SEO tests, so authenticate them with the job token.
       - name: Test core
         if: github.event_name == 'pull_request'
         timeout-minutes: 15
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: bun run test:core
 
       - name: Test exact release commit
         if: github.event_name == 'push'
         timeout-minutes: 15
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: bun run test
 
       - name: Check generated inputs
