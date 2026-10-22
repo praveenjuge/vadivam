@@ -19,6 +19,7 @@ import {
 import type { LucideIconRanking } from "./catalog";
 import { MAX_BATCH_SIZE } from "./catalog";
 import { MAX_COLUMNS } from "./layout";
+import { isRemoteSource, type RemoteFailure, type RemoteSource } from "./remote";
 
 type Tone = "idle" | "busy" | "success" | "error";
 
@@ -55,6 +56,9 @@ const auditResults = element<HTMLOListElement>("#audit-results");
 const libraryCount = element<HTMLElement>("#library-count");
 const libraryState = element<HTMLElement>("#library-state");
 const syncLibraryButton = element<HTMLButtonElement>("#sync-library");
+const sourceButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-source]")];
+const checkRemoteButton = element<HTMLButtonElement>("#check-remote");
+const remoteResults = element<HTMLOListElement>("#remote-results");
 const status = element<HTMLElement>("#status");
 const statusText = element<HTMLSpanElement>("#status-text");
 
@@ -65,6 +69,8 @@ let candidates: LucideIconRanking[] = [];
 let catalog: CatalogSummary | null = null;
 let page: PageStatus | null = null;
 let busy = true;
+let remoteSource: RemoteSource = "github";
+const sourceLabels: Record<RemoteSource, string> = { github: "GitHub main", npm: "npm latest" };
 
 const renameReasonLabels: Record<RenameReason, string> = {
   format: "Lucide format",
@@ -517,6 +523,105 @@ function renderLibrary(): void {
   syncLibraryButton.textContent = page.hasLibrary ? "Update library" : "Create library";
 }
 
+// New icons from GitHub or npm
+
+function selectSource(source: RemoteSource): void {
+  remoteSource = source;
+  for (const button of sourceButtons) {
+    button.setAttribute("aria-pressed", String(button.dataset.source === source));
+  }
+  remoteResults.replaceChildren();
+}
+
+for (const button of sourceButtons) {
+  button.addEventListener("click", () => {
+    if (isRemoteSource(button.dataset.source)) selectSource(button.dataset.source);
+  });
+}
+
+// Add uses the source that was checked, whatever the toggle shows by then.
+function renderRemoteMissing(
+  source: RemoteSource,
+  version: string,
+  missing: string[],
+  hasLibrary: boolean,
+): void {
+  remoteResults.replaceChildren();
+  if (missing.length === 0) {
+    remoteResults.append(emptyState(`The library has every icon in ${version}.`, true));
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  const bulk = document.createElement("li");
+  const label = document.createElement("span");
+  bulk.className = "bulk";
+  label.textContent = hasLibrary
+    ? `${plural(missing.length, "icon")} in ${version} not in the library`
+    : `Create the library first · ${version} has ${plural(missing.length, "icon")}`;
+  bulk.append(label);
+  if (hasLibrary) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary";
+    button.dataset.action = "";
+    button.textContent = `Add ${numberFormat.format(missing.length)}`;
+    button.addEventListener("click", () => {
+      startAction(`Adding ${plural(missing.length, "icon")} from ${sourceLabels[source]}…`, {
+        type: "add-remote",
+        source,
+      });
+    });
+    bulk.append(button);
+  }
+  fragment.append(bulk);
+  for (const name of missing) {
+    const item = document.createElement("li");
+    const text = document.createElement("span");
+    item.className = "replaced";
+    text.className = "candidate-name";
+    text.textContent = name;
+    item.append(text);
+    fragment.append(item);
+  }
+  remoteResults.append(fragment);
+  updateActions();
+}
+
+function renderRemoteAdded(version: string, added: string[], failed: RemoteFailure[]): void {
+  remoteResults.replaceChildren();
+  const fragment = document.createDocumentFragment();
+  for (const failure of failed) {
+    const item = document.createElement("li");
+    const name = document.createElement("span");
+    const reasons = document.createElement("ul");
+    const reason = document.createElement("li");
+    item.className = "issue";
+    name.className = "candidate-name";
+    reasons.className = "violations";
+    name.textContent = failure.name;
+    reason.textContent = failure.reason;
+    reasons.append(reason);
+    item.append(name, reasons);
+    fragment.append(item);
+  }
+  for (const icon of added) {
+    const item = document.createElement("li");
+    const name = document.createElement("span");
+    const note = document.createElement("span");
+    item.className = "replaced";
+    name.className = "candidate-name";
+    note.className = "subtle";
+    name.textContent = icon;
+    note.textContent = "Added";
+    item.append(name, note);
+    fragment.append(item);
+  }
+  if (added.length === 0 && failed.length === 0) {
+    fragment.append(emptyState(`The library has every icon in ${version}.`, true));
+  }
+  remoteResults.append(fragment);
+}
+
 // Actions
 
 refreshButton.addEventListener("click", () => {
@@ -540,6 +645,9 @@ suggestButton.addEventListener("click", () => {
 });
 auditButton.addEventListener("click", () => {
   startAction("Auditing icons…", { type: "audit" });
+});
+checkRemoteButton.addEventListener("click", () => {
+  startAction(`Reading ${sourceLabels[remoteSource]}…`, { type: "check-remote", source: remoteSource });
 });
 syncLibraryButton.addEventListener("click", () => {
   startAction(
@@ -643,6 +751,30 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
       finishAction(
         `${message.created ? "Created" : "Updated"} ${plural(message.count, "icon")}${extras.length ? ` · ${extras.join(" · ")}` : ""}`,
         "success",
+      );
+      return;
+    }
+    case "remote-checked": {
+      renderRemoteMissing(message.source, message.version, message.missing, message.hasLibrary);
+      const missing = message.missing.length;
+      finishAction(
+        missing === 0
+          ? `Up to date with ${message.version}`
+          : `${plural(missing, "new icon")} in ${message.version}`,
+        missing === 0 ? "success" : "idle",
+      );
+      return;
+    }
+    case "remote-added": {
+      renderRemoteAdded(message.version, message.added, message.failed);
+      const added = message.added.length;
+      const failed = message.failed.length;
+      finishAction(
+        [
+          added > 0 ? `Added ${plural(added, "icon")} from ${message.version}` : `Nothing added from ${message.version}`,
+          failed > 0 ? `${numberFormat.format(failed)} skipped` : "",
+        ].filter(Boolean).join(" · "),
+        failed > 0 && added === 0 ? "error" : "success",
       );
       return;
     }

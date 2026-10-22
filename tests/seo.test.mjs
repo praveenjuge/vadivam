@@ -83,7 +83,10 @@ describe("website SEO", () => {
   test("homepage stays lean: path-only tiles, lazy tags, and a size budget", () => {
     const html = readDist("index.html");
     // Tiles carry only path data; presentation attributes live in CSS.
-    expect(html).toContain('href="/icons/activity" data-name="activity" aria-label="View Activity icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path');
+    expect(html).toContain('<a href="/icons/activity" aria-label="activity"><svg viewBox="0 0 24 24"><path');
+    // Tiles render in chunks of 120 so off-screen chunks skip style and layout.
+    const chunks = html.split('<div class="icon-chunk">').length - 1;
+    expect(chunks).toBe(Math.ceil(icons.length / 120));
     expect(Buffer.byteLength(html, "utf8")).toBeLessThan(1024 * 1024);
     // Tags and categories load on demand, so they never weigh down the HTML.
     expect(html).not.toContain("heart rate monitor");
@@ -147,6 +150,15 @@ describe("website SEO", () => {
     const html = readDist("icons", "activity", "index.html");
     expect(html).toContain("vadivam-react-native");
     expect(html).toContain('data-title="React Native"');
+  });
+
+  test("icon pages install each framework's own package and link related icons", () => {
+    const html = readDist("icons", "bell", "index.html");
+    expect(html).toContain('data-install="vadivam-vue">npm install vadivam-vue</code>');
+    expect(html).toContain('data-install="vadivam">npm install vadivam</code>');
+    expect(html).toContain('class="related-tile" href="/icons/bell-ring"');
+    expect(html).toContain('rel="prev"');
+    expect(html).toContain('rel="next"');
   });
 
   test("homepage declares the library as a free SoftwareApplication", () => {

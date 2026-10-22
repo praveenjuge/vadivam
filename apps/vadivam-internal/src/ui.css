@@ -559,6 +559,12 @@ h1 {
   color: var(--muted);
 }
 
+.remote { border-top: 1px solid var(--rule); }
+
+.remote h2 { margin: 0; font-size: inherit; }
+
+.remote .row .secondary { height: 28px; }
+
 /* Status bar */
 
 .status {

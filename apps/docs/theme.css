@@ -1,26 +1,56 @@
-/* The homepage renders one tile per icon. Its utilities live here once instead of
-   being repeated in every tile's class attribute, which keeps the page's HTML
-   under the 2 MB crawl limit as the icon set grows. */
+/* The homepage renders one bare `<a><svg>` tile per icon, grouped into chunks
+   of 120. Tile styles live here once instead of in every tile's attributes,
+   which keeps the page's HTML small as the icon set grows. Every column count
+   below divides 120, so chunks stack into one seamless grid. */
 @layer components {
-  .icon-card {
-    @apply relative grid aspect-square min-w-0 cursor-pointer place-items-center rounded-md text-foreground no-underline hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-[current=true]:bg-accent/10 aria-[current=true]:text-accent aria-[current=true]:ring-1 aria-[current=true]:ring-accent;
-    /* Off-screen tiles skip layout and paint until they scroll into view. */
-    content-visibility: auto;
-    contain-intrinsic-size: auto 2.75rem;
+  .icon-browser {
+    container-type: inline-size;
   }
 
-  /* While a search shows its results grid, the full grid keeps its rendering
-     state instead of being torn down, so clearing the search is cheap. */
+  /* Off-screen chunks skip style, layout, and paint until they scroll near
+     the viewport. Chunking (rather than per-tile containment) keeps the
+     browser tracking ~16 boxes instead of ~1900. The intrinsic size is the
+     chunk's real height: 120 square tiles across the container's width. */
+  .icon-chunk {
+    @apply grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-24;
+    content-visibility: auto;
+    contain-intrinsic-size: auto calc(100cqw * 120 / 25);
+  }
+  @media (width >= 40rem) {
+    .icon-chunk {
+      contain-intrinsic-size: auto calc(100cqw * 120 / 64);
+    }
+  }
+  @media (width >= 48rem) {
+    .icon-chunk {
+      contain-intrinsic-size: auto calc(100cqw * 120 / 100);
+    }
+  }
+  @media (width >= 64rem) {
+    .icon-chunk {
+      contain-intrinsic-size: auto calc(100cqw * 120 / 576);
+    }
+  }
+
+  /* While a search shows its results, the full grid keeps its rendering state
+     instead of being torn down, so clearing the search is cheap. */
   .icon-grid.is-dormant {
     content-visibility: hidden;
     contain-intrinsic-size: none;
     height: 0;
   }
 
+  /* Scroll margins keep a tile stepped to from the drawer clear of the
+     sticky header and toolbar. */
+  .icon-chunk > a {
+    scroll-margin-block: 8.5rem 2rem;
+    @apply relative grid aspect-square min-w-0 cursor-pointer place-items-center rounded-md text-foreground no-underline hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-[current=true]:bg-accent/10 aria-[current=true]:text-accent aria-[current=true]:ring-1 aria-[current=true]:ring-accent;
+  }
+
   /* Tiles carry only path data, so the SVG presentation attributes live here
      once. The drawer's customizer previews stroke width and color through the
-     grid's custom properties. */
-  .icon-card > svg {
+     browser's custom properties. */
+  .icon-chunk > a > svg {
     width: 1.5rem;
     height: 1.5rem;
     fill: none;
@@ -29,6 +59,45 @@
     stroke-linecap: round;
     stroke-linejoin: round;
     pointer-events: none;
+  }
+
+  /* "Show names" labels each tile from its aria-label, so the names cost no
+     extra markup. Tiles get a fixed height and fewer columns. */
+  /* The bottom padding matches the row gap, so chunk boundaries look like
+     ordinary rows and each row reserves exactly 5.25rem. */
+  .icon-browser[data-names] .icon-chunk {
+    @apply grid-cols-3 gap-1 pb-1 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12;
+    contain-intrinsic-size: auto calc(40 * 5.25rem);
+  }
+  @media (width >= 40rem) {
+    .icon-browser[data-names] .icon-chunk {
+      contain-intrinsic-size: auto calc(30 * 5.25rem);
+    }
+  }
+  @media (width >= 48rem) {
+    .icon-browser[data-names] .icon-chunk {
+      contain-intrinsic-size: auto calc(20 * 5.25rem);
+    }
+  }
+  @media (width >= 64rem) {
+    .icon-browser[data-names] .icon-chunk {
+      contain-intrinsic-size: auto calc(15 * 5.25rem);
+    }
+  }
+  @media (width >= 80rem) {
+    .icon-browser[data-names] .icon-chunk {
+      contain-intrinsic-size: auto calc(10 * 5.25rem);
+    }
+  }
+  .icon-browser[data-names] .icon-chunk > a {
+    @apply aspect-auto h-20 content-center gap-2 px-1.5;
+  }
+  .icon-browser[data-names] .icon-chunk > a::after {
+    @apply block w-full truncate text-center font-mono text-[0.65rem] leading-4 text-muted-foreground;
+    content: attr(aria-label);
+  }
+  .icon-browser[data-names] .icon-chunk > a[aria-current="true"]::after {
+    @apply text-accent;
   }
 }
 

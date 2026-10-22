@@ -116,7 +116,7 @@ async function buildStrings(icons, outputDirectory) {
   );
 }
 
-async function buildSprite(icons, outputPath) {
+export async function buildSprite(icons, outputPath) {
   const symbols = icons
     .map(
       (icon) =>

@@ -34,6 +34,7 @@ import {
   type Tab,
   type UiToPluginMessage,
 } from "./protocol";
+import { isRemoteSource, loadRemoteCatalog, type RemoteCatalog, type RemoteSource } from "./remote";
 import { suggestRenameIdeas, toKebabName } from "./rename";
 
 const UI_WIDTH = 420;
@@ -55,6 +56,8 @@ const allowedIconNames = new Set(lucideIconNames);
 
 let settings: PluginSettings = { batchSize: 20, columns: DEFAULT_COLUMNS, tab: "create" };
 let existingSlugs = new Set<string>();
+// The last catalog read from GitHub or npm, reused when its icons are added.
+let remoteCatalog: RemoteCatalog | null = null;
 let candidates: LucideIconRanking[] = [];
 
 figma.showUI(__html__, {
@@ -286,7 +289,10 @@ function tagLibraryComponent(component: ComponentNode, name: string): void {
   ];
 }
 
-function configureLibrarySet(componentSet: ComponentSetNode): void {
+function configureLibrarySet(
+  componentSet: ComponentSetNode,
+  iconCount: number = iconCatalog.length,
+): void {
   componentSet.name = LIBRARY_NAME;
   componentSet.layoutMode = "HORIZONTAL";
   componentSet.layoutWrap = "WRAP";
@@ -318,7 +324,7 @@ function configureLibrarySet(componentSet: ComponentSetNode): void {
   componentSet.setRelaunchData({
     "sync-library": "Update all icons from the canonical icon catalog",
   });
-  componentSet.descriptionMarkdown = `# Vadivam Icons\n\n${iconCatalog.length} open-source outline icons on a 24 px grid with 2 px strokes, round caps, and round joins.\n\n## Use\n\n1. Insert an instance of this component set.\n2. Choose a glyph with the **Icon** variant property.\n3. Override the stroke color as needed.\n\n## Maintain\n\nRun **Vadivam Internal** and choose **Update** after the canonical \`icons/\` folder changes. Existing main components update in place so published library updates propagate to their instances. New icons are added and custom variants are retained.`;
+  componentSet.descriptionMarkdown = `# Vadivam Icons\n\n${iconCount} open-source outline icons on a 24 px grid with 2 px strokes, round caps, and round joins.\n\n## Use\n\n1. Insert an instance of this component set.\n2. Choose a glyph with the **Icon** variant property.\n3. Override the stroke color as needed.\n\n## Maintain\n\nRun **Vadivam Internal** and choose **Update** after the canonical \`icons/\` folder changes. Existing main components update in place so published library updates propagate to their instances. New icons are added and custom variants are retained.`;
   componentSet.documentationLinks = [{ uri: DOCUMENTATION_URL }];
 }
 
@@ -455,6 +461,94 @@ function syncIconLibrary(): void {
     added: result.added,
     retained: result.retained,
   });
+}
+
+function libraryIconNames(componentSet: ComponentSetNode): Set<string> {
+  const names = new Set<string>();
+  for (const child of componentSet.children) {
+    const name = child.type === "COMPONENT" ? taggedLibraryIconName(child) : null;
+    if (name) names.add(name);
+  }
+  return names;
+}
+
+// Tagged icons A–Z first, then custom variants in their current order.
+function sortLibrary(componentSet: ComponentSetNode): number {
+  const tagged = componentSet.children
+    .filter((child): child is ComponentNode => child.type === "COMPONENT" && taggedLibraryIconName(child) !== null)
+    .sort((left, right) =>
+      (taggedLibraryIconName(left) ?? "").localeCompare(taggedLibraryIconName(right) ?? ""),
+    );
+  tagged.forEach((component, index) => componentSet.insertChild(index, component));
+  return tagged.length;
+}
+
+function parseRemoteSource(value: unknown): RemoteSource {
+  if (!isRemoteSource(value)) throw new Error("Choose GitHub or npm");
+  return value;
+}
+
+async function readRemoteCatalog(source: RemoteSource, reuse: boolean): Promise<RemoteCatalog> {
+  if (reuse && remoteCatalog?.source === source) return remoteCatalog;
+  remoteCatalog = await loadRemoteCatalog(source, fetch);
+  return remoteCatalog;
+}
+
+// Lists icons on GitHub main or npm latest that the library doesn't have yet.
+async function checkRemote(sourceValue: unknown): Promise<void> {
+  const source = parseRemoteSource(sourceValue);
+  const remote = await readRemoteCatalog(source, false);
+  const componentSet = librarySetForUpdate();
+  const present = componentSet ? libraryIconNames(componentSet) : new Set<string>();
+  post({
+    type: "remote-checked",
+    source,
+    version: remote.version,
+    total: remote.names.length,
+    missing: remote.names.filter((name) => !present.has(name)),
+    hasLibrary: componentSet !== null,
+  });
+}
+
+// Adds every icon from the checked source that the library lacks, A–Z, as one
+// undo step. Existing components are never touched, so this is safe to run
+// against a published library at any time.
+async function addRemote(sourceValue: unknown): Promise<void> {
+  const source = parseRemoteSource(sourceValue);
+  const remote = await readRemoteCatalog(source, true);
+  // Everything from here to the edits runs after the downloads finish.
+  const target = librarySetForUpdate();
+  if (!target) throw new Error("Create the library first, then add new icons to it");
+  const present = libraryIconNames(target);
+  const missing = remote.names.filter((name) => !present.has(name));
+  const { icons, failed } = await remote.loadSvgs(missing);
+  const componentSet = librarySetForUpdate();
+  if (componentSet !== target || componentSet.removed) throw new Error("The library changed while downloading; try again");
+
+  const added: string[] = [];
+  const components: ComponentNode[] = [];
+  // Read once after the downloads; another plugin run may have added icons meanwhile.
+  const inLibrary = libraryIconNames(componentSet);
+  for (const icon of icons) {
+    if (inLibrary.has(icon.name)) continue;
+    try {
+      const component = createLibraryComponent(icon);
+      componentSet.appendChild(component);
+      components.push(component);
+      inLibrary.add(icon.name);
+      added.push(icon.name);
+    } catch (error) {
+      failed.push({ name: icon.name, reason: messageFromError(error) });
+    }
+  }
+  if (components.length > 0) {
+    configureLibrarySet(componentSet, sortLibrary(componentSet));
+    figma.currentPage.selection = components;
+    figma.viewport.scrollAndZoomIntoView(components);
+    figma.commitUndo();
+  }
+  publishPageStatus();
+  post({ type: "remote-added", source, version: remote.version, added, failed });
 }
 
 function generateFrames(countValue: unknown): void {
@@ -864,6 +958,10 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
       selectIcon(request.id);
     } else if (request.type === "audit") {
       auditIcons();
+    } else if (request.type === "check-remote") {
+      await checkRemote(request.source);
+    } else if (request.type === "add-remote") {
+      await addRemote(request.source);
     } else {
       post({ type: "error", message: "Unsupported plugin action" });
     }
