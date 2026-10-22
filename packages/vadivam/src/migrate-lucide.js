@@ -157,12 +157,13 @@ export function migrateSource(text, { styles = false } = {}) {
       );
     }
     if (renames.size > 0) {
-      // Rewritten import and export statements and quoted strings stay as they
-      // are. A local `export { LucideBell }` keeps its public name
-      // (`VadivamBell as LucideBell`); other identifier uses, but not property
-      // reads, take the new name.
+      // Rewritten import and export statements, quoted strings, and object or
+      // destructuring keys (`{ LucideBell: x }`) stay as they are. A local
+      // `export { LucideBell }` keeps its public name (`VadivamBell as
+      // LucideBell`); other identifier uses, but not property reads, take the
+      // new name.
       output = output.replace(
-        /\bimport\s+(?:type\s+)?(?:[\w$]+\s*,?\s*)?(?:\*\s+as\s+[\w$]+|\{[^}]*\})?\s*from\s*["'][^"']*["']|\bexport\s+(?:type\s+)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})\s*from\s*["'][^"']*["']|\bexport\s*(?:type\s*)?\{([^}]*)\}|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|(?<![\w$.])([A-Za-z_$][\w$]*)/g,
+        /\bimport\s+(?:type\s+)?(?:[\w$]+\s*,?\s*)?(?:\*\s+as\s+[\w$]+|\{[^}]*\})?\s*from\s*["'][^"']*["']|\bexport\s+(?:type\s+)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})\s*from\s*["'][^"']*["']|\bexport\s*(?:type\s*)?\{([^}]*)\}|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|(?<=[{,]\s*)[A-Za-z_$][\w$]*(?=\s*:(?!:))|(?<![\w$.])([A-Za-z_$][\w$]*)/g,
         (match, exportList, identifier) => {
           if (exportList !== undefined) {
             return match.replace(exportList, (list) =>
@@ -186,10 +187,11 @@ export function migrateSource(text, { styles = false } = {}) {
       warnings.push("a test mock factory for a Vadivam package: check that its keys use Vadivam export names");
     }
   }
-  // The core package's createIcons() reads data-vadivam instead of data-lucide.
-  output = output.replace(/\bdata-lucide(?==)/g, () => {
+  // The core package's createIcons() reads data-vadivam instead of data-lucide,
+  // and only knows current names (`home` is `house`).
+  output = output.replace(/\bdata-lucide=(?:(["'])([a-z0-9-]+)\1)?/g, (match, quote, name) => {
     changes += 1;
-    return "data-vadivam";
+    return name ? `data-vadivam=${quote}${lucideAliases[name] ?? name}${quote}` : "data-vadivam=";
   });
   for (const { pattern } of bindingLists) {
     for (const [, names, packageName] of output.matchAll(pattern)) {

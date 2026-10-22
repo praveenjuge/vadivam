@@ -461,21 +461,37 @@ async function swapLucideIcons(): Promise<void> {
   if (matches.length === 0) throw new Error("No Lucide icons in the selection");
   const components = new Map<string, ComponentNode>();
   const swapped: SceneNode[] = [];
+  const failed: string[] = [];
+  let firstError: unknown;
+  // A layer that can't be swapped is skipped and reported; the rest still
+  // swap, and the whole batch is one undo step.
   for (const { node, iconName } of matches) {
     const icon = catalog.get(iconName)!;
-    if (node.type === "COMPONENT") {
-      // A local Lucide component keeps its instances: its glyph is redrawn in place.
-      const weight = uniformStrokeWeight(node);
-      replaceComponentGlyph(node, icon);
-      applyStrokeWeight(node, weight);
-      swapped.push(node);
-    } else {
-      swapped.push(swapLayer(node, icon, components));
+    const name = node.name;
+    try {
+      if (node.type === "COMPONENT") {
+        // A local Lucide component keeps its instances: its glyph is redrawn in place.
+        const weight = uniformStrokeWeight(node);
+        replaceComponentGlyph(node, icon);
+        applyStrokeWeight(node, weight);
+        swapped.push(node);
+      } else {
+        swapped.push(swapLayer(node, icon, components));
+      }
+    } catch (error) {
+      firstError ??= error;
+      failed.push(name);
     }
   }
+  if (swapped.length === 0) throw firstError;
   figma.currentPage.selection = swapped;
   figma.commitUndo();
-  complete(`Swapped ${swapped.length} Lucide icon${swapped.length === 1 ? "" : "s"} for Vadivam`);
+  const summary = `Swapped ${swapped.length} Lucide icon${swapped.length === 1 ? "" : "s"} for Vadivam`;
+  complete(
+    failed.length === 0
+      ? summary
+      : `${summary}; couldn't swap ${failed.join(", ")}: ${messageFromError(firstError)}`,
+  );
 }
 
 async function performChoice(iconName: string): Promise<void> {

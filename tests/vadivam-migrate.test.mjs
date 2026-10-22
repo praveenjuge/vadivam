@@ -149,6 +149,21 @@ describe("migrate-lucide", () => {
     );
   });
 
+  test("leaves object and destructuring keys alone", () => {
+    const source = [
+      `import { LucideBell } from "lucide-react";`,
+      `const { LucideBell: external } = registry;`,
+      `const map = { LucideBell: 1, bell: LucideBell, other: ok ? LucideBell : null };`,
+    ].join("\n");
+    expect(migrateSource(source).text).toBe(
+      [
+        `import { VadivamBell } from "vadivam-react";`,
+        `const { LucideBell: external } = registry;`,
+        `const map = { LucideBell: 1, bell: VadivamBell, other: ok ? VadivamBell : null };`,
+      ].join("\n"),
+    );
+  });
+
   test("warns about mock factories, whose keys it cannot rewrite", () => {
     const { text, warnings } = migrateSource(`vi.mock("lucide-react", () => ({ LucideBell: () => null }));`);
     expect(text).toBe(`vi.mock("vadivam-react", () => ({ LucideBell: () => null }));`);
@@ -163,6 +178,9 @@ describe("migrate-lucide", () => {
   test("moves the core package's data-lucide attributes to data-vadivam", () => {
     const { text } = migrateSource(`import { createIcons, icons } from "lucide";\ncreateIcons({ icons });\n<i data-lucide="menu"></i>`);
     expect(text).toBe(`import { createIcons, icons } from "vadivam";\ncreateIcons({ icons });\n<i data-vadivam="menu"></i>`);
+    expect(migrateSource(`<i data-lucide="home"></i><i data-lucide='alert-circle'></i>`).text).toBe(
+      `<i data-vadivam="house"></i><i data-vadivam='circle-alert'></i>`,
+    );
   });
 
   test("warns about imports Vadivam does not export and hand migrations", () => {
