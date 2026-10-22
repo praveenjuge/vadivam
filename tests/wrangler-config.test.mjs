@@ -8,6 +8,12 @@ import {
   ROOT_CONFIG,
   toRootConfig,
 } from "../scripts/sync-wrangler-config.mjs";
+import {
+  MCP_ROUTE,
+  WORKER_ENTRY,
+  runsWorkerFirst,
+  withWorkerEntry,
+} from "../scripts/docs-worker.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -73,7 +79,8 @@ describe("root wrangler config sync", () => {
     const rootConfig = JSON.parse(readFileSync(path.join(root, ROOT_CONFIG), "utf8"));
     for (const key of GENERATED_ONLY_KEYS) expect(rootConfig).not.toHaveProperty(key);
     expect(rootConfig.name).toBe("vadivam");
-    expect(rootConfig.main).toBe("apps/docs/dist/server/blume-worker.mjs");
+    expect(rootConfig.main).toBe(`apps/docs/dist/server/${WORKER_ENTRY}`);
+    expect(runsWorkerFirst(rootConfig.assets.run_worker_first, MCP_ROUTE)).toBe(true);
     expect(rootConfig.assets.directory).toBe("apps/docs/dist/client");
 
     const generatedPath = path.join(root, GENERATED_CONFIG);
@@ -82,5 +89,48 @@ describe("root wrangler config sync", () => {
     expect(rootConfig).toEqual(built);
     expect(existsSync(path.join(root, rootConfig.main))).toBe(true);
     expect(existsSync(path.join(root, rootConfig.assets.directory))).toBe(true);
+  });
+});
+
+describe("docs Worker entry", () => {
+  const blumeConfig = {
+    main: "blume-worker.mjs",
+    assets: { directory: "../client", run_worker_first: ["/*", "!/_astro/*", "!/*.md"] },
+  };
+
+  test("points Wrangler at the MCP wrapper", () => {
+    const config = withWorkerEntry(blumeConfig);
+    expect(config.main).toBe(WORKER_ENTRY);
+    expect(blumeConfig.main).toBe("blume-worker.mjs");
+  });
+
+  test("keeps /mcp worker-first without a redundant rule", () => {
+    expect(withWorkerEntry(blumeConfig).assets.run_worker_first).toEqual(
+      blumeConfig.assets.run_worker_first,
+    );
+    const narrow = { ...blumeConfig, assets: { run_worker_first: ["/docs/*"] } };
+    expect(withWorkerEntry(narrow).assets.run_worker_first).toEqual([MCP_ROUTE, "/docs/*"]);
+    expect(withWorkerEntry(withWorkerEntry(narrow)).assets.run_worker_first).toEqual([
+      MCP_ROUTE,
+      "/docs/*",
+    ]);
+  });
+
+  test("fails when /mcp is excluded or the entry is unexpected", () => {
+    expect(() =>
+      withWorkerEntry({ ...blumeConfig, assets: { run_worker_first: ["/*", "!/mcp"] } }),
+    ).toThrow(/excluded/);
+    expect(() => withWorkerEntry({ ...blumeConfig, main: "other.mjs" })).toThrow(/Unexpected/);
+  });
+
+  test("matches Wrangler route globs", () => {
+    expect(runsWorkerFirst(["/*", "!/*.md"], "/mcp")).toBe(true);
+    expect(runsWorkerFirst(["/*", "!/*.md"], "/index.md")).toBe(false);
+    expect(runsWorkerFirst(["/docs/*"], "/mcp")).toBe(false);
+    expect(runsWorkerFirst(["/mcp"], "/mcp")).toBe(true);
+    expect(runsWorkerFirst(["/mcp"], "/mcp/extra")).toBe(false);
+    expect(runsWorkerFirst(["/*", "!/r/*"], "/r/activity.json")).toBe(false);
+    expect(runsWorkerFirst(["/*", "!/*.md"], "/md")).toBe(true);
+    expect(runsWorkerFirst(["/*", "!/api/*/pages.json"], "/api/docs/pages.json")).toBe(false);
   });
 });

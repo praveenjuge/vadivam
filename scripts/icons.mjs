@@ -9,12 +9,15 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
+import { inkBounds } from "./icon-geometry.mjs";
 import { optimize } from "svgo";
 import { Resvg } from "@resvg/resvg-js";
 import { buildAngularPackage } from "./generators/angular.mjs";
 import { buildAstroPackage } from "./generators/astro.mjs";
+import { buildMcpPackage } from "./generators/mcp.mjs";
 import { buildPreactPackage } from "./generators/preact.mjs";
 import { buildReactNativePackage } from "./generators/react-native.mjs";
+import { buildShadcnRegistry } from "./generators/shadcn.mjs";
 import { buildSolidPackage } from "./generators/solid.mjs";
 import { buildSveltePackage } from "./generators/svelte.mjs";
 import { buildVuePackage } from "./generators/vue.mjs";
@@ -39,11 +42,18 @@ const solidDist = path.join(root, "packages/vadivam-solid/dist");
 const angularPackage = path.join(root, "packages/vadivam-angular");
 const astroDist = path.join(root, "packages/vadivam-astro/dist");
 const preactDist = path.join(root, "packages/vadivam-preact/dist");
+const mcpPackage = path.join(root, "packages/vadivam-mcp");
+const skillSource = path.join(root, "apps/docs/skills/vadivam-icons/SKILL.md");
+const rawSkills = path.join(root, "packages/vadivam/skills");
 const webIconsDir = path.join(root, "apps/docs/public/icons");
+const shadcnRegistryDir = path.join(root, "apps/docs/public/r");
 const previewPath = path.join(root, "apps/docs/public/preview.png");
 const ogPath = path.join(root, "apps/docs/public/og.png");
 const fontCodepointsPath = path.join(root, "scripts/font-codepoints.json");
-const lucideVersion = "1.60.0";
+const lucideMetadata = JSON.parse(
+  await readFile(path.join(root, "metadata/lucide.json"), "utf8"),
+);
+const lucideVersion = lucideMetadata.lucideVersion;
 const lucideTreeUrl = "https://api.github.com/repos/lucide-icons/lucide/git/trees";
 const iconCountFiles = [
   path.join(root, "README.md"),
@@ -105,6 +115,8 @@ const blockedTags = new Set([
   "use",
 ]);
 const maxClosedSubpathsPerPath = 8;
+const canvasSize = 24;
+const strokeWidth = 2;
 
 async function svgFiles() {
   return (await readdir(iconsDir))
@@ -192,6 +204,31 @@ export function validateLucideIconNames(fileNames, catalog) {
   );
 }
 
+// Tags and categories come from Lucide's metadata for the pinned release, so
+// each icon's search terms match the canonical name it is drawn for.
+export function validateIconMetadata(names, metadata = lucideMetadata) {
+  const known = new Set(names);
+  const missing = names.filter((name) => !metadata.icons[name]);
+  const orphaned = Object.keys(metadata.icons).filter((name) => !known.has(name));
+  assert(missing.length === 0, `metadata/lucide.json has no entry for: ${missing.join(", ")}`);
+  assert(orphaned.length === 0, `metadata/lucide.json lists icons with no SVG: ${orphaned.join(", ")}`);
+  for (const name of names) {
+    const { tags, categories } = metadata.icons[name];
+    assert(
+      Array.isArray(tags) && tags.every((tag) => typeof tag === "string" && tag.length > 0),
+      `metadata/lucide.json: ${name} has invalid tags`,
+    );
+    assert(
+      Array.isArray(categories) && categories.length > 0 && categories.every((id) => metadata.categories[id]),
+      `metadata/lucide.json: ${name} needs at least one known category`,
+    );
+  }
+}
+
+export const iconCategories = Object.entries(lucideMetadata.categories).map(
+  ([id, { title, description }]) => ({ id, title, ...(description && { description }) }),
+);
+
 function parseSvg(svg, file = "inline.svg") {
   const xmlCheck = XMLValidator.validate(svg);
   assert(xmlCheck === true, `${file}: invalid XML ${JSON.stringify(xmlCheck)}`);
@@ -225,6 +262,7 @@ export function validateSvgContent(svg, file = "inline.svg") {
   }
 
   let count = 0;
+  const shapes = [];
   const visit = (current, parentTag) => {
     for (const [tag, value] of Object.entries(current)) {
       if (tag.startsWith("@_")) continue;
@@ -260,12 +298,43 @@ export function validateSvgContent(svg, file = "inline.svg") {
           Object.keys(item).some((attr) => allowed.has(attr)),
           `${file}: <${tag}> has no geometry`,
         );
+        shapes.push([
+          tag,
+          Object.fromEntries(
+            Object.entries(item)
+              .filter(([attr]) => allowed.has(attr))
+              .map(([attr, attrValue]) => [attr.slice(2), attrValue]),
+          ),
+        ]);
       }
     }
   };
 
   visit(node, "svg");
   assert(count > 0, `${file}: no drawable elements found`);
+  assertInkInsideCanvas(shapes, file);
+}
+
+// With round caps and joins the 2px stroke reaches 1px past the centerline, so
+// every point of the geometry must sit at least 1px inside the canvas edge.
+function assertInkInsideCanvas(shapes, file) {
+  let box;
+  try {
+    box = inkBounds(shapes, strokeWidth);
+  } catch (error) {
+    throw new Error(`${file}: ${error.message}`);
+  }
+  const epsilon = 1e-6;
+  const inside =
+    box.minX >= -epsilon &&
+    box.minY >= -epsilon &&
+    box.maxX <= canvasSize + epsilon &&
+    box.maxY <= canvasSize + epsilon;
+  const format = (value) => Number(value.toFixed(3));
+  assert(
+    inside,
+    `${file}: stroke extends outside the 24x24 canvas (ink spans x ${format(box.minX)} to ${format(box.maxX)}, y ${format(box.minY)} to ${format(box.maxY)}); keep geometry at least 1px from every edge`,
+  );
 }
 
 function assertNoFilledSourceArtwork(svg, file) {
@@ -351,10 +420,13 @@ export async function readIcons() {
       componentName: pascalCase(name),
       fileName,
       svgPath: `icons/${fileName}`,
+      tags: lucideMetadata.icons[name]?.tags ?? [],
+      categories: lucideMetadata.icons[name]?.categories ?? [],
       svg,
       iconNode,
     });
   }
+  validateIconMetadata(icons.map((icon) => icon.name));
   return icons;
 }
 
@@ -403,6 +475,7 @@ export async function checkIcons() {
       fileName,
     );
   }
+  validateIconMetadata(files.map((fileName) => fileName.replace(/\.svg$/, "")));
   const lucideCatalog = await fetchPinnedLucideCatalog();
   validateLucideIconNames(files, lucideCatalog);
   await synchronizeIconCounts(files.length, { check: true });
@@ -531,19 +604,19 @@ export default createIcons;
   const manifest = JSON.stringify(icons, null, 2);
   await writeFile(
     path.join(rawDist, "manifest.js"),
-    `export const icons = ${manifest};\nexport const iconNames = icons.map((icon) => icon.name);\nexport const iconsByName = Object.fromEntries(icons.map((icon) => [icon.name, icon]));\nexport default icons;\n`,
+    `export const icons = ${manifest};\nexport const iconNames = icons.map((icon) => icon.name);\nexport const iconsByName = Object.fromEntries(icons.map((icon) => [icon.name, icon]));\nexport const categories = ${JSON.stringify(iconCategories, null, 2)};\nexport default icons;\n`,
   );
   await writeFile(
     path.join(rawDist, "manifest.d.ts"),
-    `import type { IconName, IconNode } from "./types.js";\nexport interface VadivamIconMetadata {\n  name: IconName;\n  componentName: string;\n  fileName: \`${"${IconName}"}.svg\`;\n  svgPath: \`icons/${"${IconName}"}.svg\`;\n  svg: string;\n  iconNode: IconNode;\n}\nexport declare const icons: readonly VadivamIconMetadata[];\nexport declare const iconNames: readonly IconName[];\nexport declare const iconsByName: Record<IconName, VadivamIconMetadata>;\nexport default icons;\n`,
+    `import type { IconName, IconNode } from "./types.js";\nexport interface VadivamIconMetadata {\n  name: IconName;\n  componentName: string;\n  fileName: \`${"${IconName}"}.svg\`;\n  svgPath: \`icons/${"${IconName}"}.svg\`;\n  /** Search terms from Lucide's metadata for this icon. */\n  tags: readonly string[];\n  /** Ids from \`categories\`. */\n  categories: readonly IconCategoryId[];\n  svg: string;\n  iconNode: IconNode;\n}\nexport type IconCategoryId = ${iconCategories.map((category) => JSON.stringify(category.id)).join(" | ")};\nexport interface VadivamIconCategory {\n  id: IconCategoryId;\n  title: string;\n  description?: string;\n}\nexport declare const icons: readonly VadivamIconMetadata[];\nexport declare const iconNames: readonly IconName[];\nexport declare const iconsByName: Record<IconName, VadivamIconMetadata>;\nexport declare const categories: readonly VadivamIconCategory[];\nexport default icons;\n`,
   );
   await writeFile(
     path.join(rawDist, "index.js"),
-    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\nexport { icons as manifest, iconNames, iconsByName } from "./manifest.js";\n${rawNamedExports}\n`,
+    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\nexport { icons as manifest, iconNames, iconsByName, categories } from "./manifest.js";\n${rawNamedExports}\n`,
   );
   await writeFile(
     path.join(rawDist, "index.d.ts"),
-    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\nexport { icons as manifest, iconNames, iconsByName } from "./manifest.js";\n${rawNamedExports}\nexport type { CreateIconsOptions } from "./createIcons.js";\nexport type { VadivamIconMetadata } from "./manifest.js";\nexport type { IconName, IconNode, Icons, SVGElementType, SVGProps } from "./types.js";\n`,
+    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\nexport { icons as manifest, iconNames, iconsByName, categories } from "./manifest.js";\n${rawNamedExports}\nexport type { CreateIconsOptions } from "./createIcons.js";\nexport type { IconCategoryId, VadivamIconCategory, VadivamIconMetadata } from "./manifest.js";\nexport type { IconName, IconNode, Icons, SVGElementType, SVGProps } from "./types.js";\n`,
   );
   await buildStaticAssets(icons, {
     iconsDirectory: iconsDir,
@@ -551,6 +624,10 @@ export default createIcons;
     registryPath: fontCodepointsPath,
     root,
   });
+  // The docs site serves the same skill at /skill.md; ship one copy with the package.
+  await rm(rawSkills, { recursive: true, force: true });
+  await mkdir(path.join(rawSkills, "vadivam-icons"), { recursive: true });
+  await copyFile(skillSource, path.join(rawSkills, "vadivam-icons/SKILL.md"));
 }
 
 async function buildReactPackage(icons) {
@@ -679,6 +756,14 @@ async function buildWebAssets(icons) {
       path.join(webIconsDir, icon.fileName),
     );
   }
+  // The homepage fetches this lazily so tags never weigh down its HTML.
+  await writeFile(
+    path.join(webIconsDir, "index.json"),
+    JSON.stringify({
+      categories: Object.fromEntries(iconCategories.map(({ id, title }) => [id, title])),
+      icons: icons.map((icon) => [icon.name, icon.tags, icon.categories.join(" ")]),
+    }),
+  );
 }
 
 export async function buildPreview() {
@@ -842,7 +927,9 @@ export async function build() {
   await buildAngularPackage(icons, angularPackage, root);
   await buildAstroPackage(icons, astroDist);
   await buildPreactPackage(icons, preactDist);
+  await buildMcpPackage(icons, iconCategories, { packageDirectory: mcpPackage, root });
   await buildWebAssets(icons);
+  await buildShadcnRegistry(icons, shadcnRegistryDir);
   console.log(`Built packages and web assets for ${icons.length} icons.`);
 }
 

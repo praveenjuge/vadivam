@@ -1,3 +1,3 @@
 import { defineMeta } from "blume";
 
-export default defineMeta({ order: 3 });
+export default defineMeta({ order: 5 });

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.praveenjuge/vadivam",
+  "title": "Vadivam Icons",
+  "description": "Search 24px outline icons by name, tag, or category and get SVG or framework code.",
+  "websiteUrl": "https://vadivam.praveenjuge.com/docs/mcp",
+  "repository": {
+    "url": "https://github.com/praveenjuge/vadivam",
+    "source": "github",
+    "subfolder": "packages/vadivam-mcp"
+  },
+  "version": "0.0.55",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "vadivam-mcp",
+      "version": "0.0.55",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://vadivam.praveenjuge.com/mcp"
+    }
+  ]
+}

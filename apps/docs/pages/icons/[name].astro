@@ -2,17 +2,18 @@
 import PageLayout from "blume/components/layout/PageLayout.astro";
 import Breadcrumbs from "blume/components/layout/Breadcrumbs.astro";
 import CodeBlock from "blume/components/content/CodeBlock.astro";
-import CodeGroup from "blume/components/content/CodeGroup.astro";
-import Expandable from "blume/components/content/Expandable.astro";
-import Tab from "blume/components/content/Tab.astro";
-import Tabs from "blume/components/content/Tabs.astro";
 import Card from "blume/components/content/Card.astro";
 import CardGroup from "blume/components/content/CardGroup.astro";
-import Frame from "blume/components/content/Frame.astro";
-import Icon from "blume/components/Icon.astro";
 import data from "blume:data";
-import { icons, iconsByName } from "vadivam/manifest";
+import { categories, icons, iconsByName } from "vadivam/manifest";
 import { iconLastmods } from "../../../../scripts/icon-lastmods.mjs";
+import { frameworks, iconDefaults } from "../../../../scripts/snippets.mjs";
+import pkg from "../../../../package.json";
+import ActionMenus from "../_lib/ActionMenus.astro";
+import Customizer from "../_lib/Customizer.astro";
+import VIcon from "../_lib/VIcon.astro";
+import { buildSnippetTemplates, serializeForScript } from "../_lib/snippet-templates";
+import { snippetHtml } from "../_lib/icon-tools";
 
 export function getStaticPaths() {
   const lastmods = iconLastmods();
@@ -34,19 +35,24 @@ const install = [
   { title: "yarn", lang: "sh", code: "yarn add vadivam-react" },
 ];
 
-const usage = [
-  { title: "React", lang: "tsx", code: `import { ${c} } from "vadivam-react";\n\n<${c} />` },
-  { title: "React Native", lang: "tsx", code: `import { ${c} } from "vadivam-react-native";\n\n<${c} />` },
-  { title: "Vue", lang: "vue", code: `<script setup>\nimport { ${c} } from "vadivam-vue";\n</script>\n\n<template>\n  <${c} />\n</template>` },
-  { title: "Svelte", lang: "svelte", code: `<script>\n  import { ${c} } from "vadivam-svelte";\n</script>\n\n<${c} />` },
-  { title: "Solid", lang: "tsx", code: `import { ${c} } from "vadivam-solid";\n\n<${c} />` },
-  { title: "Preact", lang: "tsx", code: `import { ${c} } from "vadivam-preact";\n\n<${c} />` },
-  { title: "Astro", lang: "astro", code: `---\nimport { ${c} } from "vadivam-astro";\n---\n\n<${c} />` },
-  { title: "Angular", lang: "ts", code: `import { ${c} } from "vadivam-angular";\n\n<svg vadivam${c}></svg>` },
-];
+// Every icon page shares one template set; each page ships only the SVG shell
+// for its own path count.
+const pathCounts = [...new Set(icons.map((item) => (item.svg.match(/ d="/g) ?? []).length))].filter((count) => count > 0);
+const allTemplates = await buildSnippetTemplates(config.codeThemes, pathCounts);
+const pathCount = String((svg.match(/ d="/g) ?? []).length);
+const templates = { ...allTemplates, svg: { [pathCount]: allTemplates.svg[pathCount] ?? "" } };
+const iconRef = { name: icon.name, component: c, svg };
+const snippetTabs = [...frameworks.map(({ id, label }) => ({ id, label })), { id: "svg", label: "SVG" }];
+const categoryTitles = new Map(categories.map((category) => [category.id, category.title]));
 
 const pageTitle = `${c} icon — Vadivam`;
 const pageDescription = `${c} is a free, open-source 24px outline icon from Vadivam. Download the SVG or use it with React and other supported frameworks.`;
+const chipClass =
+  "rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground no-underline transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const tabClass =
+  "flex-none rounded-md border border-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-selected:border-accent aria-selected:bg-accent aria-selected:text-accent-foreground";
+const segmentClass =
+  "rounded-md border border-transparent bg-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-pressed:border-border aria-pressed:bg-background aria-pressed:text-foreground";
 const sectionClass = "mt-10 text-xs font-semibold uppercase tracking-wide text-muted-foreground";
 
 // PageLayout's built-in JSON-LD is disabled so this page can describe the icon,
@@ -76,7 +82,7 @@ const structuredData = site
           about: {
             "@type": "CreativeWork",
             name: `${c} icon`,
-            keywords: `${icon.name}, ${c}, vadivam, svg icon, outline icon, 24px icon`,
+            keywords: [icon.name, c, ...icon.tags, "vadivam", "svg icon", "outline icon", "24px icon"].join(", "),
           },
         },
         {
@@ -121,59 +127,143 @@ const structuredData = site
   <main id="iconDetail" class="mx-auto w-full max-w-4xl px-4 pt-4 pb-16 md:px-6">
     <Breadcrumbs crumbs={[{ label: "← All Icons", route: "/" }, { label: c }]} wide />
 
-    <header class="flex flex-wrap items-center justify-between gap-5">
-      <h1 class="m-0 min-w-0 text-2xl font-semibold tracking-[-0.02em]">{c}</h1>
-      <div class="flex flex-none flex-wrap gap-1.5">
+    <header class="flex flex-wrap items-start justify-between gap-4">
+      <div class="grid min-w-0 gap-2">
+        <h1 class="m-0 min-w-0 text-2xl font-semibold tracking-[-0.02em]">{c}</h1>
+        <div class="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <code class="text-xs">{icon.name}</code>
+          {icon.categories.map((id) => (
+            <a class={chipClass} href={`/?category=${id}`}>{categoryTitles.get(id) ?? id}</a>
+          ))}
+        </div>
+      </div>
+      <div class="flex flex-none flex-wrap items-center gap-1.5">
         <button
-          class="snippet-copy inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          class="inline-flex items-center gap-1.5 rounded-md border border-accent bg-accent px-2.5 py-1.5 text-xs text-accent-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           type="button"
-          data-copy={svg}
-        ><Icon icon="code" size={14} /><span>Copy SVG</span></button>
-        <button
-          class="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          id="downloadSvg"
-          type="button"
-        ><Icon icon="download" size={14} /><span>Download SVG</span></button>
+          data-action="copy-svg"
+        ><VIcon name="code" size={14} /><span>Copy SVG</span></button>
+        <ActionMenus id="pageMenu" />
       </div>
     </header>
+    <p class="m-0 mt-1 min-h-4 text-end text-xs text-muted-foreground" id="pageStatus" aria-live="polite"></p>
 
-    <Frame>
-      <div class="grid place-items-center py-4 text-foreground [&>svg]:size-20" aria-hidden="true" set:html={svg} />
-    </Frame>
+    <section class="mt-3 grid overflow-hidden rounded-blume border border-border md:grid-cols-[minmax(0,1fr)_17rem]" aria-label="Customize">
+      <div class="grid content-start gap-4 p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex gap-0.5 rounded-lg bg-muted p-0.5" role="group" aria-label="Preview background">
+            <button class={segmentClass} type="button" data-background="auto" aria-pressed="true">Auto</button>
+            <button class={segmentClass} type="button" data-background="light" aria-pressed="false">Light</button>
+            <button class={segmentClass} type="button" data-background="dark" aria-pressed="false">Dark</button>
+          </div>
+          <label class="inline-flex items-center gap-2 text-xs text-muted-foreground">
+            <input class="accent-accent" type="checkbox" id="pixelGrid" checked />
+            Pixel grid
+          </label>
+        </div>
+        <div class="grid place-items-center rounded-md py-6 text-foreground" id="previewStage" data-background="auto">
+          <div class="relative size-48">
+            <div class="absolute inset-0" data-icon-preview="192" data-zoom aria-hidden="true" set:html={svg.replace(/ width="24"/, ' width="192"').replace(/ height="24"/, ' height="192"')} />
+            <div class="pixel-grid pointer-events-none absolute inset-0" id="pixelGridOverlay" aria-hidden="true"></div>
+          </div>
+        </div>
+        <div class="flex items-end justify-around gap-2 text-foreground" aria-label="Size previews">
+          {[16, 20, 24, 32, 48].map((size) => (
+            <div class="grid justify-items-center gap-1">
+              <div class="grid place-items-center" data-icon-preview={size} set:html={svg.replace(/ width="24"/, ` width="${size}"`).replace(/ height="24"/, ` height="${size}"`)} />
+              <span class="font-mono text-[0.65rem] text-muted-foreground">{size}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div class="border-t border-border p-4 md:border-t-0 md:border-l">
+        <Customizer />
+      </div>
+    </section>
+
+    {icon.tags.length > 0 && (
+      <>
+        <h2 class={sectionClass}>Tags</h2>
+        <div class="mt-3 flex flex-wrap gap-1.5">
+          {icon.tags.map((tag) => (
+            <a class={chipClass} href={`/?q=${encodeURIComponent(tag)}`}>{tag}</a>
+          ))}
+        </div>
+      </>
+    )}
 
     <h2 class={sectionClass}>Install</h2>
-    <CodeGroup>
+    <div class="mt-3 grid gap-2" data-tabgroup="install">
+      <div class="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Package manager">
+        {
+          install.map((item, index) => (
+            <button
+              class={tabClass}
+              type="button"
+              role="tab"
+              id={`install-tab-${item.title}`}
+              data-tab={item.title}
+              aria-controls={`install-panel-${item.title}`}
+              aria-selected={index === 0 ? "true" : "false"}
+            >
+              {item.title}
+            </button>
+          ))
+        }
+      </div>
       {
-        install.map((item) => (
-          <Tab title={item.title}>
-              <CodeBlock lang={item.lang} code={item.code} icons={false} />
-          </Tab>
+        install.map((item, index) => (
+          <div class="snippet-panel relative min-w-0" id={`install-panel-${item.title}`} role="tabpanel" aria-labelledby={`install-tab-${item.title}`} hidden={index !== 0}>
+            <CodeBlock lang={item.lang} code={item.code} icons={false} />
+          </div>
         ))
       }
-    </CodeGroup>
+    </div>
 
     <h2 class={sectionClass}>Use it in your framework</h2>
-    <Tabs param="framework">
+    <div class="mt-3 grid gap-2" data-tabgroup="framework">
+      <div class="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Framework snippet">
+        {
+          snippetTabs.map((tab, index) => (
+            <button
+              class={tabClass}
+              type="button"
+              role="tab"
+              id={`tab-${tab.id}`}
+              data-tab={tab.id}
+              data-title={tab.label}
+              aria-controls={`panel-${tab.id}`}
+              aria-selected={index === 0 ? "true" : "false"}
+            >
+              {tab.label}
+            </button>
+          ))
+        }
+      </div>
       {
-        usage.map((item) => (
-          <Tab title={item.title}>
-              <CodeBlock lang={item.lang} code={item.code} icons={false} />
-          </Tab>
+        snippetTabs.map((tab, index) => (
+          <div class="snippet-panel relative min-w-0" id={`panel-${tab.id}`} role="tabpanel" aria-labelledby={`tab-${tab.id}`} hidden={index !== 0}>
+            <div class="prose max-w-none" data-snippet={tab.id} set:html={snippetHtml(templates, tab.id, iconRef, iconDefaults)} />
+            <button
+              class="absolute end-1.5 top-1.5 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[0.68rem] transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              type="button"
+              data-action="copy-snippet"
+              data-snippet-tab={tab.id}
+            ><VIcon name="copy" size={12} /><span>Copy</span></button>
+          </div>
         ))
       }
-    </Tabs>
+    </div>
 
-    <h2 class={sectionClass}>Raw SVG & assets</h2>
-    <CodeGroup>
-      <Tab title="Raw SVG">
-        <Expandable title="View raw SVG">
-          <CodeBlock lang="html" code={svg} icons={false} />
-        </Expandable>
-      </Tab>
-      <Tab title="Asset import">
+    <h2 class={sectionClass}>Asset import</h2>
+    <div class="mt-3 grid gap-3">
+      <div class="snippet-panel relative min-w-0">
         <CodeBlock lang="ts" code={`import iconUrl from "vadivam/icons/${icon.fileName}";`} icons={false} />
-      </Tab>
-    </CodeGroup>
+      </div>
+      <div class="snippet-panel relative min-w-0">
+        <CodeBlock lang="html" code={`<img src="https://cdn.jsdelivr.net/npm/vadivam@${pkg.version}/dist/icons/${icon.fileName}" width="24" height="24" alt="" />`} icons={false} />
+      </div>
+    </div>
 
     <h2 class={sectionClass}>Keep exploring</h2>
     <CardGroup cols={3}>
@@ -183,58 +273,188 @@ const structuredData = site
       <Card title="Dynamic icons" href="/docs/dynamic-icons" icon="shuffle">
         Load an icon by name when it comes from data at runtime.
       </Card>
-      <Card title="Contributing" href="/docs/contributing" icon="git-pull-request">
-        Add or refine icons and follow the outline guidelines.
+      <Card title="Design guide" href="/docs/design-guide" icon="pen-tool">
+        The grid, stroke, and shape rules every Vadivam icon follows.
       </Card>
     </CardGroup>
   </main>
 
   {structuredData && <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />}
 
-  <script is:inline define:vars={{ fileName: icon.fileName, svg }}>
-    const detail = document.getElementById("iconDetail");
+  <script is:inline type="application/json" id="snippetTemplates" set:html={serializeForScript(templates)}></script>
+  <script is:inline type="application/json" id="iconData" set:html={serializeForScript({ icon: iconRef, version: pkg.version })}></script>
 
-    document.getElementById("downloadSvg")?.addEventListener("click", () => {
-      const blob = new Blob([svg], { type: "image/svg+xml" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = fileName;
-      link.click();
-      URL.revokeObjectURL(url);
-    });
+  <script>
+    import {
+      bindCustomizer,
+      copyText,
+      createSettingsStore,
+      readTemplates,
+      renderPreviews,
+      runAction,
+      snippetHtml,
+      snippetText,
+      wireMenus,
+      type IconRef,
+    } from "../_lib/icon-tools";
 
-    // Header action + injected code-block buttons share one delegated handler.
-    document.addEventListener("click", (event) => {
-      const target = event.target instanceof Element ? event.target.closest(".snippet-copy") : null;
-      if (!target) return;
-      const value = target.getAttribute("data-copy");
-      if (!value) return;
-      navigator.clipboard.writeText(value).then(() => {
-        const label = target.querySelector("span");
-        if (!label) return;
-        const original = label.textContent;
-        label.textContent = "Copied";
-        window.setTimeout(() => {
-          label.textContent = original;
-        }, 1200);
+    // Astro's client router swaps pages without reloading and runs a bundled
+    // script once, so set each icon page up on every page load.
+    document.addEventListener("astro:page-load", () => {
+      if (!document.querySelector("#iconDetail")) return;
+
+      const detail = document.querySelector<HTMLElement>("#iconDetail")!;
+      const status = document.querySelector<HTMLElement>("#pageStatus")!;
+      const stage = document.querySelector<HTMLElement>("#previewStage")!;
+      const gridToggle = document.querySelector<HTMLInputElement>("#pixelGrid")!;
+      const overlay = document.querySelector<HTMLElement>("#pixelGridOverlay")!;
+      const templates = readTemplates("snippetTemplates");
+      const { icon, version } = JSON.parse(document.getElementById("iconData")?.textContent ?? "{}") as { icon: IconRef; version: string };
+      const store = createSettingsStore({ url: true });
+      const tabKey = "vadivam:tab";
+      const backgroundKey = "vadivam:preview-background";
+      let statusTimer: ReturnType<typeof setTimeout> | undefined;
+
+      const setStatus = (message: string) => {
+        status.textContent = message;
+        clearTimeout(statusTimer);
+        statusTimer = setTimeout(() => (status.textContent = ""), 2000);
+      };
+
+      const remember = (key: string, value: string) => {
+        try {
+          localStorage.setItem(key, value);
+        } catch {
+          // Storage can be unavailable; the choice still applies to this page.
+        }
+      };
+      const recall = (key: string) => {
+        try {
+          return localStorage.getItem(key);
+        } catch {
+          return null;
+        }
+      };
+
+      // Each tab group switches its own panels; the framework choice is remembered.
+      const selectTab = (group: HTMLElement, id: string) => {
+        const buttons = Array.from(group.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+        if (!buttons.some((button) => button.dataset.tab === id)) return;
+        for (const button of buttons) {
+          const active = button.dataset.tab === id;
+          button.setAttribute("aria-selected", String(active));
+          const panel = document.getElementById(button.getAttribute("aria-controls") ?? "");
+          if (panel) panel.hidden = !active;
+        }
+      };
+      for (const group of detail.querySelectorAll<HTMLElement>("[data-tabgroup]")) {
+        group.addEventListener("click", (event) => {
+          const tab = (event.target as HTMLElement).closest<HTMLElement>('[role="tab"]')?.dataset.tab;
+          if (!tab) return;
+          selectTab(group, tab);
+          if (group.dataset.tabgroup === "framework") remember(tabKey, tab);
+        });
+      }
+      const frameworkGroup = detail.querySelector<HTMLElement>('[data-tabgroup="framework"]');
+      if (frameworkGroup) selectTab(frameworkGroup, recall(tabKey) ?? "react");
+
+      const setBackground = (value: string) => {
+        stage.dataset.background = value;
+        for (const button of detail.querySelectorAll<HTMLElement>("[data-background]")) {
+          if (button !== stage) button.setAttribute("aria-pressed", String(button.dataset.background === value));
+        }
+      };
+      detail.querySelector('[aria-label="Preview background"]')?.addEventListener("click", (event) => {
+        const value = (event.target as HTMLElement).closest<HTMLElement>("[data-background]")?.dataset.background;
+        if (!value) return;
+        setBackground(value);
+        remember(backgroundKey, value);
       });
-    });
+      setBackground(recall(backgroundKey) ?? "auto");
 
-    // PageLayout does not ship RootLayout's code-block copy island, so add a
-    // copy button to each rendered CodeBlock (including those inside tabs).
-    for (const pre of detail?.querySelectorAll(".prose pre") ?? []) {
-      const code = pre.querySelector("code");
-      if (!code || pre.querySelector(".snippet-copy")) continue;
-      pre.classList.add("group", "relative");
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className =
-        "snippet-copy absolute end-2 top-2 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[0.68rem] opacity-0 transition-opacity hover:bg-muted focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent group-hover:opacity-100";
-      button.setAttribute("data-copy", code.textContent ?? "");
-      button.setAttribute("aria-label", "Copy code");
-      button.innerHTML = "<span>Copy</span>";
-      pre.appendChild(button);
-    }
+      gridToggle.addEventListener("change", () => {
+        overlay.hidden = !gridToggle.checked;
+        remember("vadivam:pixel-grid", String(gridToggle.checked));
+      });
+      gridToggle.checked = recall("vadivam:pixel-grid") !== "false";
+      overlay.hidden = !gridToggle.checked;
+
+      const customizer = detail.querySelector<HTMLElement>("[data-customizer]");
+      if (customizer) bindCustomizer(customizer, store);
+      store.subscribe((settings) => {
+        renderPreviews(detail, icon, settings);
+        for (const panel of detail.querySelectorAll<HTMLElement>("[data-snippet]")) {
+          panel.innerHTML = snippetHtml(templates, panel.dataset.snippet ?? "react", icon, settings);
+        }
+      });
+
+      detail.addEventListener("click", async (event) => {
+        const target = (event.target as HTMLElement).closest<HTMLElement>("[data-action]");
+        if (!target) return;
+        try {
+          if (target.dataset.action === "copy-snippet") {
+            await copyText(snippetText(target.dataset.snippetTab ?? "react", icon, store.get()));
+            setStatus("Snippet copied.");
+          } else if (target.dataset.action === "copy-code") {
+            await copyText(target.dataset.copy ?? "");
+            setStatus("Copied.");
+          } else {
+            setStatus(await runAction(target.dataset.action ?? "", icon, store.get(), version, stage));
+          }
+        } catch {
+          setStatus("Couldn't complete that action in this browser.");
+        }
+      });
+
+      wireMenus(detail);
+
+      // PageLayout does not ship RootLayout's code-block copy island, so add a
+      // copy button to each Blume CodeBlock (the install and asset tabs).
+      for (const pre of detail.querySelectorAll<HTMLElement>(".prose pre")) {
+        const code = pre.querySelector("code");
+        if (!code || pre.closest("[data-snippet]") || pre.querySelector("[data-action]")) continue;
+        pre.classList.add("group", "relative");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className =
+          "absolute end-2 top-2 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[0.68rem] opacity-0 transition-opacity hover:bg-muted focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent group-hover:opacity-100";
+        button.dataset.action = "copy-code";
+        button.dataset.copy = code.textContent ?? "";
+        button.setAttribute("aria-label", "Copy code");
+        button.innerHTML = "<span>Copy</span>";
+        pre.appendChild(button);
+      }
+    });
   </script>
 </PageLayout>
+
+<style is:global>
+  /* A 24 × 24 grid over the zoomed preview: each cell is one icon pixel. */
+  #iconDetail .pixel-grid {
+    background-image:
+      linear-gradient(to right, color-mix(in oklab, currentColor 14%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, currentColor 14%, transparent) 1px, transparent 1px);
+    background-size: calc(100% / 24) calc(100% / 24);
+    box-shadow: inset -1px -1px 0 color-mix(in oklab, currentColor 14%, transparent);
+  }
+
+  #previewStage[data-background="light"] {
+    background: #fff;
+    color: #111;
+  }
+
+  #previewStage[data-background="dark"] {
+    background: #111;
+    color: #f5f5f5;
+  }
+
+  #iconDetail .snippet-panel pre.astro-code {
+    margin: 0;
+    font-size: 0.78rem;
+  }
+
+  /* Leave room for the copy button so it never covers the first line. */
+  #iconDetail .snippet-panel pre.astro-code > code {
+    padding-inline-end: 4.5rem;
+  }
+</style>

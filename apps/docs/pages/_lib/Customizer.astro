@@ -1,0 +1,65 @@
+---
+// Size, stroke, and color controls bound to the page's settings store with
+// `bindCustomizer`. `compact` drops the presets for the homepage drawer.
+interface Props {
+  compact?: boolean;
+  class?: string;
+}
+
+const { compact = false, class: className } = Astro.props;
+const presets = [16, 20, 24, 32, 48];
+const labelClass = "flex items-center justify-between gap-2 text-xs text-muted-foreground";
+const valueClass = "font-mono text-xs text-foreground tabular-nums";
+const rangeClass = "w-full accent-accent";
+const buttonClass =
+  "rounded-md border border-border bg-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 disabled:hover:bg-transparent aria-pressed:border-accent aria-pressed:text-foreground";
+---
+
+<div class:list={["grid gap-3", className]} data-customizer>
+  <div class="grid gap-1.5">
+    <div class={labelClass}>
+      <span>Size</span>
+      <output class={valueClass} data-output="size">24px</output>
+    </div>
+    <input class={rangeClass} type="range" min="12" max="96" step="1" value="24" aria-label="Size in pixels" data-setting="size" />
+    {
+      !compact && (
+        <div class="flex flex-wrap gap-1" role="group" aria-label="Size presets">
+          {presets.map((preset) => (
+            <button class={buttonClass} type="button" data-size-preset={preset} aria-pressed="false">
+              {preset}
+            </button>
+          ))}
+        </div>
+      )
+    }
+  </div>
+
+  <div class="grid gap-1.5">
+    <div class={labelClass}>
+      <span>Stroke width</span>
+      <output class={valueClass} data-output="strokeWidth">2</output>
+    </div>
+    <input class={rangeClass} type="range" min="0.5" max="3" step="0.25" value="2" aria-label="Stroke width" data-setting="strokeWidth" />
+  </div>
+
+  <div class="flex items-center gap-2">
+    <input
+      class="size-7 flex-none cursor-pointer rounded-md border border-border bg-transparent p-0.5"
+      type="color"
+      value="#000000"
+      aria-label="Color"
+      data-setting="color"
+    />
+    <output class:list={[valueClass, "min-w-0 flex-1 truncate"]} data-output="color">currentColor</output>
+    <button class={buttonClass} type="button" data-reset-color hidden>currentColor</button>
+  </div>
+
+  <div class="flex items-center justify-between gap-2">
+    <label class="inline-flex items-center gap-2 text-xs text-muted-foreground">
+      <input class="accent-accent" type="checkbox" data-setting="absoluteStrokeWidth" />
+      Absolute stroke width
+    </label>
+    <button class={buttonClass} type="button" data-reset-all disabled>Reset</button>
+  </div>
+</div>

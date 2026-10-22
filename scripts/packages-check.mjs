@@ -3,7 +3,7 @@ import { performance } from "node:perf_hooks";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
-import { packageMetadata, publishablePackages } from "./packages.mjs";
+import { mcpServerManifest, packageMetadata, publishablePackages } from "./packages.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rootVersion = JSON.parse(
@@ -131,6 +131,7 @@ async function validatePackage({
       "dist/sprite.svg",
       "dist/strings/activity.d.ts",
       "dist/strings/activity.js",
+      "skills/vadivam-icons/SKILL.md",
     ];
     for (const asset of requiredStaticAssets) {
       if (!files.includes(asset)) {
@@ -149,9 +150,44 @@ async function validatePackage({
       throw new Error(`${name}: npm tarball contains unexpected font asset ${forbiddenStaticAsset}`);
     }
   }
+  if (name === "vadivam-mcp") validateMcpPackage(manifest, files);
   console.log(
     `Validated ${name}@${rootVersion} (${files.length} files) in ${((performance.now() - startedAt) / 1000).toFixed(2)}s.`,
   );
+}
+
+function validateMcpPackage(manifest, files) {
+  const { name } = manifest;
+  if (manifest.bin?.[name] !== "./dist/cli.js") {
+    throw new Error(`${name}: bin must map ${name} to ./dist/cli.js`);
+  }
+  for (const file of ["dist/cli.js", "dist/data.js", "dist/index.js", "dist/index.d.ts", "dist/snippets.js"]) {
+    if (!files.includes(file)) throw new Error(`${name}: npm tarball is missing ${file}`);
+  }
+  for (const [dependency, version] of Object.entries(manifest.dependencies ?? {})) {
+    if (!/^\d+\.\d+\.\d+$/.test(version)) {
+      throw new Error(`${name}: pin ${dependency} to an exact version, not ${version}`);
+    }
+  }
+  const server = JSON.parse(readFileSync(path.join(root, mcpServerManifest), "utf8"));
+  if (server.name !== manifest.mcpName) {
+    throw new Error(`${mcpServerManifest}: name ${server.name} does not match mcpName ${manifest.mcpName}`);
+  }
+  if (!server.description || server.description.length > 100) {
+    throw new Error(`${mcpServerManifest}: description must be 1-100 characters`);
+  }
+  const versions = [server.version, ...server.packages.map((entry) => entry.version)];
+  if (versions.some((version) => version !== rootVersion)) {
+    throw new Error(`${mcpServerManifest}: versions ${versions.join(", ")} do not match ${rootVersion}`);
+  }
+  const npmEntry = server.packages.find((entry) => entry.registryType === "npm");
+  if (npmEntry?.identifier !== name || npmEntry.transport?.type !== "stdio") {
+    throw new Error(`${mcpServerManifest}: missing the stdio npm package entry for ${name}`);
+  }
+  const remote = `${packageMetadata.homepage}/mcp`;
+  if (!server.remotes?.some((entry) => entry.type === "streamable-http" && entry.url === remote)) {
+    throw new Error(`${mcpServerManifest}: missing the streamable-http remote ${remote}`);
+  }
 }
 
 async function validatePackages(concurrency) {

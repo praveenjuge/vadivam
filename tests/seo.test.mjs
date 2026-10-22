@@ -80,6 +80,28 @@ describe("website SEO", () => {
     ]);
   });
 
+  test("homepage stays lean: path-only tiles, lazy tags, and a size budget", () => {
+    const html = readDist("index.html");
+    // Tiles carry only path data; presentation attributes live in CSS.
+    expect(html).toContain('href="/icons/activity" data-name="activity" aria-label="View Activity icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path');
+    expect(Buffer.byteLength(html, "utf8")).toBeLessThan(1024 * 1024);
+    // Tags and categories load on demand, so they never weigh down the HTML.
+    expect(html).not.toContain("heart rate monitor");
+    const index = JSON.parse(readDist("icons", "index.json"));
+    expect(index.icons.map(([name]) => name)).toEqual(icons.map((icon) => icon.name));
+    expect(index.icons.find(([name]) => name === "activity")[1]).toContain("heart rate monitor");
+    // Tags are arrays, so tags containing separators such as "->|" survive.
+    expect(index.icons.find(([name]) => name === "arrow-right-to-line")[1]).toContain("->|");
+    expect(index.categories.arrows).toBe("Arrows");
+  });
+
+  test("icon pages show Lucide tags and categories with filter links", () => {
+    const html = readDist("icons", "activity", "index.html");
+    expect(html).toContain('href="/?q=pulse"');
+    expect(html).toContain('href="/?category=medical"');
+    expect(html).toContain("data-customizer");
+  });
+
   test("homepage and icon pages date their WebPage from icon history", () => {
     const pages = [
       readDist("index.html"),
@@ -276,7 +298,11 @@ describe("website SEO", () => {
     const config = JSON.parse(
       readFileSync(path.join(serverDir, "wrangler.json"), "utf8"),
     );
-    expect(config.main).toBe("blume-worker.mjs");
+    // The Vadivam entry answers /mcp and delegates everything else to Blume's wrapper.
+    expect(config.main).toBe("vadivam-worker.mjs");
+    const entry = readFileSync(path.join(serverDir, config.main), "utf8");
+    expect(entry).toContain('from "./blume-worker.mjs"');
+    expect(entry).toContain('"/mcp"');
     const wrapper = readFileSync(
       path.join(serverDir, "blume-worker.mjs"),
       "utf8",
@@ -290,5 +316,18 @@ describe("website SEO", () => {
     for (const raw of ["!/*.md", "!/*.mdx"]) {
       expect(rules).toContain(raw);
     }
+  });
+
+  test("shadcn registry ships as static JSON with CORS headers", () => {
+    const rules = JSON.parse(
+      readFileSync(path.join(root, "apps/docs/dist/server/wrangler.json"), "utf8"),
+    ).assets?.run_worker_first;
+    expect(rules).toContain("!/r/*");
+    const registry = JSON.parse(readDist("r", "registry.json"));
+    expect(registry.items).toHaveLength(icons.length + 1);
+    expect(JSON.parse(readDist("r", "activity.json")).name).toBe("activity");
+    expect(readDist("_headers")).toMatch(
+      /^\/r\/\*\n {2}Access-Control-Allow-Origin: \*$/m,
+    );
   });
 });

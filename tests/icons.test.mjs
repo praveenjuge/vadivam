@@ -5,9 +5,17 @@ import {
   readIcons,
   shuffleUnique,
   updateIconCountMarkers,
+  validateIconMetadata,
   validateLucideIconNames,
   validateSvgContent,
 } from "../scripts/icons.mjs";
+import {
+  detectCircle,
+  detectRoundedRect,
+  gridClass,
+  inkBounds,
+  parsePath,
+} from "../scripts/icon-geometry.mjs";
 
 const validSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></svg>`;
 
@@ -43,6 +51,27 @@ describe("icon validation", () => {
     ["unsafe markup", validSvg.replace("<path", "<script/><path")]
   ])("rejects %s", (_name, svg) => {
     expect(() => validateSvgContent(svg, "invalid-fixture.svg")).toThrow();
+  });
+
+  test("accepts geometry that keeps the 2px stroke on the canvas", () => {
+    const edgeToEdge = validSvg.replace("M4 12h16", "M1 1h22v22H1z");
+    expect(() => validateSvgContent(edgeToEdge, "edge-fixture.svg")).not.toThrow();
+  });
+
+  test.each([
+    ["a path on the canvas edge", validSvg.replace("M4 12h16", "M0 12h24")],
+    ["a curve bulging past the edge", validSvg.replace("M4 12h16", "M2 12a10 10 0 0 1 20 0q0 12 0 12")],
+    ["a circle touching the edge", validSvg.replace('<path d="M4 12h16"/>', '<circle cx="12" cy="12" r="11.5"/>')],
+    ["a line past the bottom", validSvg.replace('<path d="M4 12h16"/>', '<line x1="12" y1="2" x2="12" y2="23.5"/>')],
+  ])("rejects %s", (_name, svg) => {
+    expect(() => validateSvgContent(svg, "overflow-fixture.svg")).toThrow(
+      "stroke extends outside the 24x24 canvas",
+    );
+  });
+
+  test("rejects path data that does not parse", () => {
+    const broken = validSvg.replace("M4 12h16", "M4 12h");
+    expect(() => validateSvgContent(broken, "broken-path.svg")).toThrow("broken-path.svg:");
   });
 
   test("validates every canonical icon", async () => {
@@ -134,6 +163,18 @@ describe("icon validation", () => {
     );
   });
 
+  test("requires tags and known categories for exactly the shipped icons", () => {
+    const metadata = {
+      categories: { arrows: { title: "Arrows" } },
+      icons: { check: { tags: ["done"], categories: ["arrows"] } },
+    };
+    expect(() => validateIconMetadata(["check"], metadata)).not.toThrow();
+    expect(() => validateIconMetadata(["check", "x"], metadata)).toThrow("has no entry for: x");
+    expect(() => validateIconMetadata([], metadata)).toThrow("lists icons with no SVG: check");
+    metadata.icons.check.categories = ["unknown"];
+    expect(() => validateIconMetadata(["check"], metadata)).toThrow("needs at least one known category");
+  });
+
   test("updates every marked icon count without changing unrelated numbers", () => {
     const content = [
       "<!-- vadivam-icon-count:start -->",
@@ -147,6 +188,35 @@ describe("icon validation", () => {
     expect(() => updateIconCountMarkers("Ships 240 icons.", 260)).toThrow(
       "missing vadivam icon count markers",
     );
+  });
+});
+
+describe("icon geometry", () => {
+  test("parses relative, shorthand, and compact arc commands to absolute segments", () => {
+    const [subpath] = parsePath("m2 2h4v4H2zM10 10c1 0 2 1 2 2s1 2 2 2a2 2 0 011-1");
+    expect(subpath.closed).toBe(true);
+    expect(subpath.segments.map((segment) => segment.to)).toEqual([
+      [6, 2],
+      [6, 6],
+      [2, 6],
+      [2, 2],
+    ]);
+    const curves = parsePath("M10 10c1 0 2 1 2 2s1 2 2 2a2 2 0 011-1")[0].segments;
+    expect(curves.map((segment) => segment.type)).toEqual(["C", "C", "A"]);
+    expect(curves[1].c1).toEqual([12, 13]);
+    expect(curves[2]).toMatchObject({ largeArc: false, sweep: true, to: [15, 13] });
+  });
+
+  test("measures the canvas keylines", () => {
+    const [circle] = parsePath("M2 12a10 10 0 0 1 20 0 10 10 0 0 1-20 0");
+    expect(detectCircle(circle)).toEqual({ cx: 12, cy: 12, r: 10 });
+    const [square] = parsePath("M8 22h8a6 6 0 0 0 6-6V8a6 6 0 0 0-6-6H8a6 6 0 0 0-6 6v8a6 6 0 0 0 6 6");
+    expect(detectRoundedRect(square)).toEqual({ x: 2, y: 2, width: 20, height: 20, r: 6 });
+    expect(inkBounds([["path", { d: "M2 12a10 10 0 0 1 20 0" }]])).toEqual({ minX: 1, minY: 1, maxX: 23, maxY: 13 });
+  });
+
+  test("classifies grid alignment", () => {
+    expect([gridClass(12), gridClass(11.5), gridClass(11.25)]).toEqual(["integer", "half", "other"]);
   });
 });
 

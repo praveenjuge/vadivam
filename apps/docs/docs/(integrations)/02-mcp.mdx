@@ -1,0 +1,125 @@
+---
+title: MCP server
+description: Connect Claude Code, Cursor, VS Code, or any MCP client to Vadivam so AI agents can search icons by tag or category and get SVG or framework code.
+related:
+  - /docs/ai-agents
+  - /docs/installation
+  - /docs/core
+search:
+  keywords: [mcp, model context protocol, claude code, cursor, vs code, agent, ai, vadivam-mcp]
+---
+
+The Vadivam MCP server lets an AI agent find the right icon by name, synonym, or category, then get it as SVG or as an import for your framework. Agents stop guessing icon names that do not exist.
+
+Use the hosted endpoint at `https://vadivam.praveenjuge.com/mcp`, or run the `vadivam-mcp` package locally. Both serve the same tools from the same icon data. The server is read-only and needs no account or API key.
+
+## Tools
+
+| Tool              | Input                                                                    | Returns                                                                                       |
+| ----------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `search_icons`    | `query`, optional `limit` (default 20, max 100), optional `category`     | Ranked icons: exact name, then name prefix or word, then tag, then category                   |
+| `get_icon`        | `name`, optional `format`, `size`, `strokeWidth`, `color`, `absoluteStrokeWidth` | The icon as SVG, JSX, a framework snippet, data URI, base64, CSS mask, CDN URL, sprite, font, Iconify id, or shadcn command |
+| `list_categories` | none                                                                     | Every category with its id, title, description, and icon count                                |
+| `get_usage`       | `framework`                                                              | Install command, import example, dynamic icon API, and docs link                              |
+
+`format` accepts `svg`, `jsx`, `react`, `react-native`, `vue`, `svelte`, `solid`, `preact`, `astro`, `angular`, `data-uri`, `base64`, `css-mask`, `cdn`, `sprite`, `font`, `iconify`, and `shadcn`. An unknown icon name returns an error with the five closest real names. Tool results include text and structured content.
+
+## Connect to the hosted server
+
+<Tabs syncKey="mcp-client">
+  <Tab title="Claude Code">
+
+```sh
+claude mcp add --transport http vadivam https://vadivam.praveenjuge.com/mcp
+```
+
+  </Tab>
+  <Tab title="Cursor">
+
+Add the server to `.cursor/mcp.json` in your project:
+
+```json
+{
+  "mcpServers": {
+    "vadivam": {
+      "url": "https://vadivam.praveenjuge.com/mcp"
+    }
+  }
+}
+```
+
+  </Tab>
+  <Tab title="VS Code">
+
+Add the server to `.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "servers": {
+    "vadivam": {
+      "type": "http",
+      "url": "https://vadivam.praveenjuge.com/mcp"
+    }
+  }
+}
+```
+
+  </Tab>
+</Tabs>
+
+Other clients connect to the same URL over Streamable HTTP.
+
+## Run it locally
+
+The `vadivam-mcp` package runs the server over stdio. It bundles the icon data, so it works offline and matches the release you install. It needs Node.js 20 or newer.
+
+<Tabs syncKey="mcp-client">
+  <Tab title="Claude Code">
+
+```sh
+claude mcp add vadivam -- npx -y vadivam-mcp
+```
+
+  </Tab>
+  <Tab title="Cursor">
+
+```json
+{
+  "mcpServers": {
+    "vadivam": {
+      "command": "npx",
+      "args": ["-y", "vadivam-mcp"]
+    }
+  }
+}
+```
+
+  </Tab>
+  <Tab title="VS Code">
+
+```json
+{
+  "servers": {
+    "vadivam": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "vadivam-mcp"]
+    }
+  }
+}
+```
+
+  </Tab>
+</Tabs>
+
+To host the server yourself, import the factory. `createVadivamServer()` returns a fresh `McpServer`, and `createVadivamHttpHandler()` wraps it in a stateless Streamable HTTP handler for Cloudflare Workers, Deno, or Bun:
+
+```js
+import { createVadivamHttpHandler } from "vadivam-mcp";
+
+export default createVadivamHttpHandler();
+```
+
+## Agent skill
+
+The [agent skill](/skill.md) teaches an agent how to install, import, size, label, and dynamically load Vadivam icons. It works with or without the MCP server. It also ships in the `vadivam` package at `node_modules/vadivam/skills/vadivam-icons/SKILL.md`, and is listed in `https://vadivam.praveenjuge.com/.well-known/agent-skills/index.json`. See [AI agents](/docs/ai-agents).

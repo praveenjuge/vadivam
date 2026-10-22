@@ -1,4 +1,4 @@
-import iconTags from "./data/lucide-icon-tags.json";
+import lucideMetadata from "../../../metadata/lucide.json";
 import lucideRankings from "./data/lucide-icon-rankings.json";
 import {
   getDeprecatedLucideReplacement,
@@ -18,7 +18,9 @@ const iconNameSet = new Set(lucideIconNames);
 const popularityRank = new Map(
   lucideRankings.icons.map((icon) => [icon.name, icon.rank] as const),
 );
-const tagsByIcon = new Map<string, readonly string[]>(Object.entries(iconTags));
+const tagsByIcon = new Map<string, readonly string[]>(
+  Object.entries(lucideMetadata.icons).map(([name, { tags }]) => [name, tags]),
+);
 
 function byPopularity(left: string, right: string): number {
   return (

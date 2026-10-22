@@ -6,6 +6,10 @@
   "preview_urls": false,
   "assets": {
     "html_handling": "drop-trailing-slash",
+    // Blume routes everything through its Worker; the shadcn registry is
+    // static JSON, so keep it on the asset layer where public/_headers
+    // (CORS, caching) applies.
+    "run_worker_first": ["/*", "!/r/*"],
   },
   "routes": [
     {

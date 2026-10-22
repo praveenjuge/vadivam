@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "blume dev",
-    "build": "blume build && bun ../../scripts/sync-wrangler-config.mjs && bun ../../scripts/complete-sitemap.mjs",
+    "build": "blume build && bun ../../scripts/docs-worker.mjs && bun ../../scripts/sync-wrangler-config.mjs && bun ../../scripts/complete-sitemap.mjs",
     "audit": "bun ../../scripts/audit-docs.mjs",
     "check": "blume check",
     "validate": "blume validate",
@@ -13,7 +13,8 @@
   "dependencies": {
     "@astrojs/cloudflare": "14.4.1",
     "blume": "2.2.4",
-    "vadivam": "workspace:*"
+    "vadivam": "workspace:*",
+    "vadivam-mcp": "workspace:*"
   },
   "optionalDependencies": {
     "@bruits/satteri-darwin-arm64": "0.10.5",

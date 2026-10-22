@@ -27,6 +27,9 @@ Vadivam is a free, open-source library of 1899 pixel-perfect 24px outline SVG ic
 | [`vadivam-angular`](https://www.npmjs.com/package/vadivam-angular)           | Angular               |
 | [`vadivam-astro`](https://www.npmjs.com/package/vadivam-astro)               | Astro                 |
 | [`vadivam-preact`](https://www.npmjs.com/package/vadivam-preact)             | Preact                |
+| [`vadivam-mcp`](https://www.npmjs.com/package/vadivam-mcp)                   | MCP server for agents |
+
+Using shadcn/ui? Every icon is also a [registry item](https://vadivam.praveenjuge.com/docs/shadcn): `npx shadcn@latest add https://vadivam.praveenjuge.com/r/arrow-right.json`.
 
 ## Quick start
 
@@ -43,5 +46,7 @@ export function Example() {
 ```
 
 Every package supports tree-shakeable named and per-icon imports. Framework packages also provide dynamic icon APIs for data-driven names.
+
+AI agents can search icons and get code through the MCP server at `https://vadivam.praveenjuge.com/mcp` or `npx -y vadivam-mcp`. See [MCP server](https://vadivam.praveenjuge.com/docs/mcp).
 
 [Contributing](./CONTRIBUTING.md) · [Issues](https://github.com/praveenjuge/vadivam/issues) · [Releases](https://github.com/praveenjuge/vadivam/releases) · [MIT License](./LICENSE)

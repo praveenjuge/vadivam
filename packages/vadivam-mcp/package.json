@@ -1,0 +1,60 @@
+{
+  "name": "vadivam-mcp",
+  "version": "0.0.55",
+  "description": "MCP server for AI agents to search Vadivam's 24px outline icons and get SVG or framework code.",
+  "license": "MIT",
+  "author": "Praveen Juge",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/praveenjuge/vadivam.git",
+    "directory": "packages/vadivam-mcp"
+  },
+  "homepage": "https://vadivam.praveenjuge.com",
+  "bugs": {
+    "url": "https://github.com/praveenjuge/vadivam/issues"
+  },
+  "keywords": [
+    "icons",
+    "svg",
+    "outline-icons",
+    "icon-library",
+    "icon-pack",
+    "24px",
+    "tree-shakeable",
+    "open-source",
+    "vadivam",
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "ai-agents"
+  ],
+  "mcpName": "io.github.praveenjuge/vadivam",
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "vadivam-mcp": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.3.1",
+    "zod": "4.6.7"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

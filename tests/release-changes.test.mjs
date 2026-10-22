@@ -24,6 +24,11 @@ describe("automatic release change detection", () => {
     "scripts/font-codepoints.json",
     "scripts/icons.mjs",
     "scripts/packages.mjs",
+    "scripts/snippets.mjs",
+    "metadata/lucide.json",
+    "packages/vadivam-mcp/src/server.js",
+    "packages/vadivam-mcp/server.json",
+    "apps/docs/skills/vadivam-icons/SKILL.md",
   ])("releases when package-producing input %s changes", (path) => {
     expect(isReleasablePath(path)).toBe(true);
   });

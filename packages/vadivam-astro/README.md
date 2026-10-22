@@ -25,6 +25,6 @@ import { Activity } from "vadivam-astro";
 - Tree-shakeable named and per-icon imports
 - Static components and typed dynamic icon APIs
 
-Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Preact](https://www.npmjs.com/package/vadivam-preact)
+Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
 
 [Issues](https://github.com/praveenjuge/vadivam/issues)

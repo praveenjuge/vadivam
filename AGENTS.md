@@ -9,6 +9,9 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - `packages/vadivam-react` publishes generated React components.
 - `packages/vadivam-react-native` publishes generated React Native components.
 - `packages/vadivam-{vue,svelte,solid,angular,astro,preact}` publish generated native framework components.
+- `apps/docs/public/r/` is the generated shadcn/ui registry (`registry.json` plus one item per icon and the shared `vadivam-icon` base), served at `/r/`.
+- `packages/vadivam-mcp` publishes the MCP server for AI agents (stdio CLI plus `createVadivamServer()`); its hand-written source is `packages/vadivam-mcp/src`, and `dist` adds generated icon data and `scripts/snippets.mjs`. `packages/vadivam-mcp/server.json` is its MCP Registry entry.
+- The docs Worker entry `apps/docs/worker/index.mjs` serves the same MCP server at `/mcp` and delegates every other request to Blume's Worker; `scripts/docs-worker.mjs` bundles it during the docs build.
 - Generated package/web assets come from `bun run icons:build`; do not edit generated output by hand.
 
 ## Setup Commands
@@ -20,7 +23,10 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - Test the raw SVG package: `bun run test:vadivam`
 - Test the React package: `bun run test:vadivam-react`
 - Test the React Native package: `bun run test:vadivam-react-native`
+- Test the MCP server package: `bun run test:vadivam-mcp`
+- Smoke-test an MCP endpoint: `bun run mcp:smoke <url>` (for `/mcp` locally, run `bun run docs:build`, then `bunx wrangler dev`; `bun run dev` does not serve `/mcp`)
 - Run the React render/SSR/exports unit suite only: `bun run test:react:unit`
+- Test the shadcn/ui registry (schemas plus a real `shadcn add` into a scratch project): `bun run test:shadcn`
 - Build and browser-test all framework integration apps: `bun run test:integration`
 - React Native compatibility is verified by the minimal Expo integration app for Android and iOS.
 - Build and deploy the Cloudflare server Worker: `bun run deploy`
@@ -31,8 +37,9 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 - Add or replace SVGs only in the root `icons/` folder.
 - Normalize SVGs in place with `bun run icons:optimize`.
 - Validate without writing files with `bun run icons:check`.
-- Keep every icon `24x24` with `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `stroke-width="2"`, and round caps/joins.
-- Keep icons outline-only. Do not add fills, gradients, masks, scripts, inline styles, external references, or unsafe SVG features.
+- Follow the design guide at `apps/docs/docs/(design)/01-design-guide.mdx` (published at `/docs/design-guide`): 24x24 canvas, 1px padding, one 2px centered `currentColor` stroke with round caps/joins, whole-pixel horizontal and vertical lines, the `circle`/`square` keylines, corner radii, and gaps of at least 1.5px.
+- Keep icons outline-only. Do not add fills, gradients, masks, scripts, inline styles, external references, or unsafe SVG features; `validateSvgContent` in `scripts/icons.mjs` is the source of truth for what is rejected.
+- When a guide rule becomes machine-checkable and every icon passes, enforce it in `scripts/icons.mjs` and update the guide. `bun scripts/icon-geometry.mjs` reports the measurements the guide quotes.
 
 ## Code Style
 
@@ -53,9 +60,9 @@ Vadivam is a Bun monorepo for a 24px outline icon set.
 
 ## Release Instructions
 
-- Keep the root package and every entry in `scripts/packages.mjs` on one synchronized version.
+- Keep the root package, every entry in `scripts/packages.mjs`, and `packages/vadivam-mcp/server.json` on one synchronized version.
 - Release by committing the version bump and pushing a matching tag such as `v0.0.3`.
-- The `Release` workflow tests, packs, publishes, and verifies all nine npm packages through npm Trusted Publishing, then creates the matching GitHub Release.
+- The `Release` workflow tests, packs, publishes, and verifies all ten npm packages through npm Trusted Publishing, publishes `packages/vadivam-mcp/server.json` to the MCP Registry, then creates the matching GitHub Release.
 - Do not publish manually unless the user explicitly asks.
 
 ## Security Notes
