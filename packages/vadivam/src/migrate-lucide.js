@@ -158,13 +158,28 @@ export function migrateSource(text, { styles = false } = {}) {
     }
     if (renames.size > 0) {
       // Rewritten import and export statements and quoted strings stay as they
-      // are; other identifier uses, but not property reads, take the new name.
-      output = output.replace(/\b(?:import|export)\s+(?:type\s+)?(?:[\w$]+\s*,?\s*)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})?\s*from\s*["'][^"']*["']|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|(?<![\w$.])([A-Za-z_$][\w$]*)/g, (match, identifier) => {
-        const renamed = identifier && renames.get(identifier);
-        if (!renamed) return match;
-        changes += 1;
-        return renamed;
-      });
+      // are. A local `export { LucideBell }` keeps its public name
+      // (`VadivamBell as LucideBell`); other identifier uses, but not property
+      // reads, take the new name.
+      output = output.replace(
+        /\b(?:import|export)\s+(?:type\s+)?(?:[\w$]+\s*,?\s*)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})?\s*from\s*["'][^"']*["']|\bexport\s*\{([^}]*)\}|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|(?<![\w$.])([A-Za-z_$][\w$]*)/g,
+        (match, exportList, identifier) => {
+          if (exportList !== undefined) {
+            return match.replace(exportList, (list) =>
+              list.replace(/([\w$]+)(\s+as\s+[\w$]+)?/g, (entry, name, alias) => {
+                const renamed = renames.get(name);
+                if (!renamed) return entry;
+                changes += 1;
+                return `${renamed}${alias ?? ` as ${name}`}`;
+              }),
+            );
+          }
+          const renamed = identifier && renames.get(identifier);
+          if (!renamed) return match;
+          changes += 1;
+          return renamed;
+        },
+      );
     }
     // A mock factory lists the module's export names, which this can't safely rewrite.
     if (/\.mock\s*\(\s*["']vadivam[^"']*["']\s*,/.test(output)) {

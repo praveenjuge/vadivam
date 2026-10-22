@@ -116,6 +116,21 @@ describe("migrate-lucide", () => {
     expect(warnings).toEqual([]);
   });
 
+  test("local export lists keep their public names", () => {
+    const source = [
+      `import { LucideBell, LucideStar } from "lucide-react";`,
+      `export { LucideBell, LucideStar as Star };`,
+      `export default LucideBell;`,
+    ].join("\n");
+    expect(migrateSource(source).text).toBe(
+      [
+        `import { VadivamBell, VadivamStar } from "vadivam-react";`,
+        `export { VadivamBell as LucideBell, VadivamStar as Star };`,
+        `export default VadivamBell;`,
+      ].join("\n"),
+    );
+  });
+
   test("renames uses in files written without semicolons", () => {
     const source = [
       `import { LucideBell } from "lucide-react"`,
