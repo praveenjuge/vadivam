@@ -129,6 +129,9 @@ describe("migrate-lucide", () => {
         `export default VadivamBell;`,
       ].join("\n"),
     );
+    expect(migrateSource(`import type { LucideProps } from "lucide-react";\nexport type { LucideProps };`).text).toBe(
+      `import type { VadivamProps } from "vadivam-react";\nexport type { VadivamProps as LucideProps };`,
+    );
   });
 
   test("renames uses in files written without semicolons", () => {
