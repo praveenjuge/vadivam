@@ -53,6 +53,22 @@ for (const icon of icons) {
   tilePaths.set(icon.name, paths);
 }
 
+// A hand-picked row that opens the page with the set's friendliest shapes.
+// Phones show the first eight. Fail the build if one is renamed or removed.
+const heroIcons = [
+  "cat", "rabbit", "bird", "snail", "coffee", "cupcake", "sprout", "rainbow",
+  "turtle", "balloon", "flower", "ghost", "umbrella", "camera", "rocket", "sparkles",
+];
+for (const name of heroIcons) {
+  if (!tilePaths.has(name)) throw new Error(`Hero icon "${name}" is not in the set`);
+}
+// Search placeholder examples, cycled until the visitor types.
+const searchExamples = ["coffee", "rocket", "cat", "calendar", "heart", "cloud", "settings", "palette"];
+for (const name of searchExamples) {
+  if (!tilePaths.has(name)) throw new Error(`Search example "${name}" is not in the set`);
+}
+const iconCount = icons.length.toLocaleString("en-US");
+
 // 120 divides every column count the grid uses (5, 8, 10, 24, and 3–12 with
 // names shown), so chunks stack without ragged rows. See `.icon-chunk`.
 const chunkSize = 120;
@@ -135,7 +151,7 @@ const structuredData = site
     <header class="grid gap-x-10 gap-y-5 pt-6 pb-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
       <div class="grid min-w-0 gap-2.5">
         <p class="m-0 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[0.7rem] uppercase tracking-[0.08em] text-muted-foreground">
-          <span>{icons.length.toLocaleString("en-US")} icons</span>
+          <span>{iconCount} icons</span>
           <span aria-hidden="true">·</span>
           <span>24px grid</span>
           <span aria-hidden="true">·</span>
@@ -147,8 +163,18 @@ const structuredData = site
           Icons shaped for interfaces.
         </h1>
         <p class="m-0 max-w-[58ch] text-sm text-muted-foreground">
-          A free, open-source icon set made for designers and developers building thoughtful digital experiences.
+          <em class="text-foreground">Vadivam</em> (<span lang="ta">வடிவம்</span>) is Tamil for “shape.” A free, open-source icon
+          set made for designers and developers building thoughtful digital experiences.
         </p>
+        <ul class="hero-icons" aria-label="Featured icons">
+          {heroIcons.map((name, index) => (
+            <li style={`--i: ${index}`}>
+              <a href={`/icons/${name}`} aria-label={name} data-hero-icon={name}>
+                <svg viewBox="0 0 24 24" set:html={tilePaths.get(name)?.replaceAll("<path ", '<path pathLength="1" ')} />
+              </a>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div class="grid min-w-0 gap-2.5 lg:w-[26rem]">
@@ -191,8 +217,9 @@ const structuredData = site
             class="peer w-full rounded-lg border border-border bg-background py-2 ps-10 pe-3 text-base text-foreground outline-none placeholder:text-muted-foreground md:pe-12 [&:not(:placeholder-shown)]:pe-10 focus:border-accent focus-visible:outline-none md:text-sm [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
             id="iconSearch"
             type="search"
-            placeholder="Search icons"
+            placeholder={`Search ${iconCount} icons`}
             aria-label="Search icons"
+            data-examples={searchExamples.join(" ")}
             aria-describedby="resultCount"
             aria-keyshortcuts="/"
             autocomplete="off"
@@ -857,6 +884,48 @@ const structuredData = site
         event.preventDefault();
         openDrawer(card);
       });
+
+      // The hero's featured icons open the same drawer as their grid tiles.
+      explorer.querySelector(".hero-icons")?.addEventListener("click", (event) => {
+        const mouse = event as MouseEvent;
+        if (mouse.metaKey || mouse.ctrlKey || mouse.shiftKey || mouse.altKey || mouse.button !== 0) return;
+        const name = (event.target as HTMLElement).closest<HTMLElement>("[data-hero-icon]")?.dataset.heroIcon;
+        const card = name ? entryByName.get(name)?.card : null;
+        if (!card) return;
+        event.preventDefault();
+        openDrawer(card);
+      });
+
+      // Type example queries into the search placeholder until the visitor
+      // focuses or types. Reduced motion keeps the plain placeholder.
+      const examples = search.dataset.examples?.split(" ") ?? [];
+      if (examples.length && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        const resting = search.placeholder;
+        let timer = 0;
+        const wait = (ms: number, next: () => void) => {
+          timer = window.setTimeout(next, ms);
+        };
+        const type = (exampleIndex: number, length: number) => {
+          if (document.activeElement === search || search.value) {
+            search.placeholder = resting;
+            wait(1500, () => type(exampleIndex, 1));
+            return;
+          }
+          const word = examples[exampleIndex % examples.length];
+          search.placeholder = `Try “${word.slice(0, length)}”`;
+          if (length < word.length) wait(90, () => type(exampleIndex, length + 1));
+          else wait(1800, () => erase(exampleIndex, word.length));
+        };
+        const erase = (exampleIndex: number, length: number) => {
+          const word = examples[exampleIndex % examples.length];
+          search.placeholder = length > 1 ? `Try “${word.slice(0, length - 1)}”` : resting;
+          if (length > 1) wait(40, () => erase(exampleIndex, length - 1));
+          else wait(1600, () => type(exampleIndex + 1, 1));
+        };
+        wait(2400, () => type(0, 1));
+        search.addEventListener("focus", () => (search.placeholder = resting), { signal });
+        signal.addEventListener("abort", () => clearTimeout(timer));
+      }
 
       // The hero's install line and the drawer's tabs share one framework choice.
       const syncInstall = () => {
