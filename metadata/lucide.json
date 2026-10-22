@@ -1,5 +1,5 @@
 {
-  "lucideVersion": "1.60.0",
+  "lucideVersion": "1.61.0",
   "categories": {
     "accessibility": {
       "title": "Accessibility",
@@ -563,6 +563,10 @@
     "circle-chevron-left": {"tags":["back","previous","less than","fewer","menu","<"],"categories":["arrows"]},
     "circle-chevron-right": {"tags":["back","more than","greater","menu",">"],"categories":["arrows"]},
     "circle-chevron-up": {"tags":["caret","ahead","menu","^"],"categories":["arrows"]},
+    "circle-chevrons-down": {"tags":["bottom","descend","page","page down","scroll","jump","south","caret","button","skip","end","last page","latest","feed","chat","pagination","fast","media"],"categories":["arrows","navigation"]},
+    "circle-chevrons-left": {"tags":["previous","rewind","backward","first","beginning","start","west","music","caret","button","pagination","skip","skip-back","seek-back","media-controls","player","playlist","track","chapter","jump","timeline","controls"],"categories":["arrows","navigation","multimedia"]},
+    "circle-chevrons-right": {"tags":["next","forward","skip","fast forward","last","end","east","music","caret","button","pagination","jump","seek","seek forward","player control","chapter","track","timeline","navigation control"],"categories":["arrows","navigation","multimedia"]},
+    "circle-chevrons-up": {"tags":["top","ascend","page","page up","back to top","scroll","jump","north","caret","button","skip","pagination","first page","fast","fast scroll","rewind","jump to start","floating action button","anchor","timeline"],"categories":["arrows","navigation"]},
     "circle-dashed": {"tags":["pending","dot","progress","issue","draft","code","coding","version control"],"categories":["development","shapes"]},
     "circle-dashed-check": {"tags":["approved","pending","changes","revision","reapproval","published","schedule","assignment","request","review","progress","issue","draft","code","coding","version control"],"categories":["shapes","development","notifications"]},
     "circle-divide": {"tags":["calculate","math","÷","/"],"categories":["math"]},

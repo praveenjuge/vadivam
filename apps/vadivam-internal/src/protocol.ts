@@ -1,4 +1,5 @@
 import type { LucideIconRanking } from "./catalog";
+import type { RemoteFailure, RemoteSource } from "./remote";
 
 export interface CatalogSummary {
   existingCount: number;
@@ -102,6 +103,21 @@ export type PluginToUiMessage =
       summary: IconAuditSummary;
       issues: IconAuditIssue[];
     }
+  | {
+      type: "remote-checked";
+      source: RemoteSource;
+      version: string;
+      total: number;
+      missing: string[];
+      hasLibrary: boolean;
+    }
+  | {
+      type: "remote-added";
+      source: RemoteSource;
+      version: string;
+      added: string[];
+      failed: RemoteFailure[];
+    }
   | { type: "error"; message: string };
 
 export type UiToPluginMessage =
@@ -116,4 +132,6 @@ export type UiToPluginMessage =
   | { type: "suggest-names" }
   | { type: "rename"; renames: Array<{ id: string; name: string }> }
   | { type: "select"; id: string }
-  | { type: "audit" };
+  | { type: "audit" }
+  | { type: "check-remote"; source: RemoteSource }
+  | { type: "add-remote"; source: RemoteSource };

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
 import vm from "node:vm";
+import { publishedSprite } from "./published-sprite.mjs";
 
 interface MockFrame {
   type: "FRAME";
@@ -673,10 +674,24 @@ describe("compiled Figma plugin", () => {
         commits.push(commits.length + 1);
       },
     };
+    // npm latest serves the real published sprite for this checkout's icons.
+    const sprite = await publishedSprite();
+    const fetched: string[] = [];
+    const routes: Record<string, string> = {
+      "https://registry.npmjs.org/vadivam/latest": JSON.stringify({ version: "9.9.9" }),
+      "https://cdn.jsdelivr.net/npm/vadivam@9.9.9/dist/sprite.svg": sprite,
+    };
+    const fetch = async (url: string) => {
+      fetched.push(url);
+      const body = routes[url];
+      return { ok: body !== undefined, status: body === undefined ? 404 : 200, text: async () => body ?? "" };
+    };
+
     const bundle = readFileSync(new URL("../dist/code.js", import.meta.url), "utf8");
     vm.runInNewContext(bundle, {
       figma: figmaMock,
       __html__: "<html></html>",
+      fetch,
       Set,
       Map,
       Promise,
@@ -688,6 +703,13 @@ describe("compiled Figma plugin", () => {
       encodeURIComponent,
     });
     await waitFor(() => messages.some((message) => message.type === "catalog"));
+
+    const last = () => messages[messages.length - 1];
+    // Before a library exists, checking still lists what the source has.
+    await ui.onmessage({ type: "check-remote", source: "npm" });
+    expect(last()).toMatchObject({ type: "remote-checked", hasLibrary: false, version: "vadivam@9.9.9" });
+    await ui.onmessage({ type: "add-remote", source: "npm" });
+    expect(last()).toEqual({ type: "error", message: "Create the library first, then add new icons to it" });
 
     await ui.onmessage({ type: "sync-library" });
     const componentSet = page.selection[0];
@@ -740,5 +762,44 @@ describe("compiled Figma plugin", () => {
         retained: 0,
       },
     ]);
+
+    // Icons published after this build: drop two components, then add them
+    // back from npm. Existing components keep their identity.
+    const names = (set: any) =>
+      set.children.map((child: any) => JSON.parse(child.getPluginData("vadivam-internal")).name);
+    const before = names(componentSet);
+    const dropped = ["bell", "circle-chevrons-down"];
+    for (const child of [...componentSet.children]) {
+      if (dropped.includes(JSON.parse(child.getPluginData("vadivam-internal")).name)) child.remove();
+    }
+    await ui.onmessage({ type: "check-remote", source: "npm" });
+    expect(last()).toEqual({
+      type: "remote-checked",
+      source: "npm",
+      version: "vadivam@9.9.9",
+      total: sourceIconCount,
+      missing: dropped,
+      hasLibrary: true,
+    });
+    const fetchesAfterCheck = fetched.length;
+    await ui.onmessage({ type: "add-remote", source: "npm" });
+    expect(last()).toEqual({
+      type: "remote-added",
+      source: "npm",
+      version: "vadivam@9.9.9",
+      added: dropped,
+      failed: [],
+    });
+    // Adding reuses the checked catalog instead of downloading it again.
+    expect(fetched).toHaveLength(fetchesAfterCheck);
+    expect(names(componentSet)).toEqual(before);
+    expect(componentSet.children[0]).toBe(firstComponent);
+    expect(page.selection.map((node: any) => node.name)).toEqual(dropped.map((name) => `Icon=${name}`));
+    expect(commits).toHaveLength(3);
+
+    // A second add finds nothing to do and leaves the undo history alone.
+    await ui.onmessage({ type: "add-remote", source: "npm" });
+    expect(last()).toMatchObject({ type: "remote-added", added: [], failed: [] });
+    expect(commits).toHaveLength(3);
   });
 });

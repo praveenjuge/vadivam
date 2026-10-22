@@ -1905,5 +1905,9 @@
   "zodiac-sagittarius": 59247,
   "zodiac-scorpio": 59248,
   "zodiac-taurus": 59249,
-  "zodiac-virgo": 59250
+  "zodiac-virgo": 59250,
+  "circle-chevrons-down": 59251,
+  "circle-chevrons-left": 59252,
+  "circle-chevrons-right": 59253,
+  "circle-chevrons-up": 59254
 }

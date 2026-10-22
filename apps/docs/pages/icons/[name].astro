@@ -1,9 +1,6 @@
 ---
 import PageLayout from "blume/components/layout/PageLayout.astro";
-import Breadcrumbs from "blume/components/layout/Breadcrumbs.astro";
 import CodeBlock from "blume/components/content/CodeBlock.astro";
-import Card from "blume/components/content/Card.astro";
-import CardGroup from "blume/components/content/CardGroup.astro";
 import data from "blume:data";
 import { categories, icons, iconsByName } from "vadivam/manifest";
 import { iconLastmods } from "../../../../scripts/icon-lastmods.mjs";
@@ -14,6 +11,7 @@ import Customizer from "../_lib/Customizer.astro";
 import VIcon from "../_lib/VIcon.astro";
 import { buildSnippetTemplates, serializeForScript } from "../_lib/snippet-templates";
 import { snippetHtml } from "../_lib/icon-tools";
+import { relatedIcons } from "../_lib/related-icons";
 
 export function getStaticPaths() {
   const lastmods = iconLastmods();
@@ -28,12 +26,8 @@ const { icon, lastModified } = Astro.props;
 const svg = iconsByName[icon.name].svg;
 const c = icon.componentName;
 
-const install = [
-  { title: "npm", lang: "sh", code: "npm install vadivam-react" },
-  { title: "pnpm", lang: "sh", code: "pnpm add vadivam-react" },
-  { title: "bun", lang: "sh", code: "bun add vadivam-react" },
-  { title: "yarn", lang: "sh", code: "yarn add vadivam-react" },
-];
+// The client swaps the manager into each tab's install line; npm is the default.
+const packageManagers = ["npm", "pnpm", "bun", "yarn"];
 
 // Every icon page shares one template set; each page ships only the SVG shell
 // for its own path count.
@@ -42,7 +36,23 @@ const allTemplates = await buildSnippetTemplates(config.codeThemes, pathCounts);
 const pathCount = String((svg.match(/ d="/g) ?? []).length);
 const templates = { ...allTemplates, svg: { [pathCount]: allTemplates.svg[pathCount] ?? "" } };
 const iconRef = { name: icon.name, component: c, svg };
-const snippetTabs = [...frameworks.map(({ id, label }) => ({ id, label })), { id: "svg", label: "SVG" }];
+const snippetTabs = [
+  ...frameworks.map(({ id, label, packageName }) => ({ id, label, packageName })),
+  { id: "svg", label: "SVG", packageName: "vadivam" },
+];
+const index = icons.findIndex((item) => item.name === icon.name);
+const previous = icons[index - 1];
+const next = icons[index + 1];
+const related = relatedIcons(icon.name);
+const primaryCategory = icon.categories[0];
+const updated = lastModified
+  ? new Date(`${lastModified}T00:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })
+  : null;
+const guides = [
+  { title: "Usage & styling", href: "/docs/usage", description: "Size, color, stroke width, and accessibility across every framework." },
+  { title: "Dynamic icons", href: "/docs/dynamic-icons", description: "Load an icon by name when it comes from data at runtime." },
+  { title: "Design guide", href: "/docs/design-guide", description: "The grid, stroke, and shape rules every Vadivam icon follows." },
+];
 const categoryTitles = new Map(categories.map((category) => [category.id, category.title]));
 
 const pageTitle = `${c} icon — Vadivam`;
@@ -53,7 +63,13 @@ const tabClass =
   "flex-none rounded-md border border-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-selected:border-accent aria-selected:bg-accent aria-selected:text-accent-foreground";
 const segmentClass =
   "rounded-md border border-transparent bg-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-pressed:border-border aria-pressed:bg-background aria-pressed:text-foreground";
-const sectionClass = "mt-10 text-xs font-semibold uppercase tracking-wide text-muted-foreground";
+const sectionClass = "m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground";
+const stepClass =
+  "inline-flex items-center gap-1 rounded-md px-2 py-1 font-mono text-xs text-muted-foreground no-underline transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const miniButtonClass =
+  "grid size-5 flex-none place-items-center rounded border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const iconButtonClass =
+  "grid size-7 flex-none place-items-center rounded-md border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
 // PageLayout's built-in JSON-LD is disabled so this page can describe the icon,
 // its image, and its breadcrumb trail in one graph (blume's default would emit
@@ -124,32 +140,48 @@ const structuredData = site
   structuredDataEnabled={false}
   page={{ title: pageTitle, description: pageDescription, route: `/icons/${icon.name}` }}
 >
-  <main id="iconDetail" class="mx-auto w-full max-w-4xl px-4 pt-4 pb-16 md:px-6">
-    <Breadcrumbs crumbs={[{ label: "← All Icons", route: "/" }, { label: c }]} wide />
+  <main id="iconDetail" class="mx-auto w-full max-w-5xl px-4 pt-4 pb-16 md:px-6">
+    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
+      <nav class="flex min-w-0 items-center gap-1.5 text-muted-foreground" aria-label="Breadcrumb">
+        <a class="no-underline hover:text-foreground" href="/">Icons</a>
+        {primaryCategory && (
+          <>
+            <span aria-hidden="true">/</span>
+            <a class="no-underline hover:text-foreground" href={`/?category=${primaryCategory}`}>{categoryTitles.get(primaryCategory) ?? primaryCategory}</a>
+          </>
+        )}
+        <span aria-hidden="true">/</span>
+        <span class="truncate text-foreground" aria-current="page">{c}</span>
+      </nav>
+      <nav class="flex flex-none items-center gap-1" aria-label="Previous and next icon">
+        {previous && (
+          <a class={stepClass} href={`/icons/${previous.name}`} rel="prev" title={previous.name}>
+            <VIcon name="chevron-left" size={14} /><span class="max-w-[9rem] truncate">{previous.name}</span>
+          </a>
+        )}
+        {next && (
+          <a class={stepClass} href={`/icons/${next.name}`} rel="next" title={next.name}>
+            <span class="max-w-[9rem] truncate">{next.name}</span><VIcon name="chevron-right" size={14} />
+          </a>
+        )}
+      </nav>
+    </div>
 
-    <header class="flex flex-wrap items-start justify-between gap-4">
-      <div class="grid min-w-0 gap-2">
-        <h1 class="m-0 min-w-0 text-2xl font-semibold tracking-[-0.02em]">{c}</h1>
-        <div class="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-          <code class="text-xs">{icon.name}</code>
-          {icon.categories.map((id) => (
-            <a class={chipClass} href={`/?category=${id}`}>{categoryTitles.get(id) ?? id}</a>
-          ))}
-        </div>
-      </div>
-      <div class="flex flex-none flex-wrap items-center gap-1.5">
-        <button
-          class="inline-flex items-center gap-1.5 rounded-md border border-accent bg-accent px-2.5 py-1.5 text-xs text-accent-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-          type="button"
-          data-action="copy-svg"
-        ><VIcon name="code" size={14} /><span>Copy SVG</span></button>
-        <ActionMenus id="pageMenu" />
+    <header class="mt-5 grid gap-2">
+      <h1 class="m-0 min-w-0 break-words text-[clamp(1.5rem,3vw,2rem)] font-semibold leading-tight tracking-[-0.02em]">{c}</h1>
+      <div class="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+        <span class="inline-flex items-center gap-0.5 rounded-md bg-muted px-1.5 py-0.5">
+          <code class="bg-transparent text-xs text-foreground">{icon.name}</code>
+          <button class={miniButtonClass} type="button" data-action="copy-name" aria-label="Copy icon name"><VIcon name="copy" size={12} /></button>
+        </span>
+        {icon.categories.map((id) => (
+          <a class={chipClass} href={`/?category=${id}`}>{categoryTitles.get(id) ?? id}</a>
+        ))}
       </div>
     </header>
-    <p class="m-0 mt-1 min-h-4 text-end text-xs text-muted-foreground" id="pageStatus" aria-live="polite"></p>
 
-    <section class="mt-3 grid overflow-hidden rounded-blume border border-border md:grid-cols-[minmax(0,1fr)_17rem]" aria-label="Customize">
-      <div class="grid content-start gap-4 p-4">
+    <section class="mt-6 grid border-y border-border lg:grid-cols-[minmax(0,1fr)_19rem]" aria-label="Preview and export">
+      <div class="grid content-start gap-4 py-4 lg:pe-6">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="flex gap-0.5 rounded-lg bg-muted p-0.5" role="group" aria-label="Preview background">
             <button class={segmentClass} type="button" data-background="auto" aria-pressed="true">Auto</button>
@@ -161,122 +193,157 @@ const structuredData = site
             Pixel grid
           </label>
         </div>
-        <div class="grid place-items-center rounded-md py-6 text-foreground" id="previewStage" data-background="auto">
-          <div class="relative size-48">
-            <div class="absolute inset-0" data-icon-preview="192" data-zoom aria-hidden="true" set:html={svg.replace(/ width="24"/, ' width="192"').replace(/ height="24"/, ' height="192"')} />
+        <div class="grid gap-6 rounded-lg px-4 py-8 text-foreground" id="previewStage" data-background="auto">
+          <div class="relative mx-auto aspect-square w-full max-w-60">
+            <div class="absolute inset-0 [&>svg]:size-full" data-icon-preview="240" data-zoom aria-hidden="true" set:html={svg.replace(/ width="24"/, ' width="240"').replace(/ height="24"/, ' height="240"')} />
             <div class="pixel-grid pointer-events-none absolute inset-0" id="pixelGridOverlay" aria-hidden="true"></div>
           </div>
+          <div class="flex items-end justify-center gap-[clamp(1rem,5vw,2.5rem)]" aria-label="Size previews">
+            {[16, 20, 24, 32, 48].map((size) => (
+              <div class="grid justify-items-center gap-1.5">
+                <div class="grid place-items-center" data-icon-preview={size} set:html={svg.replace(/ width="24"/, ` width="${size}"`).replace(/ height="24"/, ` height="${size}"`)} />
+                <span class="font-mono text-[0.65rem] opacity-60">{size}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div class="flex items-end justify-around gap-2 text-foreground" aria-label="Size previews">
-          {[16, 20, 24, 32, 48].map((size) => (
-            <div class="grid justify-items-center gap-1">
-              <div class="grid place-items-center" data-icon-preview={size} set:html={svg.replace(/ width="24"/, ` width="${size}"`).replace(/ height="24"/, ` height="${size}"`)} />
-              <span class="font-mono text-[0.65rem] text-muted-foreground">{size}</span>
+      </div>
+
+      <div class="grid content-start gap-5 border-t border-border py-4 lg:border-t-0 lg:border-l lg:ps-6">
+        <div class="grid gap-2">
+          <button
+            class="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-accent bg-accent px-3 py-2 text-sm text-accent-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            type="button"
+            data-action="copy-svg"
+          ><VIcon name="code" size={15} /><span>Copy SVG</span></button>
+          <div class="grid grid-cols-2 gap-2 [&>button]:justify-center">
+            <ActionMenus id="pageMenu" />
+          </div>
+          <p class="m-0 min-h-4 text-center text-xs text-muted-foreground" id="pageStatus" aria-live="polite"></p>
+        </div>
+        <Customizer />
+        <dl class="m-0 grid gap-2 border-t border-border pt-4 text-xs">
+          <div class="flex items-baseline justify-between gap-3">
+            <dt class="text-muted-foreground">Component</dt>
+            <dd class="m-0 flex min-w-0 items-center gap-1">
+              <code class="truncate bg-transparent text-xs">{c}</code>
+              <button class={miniButtonClass} type="button" data-action="copy-component" aria-label="Copy component name"><VIcon name="copy" size={12} /></button>
+            </dd>
+          </div>
+          {updated && (
+            <div class="flex items-baseline justify-between gap-3">
+              <dt class="text-muted-foreground">Updated</dt>
+              <dd class="m-0"><time datetime={lastModified}>{updated}</time></dd>
             </div>
+          )}
+          <div class="flex items-baseline justify-between gap-3">
+            <dt class="text-muted-foreground">License</dt>
+            <dd class="m-0"><a class="text-foreground" href="https://github.com/praveenjuge/vadivam/blob/main/LICENSE">MIT</a></dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="mt-10" aria-labelledby="codeHeading">
+      <div class="flex flex-wrap items-end justify-between gap-2">
+        <h2 class={sectionClass} id="codeHeading">Use it</h2>
+        <div class="flex gap-0.5 rounded-lg bg-muted p-0.5" role="group" aria-label="Package manager">
+          {packageManagers.map((manager, index) => (
+            <button class={segmentClass} type="button" data-package-manager={manager} aria-pressed={index === 0 ? "true" : "false"}>{manager}</button>
           ))}
         </div>
       </div>
-      <div class="border-t border-border p-4 md:border-t-0 md:border-l">
-        <Customizer />
+      <div class="mt-3 grid gap-2" data-tabgroup="framework">
+        <div class="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Framework snippet">
+          {
+            snippetTabs.map((tab, index) => (
+              <button
+                class={tabClass}
+                type="button"
+                role="tab"
+                id={`tab-${tab.id}`}
+                data-tab={tab.id}
+                data-title={tab.label}
+                aria-controls={`panel-${tab.id}`}
+                aria-selected={index === 0 ? "true" : "false"}
+              >
+                {tab.label}
+              </button>
+            ))
+          }
+        </div>
+        {
+          snippetTabs.map((tab, index) => (
+            <div class="grid min-w-0 gap-2" id={`panel-${tab.id}`} role="tabpanel" aria-labelledby={`tab-${tab.id}`} hidden={index !== 0}>
+              <div class="flex min-w-0 items-center gap-2 rounded-md border border-border bg-muted/40 ps-3 pe-1">
+                <span class="flex-none font-mono text-xs text-muted-foreground select-none" aria-hidden="true">$</span>
+                <code class="min-w-0 flex-1 truncate bg-transparent py-2 font-mono text-[0.78rem]" data-install={tab.packageName}>npm install {tab.packageName}</code>
+                <button class={iconButtonClass} type="button" data-action="copy-install" data-package={tab.packageName} aria-label={`Copy install command for ${tab.packageName}`}><VIcon name="copy" size={14} /></button>
+              </div>
+              <div class="snippet-panel relative min-w-0">
+                <div class="prose max-w-none" data-snippet={tab.id} set:html={snippetHtml(templates, tab.id, iconRef, iconDefaults)} />
+                <button
+                  class="absolute end-1.5 top-1.5 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[0.68rem] transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  type="button"
+                  data-action="copy-snippet"
+                  data-snippet-tab={tab.id}
+                ><VIcon name="copy" size={12} /><span>Copy</span></button>
+              </div>
+              {tab.id === "svg" && (
+                <>
+                  <div class="snippet-panel relative min-w-0">
+                    <CodeBlock lang="ts" code={`import iconUrl from "vadivam/icons/${icon.fileName}";`} icons={false} />
+                  </div>
+                  <div class="snippet-panel relative min-w-0">
+                    <CodeBlock lang="html" code={`<img src="https://cdn.jsdelivr.net/npm/vadivam@${pkg.version}/dist/icons/${icon.fileName}" width="24" height="24" alt="" />`} icons={false} />
+                  </div>
+                </>
+              )}
+            </div>
+          ))
+        }
       </div>
     </section>
 
     {icon.tags.length > 0 && (
-      <>
-        <h2 class={sectionClass}>Tags</h2>
+      <section class="mt-10" aria-labelledby="tagsHeading">
+        <h2 class={sectionClass} id="tagsHeading">Tags</h2>
         <div class="mt-3 flex flex-wrap gap-1.5">
           {icon.tags.map((tag) => (
             <a class={chipClass} href={`/?q=${encodeURIComponent(tag)}`}>{tag}</a>
           ))}
         </div>
-      </>
+      </section>
     )}
 
-    <h2 class={sectionClass}>Install</h2>
-    <div class="mt-3 grid gap-2" data-tabgroup="install">
-      <div class="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Package manager">
-        {
-          install.map((item, index) => (
-            <button
-              class={tabClass}
-              type="button"
-              role="tab"
-              id={`install-tab-${item.title}`}
-              data-tab={item.title}
-              aria-controls={`install-panel-${item.title}`}
-              aria-selected={index === 0 ? "true" : "false"}
-            >
-              {item.title}
-            </button>
-          ))
-        }
-      </div>
-      {
-        install.map((item, index) => (
-          <div class="snippet-panel relative min-w-0" id={`install-panel-${item.title}`} role="tabpanel" aria-labelledby={`install-tab-${item.title}`} hidden={index !== 0}>
-            <CodeBlock lang={item.lang} code={item.code} icons={false} />
-          </div>
-        ))
-      }
-    </div>
+    {related.length > 0 && (
+      <section class="mt-10" aria-labelledby="relatedHeading">
+        <h2 class={sectionClass} id="relatedHeading">Related icons</h2>
+        <div class="mt-3 grid grid-cols-3 gap-1 sm:grid-cols-6">
+          {related.map((item) => (
+            <a class="related-tile" href={`/icons/${item.name}`}>
+              <span aria-hidden="true" set:html={item.svg} />
+              <span class="related-name">{item.name}</span>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
 
-    <h2 class={sectionClass}>Use it in your framework</h2>
-    <div class="mt-3 grid gap-2" data-tabgroup="framework">
-      <div class="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Framework snippet">
-        {
-          snippetTabs.map((tab, index) => (
-            <button
-              class={tabClass}
-              type="button"
-              role="tab"
-              id={`tab-${tab.id}`}
-              data-tab={tab.id}
-              data-title={tab.label}
-              aria-controls={`panel-${tab.id}`}
-              aria-selected={index === 0 ? "true" : "false"}
-            >
-              {tab.label}
-            </button>
-          ))
-        }
-      </div>
-      {
-        snippetTabs.map((tab, index) => (
-          <div class="snippet-panel relative min-w-0" id={`panel-${tab.id}`} role="tabpanel" aria-labelledby={`tab-${tab.id}`} hidden={index !== 0}>
-            <div class="prose max-w-none" data-snippet={tab.id} set:html={snippetHtml(templates, tab.id, iconRef, iconDefaults)} />
-            <button
-              class="absolute end-1.5 top-1.5 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[0.68rem] transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              type="button"
-              data-action="copy-snippet"
-              data-snippet-tab={tab.id}
-            ><VIcon name="copy" size={12} /><span>Copy</span></button>
-          </div>
-        ))
-      }
-    </div>
-
-    <h2 class={sectionClass}>Asset import</h2>
-    <div class="mt-3 grid gap-3">
-      <div class="snippet-panel relative min-w-0">
-        <CodeBlock lang="ts" code={`import iconUrl from "vadivam/icons/${icon.fileName}";`} icons={false} />
-      </div>
-      <div class="snippet-panel relative min-w-0">
-        <CodeBlock lang="html" code={`<img src="https://cdn.jsdelivr.net/npm/vadivam@${pkg.version}/dist/icons/${icon.fileName}" width="24" height="24" alt="" />`} icons={false} />
-      </div>
-    </div>
-
-    <h2 class={sectionClass}>Keep exploring</h2>
-    <CardGroup cols={3}>
-      <Card title="Usage & styling" href="/docs/usage" icon="palette">
-        Size, color, stroke width, and accessibility across every framework.
-      </Card>
-      <Card title="Dynamic icons" href="/docs/dynamic-icons" icon="shuffle">
-        Load an icon by name when it comes from data at runtime.
-      </Card>
-      <Card title="Design guide" href="/docs/design-guide" icon="pen-tool">
-        The grid, stroke, and shape rules every Vadivam icon follows.
-      </Card>
-    </CardGroup>
+    <section class="mt-10" aria-labelledby="moreHeading">
+      <h2 class={sectionClass} id="moreHeading">Learn more</h2>
+      <ul class="m-0 mt-3 list-none divide-y divide-border border-y border-border p-0">
+        {guides.map((guide) => (
+          <li class="m-0 p-0">
+            <a class="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 py-3 text-sm text-foreground no-underline sm:grid-cols-[9rem_minmax(0,1fr)_auto]" href={guide.href}>
+              <span class="font-medium">{guide.title}</span>
+              <span class="col-start-1 row-start-2 text-muted-foreground sm:col-start-2 sm:row-start-1">{guide.description}</span>
+              <span class="col-start-2 row-span-2 row-start-1 text-muted-foreground transition-transform group-hover:translate-x-0.5 sm:col-start-3 sm:row-span-1"><VIcon name="arrow-right" size={14} /></span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
   </main>
 
   {structuredData && <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />}
@@ -358,6 +425,28 @@ const structuredData = site
       const frameworkGroup = detail.querySelector<HTMLElement>('[data-tabgroup="framework"]');
       if (frameworkGroup) selectTab(frameworkGroup, recall(tabKey) ?? "react");
 
+      // One package manager choice rewrites every tab's install line.
+      const managerKey = "vadivam:package-manager";
+      const installCommand = (manager: string, packageName: string) =>
+        `${manager} ${manager === "npm" ? "install" : "add"} ${packageName}`;
+      const setManager = (manager: string) => {
+        const buttons = Array.from(detail.querySelectorAll<HTMLElement>("[data-package-manager]"));
+        if (!buttons.some((button) => button.dataset.packageManager === manager)) return;
+        for (const button of buttons) button.setAttribute("aria-pressed", String(button.dataset.packageManager === manager));
+        for (const line of detail.querySelectorAll<HTMLElement>("[data-install]")) {
+          line.textContent = installCommand(manager, line.dataset.install ?? "");
+        }
+      };
+      const currentManager = () =>
+        detail.querySelector<HTMLElement>('[data-package-manager][aria-pressed="true"]')?.dataset.packageManager ?? "npm";
+      detail.querySelector('[aria-label="Package manager"]')?.addEventListener("click", (event) => {
+        const manager = (event.target as HTMLElement).closest<HTMLElement>("[data-package-manager]")?.dataset.packageManager;
+        if (!manager) return;
+        setManager(manager);
+        remember(managerKey, manager);
+      });
+      setManager(recall(managerKey) ?? "npm");
+
       const setBackground = (value: string) => {
         stage.dataset.background = value;
         for (const button of detail.querySelectorAll<HTMLElement>("[data-background]")) {
@@ -392,7 +481,10 @@ const structuredData = site
         const target = (event.target as HTMLElement).closest<HTMLElement>("[data-action]");
         if (!target) return;
         try {
-          if (target.dataset.action === "copy-snippet") {
+          if (target.dataset.action === "copy-install") {
+            await copyText(installCommand(currentManager(), target.dataset.package ?? ""));
+            setStatus("Install command copied.");
+          } else if (target.dataset.action === "copy-snippet") {
             await copyText(snippetText(target.dataset.snippetTab ?? "react", icon, store.get()));
             setStatus("Snippet copied.");
           } else if (target.dataset.action === "copy-code") {
@@ -409,7 +501,7 @@ const structuredData = site
       wireMenus(detail);
 
       // PageLayout does not ship RootLayout's code-block copy island, so add a
-      // copy button to each Blume CodeBlock (the install and asset tabs).
+      // copy button to each Blume CodeBlock (the SVG tab's asset imports).
       for (const pre of detail.querySelectorAll<HTMLElement>(".prose pre")) {
         const code = pre.querySelector("code");
         if (!code || pre.closest("[data-snippet]") || pre.querySelector("[data-action]")) continue;
@@ -438,6 +530,10 @@ const structuredData = site
     box-shadow: inset -1px -1px 0 color-mix(in oklab, currentColor 14%, transparent);
   }
 
+  #previewStage[data-background="auto"] {
+    background: color-mix(in oklab, var(--color-muted) 55%, transparent);
+  }
+
   #previewStage[data-background="light"] {
     background: #fff;
     color: #111;
@@ -446,6 +542,41 @@ const structuredData = site
   #previewStage[data-background="dark"] {
     background: #111;
     color: #f5f5f5;
+  }
+
+  #iconDetail .related-tile {
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.875rem 0.375rem 0.625rem;
+    border-radius: 0.375rem;
+    color: var(--color-foreground);
+    text-decoration: none;
+  }
+
+  #iconDetail .related-tile:hover {
+    background: var(--color-muted);
+  }
+
+  #iconDetail .related-tile:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+  }
+
+  #iconDetail .related-tile svg {
+    display: block;
+  }
+
+  #iconDetail .related-name {
+    max-width: 100%;
+    overflow: hidden;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.65rem;
+    line-height: 1rem;
+    color: var(--color-muted-foreground);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   #iconDetail .snippet-panel pre.astro-code {
