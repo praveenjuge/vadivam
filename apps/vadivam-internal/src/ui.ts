@@ -58,7 +58,6 @@ const libraryState = element<HTMLElement>("#library-state");
 const syncLibraryButton = element<HTMLButtonElement>("#sync-library");
 const sourceButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-source]")];
 const checkRemoteButton = element<HTMLButtonElement>("#check-remote");
-const remoteResults = element<HTMLOListElement>("#remote-results");
 const status = element<HTMLElement>("#status");
 const statusText = element<HTMLSpanElement>("#status-text");
 
@@ -530,7 +529,6 @@ function selectSource(source: RemoteSource): void {
   for (const button of sourceButtons) {
     button.setAttribute("aria-pressed", String(button.dataset.source === source));
   }
-  remoteResults.replaceChildren();
 }
 
 for (const button of sourceButtons) {
@@ -544,35 +542,29 @@ function renderRemoteMissing(
   source: RemoteSource,
   version: string,
   missing: string[],
-  hasLibrary: boolean,
 ): void {
-  remoteResults.replaceChildren();
+  replaceResults.replaceChildren();
   if (missing.length === 0) {
-    remoteResults.append(emptyState(`The library has every icon in ${version}.`, true));
+    replaceResults.append(emptyState(`This file has every icon in ${version}.`, true));
     return;
   }
   const fragment = document.createDocumentFragment();
   const bulk = document.createElement("li");
   const label = document.createElement("span");
+  const button = document.createElement("button");
   bulk.className = "bulk";
-  label.textContent = hasLibrary
-    ? `${plural(missing.length, "icon")} in ${version} not in the library`
-    : `Create the library first · ${version} has ${plural(missing.length, "icon")}`;
-  bulk.append(label);
-  if (hasLibrary) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "secondary";
-    button.dataset.action = "";
-    button.textContent = `Add ${numberFormat.format(missing.length)}`;
-    button.addEventListener("click", () => {
-      startAction(`Adding ${plural(missing.length, "icon")} from ${sourceLabels[source]}…`, {
-        type: "add-remote",
-        source,
-      });
+  label.textContent = `${plural(missing.length, "icon")} in ${version} not in this file`;
+  button.type = "button";
+  button.className = "secondary";
+  button.dataset.action = "";
+  button.textContent = `Add ${numberFormat.format(missing.length)}`;
+  button.addEventListener("click", () => {
+    startAction(`Adding ${plural(missing.length, "icon")} from ${sourceLabels[source]}…`, {
+      type: "add-remote",
+      source,
     });
-    bulk.append(button);
-  }
+  });
+  bulk.append(label, button);
   fragment.append(bulk);
   for (const name of missing) {
     const item = document.createElement("li");
@@ -583,12 +575,12 @@ function renderRemoteMissing(
     item.append(text);
     fragment.append(item);
   }
-  remoteResults.append(fragment);
+  replaceResults.append(fragment);
   updateActions();
 }
 
 function renderRemoteAdded(version: string, added: string[], failed: RemoteFailure[]): void {
-  remoteResults.replaceChildren();
+  replaceResults.replaceChildren();
   const fragment = document.createDocumentFragment();
   for (const failure of failed) {
     const item = document.createElement("li");
@@ -617,9 +609,9 @@ function renderRemoteAdded(version: string, added: string[], failed: RemoteFailu
     fragment.append(item);
   }
   if (added.length === 0 && failed.length === 0) {
-    fragment.append(emptyState(`The library has every icon in ${version}.`, true));
+    fragment.append(emptyState(`This file has every icon in ${version}.`, true));
   }
-  remoteResults.append(fragment);
+  replaceResults.append(fragment);
 }
 
 // Actions
@@ -755,7 +747,7 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
       return;
     }
     case "remote-checked": {
-      renderRemoteMissing(message.source, message.version, message.missing, message.hasLibrary);
+      renderRemoteMissing(message.source, message.version, message.missing);
       const missing = message.missing.length;
       finishAction(
         missing === 0

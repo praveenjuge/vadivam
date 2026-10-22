@@ -13,7 +13,7 @@
       "https://registry.npmjs.org",
       "https://cdn.jsdelivr.net"
     ],
-    "reasoning": "Library → New from GitHub or npm reads the latest Vadivam icon list and SVGs from the public repository or the published npm package."
+    "reasoning": "Replace → New from GitHub or npm reads the latest Vadivam icon list and SVGs from the public repository or the published npm package."
   },
   "relaunchButtons": [
     {

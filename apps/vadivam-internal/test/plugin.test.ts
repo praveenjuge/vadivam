@@ -674,24 +674,11 @@ describe("compiled Figma plugin", () => {
         commits.push(commits.length + 1);
       },
     };
-    // npm latest serves the real published sprite for this checkout's icons.
-    const sprite = await publishedSprite();
-    const fetched: string[] = [];
-    const routes: Record<string, string> = {
-      "https://registry.npmjs.org/vadivam/latest": JSON.stringify({ version: "9.9.9" }),
-      "https://cdn.jsdelivr.net/npm/vadivam@9.9.9/dist/sprite.svg": sprite,
-    };
-    const fetch = async (url: string) => {
-      fetched.push(url);
-      const body = routes[url];
-      return { ok: body !== undefined, status: body === undefined ? 404 : 200, text: async () => body ?? "" };
-    };
 
     const bundle = readFileSync(new URL("../dist/code.js", import.meta.url), "utf8");
     vm.runInNewContext(bundle, {
       figma: figmaMock,
       __html__: "<html></html>",
-      fetch,
       Set,
       Map,
       Promise,
@@ -703,13 +690,6 @@ describe("compiled Figma plugin", () => {
       encodeURIComponent,
     });
     await waitFor(() => messages.some((message) => message.type === "catalog"));
-
-    const last = () => messages[messages.length - 1];
-    // Before a library exists, checking still lists what the source has.
-    await ui.onmessage({ type: "check-remote", source: "npm" });
-    expect(last()).toMatchObject({ type: "remote-checked", hasLibrary: false, version: "vadivam@9.9.9" });
-    await ui.onmessage({ type: "add-remote", source: "npm" });
-    expect(last()).toEqual({ type: "error", message: "Create the library first, then add new icons to it" });
 
     await ui.onmessage({ type: "sync-library" });
     const componentSet = page.selection[0];
@@ -762,24 +742,139 @@ describe("compiled Figma plugin", () => {
         retained: 0,
       },
     ]);
+  });
 
-    // Icons published after this build: drop two components, then add them
-    // back from npm. Existing components keep their identity.
-    const names = (set: any) =>
-      set.children.map((child: any) => JSON.parse(child.getPluginData("vadivam-internal")).name);
-    const before = names(componentSet);
-    const dropped = ["bell", "circle-chevrons-down"];
-    for (const child of [...componentSet.children]) {
-      if (dropped.includes(JSON.parse(child.getPluginData("vadivam-internal")).name)) child.remove();
+  test("adds icons from npm that no frame in the file has, leaving existing frames alone", async () => {
+    const messages: Array<Record<string, unknown>> = [];
+    const commits: number[] = [];
+    const page: any = {
+      name: "Icons",
+      children: [],
+      selection: [],
+      findAll(predicate: (node: any) => boolean) {
+        return page.children.filter(predicate);
+      },
+    };
+
+    function detach(node: any): void {
+      const index = node.parent?.children.indexOf(node) ?? -1;
+      if (index >= 0) node.parent.children.splice(index, 1);
     }
+
+    function vector(name: string, parent: any): any {
+      const node: any = { type: "VECTOR", name, parent, remove: () => detach(node) };
+      parent.children.push(node);
+      return node;
+    }
+
+    function container(type: string, id: string, name: string, parent = page): any {
+      const node: any = {
+        type,
+        id,
+        name,
+        width: 24,
+        height: 24,
+        x: 40,
+        y: 72,
+        children: [],
+        parent,
+        appendChild(child: any) {
+          detach(child);
+          child.parent = node;
+          node.children.push(child);
+        },
+        remove() {
+          detach(node);
+          node.removed = true;
+        },
+      };
+      parent.children.push(node);
+      return node;
+    }
+
+    // Frames match by any spelling of their name, deprecated aliases included,
+    // and icons on other pages count too.
+    const otherPage: any = { name: "Drafts", children: [] };
+    container("FRAME", "2:1", "trash", otherPage);
+    const arrow = container("FRAME", "1:1", "arrow-right");
+    const check = container("FRAME", "1:2", "Check");
+    const alert = container("FRAME", "1:3", "alert-circle");
+    for (const frame of [arrow, check, alert]) vector("Edited", frame);
+
+    const ui: any = {
+      postMessage(message: Record<string, unknown>) {
+        messages.push(message);
+      },
+    };
+    const figmaMock: any = {
+      showUI() {},
+      on() {},
+      clientStorage: clientStorage(),
+      ui,
+      root: { children: [page, otherPage] },
+      currentPage: page,
+      viewport: { center: { x: 0, y: 0 }, scrollAndZoomIntoView() {} },
+      async loadAllPagesAsync() {},
+      commitUndo() {
+        commits.push(commits.length + 1);
+      },
+      createFrame() {
+        const frame = container("FRAME", `new:${page.children.length}`, "Frame");
+        frame.resize = (width: number, height: number) => {
+          frame.width = width;
+          frame.height = height;
+        };
+        return frame;
+      },
+      createNodeFromSvg() {
+        const frame = container("FRAME", `svg:${page.children.length}`, "SVG");
+        vector("New", frame);
+        return frame;
+      },
+    };
+
+    // npm latest serves the real published symbols for a handful of icons.
+    const published = ["arrow-right", "bell", "check", "circle-alert", "circle-chevrons-down", "trash"];
+    const symbols = (await publishedSprite()).match(/<symbol id="[^"]+" viewBox="0 0 24 24">[\s\S]*?<\/symbol>/g) ?? [];
+    const sprite = `<svg xmlns="http://www.w3.org/2000/svg">${symbols
+      .filter((symbol) => published.some((name) => symbol.includes(`id="vadivam-${name}"`)))
+      .join("")}</svg>`;
+    const fetched: string[] = [];
+    const routes: Record<string, string> = {
+      "https://registry.npmjs.org/vadivam/latest": JSON.stringify({ version: "9.9.9" }),
+      "https://cdn.jsdelivr.net/npm/vadivam@9.9.9/dist/sprite.svg": sprite,
+    };
+    const fetch = async (url: string) => {
+      fetched.push(url);
+      const body = routes[url];
+      return { ok: body !== undefined, status: body === undefined ? 404 : 200, text: async () => body ?? "" };
+    };
+
+    const bundle = readFileSync(new URL("../dist/code.js", import.meta.url), "utf8");
+    vm.runInNewContext(bundle, {
+      figma: figmaMock,
+      __html__: "<html></html>",
+      fetch,
+      Set,
+      Map,
+      Promise,
+      JSON,
+      Math,
+      Number,
+      Error,
+      Intl,
+      encodeURIComponent,
+    });
+    await waitFor(() => messages.some((message) => message.type === "catalog"));
+
+    const last = () => messages[messages.length - 1];
     await ui.onmessage({ type: "check-remote", source: "npm" });
     expect(last()).toEqual({
       type: "remote-checked",
       source: "npm",
       version: "vadivam@9.9.9",
-      total: sourceIconCount,
-      missing: dropped,
-      hasLibrary: true,
+      total: published.length,
+      missing: ["bell", "circle-chevrons-down"],
     });
     const fetchesAfterCheck = fetched.length;
     await ui.onmessage({ type: "add-remote", source: "npm" });
@@ -787,19 +882,29 @@ describe("compiled Figma plugin", () => {
       type: "remote-added",
       source: "npm",
       version: "vadivam@9.9.9",
-      added: dropped,
+      added: ["bell", "circle-chevrons-down"],
       failed: [],
     });
     // Adding reuses the checked catalog instead of downloading it again.
     expect(fetched).toHaveLength(fetchesAfterCheck);
-    expect(names(componentSet)).toEqual(before);
-    expect(componentSet.children[0]).toBe(firstComponent);
-    expect(page.selection.map((node: any) => node.name)).toEqual(dropped.map((name) => `Icon=${name}`));
-    expect(commits).toHaveLength(3);
+
+    // Existing frames keep their artwork; new frames get the downloaded artwork
+    // and land in A–Z order on the grid.
+    for (const frame of [arrow, check, alert]) {
+      expect(frame.children.map((child: any) => child.name)).toEqual(["Edited"]);
+    }
+    const bell = page.children.find((node: any) => node.name === "bell");
+    const chevrons = page.children.find((node: any) => node.name === "circle-chevrons-down");
+    expect(bell.children.map((child: any) => child.name)).toEqual(["New"]);
+    expect(page.children).toEqual([arrow, check, alert, bell, chevrons]);
+    const order = [alert, arrow, bell, check, chevrons].map((node: any) => [node.x, node.y]);
+    expect(order).toEqual([[40, 72], [80, 72], [120, 72], [160, 72], [200, 72]]);
+    expect(page.selection).toEqual([bell, chevrons]);
+    expect(commits).toHaveLength(1);
 
     // A second add finds nothing to do and leaves the undo history alone.
     await ui.onmessage({ type: "add-remote", source: "npm" });
     expect(last()).toMatchObject({ type: "remote-added", added: [], failed: [] });
-    expect(commits).toHaveLength(3);
+    expect(commits).toHaveLength(1);
   });
 });

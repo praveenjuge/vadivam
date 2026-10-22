@@ -109,7 +109,6 @@ export type PluginToUiMessage =
       version: string;
       total: number;
       missing: string[];
-      hasLibrary: boolean;
     }
   | {
       type: "remote-added";

@@ -186,6 +186,23 @@ function isOwnedByAnother(
   return (owners.get(name) ?? []).some((owner) => owner !== node);
 }
 
+// Every name a top-level 24×24 icon frame in the file answers to, so "ArrowRight",
+// "arrow_right", and a deprecated alias all count as that icon. Call after
+// figma.loadAllPagesAsync().
+function fileIconNames(): Set<string> {
+  const names = new Set<string>();
+  for (const page of figma.root.children) {
+    for (const node of page.children) {
+      if (!isIconContainer(node) || !isIconSized(node)) continue;
+      const key = toKebabName(node.name);
+      names.add(key);
+      const lucideName = resolveLucideIconName(key) ?? getDeprecatedLucideReplacement(key);
+      if (lucideName) names.add(lucideName);
+    }
+  }
+  return names;
+}
+
 async function scanDocument(): Promise<Set<string>> {
   await figma.loadAllPagesAsync();
   return new Set(iconNameOwners().keys());
@@ -289,10 +306,7 @@ function tagLibraryComponent(component: ComponentNode, name: string): void {
   ];
 }
 
-function configureLibrarySet(
-  componentSet: ComponentSetNode,
-  iconCount: number = iconCatalog.length,
-): void {
+function configureLibrarySet(componentSet: ComponentSetNode): void {
   componentSet.name = LIBRARY_NAME;
   componentSet.layoutMode = "HORIZONTAL";
   componentSet.layoutWrap = "WRAP";
@@ -324,7 +338,7 @@ function configureLibrarySet(
   componentSet.setRelaunchData({
     "sync-library": "Update all icons from the canonical icon catalog",
   });
-  componentSet.descriptionMarkdown = `# Vadivam Icons\n\n${iconCount} open-source outline icons on a 24 px grid with 2 px strokes, round caps, and round joins.\n\n## Use\n\n1. Insert an instance of this component set.\n2. Choose a glyph with the **Icon** variant property.\n3. Override the stroke color as needed.\n\n## Maintain\n\nRun **Vadivam Internal** and choose **Update** after the canonical \`icons/\` folder changes. Existing main components update in place so published library updates propagate to their instances. New icons are added and custom variants are retained.`;
+  componentSet.descriptionMarkdown = `# Vadivam Icons\n\n${iconCatalog.length} open-source outline icons on a 24 px grid with 2 px strokes, round caps, and round joins.\n\n## Use\n\n1. Insert an instance of this component set.\n2. Choose a glyph with the **Icon** variant property.\n3. Override the stroke color as needed.\n\n## Maintain\n\nRun **Vadivam Internal** and choose **Update** after the canonical \`icons/\` folder changes. Existing main components update in place so published library updates propagate to their instances. New icons are added and custom variants are retained.`;
   componentSet.documentationLinks = [{ uri: DOCUMENTATION_URL }];
 }
 
@@ -463,26 +477,6 @@ function syncIconLibrary(): void {
   });
 }
 
-function libraryIconNames(componentSet: ComponentSetNode): Set<string> {
-  const names = new Set<string>();
-  for (const child of componentSet.children) {
-    const name = child.type === "COMPONENT" ? taggedLibraryIconName(child) : null;
-    if (name) names.add(name);
-  }
-  return names;
-}
-
-// Tagged icons A–Z first, then custom variants in their current order.
-function sortLibrary(componentSet: ComponentSetNode): number {
-  const tagged = componentSet.children
-    .filter((child): child is ComponentNode => child.type === "COMPONENT" && taggedLibraryIconName(child) !== null)
-    .sort((left, right) =>
-      (taggedLibraryIconName(left) ?? "").localeCompare(taggedLibraryIconName(right) ?? ""),
-    );
-  tagged.forEach((component, index) => componentSet.insertChild(index, component));
-  return tagged.length;
-}
-
 function parseRemoteSource(value: unknown): RemoteSource {
   if (!isRemoteSource(value)) throw new Error("Choose GitHub or npm");
   return value;
@@ -494,57 +488,54 @@ async function readRemoteCatalog(source: RemoteSource, reuse: boolean): Promise<
   return remoteCatalog;
 }
 
-// Lists icons on GitHub main or npm latest that the library doesn't have yet.
+async function missingRemoteIcons(remote: RemoteCatalog): Promise<string[]> {
+  await figma.loadAllPagesAsync();
+  const present = fileIconNames();
+  return remote.names.filter((name) => !present.has(name));
+}
+
+// Lists icons on GitHub main or npm latest that no icon frame in this file has yet.
 async function checkRemote(sourceValue: unknown): Promise<void> {
   const source = parseRemoteSource(sourceValue);
   const remote = await readRemoteCatalog(source, false);
-  const componentSet = librarySetForUpdate();
-  const present = componentSet ? libraryIconNames(componentSet) : new Set<string>();
   post({
     type: "remote-checked",
     source,
     version: remote.version,
     total: remote.names.length,
-    missing: remote.names.filter((name) => !present.has(name)),
-    hasLibrary: componentSet !== null,
+    missing: await missingRemoteIcons(remote),
   });
 }
 
-// Adds every icon from the checked source that the library lacks, A–Z, as one
-// undo step. Existing components are never touched, so this is safe to run
-// against a published library at any time.
+// Adds a frame on this page for every icon from the checked source that the file
+// lacks, then sorts the page A–Z like Replace, as one undo step. Existing frames
+// keep their artwork, so edits made in Figma are never overwritten.
 async function addRemote(sourceValue: unknown): Promise<void> {
   const source = parseRemoteSource(sourceValue);
   const remote = await readRemoteCatalog(source, true);
-  // Everything from here to the edits runs after the downloads finish.
-  const target = librarySetForUpdate();
-  if (!target) throw new Error("Create the library first, then add new icons to it");
-  const present = libraryIconNames(target);
-  const missing = remote.names.filter((name) => !present.has(name));
-  const { icons, failed } = await remote.loadSvgs(missing);
-  const componentSet = librarySetForUpdate();
-  if (componentSet !== target || componentSet.removed) throw new Error("The library changed while downloading; try again");
+  const { icons, failed } = await remote.loadSvgs(await missingRemoteIcons(remote));
 
   const added: string[] = [];
-  const components: ComponentNode[] = [];
-  // Read once after the downloads; another plugin run may have added icons meanwhile.
-  const inLibrary = libraryIconNames(componentSet);
+  const frames: FrameNode[] = [];
+  // Read again after the downloads; the file may have changed meanwhile.
+  const present = fileIconNames();
   for (const icon of icons) {
-    if (inLibrary.has(icon.name)) continue;
+    if (present.has(icon.name)) continue;
     try {
-      const component = createLibraryComponent(icon);
-      componentSet.appendChild(component);
-      components.push(component);
-      inLibrary.add(icon.name);
+      frames.push(addIconFrame(icon.name, icon.svg));
+      present.add(icon.name);
       added.push(icon.name);
     } catch (error) {
       failed.push({ name: icon.name, reason: messageFromError(error) });
     }
   }
-  if (components.length > 0) {
-    configureLibrarySet(componentSet, sortLibrary(componentSet));
-    figma.currentPage.selection = components;
-    figma.viewport.scrollAndZoomIntoView(components);
+  if (frames.length > 0) {
+    layOutIconFrames(settings.columns);
+    existingSlugs = new Set(iconNameOwners().keys());
+    candidates = getMissingIcons(catalog.icons, existingSlugs);
+    publishCatalog();
+    figma.currentPage.selection = frames;
+    figma.viewport.scrollAndZoomIntoView(frames);
     figma.commitUndo();
   }
   publishPageStatus();

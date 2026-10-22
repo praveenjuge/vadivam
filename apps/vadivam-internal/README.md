@@ -33,9 +33,9 @@ Run `bun run update:lucide-data -- /path/to/lucide-release-checkout` from `apps/
 
 ## Add new icons from GitHub or npm
 
-Icons added to the repository after this plugin build can go straight into the library without rebuilding. In the **Library** tab, under **New from GitHub or npm**, pick a source and choose **Check for new icons**:
+Icons added to the repository after this plugin build can go straight into this file as icon frames without rebuilding. In the **Replace** tab, under **New from GitHub or npm**, pick a source and choose **Check for new icons**:
 
 - **GitHub main** resolves `main` to one commit, lists `icons/` at that commit through the GitHub API, and downloads only the missing SVGs from `raw.githubusercontent.com` at the same commit.
 - **npm latest** resolves the `vadivam` package's `latest` tag to an exact version and reads that version's `dist/sprite.svg` from jsDelivr.
 
-The plugin lists every icon the selected library set doesn't have yet. **Add** creates them as tagged, documented variants exactly like **Update library** does, and sorts the set A–Z. Existing components are never changed. Downloads are untrusted: names must be kebab-case, and each SVG must be a 24×24 path-only drawing with no scripts, styles, links, or other elements, or it is skipped and listed with the reason. The whole add is one undo step. These are the plugin's only network requests, and the manifest allows only those four hosts.
+The plugin lists every icon that no top-level 24×24 frame in the file has yet, on any page. A frame counts under any spelling of its name, so `ArrowRight`, `arrow_right`, and deprecated aliases like `alert-circle` all match. **Add** creates a frame on the current page for each one, set up like the ones **Create** makes with the downloaded artwork inside, and sorts the page's icon frames A–Z with the **Arrange** column count so they land in place. Existing frames keep their artwork and are never changed, so edits made in Figma are safe; no component library is needed. Downloads are untrusted: names must be kebab-case, and each SVG must be a 24×24 path-only drawing with no scripts, styles, links, or other elements, or it is skipped and listed with the reason. The whole add is one undo step. These are the plugin's only network requests, and the manifest allows only those four hosts.

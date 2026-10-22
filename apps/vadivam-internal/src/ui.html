@@ -50,6 +50,17 @@
           <input id="svg-files" type="file" accept=".svg,image/svg+xml" multiple hidden />
         </div>
       </div>
+      <div class="controls remote">
+        <h2 class="field-label">New from GitHub or npm</h2>
+        <p class="lede">Add icons published after this plugin build as new frames on this page. Icons this file already has, on any page, are skipped and never changed.</p>
+        <div class="row">
+          <div class="presets" role="group" aria-label="Source">
+            <button type="button" data-source="github" aria-pressed="true">GitHub main</button>
+            <button type="button" data-source="npm" aria-pressed="false">npm latest</button>
+          </div>
+          <button id="check-remote" class="secondary" type="button" data-action>Check for new icons</button>
+        </div>
+      </div>
       <ol id="replace-results" class="results" aria-label="Replace results"></ol>
     </section>
 
@@ -120,18 +131,6 @@
         <div><dt>On this page</dt><dd id="library-state">–</dd></div>
       </dl>
       <p class="note">Updating keeps each component's identity so published instances follow along. New icons are added A–Z and custom variants stay. If the page has more than one set, select the one to update first.</p>
-      <div class="controls remote">
-        <h2 class="field-label">New from GitHub or npm</h2>
-        <p class="lede">Add icons published after this plugin build. Only missing icons are added; existing components stay untouched.</p>
-        <div class="row">
-          <div class="presets" role="group" aria-label="Source">
-            <button type="button" data-source="github" aria-pressed="true">GitHub main</button>
-            <button type="button" data-source="npm" aria-pressed="false">npm latest</button>
-          </div>
-          <button id="check-remote" class="secondary" type="button" data-action>Check for new icons</button>
-        </div>
-      </div>
-      <ol id="remote-results" class="results" aria-label="Icons missing from the library"></ol>
       <div class="actions">
         <button id="sync-library" class="primary wide" type="button" data-action disabled>Create library</button>
       </div>
