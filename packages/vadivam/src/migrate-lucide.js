@@ -159,7 +159,7 @@ export function migrateSource(text, { styles = false } = {}) {
     if (renames.size > 0) {
       // Rewritten import and export statements and quoted strings stay as they
       // are; other identifier uses, but not property reads, take the new name.
-      output = output.replace(/\b(?:import|export)\s+(?:type\s+)?(?:[\w$]+\s*,?\s*)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})?\s*from\s*["'][^"']*["']|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|(?<![\w$.])([A-Za-z_$][\w$]*)/g, (match, identifier) => {
+      output = output.replace(/\bimport\s+(?:type\s+)?(?:[\w$]+\s*,?\s*)?(?:\*\s+as\s+[\w$]+|\{[^}]*\})?\s*from\s*["'][^"']*["']|\bexport\s+(?:type\s+)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})\s*from\s*["'][^"']*["']|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|(?<![\w$.])([A-Za-z_$][\w$]*)/g, (match, identifier) => {
         const renamed = identifier && renames.get(identifier);
         if (!renamed) return match;
         changes += 1;
