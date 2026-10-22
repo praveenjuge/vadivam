@@ -431,25 +431,28 @@ function swapLayer(
   const paint = uniformStrokePaint(node);
   const weight = uniformStrokeWeight(node);
   const existing = components.get(icon.name);
-  let replacement: ComponentNode | InstanceNode;
-  if (existing) {
-    replacement = existing.createInstance();
-    replacement.resize(node.width, node.height);
-  } else {
-    const component = createComponent(icon);
-    resizeIcon(component, node.width, node.height);
-    // Instances of other sizes scale the glyph rather than pin it to a corner.
-    for (const child of component.children) {
-      if ("constraints" in child) child.constraints = { horizontal: "SCALE", vertical: "SCALE" };
+  const replacement = existing ? existing.createInstance() : createComponent(icon);
+  try {
+    if (replacement.type === "INSTANCE") {
+      replacement.resize(node.width, node.height);
+    } else {
+      resizeIcon(replacement, node.width, node.height);
+      // Instances of other sizes scale the glyph rather than pin it to a corner.
+      for (const child of replacement.children) {
+        if ("constraints" in child) child.constraints = { horizontal: "SCALE", vertical: "SCALE" };
+      }
     }
-    components.set(icon.name, component);
-    replacement = component;
+    applyStrokePaint(replacement, paint);
+    applyStrokeWeight(replacement, weight);
+    parent.insertChild(Math.max(0, index), replacement);
+    copyLayoutContext(node, replacement);
+    node.remove();
+  } catch (error) {
+    if (!replacement.removed) replacement.remove();
+    throw error;
   }
-  applyStrokePaint(replacement, paint);
-  applyStrokeWeight(replacement, weight);
-  parent.insertChild(Math.max(0, index), replacement);
-  copyLayoutContext(node, replacement);
-  node.remove();
+  // Only a component that made it into the document is reused for repeats.
+  if (replacement.type === "COMPONENT") components.set(icon.name, replacement);
   return replacement;
 }
 

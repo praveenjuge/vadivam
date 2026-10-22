@@ -174,7 +174,12 @@ export function migrateSource(text, { styles = false } = {}) {
 
 /** Rename Lucide dependencies in a package.json, keeping key order and formatting. */
 export function migratePackageJson(text, version) {
-  const manifest = JSON.parse(text);
+  let manifest;
+  try {
+    manifest = JSON.parse(text);
+  } catch (error) {
+    return { text, changes: 0, warnings: [`not valid JSON, skipped: ${error.message}`] };
+  }
   const warnings = [];
   let changes = 0;
   for (const field of dependencyFields) {

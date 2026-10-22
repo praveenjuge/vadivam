@@ -133,6 +133,14 @@ describe("migrate-lucide", () => {
     );
   });
 
+  test("skips a package.json that is not valid JSON", () => {
+    const broken = `{ "dependencies": { "lucide-react": "^1.0.0", } }`;
+    const { text, changes, warnings } = migratePackageJson(broken, "1.2.3");
+    expect(text).toBe(broken);
+    expect(changes).toBe(0);
+    expect(warnings[0]).toStartWith("not valid JSON, skipped:");
+  });
+
   test("the CLI lists changes without --write and applies them with it", async () => {
     const project = await mkdtemp(path.join(tmpdir(), "vadivam-migrate-"));
     try {

@@ -468,6 +468,24 @@ describe("compiled Figma plugin", () => {
     expect(latest(harness, "error")?.message).toBe("No Lucide icons in the selection");
   });
 
+  test("removes the new component when a swap cannot be placed", async () => {
+    const harness = createHarness();
+    await runPlugin(harness);
+    const arrow = harness.lucideLayer("FRAME", "arrow-right");
+    const locked = harness.container("Locked", [arrow]);
+    locked.insertChild = () => {
+      throw new Error("This layer is locked");
+    };
+    harness.page.selection = [locked];
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const componentsBefore = harness.page.children.filter((node: NodeRecord) => node.type === "COMPONENT").length;
+
+    await harness.ui.onmessage({ type: "swap-lucide" });
+    expect(latest(harness, "error")?.message).toBe("This layer is locked");
+    expect(harness.page.children.filter((node: NodeRecord) => node.type === "COMPONENT")).toHaveLength(componentsBefore);
+    expect(locked.children).toEqual([arrow]);
+  });
+
   test("uses the single registered Figma plugin ID", () => {
     const source = readFileSync(new URL("../manifest.json", import.meta.url), "utf8");
     expect(source.match(/"id"\s*:/g)).toHaveLength(1);
