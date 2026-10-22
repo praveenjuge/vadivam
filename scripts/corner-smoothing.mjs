@@ -15,7 +15,7 @@
 // smoothing as fits, as Figma does. Corners sharper than 90° always keep their
 // radius, since a tighter radius would push their tip outward.
 
-import { arcCenter, parsePath, sampleSubpath } from "./icon-geometry.mjs";
+import { arcCenter, parsePath, sampleSubpath, serializePath } from "./icon-geometry.mjs";
 
 export const cornerSmoothing = 0.6;
 export const fullSmoothingEdge = 8;
@@ -26,6 +26,9 @@ const tolerance = 0.02;
 // has five such bends, all under 23°, and its sharpest corners start at 34°.
 const minTurn = (30 * Math.PI) / 180;
 const maxTurn = (170 * Math.PI) / 180;
+// Less smoothing than this is invisible, and SVGO rounds its tiny curves back
+// into lines, so such corners keep their plain arc. The set's least is 6.7%.
+const minSmoothing = 0.05;
 
 const add = (a, b) => [a[0] + b[0], a[1] + b[1]];
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1]];
@@ -156,7 +159,7 @@ function smoothedCorner(corner, limit, smoothing) {
     if (limit.edge >= fullSmoothingEdge - 1e-6 && corner.turn <= Math.PI / 2 + tolerance && fitted > 0) r = fitted;
     else amount = limit.budget / corner.tangent - 1;
   }
-  if (amount <= 1e-3) return null;
+  if (amount < minSmoothing) return null;
   const { vertex, u, w, inIn, outIn } = corner;
   const tangent = r * tan;
   const reachLength = (1 + amount) * tangent;
@@ -222,31 +225,6 @@ function rebuildSubpath(subpath, plans) {
   return { ...subpath, start: cyclic ? output[0].from : subpath.start, segments: output };
 }
 
-const format = (value) => {
-  const rounded = Math.round(value * 1e4) / 1e4;
-  return String(Object.is(rounded, -0) ? 0 : rounded);
-};
-const point = ([x, y]) => `${format(x)} ${format(y)}`;
-
-function serialize(subpaths) {
-  return subpaths
-    .map((subpath) => {
-      let d = `M${point(subpath.start)}`;
-      for (const segment of subpath.segments) {
-        if (segment.closing) continue;
-        if (segment.type === "L") d += `L${point(segment.to)}`;
-        else if (segment.type === "C") d += `C${point(segment.c1)} ${point(segment.c2)} ${point(segment.to)}`;
-        else if (segment.type === "Q") d += `Q${point(segment.c)} ${point(segment.to)}`;
-        else {
-          const flags = `${segment.largeArc ? 1 : 0} ${segment.sweep ? 1 : 0}`;
-          d += `A${format(segment.rx)} ${format(segment.ry)} ${format(segment.rotation)} ${flags} ${point(segment.to)}`;
-        }
-      }
-      return subpath.closed ? `${d}Z` : d;
-    })
-    .join("");
-}
-
 /**
  * Smooth every rounded corner in path data. Returns the input unchanged when
  * it has no plain rounded corner, so smoothing is idempotent.
@@ -255,7 +233,7 @@ export function smoothCorners(d, { smoothing = cornerSmoothing } = {}) {
   const subpaths = edgeSubpaths(d);
   const plans = subpaths.map((subpath) => planSubpath(subpath, smoothing));
   if (!plans.some((plan) => plan.some(Boolean))) return d;
-  return serialize(subpaths.map((subpath, index) => rebuildSubpath(subpath, plans[index])));
+  return serializePath(subpaths.map((subpath, index) => rebuildSubpath(subpath, plans[index])));
 }
 
 /**
@@ -318,7 +296,7 @@ export function reattachEnds(before, after) {
       changed.add(path);
     }
   });
-  return after.map((d, path) => (changed.has(path) ? serialize(newPaths[path]) : d));
+  return after.map((d, path) => (changed.has(path) ? serializePath(newPaths[path]) : d));
 }
 
 /** Plain rounded corners that `smoothCorners` would still change, with their vertex and radius. */

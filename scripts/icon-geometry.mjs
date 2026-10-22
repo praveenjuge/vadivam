@@ -186,6 +186,32 @@ export function parsePath(d) {
   return subpaths;
 }
 
+const format = (value) => {
+  const rounded = Math.round(value * 1e4) / 1e4;
+  return String(Object.is(rounded, -0) ? 0 : rounded);
+};
+const point = ([x, y]) => `${format(x)} ${format(y)}`;
+
+/** Path data for subpaths in the form `parsePath` returns. */
+export function serializePath(subpaths) {
+  return subpaths
+    .map((subpath) => {
+      let d = `M${point(subpath.start)}`;
+      for (const segment of subpath.segments) {
+        if (segment.closing) continue;
+        if (segment.type === "L") d += `L${point(segment.to)}`;
+        else if (segment.type === "C") d += `C${point(segment.c1)} ${point(segment.c2)} ${point(segment.to)}`;
+        else if (segment.type === "Q") d += `Q${point(segment.c)} ${point(segment.to)}`;
+        else {
+          const flags = `${segment.largeArc ? 1 : 0} ${segment.sweep ? 1 : 0}`;
+          d += `A${format(segment.rx)} ${format(segment.ry)} ${format(segment.rotation)} ${flags} ${point(segment.to)}`;
+        }
+      }
+      return subpath.closed ? `${d}Z` : d;
+    })
+    .join("");
+}
+
 // SVG arc endpoint parameterization to center parameterization (SVG 1.1 F.6.5).
 export function arcCenter(segment) {
   const [x1, y1] = segment.from;
