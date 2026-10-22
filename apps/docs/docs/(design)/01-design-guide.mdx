@@ -54,10 +54,10 @@ These rules describe how the Vadivam icons are drawn. The numbers come from meas
 
 A 2px stroke centered on a whole-number coordinate covers exactly two pixel rows at 24px, so it renders solid. Centered on a half pixel, the same stroke covers one full row and two half rows, and renders blurred. So, for crisp edges:
 
-- Put horizontal and vertical lines on whole-pixel coordinates. 93.0% of the set's 7,942 horizontal and vertical straight segments do (93.9% of those at least 2px long). In 86.3% of icons, every one does.
-- Start rectangles on whole pixels: 96.3% of rectangle corners do.
+- Put horizontal and vertical lines on whole-pixel coordinates. 93.2% of the set's 7,921 horizontal and vertical straight segments do (93.8% of those at least 2px long). In 87.1% of icons, every one does.
+- Start rectangles on whole pixels: 96.7% of rectangle corners do.
 - Center circles on whole pixels where you can (73.0%), or on half pixels (13.6%) when an odd-sized detail needs it.
-- Let curves and diagonals follow the shape. Only 46.9% of all vertices are on whole pixels, because arc and curve endpoints land wherever the shape puts them, and smoothed corners start part-way along each edge. Of 3,250 diagonal segments, 40% run at 45°.
+- Let curves and diagonals follow the shape. Only 46.9% of all vertices are on whole pixels, because arc and curve endpoints land wherever the shape puts them, and smoothed corners start part-way along each edge. Of 3,155 diagonal segments, 39% run at 45°.
 - Path data keeps at most 3 decimal places. `bun run icons:optimize` rounds it.
 
 ## Keyline shapes
@@ -78,9 +78,9 @@ Start from these base shapes. Each is drawn as its own icon, so it can be checke
 | Circle | r 10 at (12, 12) | [`circle`](/?icon=circle) | 74 full circles, all centered on (12, 12) |
 | Square | 20×20 at (2, 2), r 6 | [`square`](/?icon=square) | 75 rectangles at 20×20, 73 of them with r 6 |
 | Portrait | 14×20 at (5, 2), r 4 | [`rectangle-vertical`](/?icon=rectangle-vertical) | 14 rectangles at 14×20, at r 4 or r 3 |
-| Landscape | 20×14 at (2, 5), r 4 | [`rectangle-horizontal`](/?icon=rectangle-horizontal) | 4 rectangles at 20×14 |
+| Landscape | 20×14 at (2, 5), r 4 | [`rectangle-horizontal`](/?icon=rectangle-horizontal) | 16 rectangles at 20×14, all with r 4 (the `monitor` family) |
 
-Landscape frames usually need more height than 14px. The common alternatives are 20×18 at (2, 4) with r 5.5, used 7 times (the `calendar` family), and 16×12 at (2, 6) with r 3.75, used 8 times. Both radii are the largest that leave room for full corner smoothing on the shorter side.
+Landscape frames usually need more height than 14px. The common alternatives are 20×18 at (2, 4) with r 5.5, used 8 times (the `calendar` family), and 16×12 at (2, 6) with r 3.75, used 8 times. Both radii are the largest that leave room for full corner smoothing on the shorter side.
 
 Small circles use radius 2 (94 circles), 3 (84), 2.5 (43), 1 (37), or 3.5 (35).
 
@@ -94,17 +94,17 @@ Small circles use radius 2 (94 circles), 3 (84), 2.5 (43), 1 (37), or 3.5 (35).
 </div>
 </Visibility>
 
-- Round every rectangle. None of the 300 axis-aligned rectangles in the set has a sharp corner.
-- Make the radius about 30% of the rectangle's shorter side, on a 0.5px step where you can. The median ratio is 0.31; 80% of rectangles fall between 0.28 and 0.50.
-- For sides of 8px or more, the common radii are 6 (77 rectangles), 2.5 (44), 4 (23), and 3 (18).
-- For sides under 8px, the common radii are 2 (41), 1.5 (18), and 2.5 (14). A 4px-wide bar becomes a pill with r 2.
+- Round every rectangle. None of the 331 axis-aligned rectangles in the set has a sharp corner.
+- Make the radius about 30% of the rectangle's shorter side, on a 0.5px step where you can. The median ratio is 0.30; 80% of rectangles fall between 0.29 and 0.50.
+- For sides of 8px or more, the common radii are 6 (77 rectangles), 2.5 (50), 4 (36), and 3 (18).
+- For sides under 8px, the common radii are 2 (42), 1.5 (18), and 2.5 (18). A 4px-wide bar becomes a pill with r 2.
 - Draw corners as circular arcs, then let `bun run icons:optimize` smooth them. Don't draw the smoothing by hand. The set has 6,809 circular arc commands with a median radius of 3.5.
 
 ### Corner smoothing
 
 - **Checked.** Smooth every rounded corner at 60%, the same curve as iOS and Figma's iOS preset. A smoothed corner leaves the straight edge on a cubic curve, turns through a shorter arc of the same radius, and eases back onto the next edge, so the bend has no sudden start. `bun run icons:optimize` applies it to every circular arc that meets two straight lines tangentially, using the construction in `scripts/corner-smoothing.mjs`, and `bun run icons:check` rejects any such corner left as a plain arc. All 2,838 of these corners in the set are smoothed.
-- Leave room for it. A 60% corner reaches 1.6 times its radius along each edge, so it fits when the radius is at most the edge ÷ 3.2 (6.25 on a 20px side, 2.5 on an 8px side). Where it doesn't fit on an edge of 8px or more, optimize tightens the radius to the largest 0.25px step that does: a 20×18 frame gets r 5.5, and an 8×8 tile gets r 2.5. 2,178 corners (76.7%) are at the full 60%.
-- On edges under 8px, and at corners sharper than 90°, the radius is kept and the corner gets as much smoothing as the edge allows, as Figma does. Tightening a sharp corner would push its tip outward. These 660 corners have a median smoothing of 33%.
+- Leave room for it. A 60% corner reaches 1.6 times its radius along each edge, so it fits when the radius is at most the edge ÷ 3.2 (6.25 on a 20px side, 2.5 on an 8px side). Where it doesn't fit on an edge of 8px or more, optimize tightens the radius to the largest 0.25px step that does: a 20×18 frame gets r 5.5, and an 8×8 tile gets r 2.5. 2,182 corners (76.9%) are at the full 60%.
+- On edges under 8px, and at corners sharper than 90°, the radius is kept and the corner gets as much smoothing as the edge allows, as Figma does. Tightening a sharp corner would push its tip outward. These 656 corners have a median smoothing of 33%.
 - Some arcs are not corners and stay circular: bends that turn less than 30°, arcs with no straight line on one side (pill ends, curved stroke ends), and corners where another stroke attaches at the end of the arc, such as the pins on some `calendar-*` icons and folded file corners.
 
 Lucide uses circular 2px corners on shapes 8px and up and 1px below. Vadivam's larger, smoothed radii are what give it its softer look, so don't copy Lucide's corners.

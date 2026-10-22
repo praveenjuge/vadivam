@@ -47,6 +47,37 @@ function neighbor(segments, index, offset, cyclic) {
   return cyclic ? (target + segments.length) % segments.length : -1;
 }
 
+function continuesLine(a, b) {
+  if (a.type !== "L" || b.type !== "L") return false;
+  const first = sub(a.to, a.from);
+  const second = sub(b.to, b.from);
+  if (length(first) <= 1e-6 || length(second) <= 1e-6) return false;
+  return dot(unit(first), unit(second)) > 1 - 1e-6;
+}
+
+/**
+ * Parse path data into subpaths whose straight edges are single segments.
+ * Exports often split an edge, for example where a closed shape starts
+ * partway along it, and each corner must see the whole edge.
+ */
+function edgeSubpaths(d) {
+  return parsePath(d).map((subpath) => {
+    const segments = [];
+    for (const segment of subpath.segments) {
+      const last = segments.at(-1);
+      if (last && continuesLine(last, segment)) segments[segments.length - 1] = { ...last, to: segment.to, closing: segment.closing };
+      else segments.push(segment);
+    }
+    // Move the start of a cyclic subpath off a split edge.
+    if (segments.length > 2 && isCyclic({ ...subpath, segments }) && continuesLine(segments.at(-1), segments[0])) {
+      const last = segments.pop();
+      segments[0] = { ...segments[0], from: last.from };
+      return { ...subpath, start: last.from, segments };
+    }
+    return { ...subpath, segments };
+  });
+}
+
 // The unit normal of `direction` that points from `point` toward `center`.
 function inwardNormal(direction, point, center) {
   const normal = [-direction[1], direction[0]];
@@ -221,7 +252,7 @@ function serialize(subpaths) {
  * it has no plain rounded corner, so smoothing is idempotent.
  */
 export function smoothCorners(d, { smoothing = cornerSmoothing } = {}) {
-  const subpaths = parsePath(d);
+  const subpaths = edgeSubpaths(d);
   const plans = subpaths.map((subpath) => planSubpath(subpath, smoothing));
   if (!plans.some((plan) => plan.some(Boolean))) return d;
   return serialize(subpaths.map((subpath, index) => rebuildSubpath(subpath, plans[index])));
@@ -229,7 +260,7 @@ export function smoothCorners(d, { smoothing = cornerSmoothing } = {}) {
 
 /** Plain rounded corners that `smoothCorners` would still change, with their vertex and radius. */
 export function findUnsmoothedCorners(d, { smoothing = cornerSmoothing } = {}) {
-  return parsePath(d).flatMap((subpath) =>
+  return edgeSubpaths(d).flatMap((subpath) =>
     planSubpath(subpath, smoothing)
       .filter(Boolean)
       .map(({ vertex, r }) => ({ x: vertex[0], y: vertex[1], r })),
@@ -256,7 +287,7 @@ function cubicTangent(segment, atEnd) {
  */
 export function measureCorners(d) {
   const corners = [];
-  for (const subpath of parsePath(d)) {
+  for (const subpath of edgeSubpaths(d)) {
     const { segments } = subpath;
     const cyclic = isCyclic(subpath);
     segments.forEach((segment, index) => {

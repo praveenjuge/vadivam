@@ -270,6 +270,14 @@ describe("corner smoothing", () => {
     for (const key of ["maxX", "maxY"]) expect(after[key]).toBeLessThanOrEqual(before[key] + 1e-3);
   });
 
+  test("sees the whole edge when a closed subpath starts partway along it", () => {
+    const smoothed = smoothCorners("M15 2h1a6 6 0 0 1 6 6v8a6 6 0 0 1-6 6H8a6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z");
+    expect(measureCorners(smoothed).map(({ r, smoothing }) => [r, Number(smoothing.toFixed(4))])).toEqual(
+      Array(4).fill([6, 0.6]),
+    );
+    expect(smoothCorners(smoothed)).toBe(smoothed);
+  });
+
   test("keeps dots drawn as tiny lines", () => {
     const smoothed = smoothCorners("M9 2h6a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4m3 15h.01");
     expect(smoothed.endsWith("M12 17L12.01 17")).toBe(true);
