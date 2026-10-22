@@ -832,8 +832,12 @@ const structuredData = site
         const index = selectedIndex() + direction;
         const entry = visibleEntries()[index];
         if (!entry) return;
-        // Render matches only up to the one being stepped to.
-        if (matches && index >= renderedCount) renderBatch(index - renderedCount + 1);
+        // Render up to the match being stepped to, in whole batches: each batch
+        // is its own chunk, and a partial one would knock the rows after it
+        // out of line.
+        if (matches && index >= renderedCount) {
+          renderBatch(Math.ceil((index - renderedCount + 1) / batchSize) * batchSize);
+        }
         const next = matches ? cloneOf(entry) : entry.card;
         openDrawer(next);
         next.scrollIntoView({ block: "nearest" });

@@ -37,6 +37,13 @@ describe("remote icon sources", () => {
     expect(validateRemoteSvg(`${open}<foreignObject></foreignObject></svg>`)).not.toBeNull();
     expect(validateRemoteSvg('<svg viewBox="0 0 48 48"><path d="M0 0"/></svg>')).not.toBeNull();
     expect(validateRemoteSvg("not svg")).not.toBeNull();
+    // Harmless-looking but off-spec artwork: a filled root, a stray attribute,
+    // or an extra element never reaches the library either.
+    const canonical = icons.find((icon) => icon.name === "bell")!.svg;
+    expect(validateRemoteSvg('<svg viewBox="0 0 24 24" fill="red"><path d="M0 0h24v24z"/></svg>')).not.toBeNull();
+    expect(validateRemoteSvg(canonical.replace('fill="none"', 'fill="red"'))).not.toBeNull();
+    expect(validateRemoteSvg(canonical.replace("<path ", '<path fill="red" '))).not.toBeNull();
+    expect(validateRemoteSvg(canonical.replace("</svg>", '<circle cx="12" cy="12" r="10"/></svg>'))).not.toBeNull();
   });
 
   test("npm resolves latest to one version and reads its sprite", async () => {

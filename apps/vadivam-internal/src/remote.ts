@@ -50,17 +50,19 @@ export function isIconName(value: unknown): value is string {
   return typeof value === "string" && value.length <= 80 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
 }
 
-// The published icons are path-only, stroke-only 24×24 SVGs. Anything that
-// could load, run, or reference content is rejected outright.
+// Every published icon is exactly the canonical root tag followed by path
+// elements that carry only path data (the shape `bun run icons:check` enforces
+// and the homepage build rebuilds icons from). Requiring that exact shape
+// rejects fills, styles, links, scripts, and any other element or attribute.
+const PATH_ELEMENT = /<path d="[MLHVCSQTAZmlhvcsqtaz0-9.,eE+\s-]+"\/>/;
+const CANONICAL_SVG = new RegExp(
+  `^${SVG_OPEN_TAG.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*(?:${PATH_ELEMENT.source})+\\s*</svg>$`,
+);
+
 export function validateRemoteSvg(svg: string): string | null {
   if (svg.length === 0 || svg.length > MAX_SVG_LENGTH) return "SVG is empty or too large";
-  const trimmed = svg.trim();
-  if (!/^<svg\b[^>]*\bviewBox="0 0 24 24"[^>]*>[\s\S]*<\/svg>$/.test(trimmed)) {
-    return "Not a 24×24 SVG";
-  }
-  if (/<(?!\/?(?:svg|path)\b)[a-z!?]/i.test(trimmed)) return "SVG has elements other than paths";
-  if (/\son[a-z]+\s*=|\b(?:xlink:)?href\s*=|\bstyle\s*=|url\s*\(|javascript:/i.test(trimmed)) {
-    return "SVG has unsafe attributes";
+  if (!CANONICAL_SVG.test(svg.trim())) {
+    return "Not a canonical Vadivam SVG (24×24, 2 px currentColor stroke, path data only)";
   }
   return null;
 }
