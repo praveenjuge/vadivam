@@ -10,6 +10,7 @@ import {
   svgBase64,
   svgDataUri,
   svgToJsx,
+  tailwindMaskSnippet,
 } from "../scripts/snippets.mjs";
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n<path d="M4 12h16"/><path d="m12 4 8 8-8 8"/>\n</svg>\n`;
@@ -54,6 +55,17 @@ describe("copy formats", () => {
     expect(css).toContain("stroke-width='1.5'");
     expect(css).toContain("stroke='%23000'");
     expect(cssMaskSnippet("arrow", svg)).toContain("width: 24px;");
+  });
+
+  test("Tailwind mask is one class list with no spaces in the mask value", () => {
+    const html = tailwindMaskSnippet(svg, { size: 20, strokeWidth: 1.5 });
+    expect(html).toStartWith(`<span class="inline-block size-[20px] bg-current [mask:url(data:image/svg+xml;base64,`);
+    const mask = html.match(/\[mask:url\(([^)]*)\)/)?.[1] ?? "";
+    expect(mask).not.toContain(" ");
+    const decoded = atob(mask.split(",")[1]);
+    expect(decoded).toContain('stroke-width="1.5"');
+    expect(decoded).toContain('stroke="#000"');
+    expect(tailwindMaskSnippet(svg)).toContain("size-[24px]");
   });
 
   test("JSX, data URI, and Base64 outputs", () => {

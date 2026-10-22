@@ -7,6 +7,7 @@ import {
   icons,
   renderIcon,
   searchIcons,
+  suggestIcons,
   usageFor,
   version,
 } from "../../packages/vadivam-mcp/dist/index.js";
@@ -115,6 +116,36 @@ describe("search_icons ranking", () => {
   });
 });
 
+describe("suggest_icons", () => {
+  const top = (result) =>
+    Object.fromEntries(result.concepts.map(({ concept, results }) => [concept, results[0]?.name]));
+
+  test("splits a description into concepts and drops filler words", () => {
+    const result = suggestIcons("A settings page with search, user profile and the logout button");
+    expect(result.concepts.map(({ concept }) => concept)).toEqual(["settings", "search", "user profile", "logout"]);
+    expect(top(result)).toMatchObject({ settings: "settings", search: "search", logout: "log-out" });
+    expect(result.unmatched).toEqual([]);
+  });
+
+  test("ranks icons named for the concept first, then by popularity", () => {
+    const result = suggestIcons("cart, notifications, messages");
+    expect(top(result)).toEqual({ cart: "shopping-cart", notifications: "bell", messages: "message-circle" });
+  });
+
+  test("falls back to single words when a phrase matches nothing", () => {
+    const result = suggestIcons("upload dropzone");
+    expect(result.concepts.map(({ concept }) => concept)).toEqual(["upload"]);
+    expect(result.unmatched).toEqual(["dropzone"]);
+  });
+
+  test("limits candidates per concept to 1..10 and defaults to 3", () => {
+    expect(suggestIcons("arrow").concepts[0].results).toHaveLength(3);
+    expect(suggestIcons("arrow", { perConcept: 50 }).concepts[0].results).toHaveLength(10);
+    expect(suggestIcons("arrow", { perConcept: 1 }).concepts[0].results).toHaveLength(1);
+    expect(suggestIcons("the page")).toEqual({ description: "the page", concepts: [], unmatched: [] });
+  });
+});
+
 describe("icon lookup", () => {
   test("accepts kebab and component names", () => {
     expect(findIcon("arrow-right")?.name).toBe("arrow-right");
@@ -157,6 +188,7 @@ describe("get_icon formats", () => {
     const mask = renderIcon(activity, "css-mask", { size: 48, strokeWidth: 1.5 });
     expect(mask).toContain("width: 48px;");
     expect(mask).toContain("stroke-width='1.5'");
+    expect(renderIcon(activity, "tailwind", { size: 20 })).toContain("size-[20px] bg-current [mask:url(data:image/svg+xml;base64,");
   });
 
   test("framework snippets import from the matching package", () => {

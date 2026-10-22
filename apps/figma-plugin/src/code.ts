@@ -1,4 +1,4 @@
-import icons, { svgRoot } from "vadivam:catalog";
+import icons, { lucideAliases, svgRoot } from "vadivam:catalog";
 import type { PluginToUiMessage, UiToPluginMessage } from "./protocol";
 
 const UI_WIDTH = 320;
@@ -8,6 +8,16 @@ const PLUGIN_DATA_KEY = "vadivam";
 const PLUGIN_DATA_SCHEMA = 1;
 const DOCUMENTATION_URL = "https://vadivam.praveenjuge.com";
 const catalog = new Map(icons.map((icon) => [icon.name, icon]));
+// Selections are scanned on every change, so stop after this many layers.
+const MAX_SCAN_NODES = 5000;
+const SHAPE_TYPES = new Set(["VECTOR", "LINE", "ELLIPSE", "RECTANGLE", "POLYGON", "STAR", "BOOLEAN_OPERATION"]);
+const ICON_LAYER_TYPES = new Set(["FRAME", "GROUP", "COMPONENT", "INSTANCE"]);
+const compactName = (name: string) => name.replace(/[^a-z0-9]/g, "");
+// Current names win over deprecated ones that compact to the same letters.
+const iconsByCompactName = new Map([
+  ...Object.entries(lucideAliases).map(([alias, name]) => [compactName(alias), name] as const),
+  ...icons.map((icon) => [compactName(icon.name), icon.name] as const),
+]);
 
 type CatalogIcon = (typeof icons)[number];
 
@@ -174,20 +184,21 @@ function resizeIcon(component: ComponentNode, width: number, height: number): vo
 }
 
 function copyLayoutContext(
-  source: ComponentNode | InstanceNode,
-  target: ComponentNode,
+  source: SceneNode,
+  target: ComponentNode | InstanceNode,
 ): void {
   target.x = source.x;
   target.y = source.y;
-  target.rotation = source.rotation;
-  target.opacity = source.opacity;
-  target.blendMode = source.blendMode;
   target.visible = source.visible;
   target.locked = source.locked;
-  target.constraints = source.constraints;
-  target.layoutAlign = source.layoutAlign;
-  target.layoutGrow = source.layoutGrow;
-  target.layoutPositioning = source.layoutPositioning;
+  // Groups carry no constraints, so copy each property the source has.
+  if ("rotation" in source) target.rotation = source.rotation;
+  if ("opacity" in source) target.opacity = source.opacity;
+  if ("blendMode" in source) target.blendMode = source.blendMode;
+  if ("constraints" in source) target.constraints = source.constraints;
+  if ("layoutAlign" in source) target.layoutAlign = source.layoutAlign;
+  if ("layoutGrow" in source) target.layoutGrow = source.layoutGrow;
+  if ("layoutPositioning" in source) target.layoutPositioning = source.layoutPositioning;
 }
 
 function placeComponent(
@@ -271,6 +282,218 @@ async function taggedInstance(node: SceneNode): Promise<InstanceNode | null> {
   return main && taggedIconName(main) ? node : null;
 }
 
+function uniformStrokeWeight(node: ChildrenMixin): number | null {
+  const weights = geometryNodes(node)
+    .filter((child) => (child.strokes as readonly Paint[] | typeof figma.mixed) !== figma.mixed && child.strokes.length > 0)
+    .map((child) => ("strokeWeight" in child ? child.strokeWeight : figma.mixed));
+  const first = weights[0];
+  return typeof first === "number" && weights.every((weight) => weight === first) ? first : null;
+}
+
+function applyStrokeWeight(node: ChildrenMixin, weight: number | null): void {
+  if (weight === null) return;
+  for (const child of geometryNodes(node)) {
+    if ("strokeWeight" in child) child.strokeWeight = weight;
+  }
+}
+
+/**
+ * The Vadivam icon a layer name refers to: `arrow-right`, `ArrowRight`,
+ * `lucide/arrow-right`, `LucideArrowRight`, `arrow-right icon`, or a
+ * deprecated Lucide name such as `home`.
+ */
+function lucideIconName(layerName: string): string | null {
+  const segment = (layerName.split("/").pop() ?? "")
+    .trim()
+    .replace(/^lucide[\s_-]+/i, "")
+    .replace(/^Lucide(?=[A-Z])/, "");
+  for (const base of [segment, segment.replace(/[\s_-]*icon$/i, "")]) {
+    const name = base.replace(/([a-z])([A-Z])/g, "$1-$2").replace(/[\s_]+/g, "-").toLowerCase();
+    if (!name) continue;
+    if (catalog.has(name)) return name;
+    if (lucideAliases[name]) return lucideAliases[name];
+    // PascalCase drops the dashes around digits: ArrowDown01 is arrow-down-0-1.
+    const match = iconsByCompactName.get(compactName(name));
+    if (match) return match;
+  }
+  return null;
+}
+
+const visiblePaints = (node: BaseNode, key: "fills" | "strokes"): boolean => {
+  const paints = key in node ? (node as unknown as Record<string, unknown>)[key] : [];
+  // Mixed paints are something drawn, so they count as visible.
+  return !Array.isArray(paints) || paints.some((paint: Paint) => paint.visible !== false && paint.opacity !== 0);
+};
+
+// A square, stroke-only drawing, like an icon pasted from Lucide or placed
+// from its Figma library. A button or tile named "search" has a filled
+// background somewhere, so it is never mistaken for one.
+function isOutlineIcon(node: SceneNode & ChildrenMixin): boolean {
+  if (Math.abs(node.width - node.height) > 0.5 || node.width < 8 || node.width > 256) return false;
+  if (visiblePaints(node, "fills")) return false;
+  let stroked = 0;
+  const stack: SceneNode[] = [...node.children];
+  while (stack.length > 0) {
+    const child = stack.pop()!;
+    if (visiblePaints(child, "fills")) return false;
+    if (SHAPE_TYPES.has(child.type)) {
+      if (visiblePaints(child, "strokes")) stroked += 1;
+    } else if ((child.type === "GROUP" || child.type === "FRAME") && "children" in child) {
+      stack.push(...child.children);
+    } else {
+      return false;
+    }
+  }
+  return stroked > 0;
+}
+
+function insideInstance(node: BaseNode): boolean {
+  for (let parent = node.parent; parent; parent = parent.parent) {
+    if (parent.type === "INSTANCE") return true;
+  }
+  return false;
+}
+
+async function isVadivamIcon(node: SceneNode): Promise<boolean> {
+  if (node.type === "COMPONENT") return taggedIconName(node) !== null;
+  if (node.type !== "INSTANCE") return false;
+  const main = await node.getMainComponentAsync();
+  return Boolean(main && taggedIconName(main));
+}
+
+interface LucideMatch {
+  node: SceneNode & ChildrenMixin;
+  iconName: string;
+}
+
+/**
+ * Lucide icons in or under the selection, in layer order, outermost first.
+ * Instances of a local Lucide component that is also selected are left out:
+ * redrawing the component updates them.
+ */
+async function findLucideIcons(roots: readonly SceneNode[]): Promise<LucideMatch[]> {
+  const matches: LucideMatch[] = [];
+  const seen = new Set<string>();
+  const stack = [...roots].reverse();
+  let visited = 0;
+  while (stack.length > 0 && visited < MAX_SCAN_NODES) {
+    const node = stack.pop()!;
+    if (seen.has(node.id)) continue;
+    seen.add(node.id);
+    visited += 1;
+    if (ICON_LAYER_TYPES.has(node.type) && "children" in node) {
+      const iconName = lucideIconName(node.name);
+      if (iconName && isOutlineIcon(node) && !insideInstance(node) && !(await isVadivamIcon(node))) {
+        matches.push({ node, iconName });
+        continue;
+      }
+    }
+    // Layers inside an instance can't be replaced on their own.
+    if (node.type !== "INSTANCE" && "children" in node) {
+      for (let index = node.children.length - 1; index >= 0; index -= 1) stack.push(node.children[index]!);
+    }
+  }
+  const componentIds = new Set(
+    matches.filter(({ node }) => node.type === "COMPONENT").map(({ node }) => node.id),
+  );
+  const swappable: LucideMatch[] = [];
+  for (const match of matches) {
+    const main = match.node.type === "INSTANCE" ? await match.node.getMainComponentAsync() : null;
+    if (!main || !componentIds.has(main.id)) swappable.push(match);
+  }
+  return swappable;
+}
+
+let selectionScan = 0;
+
+async function postLucideSelection(): Promise<void> {
+  const scan = ++selectionScan;
+  const matches = await findLucideIcons(figma.currentPage.selection);
+  if (scan === selectionScan) post({ type: "lucide-selection", count: matches.length });
+}
+
+figma.on("selectionchange", () => {
+  postLucideSelection().catch(reportError);
+});
+
+// Each Lucide layer becomes the first Vadivam component for its icon or an
+// instance of it, keeping the layer's size, stroke color and weight, and place.
+function swapLayer(
+  node: SceneNode & ChildrenMixin,
+  icon: CatalogIcon,
+  components: Map<string, ComponentNode>,
+): ComponentNode | InstanceNode {
+  const parent = node.parent;
+  if (!parent || !("insertChild" in parent)) {
+    throw new Error(`${node.name} cannot be swapped in its current parent`);
+  }
+  const index = parent.children.indexOf(node);
+  const paint = uniformStrokePaint(node);
+  const weight = uniformStrokeWeight(node);
+  const existing = components.get(icon.name);
+  const replacement = existing ? existing.createInstance() : createComponent(icon);
+  try {
+    if (replacement.type === "INSTANCE") {
+      replacement.resize(node.width, node.height);
+    } else {
+      resizeIcon(replacement, node.width, node.height);
+      // Instances of other sizes scale the glyph rather than pin it to a corner.
+      for (const child of replacement.children) {
+        if ("constraints" in child) child.constraints = { horizontal: "SCALE", vertical: "SCALE" };
+      }
+    }
+    applyStrokePaint(replacement, paint);
+    applyStrokeWeight(replacement, weight);
+    parent.insertChild(Math.max(0, index), replacement);
+    copyLayoutContext(node, replacement);
+    node.remove();
+  } catch (error) {
+    if (!replacement.removed) replacement.remove();
+    throw error;
+  }
+  // Only a component that made it into the document is reused for repeats.
+  if (replacement.type === "COMPONENT") components.set(icon.name, replacement);
+  return replacement;
+}
+
+async function swapLucideIcons(): Promise<void> {
+  const matches = await findLucideIcons(figma.currentPage.selection);
+  if (matches.length === 0) throw new Error("No Lucide icons in the selection");
+  const components = new Map<string, ComponentNode>();
+  const swapped: SceneNode[] = [];
+  const failed: string[] = [];
+  let firstError: unknown;
+  // A layer that can't be swapped is skipped and reported; the rest still
+  // swap, and the whole batch is one undo step.
+  for (const { node, iconName } of matches) {
+    const icon = catalog.get(iconName)!;
+    const name = node.name;
+    try {
+      if (node.type === "COMPONENT") {
+        // A local Lucide component keeps its instances: its glyph is redrawn in place.
+        const weight = uniformStrokeWeight(node);
+        replaceComponentGlyph(node, icon);
+        applyStrokeWeight(node, weight);
+        swapped.push(node);
+      } else {
+        swapped.push(swapLayer(node, icon, components));
+      }
+    } catch (error) {
+      firstError ??= error;
+      failed.push(name);
+    }
+  }
+  if (swapped.length === 0) throw firstError;
+  figma.currentPage.selection = swapped;
+  figma.commitUndo();
+  const summary = `Swapped ${swapped.length} Lucide icon${swapped.length === 1 ? "" : "s"} for Vadivam`;
+  complete(
+    failed.length === 0
+      ? summary
+      : `${summary}; couldn't swap ${failed.join(", ")}: ${messageFromError(firstError)}`,
+  );
+}
+
 async function performChoice(iconName: string): Promise<void> {
   const icon = catalog.get(iconName);
   if (!icon) throw new Error("Unknown Vadivam icon");
@@ -349,6 +572,8 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
       typeof request.accepted === "boolean"
     ) {
       await confirmReplacement(request.requestId, request.accepted);
+    } else if (request.type === "swap-lucide") {
+      await swapLucideIcons();
     } else {
       throw new Error("Unsupported plugin action");
     }
@@ -358,3 +583,4 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
 };
 
 post({ type: "catalog", count: icons.length });
+postLucideSelection().catch(reportError);

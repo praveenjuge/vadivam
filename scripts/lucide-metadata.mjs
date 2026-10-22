@@ -31,8 +31,9 @@ function validStrings(value, maxLength) {
 
 /**
  * Read canonical names, tags, categories, and deprecated aliases from a Lucide
- * release checkout. Only canonical names are published; the deprecated aliases
- * stay internal to the Figma maintenance plugin's rename tooling.
+ * release checkout. Only canonical names are published as icons; the deprecated
+ * aliases feed the Figma maintenance plugin's rename tooling and the
+ * `vadivam migrate-lucide` codemod, which renames alias imports.
  */
 export async function readLucideCheckout(checkout) {
   const directory = path.resolve(checkout);

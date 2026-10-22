@@ -61,6 +61,9 @@
         "vadivam": "workspace:*",
         "vadivam-mcp": "workspace:*",
       },
+      "devDependencies": {
+        "lucide": "1.61.0",
+      },
       "optionalDependencies": {
         "@bruits/satteri-darwin-arm64": "0.10.5",
         "@bruits/satteri-darwin-x64": "0.10.5",
@@ -82,7 +85,7 @@
     },
     "apps/figma-plugin": {
       "name": "@vadivam/figma-plugin",
-      "version": "0.0.61",
+      "version": "0.0.62",
       "devDependencies": {
         "@figma/plugin-typings": "1.142.0",
         "@happy-dom/global-registrator": "^21.0.3",
@@ -103,11 +106,14 @@
     },
     "packages/vadivam": {
       "name": "vadivam",
-      "version": "0.0.61",
+      "version": "0.0.62",
+      "bin": {
+        "vadivam": "dist/cli.js",
+      },
     },
     "packages/vadivam-angular": {
       "name": "vadivam-angular",
-      "version": "0.0.61",
+      "version": "0.0.62",
       "dependencies": {
         "tslib": "^2.8.1",
       },
@@ -118,14 +124,14 @@
     },
     "packages/vadivam-astro": {
       "name": "vadivam-astro",
-      "version": "0.0.61",
+      "version": "0.0.62",
       "peerDependencies": {
         "astro": ">=7 <8",
       },
     },
     "packages/vadivam-mcp": {
       "name": "vadivam-mcp",
-      "version": "0.0.61",
+      "version": "0.0.62",
       "bin": {
         "vadivam-mcp": "dist/cli.js",
       },
@@ -136,21 +142,21 @@
     },
     "packages/vadivam-preact": {
       "name": "vadivam-preact",
-      "version": "0.0.61",
+      "version": "0.0.62",
       "peerDependencies": {
         "preact": ">=10.29 <11",
       },
     },
     "packages/vadivam-react": {
       "name": "vadivam-react",
-      "version": "0.0.61",
+      "version": "0.0.62",
       "peerDependencies": {
         "react": ">=18",
       },
     },
     "packages/vadivam-react-native": {
       "name": "vadivam-react-native",
-      "version": "0.0.61",
+      "version": "0.0.62",
       "peerDependencies": {
         "react": ">=18 <20",
         "react-native": ">=0.71",
@@ -159,21 +165,21 @@
     },
     "packages/vadivam-solid": {
       "name": "vadivam-solid",
-      "version": "0.0.61",
+      "version": "0.0.62",
       "peerDependencies": {
         "solid-js": ">=1.9 <2",
       },
     },
     "packages/vadivam-svelte": {
       "name": "vadivam-svelte",
-      "version": "0.0.61",
+      "version": "0.0.62",
       "peerDependencies": {
         "svelte": ">=5.56 <6",
       },
     },
     "packages/vadivam-vue": {
       "name": "vadivam-vue",
-      "version": "0.0.61",
+      "version": "0.0.62",
       "peerDependencies": {
         "vue": ">=3.5 <4",
       },
@@ -2030,6 +2036,8 @@
     "lru-cache": ["lru-cache@5.1.1", "", { "dependencies": { "yallist": "^3.0.2" } }, "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w=="],
 
     "lru_map": ["lru_map@0.4.1", "", {}, "sha512-I+lBvqMMFfqaV8CJCISjI3wbjmwVu/VyOoU7+qtu9d7ioW5klMgsTTiUOUp+DJvfTTzKXoPbyC6YfgkNcyPSOg=="],
+
+    "lucide": ["lucide@1.61.0", "", {}, "sha512-RPNMBgej6WjPKuCNEODg83CF8lnraCeDOsZ3HZ7KvUYf0O5hdJBzer/Ax/meBHl3xvrp5NmKX0IDA5myyzlvGw=="],
 
     "lz-string": ["lz-string@1.5.0", "", { "bin": { "lz-string": "bin/bin.js" } }, "sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ=="],
 

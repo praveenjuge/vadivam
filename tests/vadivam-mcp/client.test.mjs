@@ -10,7 +10,7 @@ import {
   version,
 } from "../../packages/vadivam-mcp/dist/index.js";
 
-const toolNames = ["get_icon", "get_usage", "list_categories", "search_icons"];
+const toolNames = ["get_icon", "get_usage", "list_categories", "search_icons", "suggest_icons"];
 const clients = [];
 
 async function inMemoryClient() {
@@ -76,6 +76,21 @@ async function exerciseTools(client) {
     arguments: { query: "sun", category: "nope" },
   });
   expect(badCategory.isError).toBe(true);
+
+  const suggested = await client.callTool({
+    name: "suggest_icons",
+    arguments: { description: "settings sidebar with search, notifications and logout", perConcept: 2 },
+  });
+  expect(suggested.isError).toBeFalsy();
+  expect(suggested.structuredContent.concepts.map(({ concept }) => concept)).toEqual([
+    "settings",
+    "sidebar",
+    "search",
+    "notifications",
+    "logout",
+  ]);
+  expect(suggested.structuredContent.concepts.every(({ results }) => results.length <= 2)).toBe(true);
+  expect(text(suggested)).toContain("notifications: bell (Bell)");
 
   const svg = await client.callTool({
     name: "get_icon",

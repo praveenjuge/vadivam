@@ -33,5 +33,8 @@
     "@takumi-rs/core-linux-x64-musl": "2.17.1",
     "@takumi-rs/core-win32-arm64-msvc": "2.17.1",
     "@takumi-rs/core-win32-x64-msvc": "2.17.1"
+  },
+  "devDependencies": {
+    "lucide": "1.61.0"
   }
 }

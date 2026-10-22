@@ -440,3 +440,12 @@ describe("path cleanup", () => {
     expect(normalizeSvg(normalized, "split.svg")).toBe(normalized);
   });
 });
+
+describe("Lucide comparison", () => {
+  test("the docs compare against the pinned Lucide release", async () => {
+    const read = async (file) => JSON.parse(await Bun.file(new URL(`../${file}`, import.meta.url)).text());
+    const { lucideVersion } = await read("metadata/lucide.json");
+    const docs = await read("apps/docs/package.json");
+    expect(docs.devDependencies.lucide).toBe(lucideVersion);
+  });
+});

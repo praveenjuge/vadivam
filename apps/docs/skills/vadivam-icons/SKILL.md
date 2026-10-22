@@ -44,7 +44,7 @@ Peer ranges: React 18 or newer; React Native 0.71+ with React 18–19 and `react
 
 Never guess an icon name. Names follow Lucide (`trash`, `arrow-right`, `circle-check`), and every icon carries Lucide's search `tags` (synonyms) and `categories`.
 
-- With the MCP server connected, call `search_icons` with a few words (`{ "query": "delete" }`, optionally `"category": "arrows"`), then `get_icon` with the chosen name and a `format` such as `react` or `svg`. `list_categories` lists category ids.
+- With the MCP server connected, call `search_icons` with a few words (`{ "query": "delete" }`, optionally `"category": "arrows"`), then `get_icon` with the chosen name and a `format` such as `react` or `svg`. `list_categories` lists category ids. To pick icons for a whole screen, call `suggest_icons` with a short description such as `"settings sidebar with search, profile, and logout"`.
 - Without it, search the manifest:
 
   ```ts
@@ -60,7 +60,7 @@ Never guess an icon name. Names follow Lucide (`trash`, `arrow-right`, `circle-c
 
 ### Connect the MCP server
 
-The MCP server exposes `search_icons`, `get_icon`, `list_categories`, and `get_usage`. Use the hosted endpoint, or run the `vadivam-mcp` package over stdio (it bundles the icon data and works offline):
+The MCP server exposes `search_icons`, `suggest_icons`, `get_icon`, `list_categories`, and `get_usage`. Use the hosted endpoint, or run the `vadivam-mcp` package over stdio (it bundles the icon data and works offline):
 
 ```sh
 claude mcp add --transport http vadivam https://vadivam.praveenjuge.com/mcp

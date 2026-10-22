@@ -33,15 +33,25 @@ function svgBody({ name, svg }) {
   return source.slice(SVG_ROOT.length, -"</svg>".length).trim();
 }
 
+// Deprecated Lucide names still found in older designs, mapped to the current
+// name, so "Swap Lucide icons" recognizes layers such as `home` or `alert-circle`.
+const lucideAliasesPath = resolve(root, "../vadivam-internal/src/data/lucide-deprecated-aliases.json");
+
 // The canvas side needs SVG markup to create nodes plus the words for each component description.
-function createCatalogSource(icons) {
+async function createCatalogSource(icons) {
   const catalog = icons.map((icon) => ({
     name: icon.name,
     body: svgBody(icon),
     tags: icon.tags,
     categories: icon.categories.map((id) => categoryTitles.get(id)),
   }));
-  return `export const svgRoot = ${JSON.stringify(SVG_ROOT)};\n${jsonModule(catalog)}`;
+  const names = new Set(icons.map((icon) => icon.name));
+  const aliases = Object.fromEntries(
+    Object.entries(JSON.parse(await readFile(lucideAliasesPath, "utf8"))).filter(
+      ([alias, name]) => !names.has(alias) && names.has(name),
+    ),
+  );
+  return `export const svgRoot = ${JSON.stringify(SVG_ROOT)};\nexport const lucideAliases = ${JSON.stringify(aliases)};\n${jsonModule(catalog)}`;
 }
 
 // The UI only searches; previews come from the sprite already parsed with the HTML.
@@ -83,9 +93,10 @@ function virtualModulePlugin(specifier, filter, createSource) {
     setup(pluginBuild) {
       pluginBuild.onResolve({ filter }, () => ({ path: specifier, namespace: "vadivam" }));
       pluginBuild.onLoad({ filter: /.*/, namespace: "vadivam" }, async () => ({
-        contents: createSource(await sortedIcons()),
+        contents: await createSource(await sortedIcons()),
         loader: "js",
         watchDirs: [iconsRoot],
+        watchFiles: [lucideAliasesPath],
       }));
     },
   };

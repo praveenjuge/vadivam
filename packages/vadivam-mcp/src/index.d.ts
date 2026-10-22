@@ -14,6 +14,7 @@ export type IconFormat =
   | "data-uri"
   | "base64"
   | "css-mask"
+  | "tailwind"
   | "cdn"
   | "sprite"
   | "font"
@@ -60,6 +61,12 @@ export interface SearchResult {
   results: IconSummary[];
 }
 
+export interface SuggestResult {
+  description: string;
+  concepts: { concept: string; results: IconSummary[] }[];
+  unmatched: string[];
+}
+
 export interface RenderOptions {
   size?: number;
   strokeWidth?: number;
@@ -84,7 +91,7 @@ export declare const categories: readonly VadivamMcpCategory[];
 /** Instructions the server sends to clients when they connect. */
 export declare const instructions: string;
 
-/** A fresh MCP server with the search_icons, get_icon, list_categories, and get_usage tools. */
+/** A fresh MCP server with the search_icons, suggest_icons, get_icon, list_categories, and get_usage tools. */
 export declare function createVadivamServer(): McpServer;
 /** A stateless Streamable HTTP handler with a web-standard `fetch(request)`. */
 export declare function createVadivamHttpHandler(options?: CreateMcpHandlerOptions): McpHttpHandler;
@@ -92,6 +99,10 @@ export declare function searchIcons(
   query: string,
   options?: { limit?: number; category?: string },
 ): SearchResult;
+export declare function suggestIcons(
+  description: string,
+  options?: { perConcept?: number },
+): SuggestResult;
 export declare function findIcon(name: string): VadivamMcpIcon | undefined;
 export declare function closestIconNames(name: string, limit?: number): string[];
 export declare function renderIcon(

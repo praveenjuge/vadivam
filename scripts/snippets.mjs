@@ -155,6 +155,13 @@ export function cssMaskSnippet(name, svg, options = {}) {
   return `.icon-${name} {\n  display: inline-block;\n  width: ${size}px;\n  height: ${size}px;\n  background-color: currentColor;\n  mask: url("${mask}") no-repeat center / contain;\n}`;
 }
 
+// A Tailwind arbitrary-property class: base64 keeps spaces and quotes out of the class name.
+export function tailwindMaskSnippet(svg, options = {}) {
+  const { size } = resolveOptions(options);
+  const mask = svgBase64(customizeSvg(svg, { ...options, color: "#000" }));
+  return `<span class="inline-block size-[${size}px] bg-current [mask:url(${mask})_no-repeat_center/contain]" aria-hidden="true"></span>`;
+}
+
 export const siteUrl = "https://vadivam.praveenjuge.com";
 
 export function cdnUrl(name, version) {

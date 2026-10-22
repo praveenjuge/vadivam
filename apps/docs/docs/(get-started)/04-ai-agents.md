@@ -20,7 +20,7 @@ Use Vadivam when you need consistent, pixel-perfect 24px outline icons in a web 
 
 ## How an agent should consume Vadivam
 
-- MCP server: connect to `https://vadivam.praveenjuge.com/mcp` or run `npx -y vadivam-mcp` to search icons by name, tag, or category and get SVG or framework code with the `search_icons`, `get_icon`, `list_categories`, and `get_usage` tools. See [MCP server](/docs/mcp).
+- MCP server: connect to `https://vadivam.praveenjuge.com/mcp` or run `npx -y vadivam-mcp` to search icons by name, tag, or category and get SVG or framework code with the `search_icons`, `suggest_icons`, `get_icon`, `list_categories`, and `get_usage` tools. See [MCP server](/docs/mcp).
 - Documentation index: `https://vadivam.praveenjuge.com/llms.txt` lists every docs page; `https://vadivam.praveenjuge.com/llms-full.txt` carries the full text.
 - Agent skill: `https://vadivam.praveenjuge.com/skill.md` teaches an agent to find, install, import, size, label, and dynamically load Vadivam icons, with links to each docs page. It is also listed in `https://vadivam.praveenjuge.com/.well-known/agent-skills/index.json` and ships in the `vadivam` package at `skills/vadivam-icons/SKILL.md`.
 - Icon catalog: browse and search every icon at `https://vadivam.praveenjuge.com/`; each icon is also served as an optimized SVG file at `https://vadivam.praveenjuge.com/icons/<kebab-name>.svg` (for example `/icons/activity.svg`).

@@ -4,6 +4,8 @@ Public Figma companion for searching and inserting the canonical Vadivam icon se
 
 Search matches icon names, Lucide tags, and category titles, the same way the website does, and the category menu narrows the grid. Every inserted component gets a short description listing its categories and tags, plus a link to its icon page, so Figma's asset search finds it by those words too.
 
+Select a frame that holds Lucide icons, or the icons themselves, and the plugin offers to swap them to Vadivam. It recognizes square, stroke-only layers (no filled shapes, so buttons and tiles are left alone) named after a Lucide icon (`arrow-right`, `ArrowRight`, `lucide/arrow-right`, or a deprecated name such as `home`), keeps each layer's size, stroke color and weight, and layout position, and turns repeats of the same icon into instances of one new component. A local Lucide component is redrawn in place so its instances update with it.
+
 The UI previews icons from one SVG sprite parsed with the HTML, keeps search fields precomputed, and renders matches in batches as the grid scrolls. The canvas bundle stores each icon's SVG body without the shared root element.
 
 ## Development
@@ -25,6 +27,7 @@ Use `bun run figma-plugin:dev` while editing and `bun run test:figma-plugin` bef
 ### Manual checks
 
 - Search, keyboard navigation, insert, replace, undo, and redo.
+- Swap Lucide icons placed by the Lucide plugin and from the Lucide community library, then undo the swap.
 - Light and dark themes.
 - Empty files, auto-layout parents, tagged components with instances, and selected instances.
 - Confirm the plugin requests no permissions and reports no network domains.

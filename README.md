@@ -45,6 +45,8 @@ export function Example() {
 }
 ```
 
+Coming from Lucide? Every Lucide icon name works in Vadivam, and one command moves a project over: `npx vadivam migrate-lucide --write`. See [Migrate from Lucide](https://vadivam.praveenjuge.com/docs/migrate-from-lucide).
+
 Every package supports tree-shakeable named and per-icon imports. Framework packages also provide dynamic icon APIs for data-driven names.
 
 AI agents can search icons and get code through the MCP server at `https://vadivam.praveenjuge.com/mcp` or `npx -y vadivam-mcp`. See [MCP server](https://vadivam.praveenjuge.com/docs/mcp).

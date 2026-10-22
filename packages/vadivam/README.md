@@ -38,6 +38,7 @@ createIcons({ icons });
 - Per-icon SVG strings, a complete SVG sprite, and an optional WOFF2 icon font
 - DOM replacement with configurable attributes, roots, and templates
 - Complete icon metadata from `vadivam/manifest`
+- A codemod that moves a Lucide project to Vadivam: `npx vadivam migrate-lucide --write` ([guide](https://vadivam.praveenjuge.com/docs/migrate-from-lucide))
 
 Package family: [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
 

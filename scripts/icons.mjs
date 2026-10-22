@@ -1,4 +1,5 @@
 import {
+  chmod,
   mkdir,
   readFile,
   readdir,
@@ -36,6 +37,8 @@ import {
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const iconsDir = path.join(root, "icons");
 const rawDist = path.join(root, "packages/vadivam/dist");
+const rawSource = path.join(root, "packages/vadivam/src");
+const lucideAliasesPath = path.join(root, "apps/vadivam-internal/src/data/lucide-deprecated-aliases.json");
 const reactDist = path.join(root, "packages/vadivam-react/dist");
 const reactNativeDist = path.join(root, "packages/vadivam-react-native/dist");
 const vueDist = path.join(root, "packages/vadivam-vue/dist");
@@ -700,6 +703,23 @@ export default createIcons;
     registryPath: fontCodepointsPath,
     root,
   });
+  // The Lucide migration CLI is hand-written in packages/vadivam/src and reads
+  // the generated manifest next to it, plus the deprecated Lucide aliases the
+  // maintenance plugin tracks, so it can move alias imports to canonical names.
+  for (const file of ["cli.js", "migrate-lucide.js"]) {
+    await copyFile(path.join(rawSource, file), path.join(rawDist, file));
+  }
+  await chmod(path.join(rawDist, "cli.js"), 0o755);
+  const names = new Set(icons.map((icon) => icon.name));
+  const aliases = Object.fromEntries(
+    Object.entries(JSON.parse(await readFile(lucideAliasesPath, "utf8"))).filter(
+      ([alias, name]) => !names.has(alias) && names.has(name),
+    ),
+  );
+  await writeFile(
+    path.join(rawDist, "lucide-aliases.js"),
+    `// Deprecated Lucide names and the canonical icon each one now points to.\nexport const lucideAliases = ${JSON.stringify(aliases)};\n`,
+  );
   // The docs site serves the same skill at /skill.md; ship one copy with the package.
   await rm(rawSkills, { recursive: true, force: true });
   await mkdir(path.join(rawSkills, "vadivam-icons"), { recursive: true });
