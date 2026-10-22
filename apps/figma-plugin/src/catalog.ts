@@ -82,8 +82,12 @@ function termRank(entry: IconEntry, term: string): number {
 
 function rankEntry(entry: IconEntry, terms: readonly string[]): number {
   if (terms.length === 0) return 0;
-  const joined = terms.map(nameTerm).filter(Boolean).join("-");
-  if (terms.length > 1 && joined && entry.name.includes(joined)) return entry.name === joined ? 0 : 1;
+  // Joined words like `arrow down` match hyphenated names only when every word is a name word.
+  const nameTerms = terms.map(nameTerm);
+  const joined = nameTerms.join("-");
+  if (terms.length > 1 && nameTerms.every(Boolean) && entry.name.includes(joined)) {
+    return entry.name === joined ? 0 : 1;
+  }
   let rank = 0;
   for (const term of terms) {
     const termRanked = termRank(entry, term);

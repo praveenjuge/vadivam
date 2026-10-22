@@ -59,6 +59,8 @@ describe("searchIcons", () => {
   test("requires every word and joins words into hyphenated names", () => {
     expect(names("arrow down")).toEqual(["arrow-down-0-1"]);
     expect(names("delete garbage")).toEqual(["trash-2"]);
+    expect(names("badge $")).toEqual(["badge-dollar-sign"]);
+    expect(names("search $")).toEqual([]);
   });
 
   test("filters by category id", () => {
