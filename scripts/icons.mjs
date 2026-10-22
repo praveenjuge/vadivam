@@ -450,13 +450,15 @@ export function normalizeSvg(svg, file) {
   // found and smoothed; a last pass compacts the rewritten path data. Strokes
   // Figma split apart are joined first, and SVGO runs again on the joined
   // outline, so smoothing sees whole corners.
-  const pathPattern = /<path\b[^>]*\sd="([^"]*)"[^>]*\/>/g;
-  const pathData = (content) => [...content.matchAll(pathPattern)].map((match) => match[1]);
+  // Only path data is swapped; every other attribute stays for validation to judge.
+  const pathPattern = /(<path\b[^>]*\sd=")([^"]*)("[^>]*>)/g;
+  const pathData = (content) => [...content.matchAll(pathPattern)].map((match) => match[2]);
   const replacePaths = (content, paths) => {
     let index = 0;
-    return content.replace(pathPattern, () => {
-      const d = paths[index++];
-      return d === null ? "" : `<path d="${d}"/>`;
+    return content.replace(pathPattern, (match, prefix, d, suffix) => {
+      const next = paths[index++];
+      if (next !== null) return `${prefix}${next}${suffix}`;
+      return suffix.endsWith("/>") ? "" : match;
     });
   };
   const first = optimizeSvg(svg, file);

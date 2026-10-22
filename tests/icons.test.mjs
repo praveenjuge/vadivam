@@ -39,6 +39,15 @@ describe("icon validation", () => {
     );
   });
 
+  test.each([
+    ["a dashed stroke", 'stroke-dasharray="2 2"'],
+    ["an opacity", 'opacity=".5"'],
+    ["an inline style", 'style="color:red"'],
+  ])("rejects a path with %s instead of dropping it while normalizing", (_name, attribute) => {
+    const svg = validSvg.replace('<path d="M4 12h16"/>', `<path d="M4 12h16" ${attribute}/>`);
+    expect(() => normalizeSvg(svg, "path-attribute.svg")).toThrow("path-attribute.svg: unsupported path attribute");
+  });
+
   test("rejects compound paths that look like expanded strokes", () => {
     const closedShapes = Array.from(
       { length: 9 },
