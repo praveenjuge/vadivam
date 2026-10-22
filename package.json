@@ -1,6 +1,6 @@
 {
   "name": "vadivam-monorepo",
-  "version": "0.0.55",
+  "version": "0.0.56",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.4.3",
