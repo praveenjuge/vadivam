@@ -116,6 +116,21 @@ describe("migrate-lucide", () => {
     expect(warnings).toEqual([]);
   });
 
+  test("renames uses in files written without semicolons", () => {
+    const source = [
+      `import { LucideBell } from "lucide-react"`,
+      `export const A = () => <LucideBell />`,
+      `export { B } from "./b"`,
+    ].join("\n");
+    expect(migrateSource(source).text).toBe(
+      [
+        `import { VadivamBell } from "vadivam-react"`,
+        `export const A = () => <VadivamBell />`,
+        `export { B } from "./b"`,
+      ].join("\n"),
+    );
+  });
+
   test("warns about mock factories, whose keys it cannot rewrite", () => {
     const { text, warnings } = migrateSource(`vi.mock("lucide-react", () => ({ LucideBell: () => null }));`);
     expect(text).toBe(`vi.mock("vadivam-react", () => ({ LucideBell: () => null }));`);
