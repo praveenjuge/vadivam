@@ -105,17 +105,24 @@
    staggered by its `--i` index, and wiggles on hover. Paths carry
    `pathLength="1"`, so one dash covers any path; the longer gap keeps a
    zero-length dash (a round-cap dot) off the path's far end. Phones show the
-   first eight. */
+   first eight. Columns cap at 2.75rem and shrink, icon and all, when the row
+   is narrower than that, so it never overflows. */
 @layer components {
   .hero-icons {
-    @apply m-0 mt-2 flex list-none gap-1 p-0 max-sm:[&>:nth-child(n+9)]:hidden;
+    @apply m-0 mt-2 grid list-none gap-1 p-0 max-sm:[&>:nth-child(n+9)]:hidden;
+    grid-template-columns: repeat(8, minmax(0, 2.75rem));
+  }
+  @media (width >= 40rem) {
+    .hero-icons {
+      grid-template-columns: repeat(16, minmax(0, 2.75rem));
+    }
   }
   .hero-icons a {
-    @apply grid size-10 place-items-center rounded-lg text-foreground no-underline transition-colors hover:bg-muted hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:size-11;
+    @apply grid aspect-square w-full place-items-center rounded-lg text-foreground no-underline transition-colors hover:bg-muted hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent;
   }
   .hero-icons svg {
-    width: 1.75rem;
-    height: 1.75rem;
+    width: min(1.75rem, 75%);
+    height: auto;
     fill: none;
     stroke: currentColor;
     stroke-width: 2;
