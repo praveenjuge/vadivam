@@ -539,7 +539,13 @@ for (const button of sourceButtons) {
   });
 }
 
-function renderRemoteMissing(version: string, missing: string[], hasLibrary: boolean): void {
+// Add uses the source that was checked, whatever the toggle shows by then.
+function renderRemoteMissing(
+  source: RemoteSource,
+  version: string,
+  missing: string[],
+  hasLibrary: boolean,
+): void {
   remoteResults.replaceChildren();
   if (missing.length === 0) {
     remoteResults.append(emptyState(`The library has every icon in ${version}.`, true));
@@ -560,9 +566,9 @@ function renderRemoteMissing(version: string, missing: string[], hasLibrary: boo
     button.dataset.action = "";
     button.textContent = `Add ${numberFormat.format(missing.length)}`;
     button.addEventListener("click", () => {
-      startAction(`Adding ${plural(missing.length, "icon")} from ${sourceLabels[remoteSource]}…`, {
+      startAction(`Adding ${plural(missing.length, "icon")} from ${sourceLabels[source]}…`, {
         type: "add-remote",
-        source: remoteSource,
+        source,
       });
     });
     bulk.append(button);
@@ -749,7 +755,7 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
       return;
     }
     case "remote-checked": {
-      renderRemoteMissing(message.version, message.missing, message.hasLibrary);
+      renderRemoteMissing(message.source, message.version, message.missing, message.hasLibrary);
       const missing = message.missing.length;
       finishAction(
         missing === 0

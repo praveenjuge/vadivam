@@ -884,7 +884,8 @@ const structuredData = site
             delete button.dataset.copied;
           }, 1500);
         } catch {
-          installCommand.focus();
+          // Clipboard access can be refused; select the command so it can be copied by hand.
+          getSelection()?.selectAllChildren(installCommand);
         }
       });
       syncInstall();
