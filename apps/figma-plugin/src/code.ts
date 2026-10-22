@@ -319,19 +319,32 @@ function lucideIconName(layerName: string): string | null {
   return null;
 }
 
-// A square layer drawn only with shapes, like an icon pasted from Lucide or
-// placed from its Figma library, as opposed to a frame of UI named "search".
+const visiblePaints = (node: BaseNode, key: "fills" | "strokes"): boolean => {
+  const paints = key in node ? (node as unknown as Record<string, unknown>)[key] : [];
+  // Mixed paints are something drawn, so they count as visible.
+  return !Array.isArray(paints) || paints.some((paint: Paint) => paint.visible !== false && paint.opacity !== 0);
+};
+
+// A square, stroke-only drawing, like an icon pasted from Lucide or placed
+// from its Figma library. A button or tile named "search" has a filled
+// background somewhere, so it is never mistaken for one.
 function isOutlineIcon(node: SceneNode & ChildrenMixin): boolean {
   if (Math.abs(node.width - node.height) > 0.5 || node.width < 8 || node.width > 256) return false;
-  let shapes = 0;
+  if (visiblePaints(node, "fills")) return false;
+  let stroked = 0;
   const stack: SceneNode[] = [...node.children];
   while (stack.length > 0) {
     const child = stack.pop()!;
-    if (SHAPE_TYPES.has(child.type)) shapes += 1;
-    else if ((child.type === "GROUP" || child.type === "FRAME") && "children" in child) stack.push(...child.children);
-    else return false;
+    if (visiblePaints(child, "fills")) return false;
+    if (SHAPE_TYPES.has(child.type)) {
+      if (visiblePaints(child, "strokes")) stroked += 1;
+    } else if ((child.type === "GROUP" || child.type === "FRAME") && "children" in child) {
+      stack.push(...child.children);
+    } else {
+      return false;
+    }
   }
-  return shapes > 0;
+  return stroked > 0;
 }
 
 function insideInstance(node: BaseNode): boolean {

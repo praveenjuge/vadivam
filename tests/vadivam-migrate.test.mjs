@@ -82,6 +82,23 @@ describe("migrate-lucide", () => {
     );
   });
 
+  test("renames only bindings imported from Lucide", () => {
+    const source = [
+      `import { LucideBell } from "lucide-react";`,
+      `import { LucideClient } from "@acme/lucide-client";`,
+      `const client = new LucideClient();`,
+      `export const Bell = () => <LucideBell aria-label="LucideBell" data-client={client.LucideBell} />;`,
+    ].join("\n");
+    expect(migrateSource(source).text).toBe(
+      [
+        `import { VadivamBell } from "vadivam-react";`,
+        `import { LucideClient } from "@acme/lucide-client";`,
+        `const client = new LucideClient();`,
+        `export const Bell = () => <VadivamBell aria-label="LucideBell" data-client={client.LucideBell} />;`,
+      ].join("\n"),
+    );
+  });
+
   test("leaves files without Lucide imports alone", () => {
     const source = `import { LucideLike } from "./local";\n`;
     expect(migrateSource(source)).toEqual({ text: source, changes: 0, warnings: [] });

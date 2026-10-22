@@ -419,9 +419,13 @@ describe("compiled Figma plugin", () => {
     const label = harness.register({ type: "FRAME", name: "search", children: [{ type: "TEXT", name: "Search" }] });
     const notSquare = harness.lucideLayer("FRAME", "heart");
     notSquare.width = 40;
+    // A square button with a filled background and an icon inside is UI, not an icon.
+    const button = harness.lucideLayer("FRAME", "search");
+    const background = { type: "RECTANGLE", name: "bg", parent: button, fills: [{ type: "SOLID", color: { r: 0, g: 0, b: 1 } }], strokes: [] };
+    button.children.unshift(background);
     arrow.x = 12;
     arrow.layoutGrow = 1;
-    const card = harness.container("Card", [arrow, secondArrow, home, digits, star, starUse, bell, label, notSquare, vadivam]);
+    const card = harness.container("Card", [arrow, secondArrow, home, digits, star, starUse, bell, label, notSquare, button, vadivam]);
 
     harness.page.selection = [card];
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -451,7 +455,7 @@ describe("compiled Figma plugin", () => {
     expect(star.children.every((child: any) => child.strokeWeight === 1.5)).toBe(true);
     expect(starInstance).toBe(starUse);
     expect(bellComponent).toMatchObject({ type: "COMPONENT", name: "bell" });
-    expect(rest).toEqual([label, notSquare, vadivam]);
+    expect(rest).toEqual([label, notSquare, button, vadivam]);
     expect(harness.nodes.has(arrow.id)).toBe(false);
     expect(harness.page.selection).toHaveLength(6);
 

@@ -61,7 +61,6 @@ const apiExports = new Set([
 ]);
 
 const specifierPattern = /(\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|\brequire\s*\(\s*|\.mock\s*\(\s*)(["'])([^"'\n]+)\2/g;
-const lucideIdentifierPattern = /\b[A-Za-z_$][\w$]*\b/g;
 const namedImportPattern = /\bimport\s+(?:type\s+)?(?:[\w$]+\s*,\s*)?\{([^}]*)\}\s*from\s*["'](vadivam(?:-[a-z-]+)?)(\/dynamic)?["']/g;
 
 function splitSpecifier(specifier) {
@@ -129,26 +128,33 @@ export function migrateSource(text, { styles = false } = {}) {
     return `${prefix}${quote}${mapped.specifier}${quote}`;
   });
   if (migrated) {
-    // LucideArrowRight, LucideProps, createLucideIcon, LucideProvider, ...
-    output = output.replace(lucideIdentifierPattern, (identifier) => {
-      const renamed = renameIdentifier(identifier);
-      if (renamed !== identifier) changes += 1;
-      return renamed;
-    });
-    // A deprecated Lucide name imports the canonical icon under the old local
-    // name (`House as Home`), so the rest of the file, its strings included,
-    // stays as written.
+    // Only bindings imported from Lucide are renamed. `LucideBell` becomes
+    // `VadivamBell` here and in the file's uses; a deprecated name imports the
+    // canonical icon under the old local name (`House as Home`) so the file's
+    // strings and JSX text stay as written.
+    const renames = new Map();
     output = output.replace(namedImportPattern, (statement, names) =>
       statement.replace(names, (list) =>
-        list.replace(/((?:type\s+)?)([\w$]+)(\s+as\s+[\w$]+)?/g, (entry, type, imported, local) => {
-          const canonical = canonicalExport(imported);
-          if (canonical === imported) return entry;
-          changes += 1;
-          const alias = local ?? ` as ${imported}`;
-          return `${type}${canonical}${alias.replace(/^\s+as\s+/, "") === canonical ? "" : alias}`;
+        list.replace(/((?:type\s+)?)([\w$]+)(?:\s+as\s+([\w$]+))?/g, (entry, type, imported, local) => {
+          const binding = local ?? renameIdentifier(imported);
+          const exported = canonicalExport(renameIdentifier(imported));
+          if (!local && binding !== imported) renames.set(imported, binding);
+          const next = `${type}${exported}${binding === exported ? "" : ` as ${binding}`}`;
+          if (next !== entry) changes += 1;
+          return next;
         }),
       ),
     );
+    if (renames.size > 0) {
+      // Import statements (already rewritten) and quoted strings stay as they
+      // are; other identifier uses, but not property reads, take the new name.
+      output = output.replace(/\bimport\s[^;]*?\bfrom\s*["'][^"']*["']|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|(?<![\w$.])([A-Za-z_$][\w$]*)/g, (match, identifier) => {
+        const renamed = identifier && renames.get(identifier);
+        if (!renamed) return match;
+        changes += 1;
+        return renamed;
+      });
+    }
   }
   // The core package's createIcons() reads data-vadivam instead of data-lucide.
   output = output.replace(/\bdata-lucide(?==)/g, () => {
