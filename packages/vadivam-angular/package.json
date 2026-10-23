@@ -59,6 +59,26 @@
       "import": "./dist/icons/*.js",
       "default": "./dist/icons/*.js"
     },
+    "./solid": {
+      "types": "./dist/types/vadivam-angular-solid.d.ts",
+      "import": "./dist/fesm2022/vadivam-angular-solid.mjs",
+      "default": "./dist/fesm2022/vadivam-angular-solid.mjs"
+    },
+    "./solid/dynamic": {
+      "types": "./dist/types/vadivam-angular-solid.d.ts",
+      "import": "./dist/fesm2022/vadivam-angular-solid.mjs",
+      "default": "./dist/fesm2022/vadivam-angular-solid.mjs"
+    },
+    "./solid/dynamicIconImports": {
+      "types": "./dist/types/vadivam-angular-solid.d.ts",
+      "import": "./dist/fesm2022/vadivam-angular-solid.mjs",
+      "default": "./dist/fesm2022/vadivam-angular-solid.mjs"
+    },
+    "./solid/icons/*": {
+      "types": "./dist/solid/icons/*.d.ts",
+      "import": "./dist/solid/icons/*.js",
+      "default": "./dist/solid/icons/*.js"
+    },
     "./package.json": "./package.json"
   },
   "peerDependencies": {

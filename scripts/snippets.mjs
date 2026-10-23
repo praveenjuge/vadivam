@@ -23,6 +23,12 @@ export const frameworksById = Object.freeze(
   Object.fromEntries(frameworks.map((framework) => [framework.id, framework])),
 );
 
+// Every icon is drawn in each of these styles. Solid icons are filled, so they
+// take no stroke options.
+export const iconStyles = Object.freeze(["outline", "solid"]);
+
+const isSolid = (options) => options?.style === "solid";
+
 /** Resolve options against the defaults, keeping only finite numbers and plain colors. */
 export function resolveOptions(options = {}) {
   const size = Number(options.size);
@@ -50,6 +56,7 @@ function changedProps(options) {
   const props = [];
   if (resolved.size !== iconDefaults.size) props.push(["size", resolved.size]);
   if (resolved.color !== iconDefaults.color) props.push(["color", resolved.color]);
+  if (isSolid(options)) return props;
   if (resolved.strokeWidth !== iconDefaults.strokeWidth) props.push(["strokeWidth", resolved.strokeWidth]);
   if (resolved.absoluteStrokeWidth) props.push(["absoluteStrokeWidth", true]);
   return props;
@@ -84,7 +91,7 @@ export function componentSnippet(frameworkId, componentName, options = {}) {
   const framework = frameworksById[frameworkId];
   if (!framework) throw new Error(`Unknown framework: ${frameworkId}`);
   const props = propsSource(frameworkId, options);
-  const from = framework.packageName;
+  const from = isSolid(options) ? `${framework.packageName}/solid` : framework.packageName;
   switch (frameworkId) {
     case "vue":
       return `<script setup>\nimport { ${componentName} } from "${from}";\n</script>\n\n<template>\n  <${componentName}${props} />\n</template>`;
@@ -93,7 +100,7 @@ export function componentSnippet(frameworkId, componentName, options = {}) {
     case "astro":
       return `---\nimport { ${componentName} } from "${from}";\n---\n\n<${componentName}${props} />`;
     case "angular":
-      return `import { ${componentName} } from "${from}";\n\n<svg vadivam${componentName}${props}></svg>`;
+      return `import { ${componentName} } from "${from}";\n\n<svg vadivam${isSolid(options) ? "Solid" : ""}${componentName}${props}></svg>`;
     default:
       return `import { ${componentName} } from "${from}";\n\n<${componentName}${props} />`;
   }
@@ -102,6 +109,12 @@ export function componentSnippet(frameworkId, componentName, options = {}) {
 /** Apply size, color, and stroke settings to an icon's normalized SVG markup. */
 export function customizeSvg(svg, options = {}) {
   const { size, color } = resolveOptions(options);
+  if (isSolid(options)) {
+    return svg
+      .replace(/ width="[^"]*"/, ` width="${size}"`)
+      .replace(/ height="[^"]*"/, ` height="${size}"`)
+      .replace(/ fill="[^"]*"/, ` fill="${color}"`);
+  }
   const strokeWidth = effectiveStrokeWidth(options);
   return svg
     .replace(/ width="[^"]*"/, ` width="${size}"`)
@@ -164,26 +177,30 @@ export function tailwindMaskSnippet(svg, options = {}) {
 
 export const siteUrl = "https://vadivam.praveenjuge.com";
 
-export function cdnUrl(name, version) {
-  return `https://cdn.jsdelivr.net/npm/vadivam@${version}/dist/icons/${name}.svg`;
+export function cdnUrl(name, version, style = "outline") {
+  return `https://cdn.jsdelivr.net/npm/vadivam@${version}/dist/${style === "solid" ? "solid/" : ""}icons/${name}.svg`;
 }
 
-export function spriteSnippet(name) {
+export function spriteSnippet(name, style = "outline") {
+  if (style === "solid") {
+    return `<svg width="24" height="24" fill="currentColor" fill-rule="evenodd" aria-hidden="true">\n  <use href="/sprite-solid.svg#vadivam-solid-${name}" />\n</svg>`;
+  }
   return `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">\n  <use href="/sprite.svg#vadivam-${name}" />\n</svg>`;
 }
 
-export function fontSnippet(name) {
-  return `<i class="vadivam-icon vadivam-icon-${name}" aria-hidden="true"></i>`;
+export function fontSnippet(name, style = "outline") {
+  return `<i class="${style === "solid" ? "vadivam-solid-icon" : "vadivam-icon"} vadivam-icon-${name}" aria-hidden="true"></i>`;
 }
 
-export function iconifySnippet(name) {
+export function iconifySnippet(name, style = "outline") {
+  if (style === "solid") throw new Error("Iconify has the outline icons only; use another format for solid icons.");
   return `vadivam:${name}`;
 }
 
-export function shadcnItemUrl(name, baseUrl = siteUrl) {
-  return `${baseUrl}/r/${name}.json`;
+export function shadcnItemUrl(name, baseUrl = siteUrl, style = "outline") {
+  return `${baseUrl}/r/${style === "solid" ? "solid/" : ""}${name}.json`;
 }
 
-export function shadcnAddCommand(name) {
-  return `npx shadcn@latest add ${shadcnItemUrl(name)}`;
+export function shadcnAddCommand(name, style = "outline") {
+  return `npx shadcn@latest add ${shadcnItemUrl(name, siteUrl, style)}`;
 }

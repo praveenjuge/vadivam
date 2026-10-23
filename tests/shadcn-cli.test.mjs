@@ -18,6 +18,7 @@ const cli = path.join(root, "node_modules/shadcn/dist/index.js");
 const tsc = path.join(root, "node_modules/typescript/bin/tsc");
 const node = Bun.which("node");
 const picked = icons.filter(({ name }) => ["activity", "arrow-right"].includes(name));
+const pickedSolid = picked.map((icon) => ({ ...icon, svg: icon.solid.svg, iconNode: icon.solid.iconNode }));
 
 let project;
 let server;
@@ -71,7 +72,7 @@ beforeAll(async () => {
     },
   });
   registryUrl = `http://127.0.0.1:${server.port}`;
-  await buildShadcnRegistry(picked, path.join(publicDir, "r"), { baseUrl: registryUrl });
+  await buildShadcnRegistry(picked, path.join(publicDir, "r"), { baseUrl: registryUrl, solidIcons: pickedSolid });
   await mkdir(path.join(publicDir, "shadcn/r/colors"), { recursive: true });
   await writeFile(
     path.join(publicDir, "shadcn/r/colors/neutral.json"),
@@ -118,7 +119,7 @@ beforeAll(async () => {
       tsx: true,
       tailwind: { config: "", css: "src/app/globals.css", baseColor: "neutral", cssVariables: true },
       aliases: { components: "@/components", utils: "@/lib/utils", ui: "@/components/ui", lib: "@/lib", hooks: "@/hooks" },
-      registries: { "@vadivam": `${registryUrl}/r/{name}.json` },
+      registries: { "@vadivam": `${registryUrl}/r/{name}.json`, "@vadivam-solid": `${registryUrl}/r/solid/{name}.json` },
     }),
   );
 });
@@ -147,12 +148,20 @@ describe.skipIf(!node)("shadcn CLI install", () => {
     expect(output).toContain("@vadivam/arrow-right");
   }, 120_000);
 
+  test("adds a solid icon through the @vadivam-solid namespace beside the outline one", async () => {
+    const output = await shadcn("add", "@vadivam-solid/activity", "--yes", "--overwrite");
+    expect(output).toContain("src/components/icons/solid/vadivam-icon.tsx");
+    expect(output).toContain("src/components/icons/solid/activity.tsx");
+    expect(await Bun.file(path.join(iconsDir(), "activity.tsx")).exists()).toBe(true);
+  }, 120_000);
+
   test("installed components typecheck under strict TypeScript", async () => {
     await writeFile(
       path.join(project, "src/app/page.tsx"),
       `import { useRef } from "react";
 import { Activity } from "@/components/icons/activity";
 import ArrowRight, { ArrowRightIcon } from "@/components/icons/arrow-right";
+import { Activity as SolidActivity } from "@/components/icons/solid/activity";
 
 export function Page() {
   const ref = useRef<SVGSVGElement>(null);
@@ -161,12 +170,16 @@ export function Page() {
       <Activity ref={ref} size={32} color="red" strokeWidth={1.5} absoluteStrokeWidth title="Pulse" className="icon" onClick={() => {}} />
       <ArrowRight aria-label="Next" />
       <ArrowRightIcon size="1em" />
+      <SolidActivity size={32} color="red" title="Pulse" />
     </nav>
   );
 }
 
 // @ts-expect-error size must be a number or string
 export const invalid = <Activity size={{}} />;
+
+// @ts-expect-error solid icons have no stroke
+export const solidStroke = <SolidActivity strokeWidth={2} />;
 `,
     );
     const result = spawnSync(process.execPath, [tsc, "-p", project], { encoding: "utf8" });
@@ -197,5 +210,13 @@ export const invalid = <Activity size={{}} />;
     const named = renderToStaticMarkup(createElement(Activity, { "aria-label": "Activity" }));
     expect(named).toContain('aria-label="Activity"');
     expect(named).not.toContain("aria-hidden");
+  });
+
+  test("installed solid components paint a fill", async () => {
+    const { Activity } = await import(path.join(iconsDir(), "solid/activity.tsx"));
+    const [, d] = pickedSolid.find(({ name }) => name === "activity").svg.match(/ d="([^"]+)"/);
+    expect(renderToStaticMarkup(createElement(Activity, { color: "red" }))).toBe(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="red" fill-rule="evenodd" class="vadivam vadivam-activity" aria-hidden="true"><path d="${d}"></path></svg>`,
+    );
   });
 });

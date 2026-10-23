@@ -57,6 +57,21 @@ import { Activity, Search, VadivamProvider } from "vadivam-react-native";
 
 The provider supplies `size`, `color`, `strokeWidth`, and `absoluteStrokeWidth`. Individual icon props take precedence.
 
+## Solid icons
+
+Every icon has a [solid](/docs/design-guide#solid) twin with the same name in `vadivam-react-native/solid`:
+
+```tsx
+import { House } from "vadivam-react-native";
+import { House as HouseSolid } from "vadivam-react-native/solid";
+
+export function HomeTab({ focused }: { focused: boolean }) {
+  return focused ? <HouseSolid size={24} color="#0a84ff" /> : <House size={24} />;
+}
+```
+
+Solid icons fill their shapes with `color` and take no stroke props. `VadivamProvider` sets defaults for both styles, and `vadivam-react-native/solid/icons/house` and `vadivam-react-native/solid/dynamic` work like their outline counterparts.
+
 ## Per-icon and dynamic imports
 
 ```tsx

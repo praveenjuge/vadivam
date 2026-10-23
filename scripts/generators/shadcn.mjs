@@ -1,10 +1,12 @@
 // shadcn/ui registry: one self-contained React component per icon, served
-// flat at /r/<name>.json with a /r/registry.json index.
+// flat at /r/<name>.json with a /r/registry.json index. Solid icons are a
+// second registry at /r/solid/, installed under components/icons/solid/.
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { shadcnItemUrl, siteUrl } from "../snippets.mjs";
 
 export const registryName = "vadivam";
+export const solidRegistryName = "vadivam-solid";
 export const baseItemName = "vadivam-icon";
 const author = `Praveen Juge <${siteUrl}>`;
 const itemSchema = "https://ui.shadcn.com/schema/registry-item.json";
@@ -62,6 +64,46 @@ export function VadivamIcon({
 }
 `;
 
+export const solidBaseComponentSource = `import type * as React from "react";
+
+export type VadivamIconProps = Omit<React.ComponentProps<"svg">, "strokeWidth"> & {
+  size?: number | string;
+  color?: string;
+  title?: string;
+};
+
+export function VadivamIcon({
+  name,
+  size = 24,
+  color = "currentColor",
+  title,
+  className,
+  children,
+  ...props
+}: VadivamIconProps & { name: string }) {
+  const labelled =
+    Boolean(title) ||
+    Object.keys(props).some((key) => key.startsWith("aria-") || key === "role");
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={color}
+      fillRule="evenodd"
+      className={["vadivam", \`vadivam-\${name}\`, className].filter(Boolean).join(" ")}
+      aria-hidden={labelled ? undefined : true}
+      role={title ? "img" : undefined}
+      {...props}
+    >
+      {title ? <title>{title}</title> : null}
+      {children}
+    </svg>
+  );
+}
+`;
+
 function jsxElement([tag, attrs]) {
   const props = Object.entries(attrs)
     .filter(([name]) => name !== "key")
@@ -94,40 +136,43 @@ export default ${componentName};
 `;
 }
 
-function componentFile(name, content) {
+function componentFile(name, content, style = "outline") {
+  const folder = style === "solid" ? "icons/solid" : "icons";
   return {
-    path: `registry/icons/${name}.tsx`,
+    path: `registry/${folder}/${name}.tsx`,
     content,
     type: "registry:component",
-    target: `@components/icons/${name}.tsx`,
+    target: `@components/${folder}/${name}.tsx`,
   };
 }
 
-export function baseItem() {
+export function baseItem({ style = "outline" } = {}) {
+  const solid = style === "solid";
   return {
     $schema: itemSchema,
     name: baseItemName,
     type: "registry:component",
     title: "VadivamIcon",
-    description:
-      "Shared base component for Vadivam icons: size, color, strokeWidth, absoluteStrokeWidth, and title props on a 24px outline SVG.",
+    description: solid
+      ? "Shared base component for solid Vadivam icons: size, color, and title props on a 24px filled SVG."
+      : "Shared base component for Vadivam icons: size, color, strokeWidth, absoluteStrokeWidth, and title props on a 24px outline SVG.",
     author,
     docs: `Props and usage: ${siteUrl}/docs/shadcn`,
-    files: [componentFile(baseItemName, baseComponentSource)],
+    files: [componentFile(baseItemName, solid ? solidBaseComponentSource : baseComponentSource, style)],
   };
 }
 
-export function iconItem(icon, { baseUrl = siteUrl } = {}) {
+export function iconItem(icon, { baseUrl = siteUrl, style = "outline" } = {}) {
   const tags = icon.tags.length ? ` Tags: ${icon.tags.join(", ")}.` : "";
   return {
     $schema: itemSchema,
     name: icon.name,
     type: "registry:component",
     title: icon.componentName,
-    description: `${icon.componentName} icon from Vadivam, a 24px outline icon set.${tags}`,
+    description: `${icon.componentName} icon from Vadivam, a 24px ${style === "solid" ? "solid" : "outline"} icon set.${tags}`,
     author,
-    registryDependencies: [shadcnItemUrl(baseItemName, baseUrl)],
-    files: [componentFile(icon.name, iconComponentSource(icon))],
+    registryDependencies: [shadcnItemUrl(baseItemName, baseUrl, style)],
+    files: [componentFile(icon.name, iconComponentSource(icon), style)],
     categories: icon.categories,
     meta: { tags: icon.tags, lucide: icon.name },
     docs: `Preview and other formats: ${siteUrl}/icons/${icon.name}`,
@@ -140,14 +185,14 @@ export function registryItems(icons, options) {
       throw new Error(`Icon name collides with a shadcn registry file: ${icon.name}`);
     }
   }
-  return [baseItem(), ...icons.map((icon) => iconItem(icon, options))];
+  return [baseItem(options), ...icons.map((icon) => iconItem(icon, options))];
 }
 
 /** The registry index lists every item; per the directory rules its files carry no content. */
-export function registryIndex(items) {
+export function registryIndex(items, { style = "outline" } = {}) {
   return {
     $schema: registrySchema,
-    name: registryName,
+    name: style === "solid" ? solidRegistryName : registryName,
     homepage: siteUrl,
     items: items.map(({ $schema, files, ...item }) => ({
       ...item,
@@ -156,19 +201,23 @@ export function registryIndex(items) {
   };
 }
 
-export async function buildShadcnRegistry(icons, outDir, options) {
+export async function buildShadcnRegistry(icons, outDir, options = {}) {
   const items = registryItems(icons, options);
   await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
   await writeFile(
     path.join(outDir, "registry.json"),
-    `${JSON.stringify(registryIndex(items))}\n`,
+    `${JSON.stringify(registryIndex(items, options))}\n`,
   );
   for (const item of items) {
     await writeFile(
       path.join(outDir, `${item.name}.json`),
       `${JSON.stringify(item, null, 2)}\n`,
     );
+  }
+  if (options.solidIcons?.length) {
+    const { solidIcons, ...rest } = options;
+    await buildShadcnRegistry(solidIcons, path.join(outDir, "solid"), { ...rest, style: "solid" });
   }
   return items;
 }

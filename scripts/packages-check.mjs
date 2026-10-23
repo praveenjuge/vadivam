@@ -103,7 +103,10 @@ async function validatePackage({
       throw new Error(`${name}: README does not link package family member ${other.name}`);
     }
   }
-  await run("bun", ["x", "publint", "."], cwd);
+  // publint opens every file its export globs match at once. Under Node, a
+  // package with more matches than the open-file limit reports the files it
+  // could not open as missing; Bun's runtime does not, so run it there.
+  await run("bun", ["--bun", "x", "publint", "."], cwd);
   const packed = JSON.parse(
     await run("npm", ["pack", "--dry-run", "--json"], cwd, true),
   );
@@ -121,16 +124,21 @@ async function validatePackage({
   if (name === "vadivam") {
     if (
       JSON.stringify(manifest.sideEffects) !==
-      JSON.stringify(["./dist/font/vadivam.css"])
+      JSON.stringify(["./dist/font/vadivam.css", "./dist/font/vadivam-solid.css"])
     ) {
       throw new Error(`${name}: font CSS must be preserved as a side effect`);
     }
     const requiredStaticAssets = [
       "dist/font/vadivam.css",
       "dist/font/vadivam.woff2",
+      "dist/font/vadivam-solid.css",
+      "dist/font/vadivam-solid.woff2",
       "dist/sprite.svg",
       "dist/strings/activity.d.ts",
       "dist/strings/activity.js",
+      "dist/solid/sprite.svg",
+      "dist/solid/icons/activity.svg",
+      "dist/solid/strings/activity.js",
       "skills/vadivam-icons/SKILL.md",
     ];
     for (const asset of requiredStaticAssets) {
@@ -143,8 +151,7 @@ async function validatePackage({
         file,
       ) ||
       (file.startsWith("dist/font/") &&
-        file !== "dist/font/vadivam.css" &&
-        file !== "dist/font/vadivam.woff2"),
+        !/^dist\/font\/vadivam(?:-solid)?\.(?:css|woff2)$/.test(file)),
     );
     if (forbiddenStaticAsset) {
       throw new Error(`${name}: npm tarball contains unexpected font asset ${forbiddenStaticAsset}`);

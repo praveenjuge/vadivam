@@ -232,8 +232,38 @@ describe("WOFF2 font", () => {
       expect(css).not.toContain(`.vadivam-icon-${name}::before`);
     }
     expect((await readdir(fontDirectory)).sort()).toEqual([
+      "vadivam-solid.css",
+      "vadivam-solid.woff2",
       "vadivam.css",
       "vadivam.woff2",
     ]);
+  });
+
+  test("ships a solid font on the same codepoints", async () => {
+    const fontDirectory = path.join(packageDist, "font");
+    const css = await readFile(path.join(fontDirectory, "vadivam-solid.css"), "utf8");
+    expect(css).toContain('url("./vadivam-solid.woff2") format("woff2")');
+    expect(css).toContain('font-family: "Vadivam Icons Solid"');
+    expect(css).toContain(".vadivam-solid-icon {");
+    for (const icon of manifest) {
+      expect(css).toContain(`.vadivam-icon-${icon.name}::before`);
+    }
+    const font = openSync(path.join(fontDirectory, "vadivam-solid.woff2"));
+    const registry = await readFontCodepoints(registryPath);
+    expect(font.familyName).toBe("Vadivam Icons Solid");
+    for (const icon of manifest) {
+      expect(font.glyphForCodePoint(registry[icon.name]).id).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("solid static assets", () => {
+  test("exports every solid SVG as a string and a sprite symbol", async () => {
+    const sprite = await readFile(path.join(packageDist, "solid/sprite.svg"), "utf8");
+    for (const icon of manifest) {
+      const module = await import(`vadivam/solid/strings/${icon.name}`);
+      expect(module.default).toBe(icon.solid.svg);
+      expect(sprite).toContain(`<symbol id="vadivam-solid-${icon.name}" viewBox="0 0 24 24">`);
+    }
   });
 });

@@ -48,6 +48,24 @@ import { Activity, Search, VadivamProvider } from "vadivam-vue";
 
 For composition-based setup code, the root package also exports `provideVadivam` and `useVadivamContext`.
 
+## Solid icons
+
+Every icon has a [solid](/docs/design-guide#solid) twin with the same name in `vadivam-vue/solid`:
+
+```vue
+<script setup lang="ts">
+import { House } from "vadivam-vue";
+import { House as HouseSolid } from "vadivam-vue/solid";
+defineProps<{ active: boolean }>();
+</script>
+
+<template>
+  <component :is="active ? HouseSolid : House" :size="20" title="Home" />
+</template>
+```
+
+Solid icons fill their shapes with `color` and have no stroke props. `VadivamProvider` sets defaults for both styles, and `vadivam-vue/solid/icons/house` and `vadivam-vue/solid/dynamic` work like their outline counterparts.
+
 ## Per-icon imports
 
 ```ts

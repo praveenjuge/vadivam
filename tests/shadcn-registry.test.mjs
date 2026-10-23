@@ -20,7 +20,7 @@ const pathData = (svg) => [...svg.matchAll(/ d="([^"]+)"/g)].map(([, d]) => d);
 
 describe("shadcn registry", () => {
   const index = readJson("registry.json");
-  const files = readdirSync(registryDir).sort();
+  const files = readdirSync(registryDir).filter((file) => file.endsWith(".json")).sort();
 
   test("registry.json matches shadcn's registry schema", () => {
     expect(registrySchema.safeParse(index).error).toBeUndefined();
@@ -136,5 +136,39 @@ describe("shadcn registry generator", () => {
     for (const name of [baseItemName, "registry"]) {
       expect(() => registryItems([{ ...activity, name }])).toThrow(/collides/);
     }
+  });
+});
+
+describe("solid shadcn registry", () => {
+  const solidDir = path.join(registryDir, "solid");
+  const readSolid = (file) => JSON.parse(readFileSync(path.join(solidDir, file), "utf8"));
+  const index = readSolid("registry.json");
+
+  test("is its own registry with one item per icon", () => {
+    expect(registrySchema.safeParse(index).error).toBeUndefined();
+    expect(index.name).toBe("vadivam-solid");
+    expect(index.items.map(({ name }) => name)).toEqual([baseItemName, ...icons.map(({ name }) => name)]);
+    expect(readdirSync(solidDir).sort()).toEqual(
+      ["registry.json", ...index.items.map(({ name }) => `${name}.json`)].sort(),
+    );
+  });
+
+  test("installs under components/icons/solid with the solid geometry and base", () => {
+    for (const icon of icons) {
+      const item = readSolid(`${icon.name}.json`);
+      const parsed = registryItemSchema.safeParse(item);
+      if (parsed.error) throw new Error(`${icon.name}: ${parsed.error.message}`);
+      expect(item.registryDependencies).toEqual([`${siteUrl}/r/solid/${baseItemName}.json`]);
+      expect(item.files[0].target).toBe(`@components/icons/solid/${icon.name}.tsx`);
+      for (const d of pathData(icon.solid.svg)) expect(item.files[0].content).toContain(`d="${d}"`);
+    }
+    const base = readSolid(`${baseItemName}.json`).files[0];
+    expect(base.target).toBe(`@components/icons/solid/${baseItemName}.tsx`);
+    expect(base.content).toContain('fillRule="evenodd"');
+    expect(base.content).not.toContain("strokeWidth=");
+  });
+
+  test("the solid add command points at a generated item", () => {
+    expect(shadcnAddCommand("house", "solid")).toBe(`npx shadcn@latest add ${siteUrl}/r/solid/house.json`);
   });
 });

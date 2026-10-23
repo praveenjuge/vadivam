@@ -30,7 +30,8 @@
     "vadivam": "dist/cli.js"
   },
   "sideEffects": [
-    "./dist/font/vadivam.css"
+    "./dist/font/vadivam.css",
+    "./dist/font/vadivam-solid.css"
   ],
   "files": [
     "dist",
@@ -63,6 +64,25 @@
     "./sprite.svg": "./dist/sprite.svg",
     "./font/vadivam.css": "./dist/font/vadivam.css",
     "./font/vadivam.woff2": "./dist/font/vadivam.woff2",
+    "./solid": {
+      "types": "./dist/solid/index.d.ts",
+      "import": "./dist/solid/index.js",
+      "default": "./dist/solid/index.js"
+    },
+    "./solid/icons/*.svg": "./dist/solid/icons/*.svg",
+    "./solid/icons/*": {
+      "types": "./dist/solid/icons/*.d.ts",
+      "import": "./dist/solid/icons/*.js",
+      "default": "./dist/solid/icons/*.js"
+    },
+    "./solid/strings/*": {
+      "types": "./dist/solid/strings/*.d.ts",
+      "import": "./dist/solid/strings/*.js",
+      "default": "./dist/solid/strings/*.js"
+    },
+    "./solid/sprite.svg": "./dist/solid/sprite.svg",
+    "./font/vadivam-solid.css": "./dist/font/vadivam-solid.css",
+    "./font/vadivam-solid.woff2": "./dist/font/vadivam-solid.woff2",
     "./package.json": "./package.json"
   },
   "publishConfig": {

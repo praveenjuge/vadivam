@@ -44,6 +44,22 @@ Components accept Svelte SVG attributes plus `size`, `color`, `strokeWidth`, `ab
 
 The root package also exports `setVadivamProps` and `getVadivamContext` for custom context integration.
 
+## Solid icons
+
+Every icon has a [solid](/docs/design-guide#solid) twin with the same name in `vadivam-svelte/solid`:
+
+```svelte
+<script lang="ts">
+  import { House } from "vadivam-svelte";
+  import { House as HouseSolid } from "vadivam-svelte/solid";
+  let { active } = $props();
+</script>
+
+{#if active}<HouseSolid size={20} title="Home" />{:else}<House size={20} title="Home" />{/if}
+```
+
+Solid icons fill their shapes with `color` and have no stroke props. `VadivamProvider` sets defaults for both styles, and `vadivam-svelte/solid/icons/house` and `vadivam-svelte/solid/dynamic` work like their outline counterparts.
+
 ## Per-icon imports
 
 ```ts
