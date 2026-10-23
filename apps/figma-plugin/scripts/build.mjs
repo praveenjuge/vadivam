@@ -2,18 +2,23 @@ import { build, context } from "esbuild";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { iconCategories, readIcons } from "../../../scripts/icons.mjs";
+import { iconCategories, readIcons, styles } from "../../../scripts/icons.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = resolve(root, "dist");
 const iconsRoot = resolve(root, "../../icons");
+const solidIconsRoot = resolve(root, "../../icons-solid");
 const watch = process.argv.includes("--watch");
 const categoryTitles = new Map(iconCategories.map(({ id, title }) => [id, title]));
 
 await mkdir(dist, { recursive: true });
 
+// Each icon carries its solid twin as `solid`.
 async function sortedIcons() {
-  return (await readIcons()).sort((left, right) => left.name.localeCompare(right.name));
+  const solid = new Map((await readIcons(styles.solid)).map((icon) => [icon.name, icon]));
+  return (await readIcons())
+    .map((icon) => ({ ...icon, solid: solid.get(icon.name) }))
+    .sort((left, right) => left.name.localeCompare(right.name));
 }
 
 // Large literals parse faster as one JSON string than as a JavaScript object.
@@ -25,12 +30,15 @@ function jsonModule(value) {
 const SVG_ROOT =
   '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
 
-function svgBody({ name, svg }) {
+const SOLID_SVG_ROOT =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd">';
+
+function svgBody({ name, svg }, root = SVG_ROOT, folder = "icons") {
   const source = svg.trim();
-  if (!source.startsWith(SVG_ROOT) || !source.endsWith("</svg>")) {
-    throw new Error(`icons/${name}.svg: expected the normalized root element; run bun run icons:optimize`);
+  if (!source.startsWith(root) || !source.endsWith("</svg>")) {
+    throw new Error(`${folder}/${name}.svg: expected the normalized root element; run bun run icons:optimize`);
   }
-  return source.slice(SVG_ROOT.length, -"</svg>".length).trim();
+  return source.slice(root.length, -"</svg>".length).trim();
 }
 
 // Deprecated Lucide names still found in older designs, mapped to the current
@@ -42,6 +50,7 @@ async function createCatalogSource(icons) {
   const catalog = icons.map((icon) => ({
     name: icon.name,
     body: svgBody(icon),
+    solidBody: svgBody(icon.solid, SOLID_SVG_ROOT, "icons-solid"),
     tags: icon.tags,
     categories: icon.categories.map((id) => categoryTitles.get(id)),
   }));
@@ -51,7 +60,7 @@ async function createCatalogSource(icons) {
       ([alias, name]) => !names.has(alias) && names.has(name),
     ),
   );
-  return `export const svgRoot = ${JSON.stringify(SVG_ROOT)};\nexport const lucideAliases = ${JSON.stringify(aliases)};\n${jsonModule(catalog)}`;
+  return `export const svgRoot = ${JSON.stringify(SVG_ROOT)};\nexport const solidSvgRoot = ${JSON.stringify(SOLID_SVG_ROOT)};\nexport const lucideAliases = ${JSON.stringify(aliases)};\n${jsonModule(catalog)}`;
 }
 
 // The UI only searches; previews come from the sprite already parsed with the HTML.
@@ -69,20 +78,25 @@ function escapeAttribute(value) {
     .replaceAll("<", "&lt;");
 }
 
-// Built from validated geometry attributes only, never raw SVG text.
+function shapes(iconNode) {
+  return iconNode
+    .map(([tag, attributes]) => {
+      const attrs = Object.entries(attributes)
+        .filter(([attribute]) => attribute !== "key")
+        .map(([attribute, value]) => ` ${attribute}="${escapeAttribute(value)}"`)
+        .join("");
+      return `<${tag}${attrs}/>`;
+    })
+    .join("");
+}
+
+// Built from validated geometry attributes only, never raw SVG text. Outline
+// symbols are `i-<name>` and solid ones `s-<name>`.
 function createSprite(icons) {
-  const symbols = icons.map(({ name, iconNode }) => {
-    const shapes = iconNode
-      .map(([tag, attributes]) => {
-        const attrs = Object.entries(attributes)
-          .filter(([attribute]) => attribute !== "key")
-          .map(([attribute, value]) => ` ${attribute}="${escapeAttribute(value)}"`)
-          .join("");
-        return `<${tag}${attrs}/>`;
-      })
-      .join("");
-    return `<symbol id="i-${name}" viewBox="0 0 24 24">${shapes}</symbol>`;
-  });
+  const symbols = icons.flatMap(({ name, iconNode, solid }) => [
+    `<symbol id="i-${name}" viewBox="0 0 24 24">${shapes(iconNode)}</symbol>`,
+    `<symbol id="s-${name}" viewBox="0 0 24 24">${shapes(solid.iconNode)}</symbol>`,
+  ]);
   // `hidden` doesn't apply to SVG, so the sprite is zero-sized and out of the layout instead.
   return `<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" style="position:absolute">${symbols.join("")}</svg>`;
 }
@@ -95,7 +109,7 @@ function virtualModulePlugin(specifier, filter, createSource) {
       pluginBuild.onLoad({ filter: /.*/, namespace: "vadivam" }, async () => ({
         contents: await createSource(await sortedIcons()),
         loader: "js",
-        watchDirs: [iconsRoot],
+        watchDirs: [iconsRoot, solidIconsRoot],
         watchFiles: [lucideAliasesPath],
       }));
     },

@@ -1,6 +1,6 @@
 import index from "vadivam:ui-catalog";
 import { createEntries, searchIcons, type IconEntry } from "./catalog";
-import type { PluginToUiMessage, UiToPluginMessage } from "./protocol";
+import type { IconStyle, PluginToUiMessage, UiToPluginMessage } from "./protocol";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const COLUMNS = 6;
@@ -22,6 +22,7 @@ const confirmMessage = element<HTMLParagraphElement>("#confirm-message");
 const lucideBar = element<HTMLDivElement>("#lucide-bar");
 const lucideMessage = element<HTMLSpanElement>("#lucide-message");
 const lucideSwap = element<HTMLButtonElement>("#lucide-swap");
+const styleButtons = [...document.querySelectorAll<HTMLButtonElement>(".style-switch [data-style]")];
 
 const entries = createEntries(index.icons, new Map(index.categories));
 // Buttons are built once per icon and reused, so a keystroke only moves existing nodes.
@@ -30,6 +31,7 @@ let visible: IconEntry[] = [];
 let renderedCount = 0;
 let pending = false;
 let confirmationId: string | null = null;
+let style: IconStyle = "outline";
 
 for (const [id, title] of index.categories) {
   const option = document.createElement("option");
@@ -53,7 +55,7 @@ function setPending(value: boolean): void {
 function choose(iconName: string): void {
   if (pending) return;
   setPending(true);
-  send({ type: "choose", iconName });
+  send({ type: "choose", iconName, style });
 }
 
 function iconButton(name: string): HTMLButtonElement {
@@ -69,7 +71,7 @@ function iconButton(name: string): HTMLButtonElement {
   const svg = document.createElementNS(SVG_NAMESPACE, "svg");
   svg.setAttribute("aria-hidden", "true");
   const use = document.createElementNS(SVG_NAMESPACE, "use");
-  use.setAttribute("href", `#i-${name}`);
+  use.setAttribute("href", `#${style === "solid" ? "s" : "i"}-${name}`);
   svg.append(use);
   button.append(svg);
   buttons.set(name, button);
@@ -107,6 +109,20 @@ function focusResult(index: number): void {
   const target = Math.max(0, Math.min(index, visible.length - 1));
   if (target >= renderedCount) renderMore(target - renderedCount + BATCH_SIZE);
   (results.children[target] as HTMLButtonElement | undefined)?.focus();
+}
+
+// Outline symbols are `#i-<name>` and solid ones `#s-<name>` in the sprite.
+function setStyle(next: IconStyle): void {
+  style = next;
+  results.dataset.style = next;
+  for (const button of styleButtons) button.setAttribute("aria-pressed", String(button.dataset.style === next));
+  for (const [name, button] of buttons) {
+    button.querySelector("use")?.setAttribute("href", `#${next === "solid" ? "s" : "i"}-${name}`);
+  }
+}
+
+for (const button of styleButtons) {
+  button.addEventListener("click", () => setStyle(button.dataset.style === "solid" ? "solid" : "outline"));
 }
 
 search.addEventListener("input", render);

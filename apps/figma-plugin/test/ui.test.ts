@@ -22,6 +22,7 @@ test("renders an accessible glyph grid, filters by tag and category, and sends o
     <main>
       <input id="search" />
       <select id="category"><option value="">All</option></select>
+      <div class="style-switch"><button data-style="outline" aria-pressed="true"></button><button data-style="solid" aria-pressed="false"></button></div>
       <div id="lucide-bar" hidden><span id="lucide-message"></span><button id="lucide-swap"></button></div>
       <div id="results"></div>
       <dialog id="confirm"><form method="dialog"><p id="confirm-message"></p></form></dialog>
@@ -66,7 +67,7 @@ test("renders an accessible glyph grid, filters by tag and category, and sends o
   expect(trash.title).toBe("trash-2");
   trash.click();
   expect(sent[sent.length - 1]).toEqual({
-    pluginMessage: { type: "choose", iconName: "trash-2" },
+    pluginMessage: { type: "choose", iconName: "trash-2", style: "outline" },
   });
   expect(trash.disabled).toBe(true);
 
@@ -99,4 +100,15 @@ test("renders an accessible glyph grid, filters by tag and category, and sends o
   expect(swap.disabled).toBe(false);
   selection(0);
   expect(lucideBar.hidden).toBe(true);
+
+  // The style switch repoints every preview at the solid symbols and sends the style.
+  const solid = document.querySelector<HTMLButtonElement>('[data-style="solid"]')!;
+  solid.click();
+  expect(solid.getAttribute("aria-pressed")).toBe("true");
+  expect(document.querySelector("#results")?.getAttribute("data-style")).toBe("solid");
+  expect(trash.querySelector("use")?.getAttribute("href")).toBe("#s-trash-2");
+  trash.click();
+  expect(sent[sent.length - 1]).toEqual({
+    pluginMessage: { type: "choose", iconName: "trash-2", style: "solid" },
+  });
 });

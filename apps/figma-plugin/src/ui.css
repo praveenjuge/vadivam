@@ -24,7 +24,7 @@ main {
 
 .search-wrap {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px;
+  grid-template-columns: minmax(0, 1fr) 52px 96px;
   gap: 6px;
   align-items: center;
   padding: 8px;
@@ -118,6 +118,46 @@ input:focus, select:focus {
   stroke-linejoin: round;
   pointer-events: none;
 }
+
+/* Solid previews are filled shapes with cut-outs. */
+#results[data-style="solid"] .icon-button svg {
+  fill: currentColor;
+  fill-rule: evenodd;
+  stroke: none;
+}
+
+.style-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 28px;
+  padding: 2px;
+  background: var(--figma-color-bg-secondary);
+  border-radius: 5px;
+}
+
+.style-switch button {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.style-switch button[aria-pressed="true"] {
+  color: var(--figma-color-text);
+  background: var(--figma-color-bg);
+  box-shadow: 0 0 0 1px var(--rule);
+}
+
+.style-switch button:focus-visible {
+  outline: 2px solid var(--figma-color-border-selected);
+  outline-offset: -2px;
+}
+
+.style-switch svg { width: 14px; height: 14px; }
 
 .empty {
   grid-column: 1 / -1;
