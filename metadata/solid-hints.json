@@ -143,5 +143,76 @@
     "square-sigma",
     "ticket-percent"
   ],
-  "icons": {}
+  "icons": {
+    "cog": {
+      "drop": [
+        2,
+        6,
+        10
+      ]
+    },
+    "bed-double": {
+      "drop": [
+        3
+      ]
+    },
+    "bridge": {
+      "mode": "line"
+    },
+    "bring-to-front": {
+      "line": [
+        0,
+        1
+      ]
+    },
+    "fishing-rod": {
+      "line": [
+        0
+      ]
+    },
+    "file-digit": {
+      "line": [
+        3
+      ]
+    },
+    "trash": {
+      "line": [
+        1
+      ]
+    },
+    "test-tube": {
+      "fill": [
+        1
+      ]
+    },
+    "test-tubes": {
+      "fill": [
+        0,
+        3
+      ],
+      "drop": [
+        1,
+        4
+      ]
+    },
+    "worm": {
+      "mode": "line"
+    },
+    "globe": {
+      "line": [
+        1
+      ]
+    },
+    "shield-ban": {
+      "line": [
+        1
+      ]
+    },
+    "users-round": {
+      "line": [
+        2,
+        3
+      ]
+    }
+  }
 }

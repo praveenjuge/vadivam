@@ -347,10 +347,12 @@ export function pathDataOf(svg) {
 // icon this one switches off, when there is one. Hints come from
 // metadata/solid-hints.json: `mode: "line"` keeps a typographic icon as 2.5px
 // lines, `mode: "letters"` cuts letters inside a frame out as lines, and
-// `fill` and `line` force single subpaths by index.
+// `fill` and `line` force single subpaths by index, and `drop` leaves detail
+// out, such as a cog's spokes.
 export function draftSolid(PK, pathData, { base, hints = {} } = {}) {
   const ops = makeOps(PK);
-  const subs = subpaths(PK, pathData);
+  const dropped = new Set(hints.drop ?? []);
+  const subs = subpaths(PK, pathData).filter((sub) => !dropped.has(sub.index));
   const slashOnly = Boolean(base);
   if (slashOnly) {
     const slash = findSlash(subs);
@@ -366,6 +368,7 @@ export function draftSolid(PK, pathData, { base, hints = {} } = {}) {
     sub.ink = ops.stroke(sub.path, 2);
     if (hints.mode === "line" || lineIndexes.has(sub.index)) continue;
     const gappedCircle = subs.length > 1 && turning(sub) >= 240 && hasFreeEnds(sub, subs);
+    if (gappedCircle && !sub.closed) sub.gap = [sub.line[0], sub.line[sub.line.length - 1]];
     if (sub.closed || isDome(sub) || fillIndexes.has(sub.index) || gappedCircle) {
       sub.fillable = true;
       sub.region = ops.fill(sub.path);
@@ -421,10 +424,45 @@ export function draftSolid(PK, pathData, { base, hints = {} } = {}) {
     outlineInk = ops.union(outlineInk, sub.ink);
   }
 
+  // Lines that sit in the gap of a shape drawn with one, such as the check
+  // badge on a file's corner, are drawn in front of it with a gap, together.
+  // A line that only closes the gap, like a chess piece's base, stays a line.
+  const closesGap = (sub, chord) => isStraight(sub) && sub.line.every((point) => distanceToLine(point, chord) < 1.5);
+  // A badge is small: a check, plus, or arrow, not a cog's teeth or a key's stem.
+  const badgeSized = (sub) => {
+    const xs = sub.line.map(([x]) => x);
+    const ys = sub.line.map(([, y]) => y);
+    return sub.length >= 2 && Math.max(...xs) - Math.min(...xs) <= 9 && Math.max(...ys) - Math.min(...ys) <= 9;
+  };
+  const badges = subs.filter(
+    (sub) =>
+      !sub.fillable &&
+      badgeSized(sub) &&
+      fillables.some(
+        (body) =>
+          body.gap &&
+          !closesGap(sub, body.gap) &&
+          sub.line.some((point) => distanceToLine(point, body.gap) < 3) &&
+          sub.line.every((point) => distanceToLine(point, body.line) >= 1.75) &&
+          area(ops.difference(sub.ink, body.silhouette)) >= 0.25 * area(sub.ink),
+      ),
+  );
+  // A badge drawn in several strokes, such as an arrow's shaft and head, moves
+  // in front as one.
+  for (let grown = true; grown; ) {
+    grown = false;
+    for (const sub of subs) {
+      if (sub.fillable || badges.includes(sub)) continue;
+      if (badges.some((badge) => sub.line.some((point) => distanceToLine(point, badge.line) < 0.75))) {
+        badges.push(sub);
+        grown = true;
+      }
+    }
+  }
   // Lines are judged against the filled shapes before any line is cut out of
   // them, so crossing lines, such as a plus, are cut out together.
   const filled = solid;
-  for (const sub of subs.filter((sub) => !sub.fillable)) {
+  for (const sub of subs.filter((sub) => !sub.fillable && !badges.includes(sub))) {
     const inkArea = area(sub.ink);
     const inside = inkArea ? area(ops.intersect(sub.ink, filled)) / inkArea : 0;
     if (inside > 0.8) {
@@ -435,13 +473,17 @@ export function draftSolid(PK, pathData, { base, hints = {} } = {}) {
       const outside = ops.difference(ops.stroke(sub.path, solidLineWidth), filled);
       solid = ops.union(ops.difference(solid, ops.stroke(sub.path, cutWidth)), outside);
     } else {
-      const line = ops.stroke(sub.path, solidLineWidth);
-      if (inside === 0 && apart(sub)) {
-        solid = ops.difference(solid, ops.stroke(sub.path, solidLineWidth + 2 * gap));
-      }
+      let line = ops.stroke(sub.path, solidLineWidth);
+      // A line that stood apart keeps a gap from the filled shapes, which stay
+      // whole in front of it.
+      if (inside === 0 && apart(sub)) line = ops.difference(line, ops.union(filled, ops.stroke(filled, 2 * gap)));
       solid = ops.union(solid, line);
     }
     outlineInk = ops.union(outlineInk, sub.ink);
+  }
+  if (badges.length) {
+    const badge = badges.reduce((ink, sub) => ops.union(ink, ops.stroke(sub.path, solidLineWidth)), ops.empty());
+    solid = ops.union(ops.difference(solid, ops.stroke(badge, 2 * gap)), badge);
   }
   return solid.simplify() ?? solid;
 }
@@ -515,7 +557,7 @@ async function main(args) {
   const hints = existsSync(hintsPath) ? JSON.parse(await readFile(hintsPath, "utf8")) : {};
   const hintsFor = (name) => ({
     ...hints.icons?.[name],
-    mode: hints.line?.includes(name) ? "line" : hints.letters?.includes(name) ? "letters" : undefined,
+    mode: hints.line?.includes(name) ? "line" : hints.letters?.includes(name) ? "letters" : hints.icons?.[name]?.mode,
   });
   const names = requested.length
     ? requested

@@ -79,7 +79,7 @@ A solid icon goes through the same steps from its own folder, `icons-solid/`, an
    bun run icons:draft-solid
    ```
 
-   The draft fills closed shapes to the outline's ink edge, cuts the details inside them out at 2px, keeps loose lines at 2.5px with a 2px gap, and builds each `-off` icon from its base icon's saved solid, so refinements to the base carry over. Typographic icons listed under `line` in `metadata/solid-hints.json` stay lines, and frames listed under `letters` have their letters cut out as lines.
+   The draft fills closed shapes to the outline's ink edge, cuts the details inside them out at 2px, keeps loose lines at 2.5px and 2px clear of the fill, draws a badge that sits in a shape's gap, such as the check on `file-check-corner`, in front with a 2px gap, and builds each `-off` icon from its base icon's saved solid, so refinements to the base carry over. Typographic icons listed under `line` in `metadata/solid-hints.json` stay lines, frames listed under `letters` have their letters cut out as lines, and entries under `icons` fill, keep as lines, or drop single subpaths by index.
 2. Refine it in Figma as a filled shape, with cut-outs as holes. Keep plain circular corners; optimizing smooths them.
 3. Export it into `icons-solid/` and run `bun run icons:optimize` and `bun run icons:check`. Optimizing compacts the path data, smooths the corners, and writes the solid root. A shape Figma fills by nonzero winding is redrawn to fill the same area under the root's `fill-rule="evenodd"`, so overlapping parts never turn into holes. Path cleanup, which joins and trims strokes, is for outlines only.
 
