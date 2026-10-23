@@ -9,7 +9,7 @@ search:
   keywords: [svgo, optimize, corner smoothing, squircle, path cleanup, svg validation, untrusted svg, icons:check, icons:build]
 ---
 
-Every icon starts as one SVG file in the repository's `icons/` folder. That file is the only hand-made part: the cleanup, the smoothed corners, and every package format are generated from it. This keeps all 24px drawings consistent and means a fix to one file reaches React, Vue, the raw SVGs, the icon font, and every other format in the same release.
+Every icon starts as one SVG file in the repository's `icons/` folder, with its [solid](/docs/design-guide#solid) twin in `icons-solid/`. Those files are the only hand-made part: the cleanup, the smoothed corners, and every package format are generated from it. This keeps all 24px drawings consistent and means a fix to one file reaches React, Vue, the raw SVGs, the icon font, and every other format in the same release.
 
 ## Pipeline
 
@@ -69,16 +69,30 @@ Every package and site asset is generated from the validated `icons/` folder, so
   </Step>
 </Steps>
 
+## Solid icons
+
+A solid icon goes through the same steps from its own folder, `icons-solid/`, and its own page in the Figma file:
+
+1. Draft it from the outline icon. This writes a draft for every icon that has none, or redrafts the named icons with `--force`:
+
+   ```sh
+   bun run icons:draft-solid
+   ```
+
+   The draft fills closed shapes to the outline's ink edge, cuts the details inside them out at 2px, keeps loose lines at 2.5px with a 2px gap, and builds each `-off` icon from its base icon's solid. Typographic icons listed under `line` in `metadata/solid-hints.json` stay lines, and frames listed under `letters` have their letters cut out as lines.
+2. Refine it in Figma as a filled shape, with cut-outs as holes. Keep plain circular corners; optimizing smooths them.
+3. Export it into `icons-solid/` and run `bun run icons:optimize` and `bun run icons:check`. Optimizing compacts the path data, smooths the corners, and writes the solid root. Path cleanup, which joins and trims strokes, is for outlines only.
+
 ## What every SVG must pass
 
 Icon files are treated as untrusted input. `bun run icons:optimize` and `bun run icons:check` reject an SVG that breaks any of these rules, before anything is published or deployed:
 
-- **Root.** The root `<svg>` has exactly `xmlns="http://www.w3.org/2000/svg"`, `width="24"`, `height="24"`, `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `stroke-width="2"`, `stroke-linecap="round"`, and `stroke-linejoin="round"`. Any other root attribute, such as `class`, `id`, or `style`, is rejected.
+- **Root.** The root `<svg>` has exactly `xmlns="http://www.w3.org/2000/svg"`, `width="24"`, `height="24"`, `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `stroke-width="2"`, `stroke-linecap="round"`, and `stroke-linejoin="round"`. A solid icon's root has the same first four, then `fill="currentColor"` and `fill-rule="evenodd"`. Any other root attribute, such as `class`, `id`, or `style`, is rejected.
 - **Elements.** Only `<path>`, `<circle>`, `<line>`, `<polyline>`, `<polygon>`, `<rect>`, and `<ellipse>` are allowed. That rules out `<a>`, `<clipPath>`, `<defs>`, `<filter>`, `<foreignObject>`, `<g>`, `<image>`, `<linearGradient>`, `<mask>`, `<pattern>`, `<radialGradient>`, `<script>`, `<style>`, `<symbol>`, `<text>`, `<use>`, and any other element. Every icon in the set uses only `<path>`.
 - **Attributes.** Each element carries geometry only: `d` on a path; `cx`, `cy`, and `r` on a circle; `x1`, `y1`, `x2`, and `y2` on a line; `points` on a polyline or polygon; `x`, `y`, `width`, and `height` on a rect, since `rx` and `ry` can't carry corner smoothing; and `cx`, `cy`, `rx`, and `ry` on an ellipse. No `fill`, `stroke`, `transform`, `opacity`, `style`, `class`, `id`, or event handlers.
-- **Geometry.** Every element needs geometry. An icon needs at least one drawable element. Path data must parse. A single path may hold at most 8 closed subpaths. The stroke must stay inside the 1px padding. Every rounded corner between two straight lines must be smoothed. Path data must already be clean: no strokes split where they meet, no stray subpaths, no straight lines in pieces, and no lines just off the pixel grid.
-- **Fills.** Source artwork with a `fill` other than `none` is rejected before optimization, so outlined Figma exports never reach the set.
-- **Files.** File names must be canonical Lucide names in lowercase kebab-case, with an entry in `metadata/lucide.json`.
+- **Geometry.** Every element needs geometry. An icon needs at least one drawable element. Path data must parse. A single outline path may hold at most 8 closed subpaths. The stroke must stay inside the 1px padding, and a solid shape inside 0.75px. Every rounded corner between two straight lines must be smoothed. Outline path data must already be clean: no strokes split where they meet, no stray subpaths, no straight lines in pieces, and no lines just off the pixel grid.
+- **Fills.** Outline source artwork with a `fill` other than `none` is rejected before optimization, so outlined Figma exports never reach the outline set. Solid source artwork with a `stroke` is rejected the same way.
+- **Files.** File names must be canonical Lucide names in lowercase kebab-case, with an entry in `metadata/lucide.json`. Every icon must exist in both `icons/` and `icons-solid/`.
 
 Because every published icon has passed these checks, Vadivam SVGs carry no scripts, styles, links, external references, or event handlers, and are safe to inline in HTML, email, or user-facing documents.
 
