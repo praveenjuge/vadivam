@@ -32,7 +32,7 @@ The framework versions each package supports are listed under [peer requirements
 
 ## Verify a package
 
-Packages are published from GitHub Actions through npm Trusted Publishing, with no long-lived publish tokens. npm shows a provenance statement on each package page that links the published files to the release commit. To check the packages installed in a project:
+Packages are published from GitHub Actions through npm Trusted Publishing, with no long-lived publish tokens. npm shows a provenance statement on each package page that links the published files to the release commit. In a project installed with `npm install` or `npm ci` (npm 9.5 or newer), check the installed packages' signatures and provenance:
 
 ```sh
 npm audit signatures

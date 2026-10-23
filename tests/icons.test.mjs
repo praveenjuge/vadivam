@@ -242,6 +242,8 @@ describe("icon validation", () => {
     expect(updated).not.toContain("stale table");
     expect(updated).toContain("| [Medical](/?category=medical) | 1 |");
     expect(updateCategoryTableMarkers(updated, ["activity", "check"])).toBe(updated);
+    const crlf = content.replaceAll("\n", "\r\n");
+    expect(updateCategoryTableMarkers(crlf, ["activity", "check"])).toBe(updated.replaceAll("\n", "\r\n"));
     expect(() => updateCategoryTableMarkers("No markers.", ["activity"])).toThrow(
       "missing vadivam categories markers",
     );

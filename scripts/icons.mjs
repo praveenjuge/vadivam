@@ -68,7 +68,7 @@ const iconCountPattern =
   /(<!-- vadivam-icon-count:start -->[\s\S]*?)(\d+)([\s\S]*?<!-- vadivam-icon-count:end -->)/g;
 const categoriesDocPath = path.join(root, "apps/docs/docs/(icons)/03-categories.mdx");
 const categoryTablePattern =
-  /(<!-- vadivam-categories:start --> \*\/\}\n)[\s\S]*?(\n\{\/\* <!-- vadivam-categories:end -->)/;
+  /(<!-- vadivam-categories:start --> \*\/\}(\r?\n))[\s\S]*?(\r?\n\{\/\* <!-- vadivam-categories:end -->)/;
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
@@ -534,7 +534,9 @@ export function categoryTable(names) {
 
 export function updateCategoryTableMarkers(content, names) {
   assert(categoryTablePattern.test(content), "missing vadivam categories markers");
-  return content.replace(categoryTablePattern, (_match, before, after) => `${before}\n${categoryTable(names)}\n${after}`);
+  return content.replace(categoryTablePattern, (_match, before, newline, after) =>
+    `${before}${newline}${categoryTable(names).replaceAll("\n", newline)}${newline}${after}`,
+  );
 }
 
 async function synchronizeDocCounts(names, { check = false } = {}) {

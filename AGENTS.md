@@ -32,7 +32,7 @@ The public docs in `apps/docs/docs` (published at https://vadivam.praveenjuge.co
 
 ## Releases
 
-- Keep the root package, every entry in `scripts/packages.mjs`, and `packages/vadivam-mcp/server.json` on one version.
+- Keep the root package, every entry in `scripts/packages.mjs`, `apps/figma-plugin/package.json`, and `packages/vadivam-mcp/server.json` on one version.
 - Release by committing the version bump and pushing a matching tag such as `v0.0.3`; the `Release` workflow publishes through npm Trusted Publishing and the MCP Registry. Do not publish manually unless asked.
 - Never commit secrets, tokens, `.env` files, or local auth output.
 

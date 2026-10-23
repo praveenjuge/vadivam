@@ -40,4 +40,4 @@ Moving the code as well? See [Migrate from Lucide](/docs/migrate-from-lucide) fo
 
 ## Privacy
 
-The icon catalog is bundled inside the plugin, so it works offline and makes no network requests. It requests no permissions and collects no personal data. The only data it stores is the icon's name, on components it creates, so a placed icon can be replaced later.
+The icon catalog is bundled inside the plugin, so it works offline and makes no network requests. It requests no permissions and collects no personal data. The only data it stores is a schema version and the icon's name, on components it creates, so a placed icon can be replaced later.
