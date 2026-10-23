@@ -21,7 +21,7 @@ Icon names follow the pinned Lucide release. A release that moves to a newer Luc
 
 A release is published only from a commit that passed the full test suite:
 
-- Production builds of real apps that install the freshly built packages: Next.js, Vite with React, TanStack Start, Vue, Svelte, Solid, Angular, Astro, Preact, and a plain HTML page. Each web app is served and checked in Chromium.
+- Production builds of real apps that install the freshly built packages: Next.js, Vite with React, TanStack Start, Vue, Svelte, Solid, Angular, Astro, Preact, and a plain HTML page. The plain HTML, Vue, Svelte, Solid, Angular, Astro, and Preact apps are also served and checked in Chromium.
 - React Native through an Expo app, exported for Android and iOS.
 - React server rendering in a true server environment, with no DOM, alongside client rendering tests.
 - The [shadcn/ui registry](/docs/shadcn), installed with the real `shadcn` CLI into a fresh project.
@@ -32,7 +32,7 @@ The framework versions each package supports are listed under [peer requirements
 
 ## Verify a package
 
-Packages are published from GitHub Actions through npm Trusted Publishing, with no long-lived publish tokens. npm shows a provenance statement on each package page that links the published files to the release commit. To check the packages installed in a project:
+Packages are published from GitHub Actions through npm Trusted Publishing, with no long-lived publish tokens. npm shows a provenance statement on each package page that links the published files to the release commit. In a project installed with `npm install` or `npm ci` (npm 9.5 or newer), check the installed packages' signatures and provenance:
 
 ```sh
 npm audit signatures
