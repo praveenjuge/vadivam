@@ -264,6 +264,9 @@ describe("solid static assets", () => {
       const module = await import(`vadivam/solid/strings/${icon.name}`);
       expect(module.default).toBe(icon.solid.svg);
       expect(sprite).toContain(`<symbol id="vadivam-solid-${icon.name}" viewBox="0 0 24 24">`);
+      // svgPath points at the SVG the package ships.
+      expect(icon.solid.svgPath).toBe(`solid/icons/${icon.fileName}`);
+      expect(await readFile(path.join(packageDist, icon.solid.svgPath), "utf8")).toBe(icon.solid.svg);
     }
   });
 });

@@ -720,7 +720,11 @@ async function buildRawPackage(icons, solidIcons = []) {
   const solidByName = new Map(solidIcons.map((icon) => [icon.name, icon]));
   const manifestIcons = icons.map((icon) => {
     const solid = solidByName.get(icon.name);
-    return solid ? { ...icon, solid: { svgPath: solid.svgPath, svg: solid.svg, iconNode: solid.iconNode } } : icon;
+    // The package ships solid SVGs under solid/icons, not the repository's
+    // icons-solid folder.
+    return solid
+      ? { ...icon, solid: { svgPath: `solid/icons/${solid.fileName}`, svg: solid.svg, iconNode: solid.iconNode } }
+      : icon;
   });
   const manifest = JSON.stringify(manifestIcons, null, 2);
   const manifestStyles = solidIcons.length ? ["outline", "solid"] : ["outline"];
@@ -730,7 +734,7 @@ async function buildRawPackage(icons, solidIcons = []) {
   );
   await writeFile(
     path.join(rawDist, "manifest.d.ts"),
-    `import type { IconName, IconNode } from "./types.js";\nexport interface VadivamIconStyle {\n  svgPath: string;\n  svg: string;\n  iconNode: IconNode;\n}\nexport interface VadivamIconMetadata {\n  name: IconName;\n  componentName: string;\n  fileName: \`${"${IconName}"}.svg\`;\n  svgPath: \`icons/${"${IconName}"}.svg\`;\n  /** Search terms from Lucide's metadata for this icon. */\n  tags: readonly string[];\n  /** Ids from \`categories\`. */\n  categories: readonly IconCategoryId[];\n  svg: string;\n  iconNode: IconNode;\n  /** The solid twin, drawn under the same name. */\n  solid?: VadivamIconStyle;\n}\nexport type IconCategoryId = ${iconCategories.map((category) => JSON.stringify(category.id)).join(" | ")};\nexport interface VadivamIconCategory {\n  id: IconCategoryId;\n  title: string;\n  description?: string;\n}\nexport type VadivamIconStyleId = "outline" | "solid";\nexport declare const icons: readonly VadivamIconMetadata[];\nexport declare const iconNames: readonly IconName[];\nexport declare const iconsByName: Record<IconName, VadivamIconMetadata>;\nexport declare const categories: readonly VadivamIconCategory[];\n/** The styles every icon is drawn in. */\nexport declare const styles: readonly VadivamIconStyleId[];\nexport default icons;\n`,
+    `import type { IconName, IconNode } from "./types.js";\nexport interface VadivamIconStyle {\n  svgPath: \`solid/icons/${"${IconName}"}.svg\`;\n  svg: string;\n  iconNode: IconNode;\n}\nexport interface VadivamIconMetadata {\n  name: IconName;\n  componentName: string;\n  fileName: \`${"${IconName}"}.svg\`;\n  svgPath: \`icons/${"${IconName}"}.svg\`;\n  /** Search terms from Lucide's metadata for this icon. */\n  tags: readonly string[];\n  /** Ids from \`categories\`. */\n  categories: readonly IconCategoryId[];\n  svg: string;\n  iconNode: IconNode;\n  /** The solid twin, drawn under the same name. */\n  solid?: VadivamIconStyle;\n}\nexport type IconCategoryId = ${iconCategories.map((category) => JSON.stringify(category.id)).join(" | ")};\nexport interface VadivamIconCategory {\n  id: IconCategoryId;\n  title: string;\n  description?: string;\n}\nexport type VadivamIconStyleId = "outline" | "solid";\nexport declare const icons: readonly VadivamIconMetadata[];\nexport declare const iconNames: readonly IconName[];\nexport declare const iconsByName: Record<IconName, VadivamIconMetadata>;\nexport declare const categories: readonly VadivamIconCategory[];\n/** The styles every icon is drawn in. */\nexport declare const styles: readonly VadivamIconStyleId[];\nexport default icons;\n`,
   );
   // The Lucide migration CLI is hand-written in packages/vadivam/src and reads
   // the generated manifest next to it, plus the deprecated Lucide aliases the
