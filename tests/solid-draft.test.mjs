@@ -5,6 +5,11 @@ import { area, draftSolid, loadPathKit, pathDataOf, solidPath, solidSvg, toPathD
 const PK = await loadPathKit();
 const outline = (name) => pathDataOf(readFileSync(new URL(`../icons/${name}.svg`, import.meta.url), "utf8"));
 const inkCircle = Math.PI * 11 ** 2;
+// How much of a 1px square centered on a point the draft fills, from 0 to 1.
+const coverage = (drafted, [x, y]) => {
+  const square = PK.FromSVGString(`M${x - 0.5} ${y - 0.5}h1v1h-1z`).transform(64, 0, 0, 0, 64, 0, 0, 0, 1);
+  return area(PK.MakeFromOp(drafted, square, PK.PathOp.INTERSECT));
+};
 // A stroke of the given width along path data, at the drafts' working scale.
 const ink = (d, width) =>
   PK.FromSVGString(d)
@@ -59,6 +64,48 @@ describe("solid drafts", () => {
     const squareOnly = PK.MakeFromOp(withLine, solidPath(PK, solidSvg("M2 2h13.5v14H2z")), PK.PathOp.INTERSECT);
     expect(area(squareOnly)).toBeCloseTo(alone, 0);
     expect(area(withLine)).toBeGreaterThan(alone + 10);
+  });
+
+  test("keeps a page whole with its dog-ear as a window inside its edge", () => {
+    const drafted = draftSolid(PK, outline("file"));
+    // The fold's corner is open, the page's edge beyond it and the page under it filled.
+    expect(coverage(drafted, [14, 7])).toBeLessThan(0.05);
+    expect(coverage(drafted, [17, 6.5])).toBeGreaterThan(0.95);
+    expect(coverage(drafted, [12, 15])).toBeGreaterThan(0.95);
+  });
+
+  test("draws a lock in a page's gap in front of it, shackle and all", () => {
+    const drafted = draftSolid(PK, outline("file-lock"));
+    // The lock's body and shackle are filled, with a gap above the shackle.
+    expect(coverage(drafted, [12, 18.5])).toBeGreaterThan(0.95);
+    expect(coverage(drafted, [12, 12])).toBeGreaterThan(0.95);
+    expect(coverage(drafted, [12, 9.6])).toBeLessThan(0.05);
+  });
+
+  test("knocks a lock out of a shield, shackle and all", () => {
+    const drafted = draftSolid(PK, outline("shield-lock"));
+    expect(coverage(drafted, [12, 12])).toBeLessThan(0.05);
+    expect(coverage(drafted, [12, 7])).toBeLessThan(0.05);
+    expect(coverage(drafted, [12, 18])).toBeGreaterThan(0.95);
+  });
+
+  test("runs a dividing line out through the edges it ends on", () => {
+    // A calendar's header line and a bottle's label line, drawn as their own
+    // stroke and as part of the shape's stroke, split the fill edge to edge.
+    const calendar = draftSolid(PK, outline("calendar"));
+    expect(coverage(calendar, [2.1, 9])).toBeLessThan(0.05);
+    expect(coverage(calendar, [21.9, 9])).toBeLessThan(0.05);
+    const bottle = draftSolid(PK, outline("bottle-wine"));
+    expect(coverage(bottle, [7.2, 16])).toBeLessThan(0.05);
+    expect(coverage(bottle, [16.8, 16])).toBeLessThan(0.05);
+  });
+
+  test("cuts lines inside a shape with a hole", () => {
+    // A disc's grooves sit between its rim and its hole; the edges of a
+    // shape with a hole must not swallow them.
+    const drafted = draftSolid(PK, outline("disc-3"));
+    expect(coverage(drafted, [16.2, 7.8])).toBeLessThan(0.05);
+    expect(coverage(drafted, [12, 5])).toBeGreaterThan(0.95);
   });
 
   test("writes conic arcs as cubics that keep the shape", () => {
