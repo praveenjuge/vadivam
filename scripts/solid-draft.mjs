@@ -113,12 +113,36 @@ function polylineLength(points) {
   return length;
 }
 
-// Area of a simplified path: Skia gives holes the opposite winding, so the
-// signed contour areas sum to the filled area.
+function insidePolygon([x, y], points) {
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
+    const [xi, yi] = points[i];
+    const [xj, yj] = points[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+// Skia's simplify and path ops return even-odd paths whose contours all wind
+// the same way, so a contour's role comes from how deeply it is nested: even
+// depths are filled, odd depths are holes.
+function contourDepths(contours) {
+  return contours.map((contour, index) => {
+    const probe = contour[0];
+    return contours.filter((other, otherIndex) => otherIndex !== index && insidePolygon(probe, other)).length;
+  });
+}
+
+// The filled area of a simplified path.
 export function area(path) {
   if (!path) return 0;
-  const total = flatten(path.toCmds()).reduce((sum, contour) => sum + polygonArea(contour), 0);
-  return Math.abs(total) / scale ** 2;
+  const contours = flatten(path.toCmds()).filter((contour) => contour.length > 2);
+  const depths = contourDepths(contours);
+  const total = contours.reduce(
+    (sum, contour, index) => sum + (depths[index] % 2 === 0 ? 1 : -1) * Math.abs(polygonArea(contour)),
+    0,
+  );
+  return Math.max(0, total) / scale ** 2;
 }
 
 function makeOps(PK) {
@@ -275,16 +299,16 @@ function turning(sub) {
   return Math.abs((total * 180) / Math.PI);
 }
 
-// The ink with every hole it encloses filled in.
+// The ink with every hole it encloses filled in: only its outermost contours.
 function fillHoles(PK, path) {
   const contours = [];
   for (const cmd of path.toCmds()) {
     if (cmd[0] === MOVE) contours.push([cmd]);
     else contours.at(-1)?.push(cmd);
   }
-  const signed = contours.map((cmds) => flatten(cmds).reduce((sum, contour) => sum + polygonArea(contour), 0));
-  const outer = Math.sign(signed.reduce((best, value) => (Math.abs(value) > Math.abs(best) ? value : best), 0));
-  const kept = contours.filter((_, index) => Math.sign(signed[index]) === outer).flat();
+  const polygons = contours.map((cmds) => flatten(cmds)[0] ?? []);
+  const depths = contourDepths(polygons);
+  const kept = contours.filter((_, index) => depths[index] === 0 && polygons[index].length > 2).flat();
   const filled = PK.FromCmds(kept);
   filled.setFillType(PK.FillType.WINDING);
   return filled.simplify() ?? filled;
@@ -336,12 +360,16 @@ export function draftSolid(PK, pathData, { base, hints = {} } = {}) {
       sub.silhouette = ops.union(sub.region, sub.ink);
     } else {
       // An open stroke that loops back on itself, such as a bell drawn in one
-      // line, fills the area it encloses.
+      // line, fills the area it encloses. Its strokes that run inside that
+      // area, such as an envelope's flap, are cut out like any inner line.
       const enclosed = fillHoles(PK, sub.ink);
       if (area(enclosed) - area(sub.ink) > 2) {
         sub.fillable = true;
         sub.region = enclosed;
         sub.silhouette = enclosed;
+        // The outer stroke reaches 2px in from the edge; what lies beyond is inner.
+        const inner = ops.difference(sub.ink, ops.stroke(enclosed, 2 * gap + 0.5));
+        if (area(inner) > 1) sub.cut = inner;
       }
     }
     if (sub.fillable) sub.area = area(sub.silhouette);
@@ -374,7 +402,7 @@ export function draftSolid(PK, pathData, { base, hints = {} } = {}) {
   for (const sub of ordered) {
     if (sub.depth % 2 === 0) {
       solid = ops.difference(solid, ops.stroke(sub.silhouette, 2 * gap));
-      solid = ops.union(solid, sub.silhouette);
+      solid = ops.union(solid, sub.cut ? ops.difference(sub.silhouette, sub.cut) : sub.silhouette);
     } else {
       solid = ops.difference(solid, sub.silhouette);
     }
