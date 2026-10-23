@@ -1,7 +1,10 @@
 ---
-title: Usage, styling, and accessibility
-description: Size, color, style, and label Vadivam icons consistently across supported frameworks while preserving visual and accessible behavior.
+title: Usage and styling
+description: Size, color, and style Vadivam icons consistently across supported frameworks, set shared defaults, and keep imports tree-shakeable.
+sidebar:
+  label: Usage
 related:
+  - /docs/accessibility
   - /docs/dynamic-icons
   - /docs/installation
   - /docs/react
@@ -201,46 +204,7 @@ An icon's own props override provider values. See each [framework guide](/docs/#
 
 ## Accessibility
 
-### Decorative icons
-
-An icon that repeats adjacent text should be hidden from assistive technology:
-
-```tsx
-<button type="button">
-  <Activity aria-hidden="true" />
-  Activity
-</button>
-```
-
-Web framework components are decorative by default when no title or accessible attribute is provided. Supplying `aria-hidden` explicitly still makes intent clear and is useful when reviewing a control. The core `createIcons` helper also adds `aria-hidden="true"` to unlabeled placeholders; `createElement` does not, so label or hide its result yourself.
-
-### Meaningful icons
-
-If an icon conveys information not present as visible text, give it an accessible name:
-
-```tsx
-<Activity role="img" aria-label="Service is active" />
-```
-
-Framework components also support a `title` prop, which inserts an SVG `<title>` and marks the icon as an image:
-
-```tsx
-<Activity title="Service is active" />
-```
-
-For React Native, use native accessibility props such as `accessibilityLabel`:
-
-```tsx
-<Activity accessibilityLabel="Service is active" accessible />
-```
-
-Prefer visible text for primary actions. An icon-only button needs a name on the button itself:
-
-```tsx
-<button type="button" aria-label="Search">
-  <Search aria-hidden="true" />
-</button>
-```
+Every icon is either decorative or meaningful, and each needs different props. See [Accessibility](/docs/accessibility) for examples in each framework.
 
 ## Static imports first
 

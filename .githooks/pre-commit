@@ -14,7 +14,7 @@ if ! bun run icons:check; then
   exit 1
 fi
 
-if ! git diff --quiet -- icons README.md apps/docs/docs/index.md; then
+if ! git diff --quiet -- icons README.md apps/docs/docs/index.mdx "apps/docs/docs/(icons)/03-categories.mdx"; then
   echo "Icon optimization changed icons or generated icon counts. Review and stage them, then commit again." >&2
   exit 1
 fi

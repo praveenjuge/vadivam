@@ -12,7 +12,7 @@ Vadivam is a free, open-source library of 1903 pixel-perfect 24px outline SVG ic
 
 ![All Vadivam icons](./apps/docs/public/preview.png?v=0.0.63)
 
-[Browse all icons](https://vadivam.praveenjuge.com), copy SVG or framework-ready components, or use the [Figma plugin](https://github.com/praveenjuge/vadivam/tree/main/apps/figma-plugin) to place editable local components.
+[Browse all icons](https://vadivam.praveenjuge.com), copy SVG or framework-ready components, or use the [Figma plugin](https://vadivam.praveenjuge.com/docs/figma-plugin) to place editable local components.
 
 ## Packages
 
@@ -51,4 +51,4 @@ Every package supports tree-shakeable named and per-icon imports. Framework pack
 
 AI agents can search icons and get code through the MCP server at `https://vadivam.praveenjuge.com/mcp` or `npx -y vadivam-mcp`. See [MCP server](https://vadivam.praveenjuge.com/docs/mcp).
 
-[Contributing](./CONTRIBUTING.md) · [Issues](https://github.com/praveenjuge/vadivam/issues) · [Releases](https://github.com/praveenjuge/vadivam/releases) · [MIT License](./LICENSE)
+[Docs](https://vadivam.praveenjuge.com/docs) · [Contributing](https://vadivam.praveenjuge.com/docs/contributing) · [Issues](https://github.com/praveenjuge/vadivam/issues) · [Changelog](https://vadivam.praveenjuge.com/changelog) · [MIT License](./LICENSE)

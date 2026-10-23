@@ -63,4 +63,4 @@ import { DynamicIcon } from "vadivam-solid/dynamic";
 
 The dynamic entry point exports `DynamicIcon`, `iconNames`, and `dynamicIconImports`. The component accepts normal icon props plus a kebab-case `name` and optional JSX fallback.
 
-Use static imports for names known in source. See [Dynamic icons](/docs/dynamic-icons) and [Usage, styling, and accessibility](/docs/usage).
+Use static imports for names known in source. See [Dynamic icons](/docs/dynamic-icons), [Usage](/docs/usage), and [Accessibility](/docs/accessibility).

@@ -59,9 +59,11 @@ export default defineConfig({
     popular: [
       { href: "/docs/installation", label: "Installation", icon: "download" },
       { href: "/docs/usage", label: "Usage & styling", icon: "palette" },
+      { href: "/docs/accessibility", label: "Accessibility", icon: "accessibility" },
       { href: "/docs/dynamic-icons", label: "Dynamic icons", icon: "shuffle" },
       { href: "/docs/react", label: "React", icon: "code" },
-      { href: "/docs/core", label: "Core SVG", icon: "file-code" },
+      { href: "/docs/core", label: "SVG and JavaScript", icon: "file-code" },
+      { href: "/docs/figma-plugin", label: "Figma plugin", icon: "frame" },
       { href: "/docs/design-guide", label: "Design guide", icon: "pen-tool" },
       {
         href: "/docs/contributing",

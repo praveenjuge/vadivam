@@ -100,4 +100,4 @@ export class DynamicStatusComponent {
 
 The dynamic directive lazy-loads icon-node data. Its optional `fallback` input expects icon-node data rather than an Angular template. `DynamicIcon`, `iconNames`, and `dynamicIconImports` are exported from both the package bundle and the `/dynamic` export.
 
-Angular adds `aria-hidden="true"` when an icon has no title, ARIA attribute, or role. A title adds an SVG `<title>` and `role="img"`. See [Dynamic icons](/docs/dynamic-icons) and [Accessibility](/docs/usage#accessibility).
+Angular adds `aria-hidden="true"` when an icon has no title, ARIA attribute, or role. A title adds an SVG `<title>` and `role="img"`. See [Dynamic icons](/docs/dynamic-icons) and [Accessibility](/docs/accessibility).
