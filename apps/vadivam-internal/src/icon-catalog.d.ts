@@ -3,6 +3,7 @@ declare module "vadivam:icon-catalog" {
   const icons: ReadonlyArray<{
     name: string;
     svg: string;
+    solidSvg: string;
     tags: readonly string[];
     categories: readonly string[];
   }>;

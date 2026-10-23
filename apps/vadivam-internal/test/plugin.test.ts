@@ -278,6 +278,19 @@ describe("compiled Figma plugin", () => {
     await ui.onmessage?.({ type: "select", id: "1:1" });
     expect(currentPage.selection).toEqual([existing[1]]);
 
+    // On a Solid page, filled artwork passes and stroked artwork fails.
+    currentPage.name = "Solid";
+    await ui.onmessage?.({ type: "audit" });
+    const solidAudit = [...messages].reverse().find(
+      (message) => (message as { type?: string }).type === "audit",
+    ) as { issues: Array<{ name: string; violations: string[] }> };
+    const solidViolations = (name: string) => solidAudit.issues.find((issue) => issue.name === name)?.violations ?? [];
+    expect(solidViolations("x")).toContain("Solid artwork must have no stroke");
+    expect(solidViolations("x")).toContain("Solid artwork must use fills");
+    expect(solidViolations("check")).not.toContain("Solid artwork must use fills");
+    expect(solidViolations("check")).not.toContain("Stroke weight must be 2 px");
+    currentPage.name = "Vadivam Icons";
+
     const savedChildren = currentPage.children.splice(0);
     await ui.onmessage?.({ type: "suggest-names" });
     expect(messages[messages.length - 1]).toEqual({
@@ -709,9 +722,9 @@ describe("compiled Figma plugin", () => {
       counterAxisSpacing: 24,
       fills: [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }],
     });
-    expect(componentSet.children).toHaveLength(sourceIconCount);
+    expect(componentSet.children).toHaveLength(sourceIconCount * 2);
     expect(componentSet.descriptionMarkdown).toBe(
-      `${sourceIconCount} open-source outline icons on a 24 px grid. Pick an icon with the **Icon** property and change the stroke color as needed.`,
+      `${sourceIconCount} open-source icons on a 24 px grid, each in an outline and a solid style. Pick an icon with the **Icon** property and a style with **Style**, then change the color as needed.`,
     );
     expect(componentSet.documentationLinks).toEqual([
       { uri: "https://vadivam.praveenjuge.com" },
@@ -719,7 +732,11 @@ describe("compiled Figma plugin", () => {
 
     const firstComponent = componentSet.children[0];
     const firstName = JSON.parse(firstComponent.getPluginData("vadivam-internal")).name;
-    expect(firstComponent.name).toBe(`Icon=${firstName}`);
+    expect(firstComponent.name).toBe(`Icon=${firstName}, Style=Outline`);
+    const firstSolid = componentSet.children[1];
+    expect(firstSolid.name).toBe(`Icon=${firstName}, Style=Solid`);
+    expect(JSON.parse(firstSolid.getPluginData("vadivam-internal"))).toMatchObject({ name: firstName, style: "solid" });
+    expect(firstSolid.descriptionMarkdown).toStartWith("24 px solid icon from Vadivam.");
     expect(firstComponent.documentationLinks).toEqual([
       { uri: `https://vadivam.praveenjuge.com/icons/${firstName}` },
     ]);
@@ -732,23 +749,31 @@ describe("compiled Figma plugin", () => {
       `24 px outline icon from Vadivam.\n\n**Categories:** ${categoryTitles.join(", ")}\n\n**Tags:** ${tags.join(", ")}`,
     );
 
+    // A library from before solid icons: an outline component with no style,
+    // and no solid variant. Updating keeps the component and adds the variant.
+    firstComponent.setPluginData("vadivam-internal", JSON.stringify({ schema: 1, kind: "icon", name: firstName }));
+    firstComponent.name = `Icon=${firstName}`;
+    firstSolid.remove();
     page.selection = [componentSet];
     await ui.onmessage({ type: "sync-library" });
     expect(componentSet.children[0]).toBe(firstComponent);
+    expect(firstComponent.name).toBe(`Icon=${firstName}, Style=Outline`);
+    expect(componentSet.children[1].name).toBe(`Icon=${firstName}, Style=Solid`);
+    expect(componentSet.children).toHaveLength(sourceIconCount * 2);
     expect(commits).toHaveLength(2);
     expect(messages.filter((message) => message.type === "library-synced")).toEqual([
       {
         type: "library-synced",
         count: sourceIconCount,
         created: true,
-        added: sourceIconCount,
+        added: sourceIconCount * 2,
         retained: 0,
       },
       {
         type: "library-synced",
         count: sourceIconCount,
         created: false,
-        added: 0,
+        added: 1,
         retained: 0,
       },
     ]);
