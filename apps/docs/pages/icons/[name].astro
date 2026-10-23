@@ -25,6 +25,7 @@ export function getStaticPaths() {
 const { config } = data;
 const { icon, lastModified } = Astro.props;
 const svg = iconsByName[icon.name].svg;
+const solidSvg = iconsByName[icon.name].solid?.svg ?? "";
 const c = icon.componentName;
 
 // The client swaps the manager into each tab's install line; npm is the default.
@@ -32,11 +33,23 @@ const packageManagers = ["npm", "pnpm", "bun", "yarn"];
 
 // Every icon page shares one template set; each page ships only the SVG shell
 // for its own path count.
-const pathCounts = [...new Set(icons.map((item) => (item.svg.match(/ d="/g) ?? []).length))].filter((count) => count > 0);
-const allTemplates = await buildSnippetTemplates(config.codeThemes, pathCounts);
-const pathCount = String((svg.match(/ d="/g) ?? []).length);
-const templates = { ...allTemplates, svg: { [pathCount]: allTemplates.svg[pathCount] ?? "" } };
+const countPaths = (markup: string) => (markup.match(/ d="/g) ?? []).length;
+const pathCounts = [...new Set(icons.map((item) => countPaths(item.svg)))].filter((count) => count > 0);
+const solidPathCounts = [...new Set(icons.map((item) => countPaths(item.solid?.svg ?? "")))].filter((count) => count > 0);
+const allTemplates = await buildSnippetTemplates(config.codeThemes, pathCounts, solidPathCounts);
+const pathCount = String(countPaths(svg));
+const solidPathCount = String(countPaths(solidSvg));
+const templates = {
+  ...allTemplates,
+  svg: { [pathCount]: allTemplates.svg[pathCount] ?? "" },
+  solid: { ...allTemplates.solid, svg: { [solidPathCount]: allTemplates.solid.svg[solidPathCount] ?? "" } },
+};
 const iconRef = { name: icon.name, component: c, svg };
+const solidRef = { name: icon.name, component: c, svg: solidSvg, style: "solid" as const };
+const iconStyles = [
+  { id: "outline", label: "Outline", svg },
+  { id: "solid", label: "Solid", svg: solidSvg },
+];
 const snippetTabs = [
   ...frameworks.map(({ id, label, packageName }) => ({ id, label, packageName })),
   { id: "svg", label: "SVG", packageName: "vadivam" },
@@ -61,7 +74,7 @@ const guides = [
 const categoryTitles = new Map(categories.map((category) => [category.id, category.title]));
 
 const pageTitle = `${c} icon — Vadivam`;
-const pageDescription = `${c} is a free, open-source 24px outline icon from Vadivam. Download the SVG or use it with React and other supported frameworks.`;
+const pageDescription = `${c} is a free, open-source 24px icon from Vadivam, outline and solid. Download the SVG or use it in React and other frameworks.`;
 const chipClass =
   "rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground no-underline transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 const tabClass =
@@ -103,7 +116,7 @@ const structuredData = site
           about: {
             "@type": "CreativeWork",
             name: `${c} icon`,
-            keywords: [icon.name, c, ...icon.tags, "vadivam", "svg icon", "outline icon", "24px icon"].join(", "),
+            keywords: [icon.name, c, ...icon.tags, "vadivam", "svg icon", "outline icon", "solid icon", "24px icon"].join(", "),
           },
         },
         {
@@ -199,14 +212,26 @@ const structuredData = site
           </label>
         </div>
         <div class="grid gap-6 rounded-lg px-4 py-8 text-foreground" id="previewStage" data-background="auto">
-          <div class="relative mx-auto aspect-square w-full max-w-60">
-            <div class="absolute inset-0 [&>svg]:size-full" data-icon-preview="240" data-zoom aria-hidden="true" set:html={svg.replace(/ width="24"/, ' width="240"').replace(/ height="24"/, ' height="240"')} />
-            <div class="pixel-grid pointer-events-none absolute inset-0" id="pixelGridOverlay" aria-hidden="true"></div>
+          <div class="grid grid-cols-2 gap-[clamp(1rem,4vw,2.5rem)]">
+            {iconStyles.map((style) => (
+              <figure class="m-0 grid gap-2">
+                <div class="relative mx-auto aspect-square w-full max-w-60">
+                  <div class="absolute inset-0 [&>svg]:size-full" data-icon-preview="240" data-icon-style={style.id} data-zoom aria-hidden="true" set:html={sized(style.svg, 240)} />
+                  <div class="pixel-grid pointer-events-none absolute inset-0" data-pixel-grid aria-hidden="true"></div>
+                </div>
+                <figcaption class="flex items-center justify-center gap-1 text-xs opacity-70">
+                  {style.label}
+                  <button class={miniButtonClass} type="button" data-action="copy-svg" data-icon-style={style.id} aria-label={`Copy ${style.label.toLowerCase()} SVG`}><VIcon name="copy" size={12} /></button>
+                </figcaption>
+              </figure>
+            ))}
           </div>
           <div class="flex items-end justify-center gap-[clamp(1rem,5vw,2.5rem)]" aria-label="Size previews">
             {[16, 20, 24, 32, 48].map((size) => (
               <div class="grid justify-items-center gap-1.5">
-                <div class="grid place-items-center" data-icon-preview={size} set:html={svg.replace(/ width="24"/, ` width="${size}"`).replace(/ height="24"/, ` height="${size}"`)} />
+                {iconStyles.map((style) => (
+                  <div class="grid place-items-center" data-icon-preview={size} data-icon-style={style.id} set:html={sized(style.svg, size)} />
+                ))}
                 <span class="font-mono text-[0.65rem] opacity-60">{size}</span>
               </div>
             ))}
@@ -216,6 +241,11 @@ const structuredData = site
 
       <div class="grid content-start gap-5 border-t border-border py-4 lg:border-t-0 lg:border-l lg:ps-6">
         <div class="grid gap-2">
+          <div class="grid grid-cols-2 gap-0.5 rounded-lg bg-muted p-0.5" role="group" aria-label="Style to export">
+            {iconStyles.map((style, index) => (
+              <button class={segmentClass} type="button" data-style-choice={style.id} aria-pressed={index === 0 ? "true" : "false"}>{style.label}</button>
+            ))}
+          </div>
           <button
             class="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-accent bg-accent px-3 py-2 text-sm text-accent-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             type="button"
@@ -294,16 +324,19 @@ const structuredData = site
                   data-snippet-tab={tab.id}
                 ><VIcon name="copy" size={12} /><span>Copy</span></button>
               </div>
-              {tab.id === "svg" && (
-                <>
-                  <div class="snippet-panel relative min-w-0">
-                    <CodeBlock lang="ts" code={`import iconUrl from "vadivam/icons/${icon.fileName}";`} icons={false} />
+              {tab.id === "svg" && iconStyles.map((style) => {
+                const folder = style.id === "solid" ? "solid/icons" : "icons";
+                return (
+                  <div class="grid min-w-0 gap-2" data-style-block={style.id} hidden={style.id !== "outline"}>
+                    <div class="snippet-panel relative min-w-0">
+                      <CodeBlock lang="ts" code={`import iconUrl from "vadivam/${folder}/${icon.fileName}";`} icons={false} />
+                    </div>
+                    <div class="snippet-panel relative min-w-0">
+                      <CodeBlock lang="html" code={`<img src="https://cdn.jsdelivr.net/npm/vadivam@${pkg.version}/dist/${folder}/${icon.fileName}" width="24" height="24" alt="" />`} icons={false} />
+                    </div>
                   </div>
-                  <div class="snippet-panel relative min-w-0">
-                    <CodeBlock lang="html" code={`<img src="https://cdn.jsdelivr.net/npm/vadivam@${pkg.version}/dist/icons/${icon.fileName}" width="24" height="24" alt="" />`} icons={false} />
-                  </div>
-                </>
-              )}
+                );
+              })}
             </div>
           ))
         }
@@ -396,7 +429,7 @@ const structuredData = site
   {structuredData && <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />}
 
   <script is:inline type="application/json" id="snippetTemplates" set:html={serializeForScript(templates)}></script>
-  <script is:inline type="application/json" id="iconData" set:html={serializeForScript({ icon: iconRef, version: pkg.version })}></script>
+  <script is:inline type="application/json" id="iconData" set:html={serializeForScript({ icon: iconRef, solid: solidRef, version: pkg.version })}></script>
 
   <script>
     import {
@@ -421,9 +454,16 @@ const structuredData = site
       const status = document.querySelector<HTMLElement>("#pageStatus")!;
       const stage = document.querySelector<HTMLElement>("#previewStage")!;
       const gridToggle = document.querySelector<HTMLInputElement>("#pixelGrid")!;
-      const overlay = document.querySelector<HTMLElement>("#pixelGridOverlay")!;
+      const overlays = Array.from(detail.querySelectorAll<HTMLElement>("[data-pixel-grid]"));
       const templates = readTemplates("snippetTemplates");
-      const { icon, version } = JSON.parse(document.getElementById("iconData")?.textContent ?? "{}") as { icon: IconRef; version: string };
+      const { icon: outline, solid, version } = JSON.parse(document.getElementById("iconData")?.textContent ?? "{}") as {
+        icon: IconRef;
+        solid: IconRef;
+        version: string;
+      };
+      // Both styles are previewed side by side; the style switch picks which
+      // one the export actions and the code snippets use.
+      let icon = outline;
       const store = createSettingsStore({ url: true });
       const tabKey = "vadivam:tab";
       const backgroundKey = "vadivam:preview-background";
@@ -508,20 +548,47 @@ const structuredData = site
       });
       setBackground(recall(backgroundKey) ?? "auto");
 
+      const showGrid = () => {
+        for (const overlay of overlays) overlay.hidden = !gridToggle.checked;
+      };
       gridToggle.addEventListener("change", () => {
-        overlay.hidden = !gridToggle.checked;
+        showGrid();
         remember("vadivam:pixel-grid", String(gridToggle.checked));
       });
       gridToggle.checked = recall("vadivam:pixel-grid") !== "false";
-      overlay.hidden = !gridToggle.checked;
+      showGrid();
+
+      const renderSnippets = () => {
+        for (const panel of detail.querySelectorAll<HTMLElement>("[data-snippet]")) {
+          panel.innerHTML = snippetHtml(templates, panel.dataset.snippet ?? "react", icon, store.get());
+        }
+      };
+      const setStyle = (style: string, { updateUrl = true } = {}) => {
+        if (style !== "outline" && style !== "solid") return;
+        icon = style === "solid" ? solid : outline;
+        for (const button of detail.querySelectorAll<HTMLElement>("[data-style-choice]")) {
+          button.setAttribute("aria-pressed", String(button.dataset.styleChoice === style));
+        }
+        for (const block of detail.querySelectorAll<HTMLElement>("[data-style-block]")) block.hidden = block.dataset.styleBlock !== style;
+        renderSnippets();
+        if (updateUrl) {
+          const url = new URL(location.href);
+          if (style === "solid") url.searchParams.set("style", "solid");
+          else url.searchParams.delete("style");
+          history.replaceState(history.state, "", url);
+        }
+      };
+      detail.querySelector('[aria-label="Style to export"]')?.addEventListener("click", (event) => {
+        const style = (event.target as HTMLElement).closest<HTMLElement>("[data-style-choice]")?.dataset.styleChoice;
+        if (style) setStyle(style);
+      });
+      setStyle(new URLSearchParams(location.search).get("style") ?? "outline", { updateUrl: false });
 
       const customizer = detail.querySelector<HTMLElement>("[data-customizer]");
       if (customizer) bindCustomizer(customizer, store);
       store.subscribe((settings) => {
-        renderPreviews(detail, icon, settings);
-        for (const panel of detail.querySelectorAll<HTMLElement>("[data-snippet]")) {
-          panel.innerHTML = snippetHtml(templates, panel.dataset.snippet ?? "react", icon, settings);
-        }
+        renderPreviews(detail, outline, settings, solid);
+        renderSnippets();
       });
 
       detail.addEventListener("click", async (event) => {
@@ -538,7 +605,9 @@ const structuredData = site
             await copyText(target.dataset.copy ?? "");
             setStatus("Copied.");
           } else {
-            setStatus(await runAction(target.dataset.action ?? "", icon, store.get(), version, stage));
+            // A preview's own copy button exports its style; the rest export the chosen style.
+            const styleIcon = target.dataset.iconStyle ? (target.dataset.iconStyle === "solid" ? solid : outline) : icon;
+            setStatus(await runAction(target.dataset.action ?? "", styleIcon, store.get(), version, stage));
           }
         } catch {
           setStatus("Couldn't complete that action in this browser.");
