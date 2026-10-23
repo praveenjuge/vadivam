@@ -36,6 +36,7 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const iconsDir = path.join(root, "icons");
+const solidIconsDir = path.join(root, "icons-solid");
 const rawDist = path.join(root, "packages/vadivam/dist");
 const rawSource = path.join(root, "packages/vadivam/src");
 const lucideAliasesPath = path.join(root, "apps/vadivam-internal/src/data/lucide-deprecated-aliases.json");
@@ -93,17 +94,48 @@ const geometryAttrs = {
   rect: new Set(["@_x", "@_y", "@_width", "@_height", "@_rx", "@_ry"]),
   ellipse: new Set(["@_cx", "@_cy", "@_rx", "@_ry"]),
 };
-const rootAttrs = {
+const canvasAttrs = {
   "@_xmlns": "http://www.w3.org/2000/svg",
   "@_width": "24",
   "@_height": "24",
   "@_viewBox": "0 0 24 24",
-  "@_fill": "none",
-  "@_stroke": "currentColor",
-  "@_stroke-width": "2",
-  "@_stroke-linecap": "round",
-  "@_stroke-linejoin": "round",
 };
+// Each style is one folder of SVGs with the same names. Outline icons are
+// centerline strokes; solid icons are filled shapes whose cut-outs rely on the
+// even-odd rule. Solid lines are 2.5px wide on the outline's centerlines, so
+// their ink reaches 0.25px further into the padding than a 2px stroke.
+export const styles = {
+  outline: {
+    id: "outline",
+    directory: iconsDir,
+    rootAttrs: {
+      ...canvasAttrs,
+      "@_fill": "none",
+      "@_stroke": "currentColor",
+      "@_stroke-width": "2",
+      "@_stroke-linecap": "round",
+      "@_stroke-linejoin": "round",
+    },
+    inkWidth: 2,
+    padding: 1,
+  },
+  solid: {
+    id: "solid",
+    directory: solidIconsDir,
+    rootAttrs: {
+      ...canvasAttrs,
+      "@_fill": "currentColor",
+      "@_fill-rule": "evenodd",
+    },
+    inkWidth: 0,
+    padding: 0.75,
+  },
+};
+
+function rootTag(style) {
+  const attrs = Object.entries(style.rootAttrs).map(([name, value]) => `${name.slice(2)}="${value}"`);
+  return `<svg ${attrs.join(" ")}>`;
+}
 const blockedTags = new Set([
   "a",
   "clipPath",
@@ -124,11 +156,9 @@ const blockedTags = new Set([
 ]);
 const maxClosedSubpathsPerPath = 8;
 const canvasSize = 24;
-const padding = 1;
-const strokeWidth = 2;
 
-async function svgFiles() {
-  return (await readdir(iconsDir))
+async function svgFiles(style = styles.outline) {
+  return (await readdir(style.directory))
     .filter((file) => file.endsWith(".svg"))
     .sort();
 }
@@ -258,9 +288,9 @@ function asArray(value) {
   return Array.isArray(value) ? value : [value];
 }
 
-export function validateSvgContent(svg, file = "inline.svg") {
+export function validateSvgContent(svg, file = "inline.svg", style = styles.outline) {
   const node = parseSvg(svg, file);
-  for (const [attr, value] of Object.entries(rootAttrs)) {
+  for (const [attr, value] of Object.entries(style.rootAttrs)) {
     assert(
       node[attr] === value,
       `${file}: expected ${attr.slice(2)}="${value}"`,
@@ -269,7 +299,7 @@ export function validateSvgContent(svg, file = "inline.svg") {
   for (const key of Object.keys(node)) {
     if (key.startsWith("@_"))
       assert(
-        key in rootAttrs,
+        key in style.rootAttrs,
         `${file}: unsupported root attribute ${key.slice(2)}`,
       );
   }
@@ -293,7 +323,7 @@ export function validateSvgContent(svg, file = "inline.svg") {
           const closedSubpaths =
             typeof pathData === "string" ? (pathData.match(/z/gi) ?? []).length : 0;
           assert(
-            closedSubpaths <= maxClosedSubpathsPerPath,
+            style !== styles.outline || closedSubpaths <= maxClosedSubpathsPerPath,
             `${file}: path has ${closedSubpaths} closed subpaths and looks like expanded stroke geometry; use open centerline strokes`,
           );
           assertSmoothCorners(pathData, file);
@@ -332,8 +362,11 @@ export function validateSvgContent(svg, file = "inline.svg") {
 
   visit(node, "svg");
   assert(count > 0, `${file}: no drawable elements found`);
-  assertInkInsidePadding(shapes, file);
-  assertCleanPaths(shapes.filter(([tag]) => tag === "path").map(([, attrs]) => attrs.d), file);
+  assertInkInsidePadding(shapes, file, style);
+  // Path cleanup joins and trims strokes, which only applies to outlines.
+  if (style === styles.outline) {
+    assertCleanPaths(shapes.filter(([tag]) => tag === "path").map(([, attrs]) => attrs.d), file);
+  }
 }
 
 // Every rounded corner between two straight lines must use the smoothed
@@ -355,16 +388,19 @@ function assertSmoothCorners(pathData, file) {
 
 // With round caps and joins the 2px stroke reaches 1px past the centerline, so
 // keeping the ink inside the 1px padding keeps every point of the geometry at
-// least 2px inside the canvas edge.
-function assertInkInsidePadding(shapes, file) {
+// least 2px inside the canvas edge. Solid shapes are their own ink.
+function assertInkInsidePadding(shapes, file, style = styles.outline) {
+  const { padding } = style;
   let box;
   try {
-    box = inkBounds(shapes, strokeWidth);
+    box = inkBounds(shapes, style.inkWidth);
   } catch (error) {
     throw new Error(`${file}: ${error.message}`);
   }
-  // Path data keeps 3 decimals, so curves may overshoot the padding line by a hair.
-  const epsilon = 0.01;
+  // Path data keeps 3 decimals, so curves may overshoot the padding line by a
+  // hair. Solid outlines are offset curves that SVGO refits as arcs, which
+  // can overshoot a little more.
+  const epsilon = style === styles.outline ? 0.01 : 0.05;
   const inside =
     box.minX >= padding - epsilon &&
     box.minY >= padding - epsilon &&
@@ -373,7 +409,9 @@ function assertInkInsidePadding(shapes, file) {
   const format = (value) => Number(value.toFixed(3));
   assert(
     inside,
-    `${file}: stroke reaches into the 1px padding (ink spans x ${format(box.minX)} to ${format(box.maxX)}, y ${format(box.minY)} to ${format(box.maxY)}); keep geometry at least 2px from every edge`,
+    style === styles.outline
+      ? `${file}: stroke reaches into the 1px padding (ink spans x ${format(box.minX)} to ${format(box.maxX)}, y ${format(box.minY)} to ${format(box.maxY)}); keep geometry at least 2px from every edge`
+      : `${file}: shape reaches into the ${padding}px padding (ink spans x ${format(box.minX)} to ${format(box.maxX)}, y ${format(box.minY)} to ${format(box.maxY)}); keep the shape at least ${padding}px from every edge`,
   );
 }
 
@@ -394,17 +432,22 @@ function assertCleanPaths(paths, file) {
   );
 }
 
-function assertNoFilledSourceArtwork(svg, file) {
+// Outline artwork may not be filled, and solid artwork may not be stroked:
+// either would be lost when the root attributes are rewritten.
+function assertSourcePaint(svg, file, style = styles.outline) {
   const rootNode = parseSvg(svg, file);
+  const paint = style === styles.outline ? "@_fill" : "@_stroke";
   const visit = (current) => {
     for (const [tag, value] of Object.entries(current)) {
       if (tag.startsWith("@_")) continue;
       for (const item of asArray(value)) {
         if (!item || typeof item !== "object") continue;
-        const fill = item["@_fill"];
+        const value = item[paint];
         assert(
-          fill === undefined || fill === "none",
-          `${file}: filled artwork cannot be normalized; use open centerline strokes instead of outlined stroke geometry`,
+          value === undefined || value === "none",
+          style === styles.outline
+            ? `${file}: filled artwork cannot be normalized; use open centerline strokes instead of outlined stroke geometry`
+            : `${file}: stroked artwork cannot be normalized; outline strokes into filled shapes for solid icons`,
         );
         visit(item);
       }
@@ -450,8 +493,9 @@ function optimizeSvg(svg, file) {
   return result.data;
 }
 
-export function normalizeSvg(svg, file) {
-  assertNoFilledSourceArtwork(svg, file);
+export function normalizeSvg(svg, file, style = styles.outline) {
+  assertSourcePaint(svg, file, style);
+  if (style !== styles.outline) return normalizeFilledSvg(svg, file, style);
   // SVGO turns Figma's circular curves into arcs, so rounded corners can be
   // found and smoothed; a last pass compacts the rewritten path data. Strokes
   // Figma split apart are joined first, and SVGO runs again on the joined
@@ -482,26 +526,51 @@ export function normalizeSvg(svg, file) {
       "",
     )
     .trim();
-  const normalized = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n${inner}\n</svg>\n`;
+  const normalized = `${rootTag(style)}\n${inner}\n</svg>\n`;
   validateSvgContent(normalized, file);
   return normalized;
 }
 
-export async function readIcons() {
-  const files = await svgFiles();
+// Filled artwork has no strokes to join or trim, so it is only compacted and
+// its rounded corners smoothed, like an outline's.
+function normalizeFilledSvg(svg, file, style) {
+  const pathPattern = /(<path\b[^>]*\sd=")([^"]*)("[^>]*>)/g;
+  const smooth = (content) =>
+    content.replace(pathPattern, (_match, prefix, d, suffix) => `${prefix}${smoothCorners(d)}${suffix}`);
+  // SVGO can turn a smoothed curve back into an arc, so repeat until stable.
+  let optimized = optimizeSvg(svg, file);
+  for (let pass = 0; pass < 4; pass += 1) {
+    const next = optimizeSvg(smooth(optimized), file);
+    if (next === optimized) break;
+    optimized = next;
+  }
+  const open = optimized.match(/<svg\b[^>]*>/);
+  const close = optimized.lastIndexOf("</svg>");
+  assert(open && close > -1, `${file}: optimized SVG is missing root`);
+  const inner = optimized
+    .slice(open.index + open[0].length, close)
+    .replace(/\s(?:fill|fill-rule|clip-rule|stroke|stroke-width|stroke-linecap|stroke-linejoin)="[^"]*"/g, "")
+    .trim();
+  const normalized = `${rootTag(style)}\n${inner}\n</svg>\n`;
+  validateSvgContent(normalized, file, style);
+  return normalized;
+}
+
+export async function readIcons(style = styles.outline) {
+  const files = await svgFiles(style);
   const icons = [];
   for (const fileName of files) {
     const name = fileName.replace(/\.svg$/, "");
     validateIconName(name, fileName);
-    const filePath = path.join(iconsDir, fileName);
+    const filePath = path.join(style.directory, fileName);
     const svg = await readFile(filePath, "utf8");
-    validateSvgContent(svg, fileName);
+    validateSvgContent(svg, fileName, style);
     const iconNode = iconNodeFromSvg(svg, fileName);
     icons.push({
       name,
       componentName: pascalCase(name),
       fileName,
-      svgPath: `icons/${fileName}`,
+      svgPath: `${path.relative(root, style.directory)}/${fileName}`,
       tags: lucideMetadata.icons[name]?.tags ?? [],
       categories: lucideMetadata.icons[name]?.categories ?? [],
       svg,
@@ -557,33 +626,61 @@ async function synchronizeDocCounts(names, { check = false } = {}) {
 export async function optimizeIcons() {
   const files = await svgFiles();
   const normalizedIcons = [];
-  for (const fileName of files) {
-    const filePath = path.join(iconsDir, fileName);
-    const svg = await readFile(filePath, "utf8");
-    normalizedIcons.push([filePath, normalizeSvg(svg, fileName)]);
+  for (const style of Object.values(styles)) {
+    for (const fileName of await svgFiles(style)) {
+      const filePath = path.join(style.directory, fileName);
+      const svg = await readFile(filePath, "utf8");
+      normalizedIcons.push([filePath, normalizeSvg(svg, fileName, style)]);
+    }
   }
   for (const [filePath, svg] of normalizedIcons) {
     await writeFile(filePath, svg);
   }
   await synchronizeDocCounts(files.map((fileName) => fileName.replace(/\.svg$/, "")));
-  console.log(`Optimized ${files.length} icons.`);
+  console.log(`Optimized ${files.length} icons in ${Object.keys(styles).length} styles.`);
+}
+
+// Every icon is drawn in every style, under the same name.
+export function validateStyleTwins(namesByStyle) {
+  const [[firstStyle, expected], ...others] = Object.entries(namesByStyle);
+  const expectedSet = new Set(expected);
+  for (const [style, names] of others) {
+    const set = new Set(names);
+    const missing = expected.filter((name) => !set.has(name));
+    const extra = names.filter((name) => !expectedSet.has(name));
+    assert(
+      missing.length === 0,
+      `${style} is missing ${missing.length} icon(s) drawn in ${firstStyle}: ${missing.slice(0, 10).join(", ")}${missing.length > 10 ? ", …" : ""}`,
+    );
+    assert(
+      extra.length === 0,
+      `${style} has ${extra.length} icon(s) with no ${firstStyle} twin: ${extra.slice(0, 10).join(", ")}${extra.length > 10 ? ", …" : ""}`,
+    );
+  }
 }
 
 export async function checkIcons() {
   const files = await svgFiles();
-  for (const fileName of files) {
-    validateIconName(fileName.replace(/\.svg$/, ""), fileName);
-    validateSvgContent(
-      await readFile(path.join(iconsDir, fileName), "utf8"),
-      fileName,
-    );
+  const namesByStyle = {};
+  for (const style of Object.values(styles)) {
+    const styleFiles = await svgFiles(style);
+    for (const fileName of styleFiles) {
+      validateIconName(fileName.replace(/\.svg$/, ""), fileName);
+      validateSvgContent(
+        await readFile(path.join(style.directory, fileName), "utf8"),
+        `${path.relative(root, style.directory)}/${fileName}`,
+        style,
+      );
+    }
+    namesByStyle[style.id] = styleFiles.map((fileName) => fileName.replace(/\.svg$/, ""));
   }
+  validateStyleTwins(namesByStyle);
   validateIconMetadata(files.map((fileName) => fileName.replace(/\.svg$/, "")));
   const lucideCatalog = await fetchPinnedLucideCatalog();
   validateLucideIconNames(files, lucideCatalog);
   await synchronizeDocCounts(files.map((fileName) => fileName.replace(/\.svg$/, "")), { check: true });
   console.log(
-    `Checked ${files.length} icons against Lucide ${lucideCatalog.version} canonical names.`,
+    `Checked ${files.length} icons in ${Object.keys(styles).length} styles against Lucide ${lucideCatalog.version} canonical names.`,
   );
 }
 
