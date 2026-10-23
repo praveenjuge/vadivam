@@ -2,6 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { renderReleaseNotes, summarizeReleaseDiff } from "../scripts/release-notes.mjs";
 
 describe("release notes", () => {
+  test("lists an icon once whichever of its styles changed", () => {
+    const summary = summarizeReleaseDiff(["A\ticons/bell.svg", "A\ticons-solid/bell.svg", "M\ticons-solid/activity.svg"].join("\n"));
+    expect(summary.icons).toEqual({ added: ["bell"], changed: ["activity"], removed: [] });
+    expect(renderReleaseNotes(summary, 242)).toContain("**Updated:** `activity`");
+  });
+
   test("summarizes icon additions, updates, removals, renames, and surfaces", () => {
     const summary = summarizeReleaseDiff([
       "A\ticons/bell.svg",

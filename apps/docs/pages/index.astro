@@ -738,7 +738,10 @@ const structuredData = site
       // Set by the drawer: repaints it in the new style.
       let afterStyle = () => {};
 
+      // The latest click wins, even over a solid fetch still in flight.
+      let requestedStyle: "outline" | "solid" = "outline";
       const setStyle = async (style: "outline" | "solid", { updateUrl = true } = {}) => {
+        requestedStyle = style;
         if (style === iconStyle) return;
         let solid: Record<string, string[]> = {};
         if (style === "solid") {
@@ -747,6 +750,7 @@ const structuredData = site
           } catch {
             return;
           }
+          if (requestedStyle !== style) return;
         }
         iconStyle = style;
         for (const entry of entries) {

@@ -120,10 +120,13 @@ describe("compiled Figma plugin", () => {
     };
 
     const storage = clientStorage({ settings: { columns: 4, tab: "nope" } });
+    const handlers: Record<string, () => void> = {};
     const figmaMock = {
       mixed: Symbol("mixed"),
       showUI() {},
-      on() {},
+      on(event: string, handler: () => void) {
+        handlers[event] = handler;
+      },
       clientStorage: storage,
       ui,
       root: { children: [currentPage] },
@@ -290,6 +293,24 @@ describe("compiled Figma plugin", () => {
     expect(solidViolations("check")).not.toContain("Solid artwork must use fills");
     expect(solidViolations("check")).not.toContain("Stroke weight must be 2 px");
     currentPage.name = "Vadivam Icons";
+
+    // Moving to a page of the other style rescans for that style's icons.
+    type Catalog = { summary: { existingCount: number } };
+    const catalogs = () => messages.filter((message) => (message as { type?: string }).type === "catalog") as Catalog[];
+    const switchPage = async (page: typeof currentPage) => {
+      const count = catalogs().length;
+      figmaMock.currentPage = page;
+      handlers.currentpagechange?.();
+      await waitFor(() => catalogs().length > count);
+      return lastCatalog().summary.existingCount;
+    };
+    const lastCatalog = () => catalogs()[catalogs().length - 1]!;
+    const outlineCount = lastCatalog().summary.existingCount;
+    const solidPage = { ...currentPage, name: "Vadivam Solid", children: [], selection: [] };
+    figmaMock.root.children.push(solidPage);
+    expect(await switchPage(solidPage)).toBe(0);
+    expect(await switchPage(currentPage)).toBe(outlineCount);
+    figmaMock.root.children.pop();
 
     const savedChildren = currentPage.children.splice(0);
     await ui.onmessage?.({ type: "suggest-names" });

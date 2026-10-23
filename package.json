@@ -24,7 +24,7 @@
     "icons:font-codepoints": "bun scripts/icons.mjs font-codepoints",
     "icons:preview": "bun scripts/icons.mjs preview",
     "icons:og": "bun scripts/icons.mjs og",
-    "icons:test": "bun test tests/icons.test.mjs tests/snippets.test.mjs",
+    "icons:test": "bun test tests/icons.test.mjs tests/solid-draft.test.mjs tests/snippets.test.mjs",
     "plugin:build": "bun run --cwd apps/vadivam-internal build",
     "plugin:dev": "bun run --cwd apps/vadivam-internal dev",
     "figma-plugin:build": "bun run --cwd apps/figma-plugin build",

@@ -244,8 +244,13 @@ function publishCatalog(): void {
   });
 }
 
+// The style the catalog was last scanned for; the names and missing icons
+// change when the current page moves to the other style.
+let scannedStyle: IconStyle | null = null;
+
 async function refreshCatalog(): Promise<void> {
   post({ type: "loading" });
+  scannedStyle = pageStyle(figma.currentPage);
   existingSlugs = await scanDocument();
   candidates = getMissingIcons(catalog.icons, existingSlugs);
   publishCatalog();
@@ -1021,7 +1026,12 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
   }
 };
 
-figma.on("currentpagechange", publishPageStatus);
+figma.on("currentpagechange", () => {
+  publishPageStatus();
+  if (scannedStyle !== null && pageStyle(figma.currentPage) !== scannedStyle) {
+    refreshCatalog().catch((error: unknown) => post({ type: "error", message: messageFromError(error) }));
+  }
+});
 
 async function start(): Promise<void> {
   settings = await loadSettings();

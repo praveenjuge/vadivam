@@ -27,6 +27,7 @@ import {
   smoothCorners,
 } from "../scripts/corner-smoothing.mjs";
 import { cleanPaths } from "../scripts/path-cleanup.mjs";
+import { area, loadPathKit, solidPath } from "../scripts/solid-draft.mjs";
 
 const validSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></svg>`;
 
@@ -269,6 +270,18 @@ describe("solid icon validation", () => {
   test("rejects stroked artwork before normalization", () => {
     const stroked = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12h16" stroke="black" stroke-width="2"/></svg>`;
     expect(() => normalizeSvg(stroked, "stroked.svg", styles.solid)).toThrow("stroked artwork cannot be normalized");
+    const rootStroke = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" xmlns="http://www.w3.org/2000/svg"><path d="M4 12h16"/></svg>`;
+    expect(() => normalizeSvg(rootStroke, "root-stroke.svg", styles.solid)).toThrow("stroked artwork cannot be normalized");
+  });
+
+  test("keeps a nonzero fill's area under the evenodd root", async () => {
+    const PK = await loadPathKit();
+    const nested = "M2 2h20v20H2z M8 8h8v8H8z";
+    const filledArea = (svg) => area(solidPath(PK, normalizeSvg(svg, "nested.svg", styles.solid)));
+    const nonzero = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${nested}" fill="black"/></svg>`;
+    expect(filledArea(nonzero)).toBeCloseTo(400, 1);
+    const evenOdd = nonzero.replace("<path ", '<path fill-rule="evenodd" ');
+    expect(filledArea(evenOdd)).toBeCloseTo(400 - 64, 1);
   });
 
   test("normalizes a Figma export to the solid root", () => {

@@ -12,6 +12,7 @@
 // - an "-off" icon is its base icon's solid with the slash cut through it.
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 
@@ -143,6 +144,17 @@ export function area(path) {
     0,
   );
   return Math.max(0, total) / scale ** 2;
+}
+
+// Path data that fills under the evenodd rule what `d` fills under nonzero, or
+// null when the two rules already fill the same area.
+export function evenOddPathData(PK, d) {
+  const nonzero = PK.FromSVGString(d).transform(scale, 0, 0, 0, scale, 0, 0, 0, 1);
+  nonzero.setFillType(PK.FillType.WINDING);
+  const evenOdd = nonzero.copy();
+  evenOdd.setFillType(PK.FillType.EVENODD);
+  if (area(PK.MakeFromOp(nonzero, evenOdd, PK.PathOp.XOR)) < 0.01) return null;
+  return toPathData(nonzero.simplify());
 }
 
 function makeOps(PK) {
@@ -476,6 +488,13 @@ export function toPathData(path) {
   return parts.join("");
 }
 
+// The filled area of a solid SVG, as drafts are built.
+export function solidPath(PK, svg) {
+  const path = PK.FromSVGString(pathDataOf(svg).join(" ")).transform(scale, 0, 0, 0, scale, 0, 0, 0, 1);
+  path.setFillType(PK.FillType.EVENODD);
+  return path.simplify() ?? path;
+}
+
 export function solidSvg(pathData) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd">\n<path d="${pathData}"/>\n</svg>\n`;
 }
@@ -486,7 +505,7 @@ async function main(args) {
   const { mkdir, readFile, readdir, writeFile } = await import("node:fs/promises");
   const { existsSync } = await import("node:fs");
   const path = await import("node:path");
-  const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const force = args.includes("--force");
   const requested = args.filter((arg) => !arg.startsWith("--"));
   const iconsDir = path.join(root, "icons");
@@ -502,24 +521,33 @@ async function main(args) {
     ? requested
     : (await readdir(iconsDir)).filter((file) => file.endsWith(".svg")).map((file) => file.slice(0, -4)).sort();
   const PK = await loadPathKit();
+  const saved = new Set(await readdir(solidDir));
+  const redrafted = (name) => !saved.has(`${name}.svg`) || (force && (!requested.length || requested.includes(name)));
   const drafted = new Map();
   const draft = async (name) => {
     if (drafted.has(name)) return drafted.get(name);
     const svg = await readFile(path.join(iconsDir, `${name}.svg`), "utf8");
     const baseName = name.endsWith("-off") ? name.slice(0, -4) : null;
-    const base = baseName && existsSync(path.join(iconsDir, `${baseName}.svg`)) ? await draft(baseName) : undefined;
+    // An "-off" icon starts from its base's saved solid, so refinements made
+    // in Figma carry over, unless the base is being drafted in this run too.
+    let base;
+    if (baseName && !redrafted(baseName)) {
+      base = solidPath(PK, await readFile(path.join(solidDir, `${baseName}.svg`), "utf8"));
+    } else if (baseName && existsSync(path.join(iconsDir, `${baseName}.svg`))) {
+      base = await draft(baseName);
+    }
     const solid = draftSolid(PK, pathDataOf(svg), { base, hints: hintsFor(name) });
     drafted.set(name, solid);
     return solid;
   };
   let written = 0;
   for (const name of names) {
+    if (!redrafted(name)) continue;
     const target = path.join(solidDir, `${name}.svg`);
-    if (!force && existsSync(target)) continue;
     await writeFile(target, solidSvg(toPathData(await draft(name))));
     written += 1;
   }
   console.log(`Drafted ${written} solid icon${written === 1 ? "" : "s"}; run bun run icons:optimize next.`);
 }
 
-if (process.argv[1] === new URL(import.meta.url).pathname) await main(process.argv.slice(2));
+if (process.argv[1] === fileURLToPath(import.meta.url)) await main(process.argv.slice(2));

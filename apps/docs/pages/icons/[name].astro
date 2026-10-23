@@ -439,6 +439,7 @@ const structuredData = site
       readTemplates,
       renderPreviews,
       runAction,
+      showStrokeSettings,
       snippetHtml,
       snippetText,
       wireMenus,
@@ -570,6 +571,7 @@ const structuredData = site
           button.setAttribute("aria-pressed", String(button.dataset.styleChoice === style));
         }
         for (const block of detail.querySelectorAll<HTMLElement>("[data-style-block]")) block.hidden = block.dataset.styleBlock !== style;
+        showStrokeSettings(detail, style === "solid" ? "solid" : "outline");
         renderSnippets();
         if (updateUrl) {
           const url = new URL(location.href);

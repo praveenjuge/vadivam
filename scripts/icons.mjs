@@ -13,6 +13,7 @@ import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { inkBounds } from "./icon-geometry.mjs";
 import { findUnsmoothedCorners, reattachEnds, smoothCorners } from "./corner-smoothing.mjs";
 import { cleanPaths, gridTolerance } from "./path-cleanup.mjs";
+import { evenOddPathData, loadPathKit } from "./solid-draft.mjs";
 import { optimize } from "svgo";
 import { Resvg } from "@resvg/resvg-js";
 import { buildAngularPackage } from "./generators/angular.mjs";
@@ -438,25 +439,24 @@ function assertCleanPaths(paths, file) {
 // Outline artwork may not be filled, and solid artwork may not be stroked:
 // either would be lost when the root attributes are rewritten.
 function assertSourcePaint(svg, file, style = styles.outline) {
-  const rootNode = parseSvg(svg, file);
   const paint = style === styles.outline ? "@_fill" : "@_stroke";
+  // The root counts too: its paint is inherited by every shape.
   const visit = (current) => {
-    for (const [tag, value] of Object.entries(current)) {
+    const value = current[paint];
+    assert(
+      value === undefined || value === "none",
+      style === styles.outline
+        ? `${file}: filled artwork cannot be normalized; use open centerline strokes instead of outlined stroke geometry`
+        : `${file}: stroked artwork cannot be normalized; outline strokes into filled shapes for solid icons`,
+    );
+    for (const [tag, children] of Object.entries(current)) {
       if (tag.startsWith("@_")) continue;
-      for (const item of asArray(value)) {
-        if (!item || typeof item !== "object") continue;
-        const value = item[paint];
-        assert(
-          value === undefined || value === "none",
-          style === styles.outline
-            ? `${file}: filled artwork cannot be normalized; use open centerline strokes instead of outlined stroke geometry`
-            : `${file}: stroked artwork cannot be normalized; outline strokes into filled shapes for solid icons`,
-        );
-        visit(item);
+      for (const item of asArray(children)) {
+        if (item && typeof item === "object") visit(item);
       }
     }
   };
-  visit(rootNode);
+  visit(parseSvg(svg, file));
 }
 
 function iconNodeFromSvg(svg, file) {
@@ -534,14 +534,24 @@ export function normalizeSvg(svg, file, style = styles.outline) {
   return normalized;
 }
 
+const pathKit = await loadPathKit();
+
 // Filled artwork has no strokes to join or trim, so it is only compacted and
 // its rounded corners smoothed, like an outline's.
 function normalizeFilledSvg(svg, file, style) {
   const pathPattern = /(<path\b[^>]*\sd=")([^"]*)("[^>]*>)/g;
   const smooth = (content) =>
     content.replace(pathPattern, (_match, prefix, d, suffix) => `${prefix}${smoothCorners(d)}${suffix}`);
-  // SVGO can turn a smoothed curve back into an arc, so repeat until stable.
   let optimized = optimizeSvg(svg, file);
+  // The root's fill-rule replaces each shape's own, so a path Figma fills by
+  // nonzero winding is redrawn first to fill the same area by evenodd.
+  const rootRule = optimized.match(/<svg\b[^>]*>/)?.[0].match(/\sfill-rule="([^"]*)"/)?.[1];
+  optimized = optimized.replace(pathPattern, (match, prefix, d, suffix) => {
+    const rule = match.match(/\sfill-rule="([^"]*)"/)?.[1] ?? rootRule ?? "nonzero";
+    const converted = rule === "evenodd" ? null : evenOddPathData(pathKit, d);
+    return converted ? `${prefix}${converted}${suffix}` : match;
+  });
+  // SVGO can turn a smoothed curve back into an arc, so repeat until stable.
   for (let pass = 0; pass < 4; pass += 1) {
     const next = optimizeSvg(smooth(optimized), file);
     if (next === optimized) break;
