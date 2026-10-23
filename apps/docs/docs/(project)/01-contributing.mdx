@@ -1,0 +1,91 @@
+---
+title: Contributing
+description: Set up the Vadivam monorepo, add or update icons through the Figma and SVG workflow, and validate package or documentation changes.
+related:
+  - /docs/design-guide
+  - /docs/how-icons-are-built
+  - /docs/versions
+search:
+  keywords: [figma, pull request, icons:optimize, icons:check, bun, playwright]
+---
+
+Vadivam is a Bun monorepo. Source SVGs in the root `icons/` directory are canonical; package distributions and website assets are generated and must not be edited by hand.
+
+## Requirements
+
+- [Bun](https://bun.sh) at the version pinned in the root `package.json` (`packageManager`).
+- Node.js 24 for the full test suite. The Angular integration app needs Node 22.22.3 or newer.
+- Playwright's Chromium for the framework integration apps, installed once with `bunx playwright install --with-deps chromium`.
+
+## Set up the repository
+
+<Steps>
+  <Step title="Clone the repository">
+
+```sh
+git clone https://github.com/praveenjuge/vadivam.git
+cd vadivam
+```
+
+  </Step>
+  <Step title="Install dependencies">
+
+```sh
+bun install
+```
+
+This also installs a pre-commit hook that optimizes and checks icons before each commit.
+
+  </Step>
+  <Step title="Start the docs site">
+
+```sh
+bun run dev  # docs at http://localhost:4321
+```
+
+Stop the dev server before running the full test suite, which builds and checks the docs on the same port.
+
+  </Step>
+</Steps>
+
+Keep pull requests focused and describe visible changes and package API changes.
+
+## Add or update an icon
+
+Add or replace only the source SVG in `icons/`, named after the icon's current Lucide name. Draw it to the [design guide](/docs/design-guide), then follow [How icons are built](/docs/how-icons-are-built) to normalize, validate, and build it:
+
+```sh
+bun run icons:optimize  # clean paths and smooth corners in place
+bun run icons:check     # validate without writing
+bun run icons:build     # regenerate packages and site assets
+```
+
+Do not hand-edit generated output to fix an icon; correct the canonical SVG and regenerate.
+
+## Validate changes
+
+Run the full project checks before submitting:
+
+```sh
+bun run test
+```
+
+It regenerates the packages, runs every unit test, builds and checks the docs site, and builds and browser-tests every framework integration app. Focused commands are available while iterating:
+
+| Command | Checks |
+| --- | --- |
+| `bun run icons:check` | Icon rules and names |
+| `bun run test:vadivam` | Core SVG package |
+| `bun run test:vadivam-react` | React package |
+| `bun run test:vadivam-react-native` | React Native package |
+| `bun run test:vadivam-mcp` | MCP server |
+| `bun run test:shadcn` | shadcn/ui registry, including a real `shadcn add` |
+| `bun run test:integration` | Framework integration apps in Chromium and the Expo app |
+
+## Documentation changes
+
+Documentation source lives in `apps/docs/docs`. Use Markdown where possible, and MDX only when a page needs built-in components. Include `title` and `description` YAML frontmatter, keep examples executable, and use links rooted at `/docs` for documentation pages.
+
+For package behavior, verify the package README, `package.json` export map, and generated public declarations before documenting it. Do not infer an API from another framework package: providers, dynamic exports, fallback types, and peer ranges differ.
+
+Report bugs or propose changes through [GitHub issues](https://github.com/praveenjuge/vadivam/issues).

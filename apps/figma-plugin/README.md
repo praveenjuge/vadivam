@@ -1,10 +1,6 @@
 # Vadivam Icons for Figma
 
-Public Figma companion for searching and inserting the canonical Vadivam icon set as editable local components. The catalog is bundled from the repository's validated `icons/` directory and works without network access.
-
-Search matches icon names, Lucide tags, and category titles, the same way the website does, and the category menu narrows the grid. Every inserted component gets a short description listing its categories and tags, plus a link to its icon page, so Figma's asset search finds it by those words too.
-
-Select a frame that holds Lucide icons, or the icons themselves, and the plugin offers to swap them to Vadivam. It recognizes square, stroke-only layers (no filled shapes, so buttons and tiles are left alone) named after a Lucide icon (`arrow-right`, `ArrowRight`, `lucide/arrow-right`, or a deprecated name such as `home`), keeps each layer's size, stroke color and weight, and layout position, and turns repeats of the same icon into instances of one new component. A local Lucide component is redrawn in place so its instances update with it.
+Public Figma plugin for searching and inserting the canonical Vadivam icon set as editable local components, and for swapping Lucide icons to Vadivam. What it does for designers is documented at [vadivam.praveenjuge.com/docs/figma-plugin](https://vadivam.praveenjuge.com/docs/figma-plugin); keep that page in step with behavior changes. The catalog is bundled from the repository's validated `icons/` directory and works without network access.
 
 The UI previews icons from one SVG sprite parsed with the HTML, keeps search fields precomputed, and renders matches in batches as the grid scrolls. The canvas bundle stores each icon's SVG body without the shared root element.
 

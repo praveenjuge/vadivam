@@ -1,0 +1,95 @@
+---
+title: How icons are built
+description: Follow a Vadivam icon from its Figma drawing through path cleanup, 60% corner smoothing, strict SVG validation, and generation into every package.
+related:
+  - /docs/design-guide
+  - /docs/contributing
+  - /docs/core
+search:
+  keywords: [svgo, optimize, corner smoothing, squircle, path cleanup, svg validation, untrusted svg, icons:check, icons:build]
+---
+
+Every icon starts as one SVG file in the repository's `icons/` folder. That file is the only hand-made part: the cleanup, the smoothed corners, and every package format are generated from it. This keeps all 24px drawings consistent and means a fix to one file reaches React, Vue, the raw SVGs, the icon font, and every other format in the same release.
+
+## Pipeline
+
+<Steps>
+  <Step title="Draw in Figma">
+
+Each icon is a top-level 24×24 frame named after its Lucide name, on a 2px grid. Draw centerline strokes on the frame. Don't flatten or outline them, and keep corners as plain circular arcs: the smoothing is added in a later step. Before export, each frame is audited for a canonical name, 24×24 size, no background fill or layout guides, stroke-only artwork, a 2px stroke, round caps and joins, and zero rotation. After optimizing, the smoothed artwork is brought back into Figma, so the source file and the [Community library](/docs/figma-plugin) always match the published icons.
+
+  </Step>
+  <Step title="Export to icons/">
+
+Export the frame as SVG into the root `icons/` folder, replacing the existing file of the same name.
+
+  </Step>
+  <Step title="Normalize">
+
+```sh
+bun run icons:optimize
+```
+
+This optimizes each SVG in place with SVGO, cleans the path data, smooths every rounded corner at 60%, rewrites the root attributes, and strips stroke and fill attributes from the elements. Running it again changes nothing.
+
+Cleaning the path data undoes what Figma's export leaves behind, without changing how the icon looks:
+
+- Strokes that end at the same point are joined into one, preferring the stroke that continues straight on at a junction. With round caps and joins, two strokes meeting at a point render exactly like one stroke turning there, and a joined outline lets smoothing see both sides of each corner.
+- Lone `M` commands, and stubs shorter than 0.05px hidden under another stroke, are removed. Dots drawn as `h.01` are kept.
+- A straight line split into pieces becomes one line.
+- Horizontal and vertical lines just off the pixel grid are snapped onto it, as described under [Pixel grid alignment](/docs/design-guide#pixel-grid-alignment).
+
+  </Step>
+  <Step title="Validate">
+
+```sh
+bun run icons:check
+```
+
+This runs every rule under [What every SVG must pass](#what-every-svg-must-pass), every **Checked** rule in the [design guide](/docs/design-guide), and confirms the names against the pinned Lucide release.
+
+  </Step>
+  <Step title="Review by eye">
+
+Compare the icon with `circle`, `square`, and its family at 24px and at 1×, against the rules that are not checked automatically: grid alignment, keylines, corner radius, gaps, and weight. To see where the icon sits in the set's distributions, run:
+
+```sh
+bun scripts/icon-geometry.mjs
+```
+
+  </Step>
+  <Step title="Build">
+
+```sh
+bun run icons:build
+```
+
+Every package and site asset is generated from the validated `icons/` folder, so one drawing reaches every format in the same release. Generated files are never edited by hand; fix the source SVG and build again.
+
+  </Step>
+</Steps>
+
+## What every SVG must pass
+
+Icon files are treated as untrusted input. `bun run icons:optimize` and `bun run icons:check` reject an SVG that breaks any of these rules, before anything is published or deployed:
+
+- **Root.** The root `<svg>` has exactly `xmlns="http://www.w3.org/2000/svg"`, `width="24"`, `height="24"`, `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `stroke-width="2"`, `stroke-linecap="round"`, and `stroke-linejoin="round"`. Any other root attribute, such as `class`, `id`, or `style`, is rejected.
+- **Elements.** Only `<path>`, `<circle>`, `<line>`, `<polyline>`, `<polygon>`, `<rect>`, and `<ellipse>` are allowed. That rules out `<a>`, `<clipPath>`, `<defs>`, `<filter>`, `<foreignObject>`, `<g>`, `<image>`, `<linearGradient>`, `<mask>`, `<pattern>`, `<radialGradient>`, `<script>`, `<style>`, `<symbol>`, `<text>`, `<use>`, and any other element. Every icon in the set uses only `<path>`.
+- **Attributes.** Each element carries geometry only: `d` on a path; `cx`, `cy`, and `r` on a circle; `x1`, `y1`, `x2`, and `y2` on a line; `points` on a polyline or polygon; `x`, `y`, `width`, and `height` on a rect, since `rx` and `ry` can't carry corner smoothing; and `cx`, `cy`, `rx`, and `ry` on an ellipse. No `fill`, `stroke`, `transform`, `opacity`, `style`, `class`, `id`, or event handlers.
+- **Geometry.** Every element needs geometry. An icon needs at least one drawable element. Path data must parse. A single path may hold at most 8 closed subpaths. The stroke must stay inside the 1px padding. Every rounded corner between two straight lines must be smoothed. Path data must already be clean: no strokes split where they meet, no stray subpaths, no straight lines in pieces, and no lines just off the pixel grid.
+- **Fills.** Source artwork with a `fill` other than `none` is rejected before optimization, so outlined Figma exports never reach the set.
+- **Files.** File names must be canonical Lucide names in lowercase kebab-case, with an entry in `metadata/lucide.json`.
+
+Because every published icon has passed these checks, Vadivam SVGs carry no scripts, styles, links, external references, or event handlers, and are safe to inline in HTML, email, or user-facing documents.
+
+## What gets built
+
+From each validated SVG, `bun run icons:build` generates:
+
+- Optimized SVG files, per-icon SVG strings, a full SVG sprite, an icon font, and icon-node data in [`vadivam`](/docs/core).
+- Components for [React](/docs/react), [React Native](/docs/react-native), [Vue](/docs/vue), [Svelte](/docs/svelte), [Solid](/docs/solid), [Angular](/docs/angular), [Astro](/docs/astro), and [Preact](/docs/preact), each with a PascalCase name made from the file name.
+- The [shadcn/ui registry](/docs/shadcn) item for every icon.
+- The icon data inside the [MCP server](/docs/mcp).
+- The website's search index and the `/icons/<name>.svg` file behind every [icon page](/).
+
+All packages share one version and are published together. See [Versions and compatibility](/docs/versions).

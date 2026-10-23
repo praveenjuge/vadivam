@@ -66,6 +66,9 @@ const iconCountFiles = [
 ];
 const iconCountPattern =
   /(<!-- vadivam-icon-count:start -->[\s\S]*?)(\d+)([\s\S]*?<!-- vadivam-icon-count:end -->)/g;
+const categoriesDocPath = path.join(root, "apps/docs/docs/(icons)/03-categories.mdx");
+const categoryTablePattern =
+  /(<!-- vadivam-categories:start --> \*\/\}\n)[\s\S]*?(\n\{\/\* <!-- vadivam-categories:end -->)/;
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
@@ -519,13 +522,32 @@ export function updateIconCountMarkers(content, count) {
   return updated;
 }
 
-async function synchronizeIconCounts(count, { check = false } = {}) {
-  for (const filePath of iconCountFiles) {
+// The categories table lists each category with its icon count, linked to the
+// homepage filter, so the docs page stays in step with the set.
+export function categoryTable(names) {
+  const rows = iconCategories.map(({ id, title, description = "" }) => {
+    const count = names.filter((name) => lucideMetadata.icons[name]?.categories.includes(id)).length;
+    return `| [${title}](/?category=${id}) | ${count} | ${description} |`;
+  });
+  return ["| Category | Icons | Description |", "| --- | --: | --- |", ...rows].join("\n");
+}
+
+export function updateCategoryTableMarkers(content, names) {
+  assert(categoryTablePattern.test(content), "missing vadivam categories markers");
+  return content.replace(categoryTablePattern, (_match, before, after) => `${before}\n${categoryTable(names)}\n${after}`);
+}
+
+async function synchronizeDocCounts(names, { check = false } = {}) {
+  const updates = [
+    ...iconCountFiles.map((filePath) => [filePath, (content) => updateIconCountMarkers(content, names.length)]),
+    [categoriesDocPath, (content) => updateCategoryTableMarkers(content, names)],
+  ];
+  for (const [filePath, update] of updates) {
     const original = await readFile(filePath, "utf8");
-    const updated = updateIconCountMarkers(original, count);
+    const updated = update(original);
     if (updated === original) continue;
     const relativePath = path.relative(root, filePath);
-    assert(!check, `${relativePath}: icon count is stale; run bun run icons:optimize`);
+    assert(!check, `${relativePath}: icon counts are stale; run bun run icons:optimize`);
     await writeFile(filePath, updated);
   }
 }
@@ -541,7 +563,7 @@ export async function optimizeIcons() {
   for (const [filePath, svg] of normalizedIcons) {
     await writeFile(filePath, svg);
   }
-  await synchronizeIconCounts(files.length);
+  await synchronizeDocCounts(files.map((fileName) => fileName.replace(/\.svg$/, "")));
   console.log(`Optimized ${files.length} icons.`);
 }
 
@@ -557,7 +579,7 @@ export async function checkIcons() {
   validateIconMetadata(files.map((fileName) => fileName.replace(/\.svg$/, "")));
   const lucideCatalog = await fetchPinnedLucideCatalog();
   validateLucideIconNames(files, lucideCatalog);
-  await synchronizeIconCounts(files.length, { check: true });
+  await synchronizeDocCounts(files.map((fileName) => fileName.replace(/\.svg$/, "")), { check: true });
   console.log(
     `Checked ${files.length} icons against Lucide ${lucideCatalog.version} canonical names.`,
   );
@@ -1013,7 +1035,7 @@ export async function buildOg() {
 
 export async function build() {
   const icons = await readIcons();
-  await synchronizeIconCounts(icons.length);
+  await synchronizeDocCounts(icons.map((icon) => icon.name));
   await buildRawPackage(icons);
   await buildReactPackage(icons);
   await buildReactNativePackage(icons, reactNativeDist);

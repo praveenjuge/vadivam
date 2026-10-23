@@ -145,7 +145,7 @@ Replace `activity` with any icon name. Prefer the `vadivam-react` package when t
 - Icon-only button: name the button, `<button aria-label="Search"><Search aria-hidden="true" /></button>`.
 - React Native: `<Activity accessibilityLabel="Service is active" accessible />`.
 
-See [Usage](https://vadivam.praveenjuge.com/docs/usage.md#accessibility).
+See [Accessibility](https://vadivam.praveenjuge.com/docs/accessibility.md).
 
 ## Gotchas
 
@@ -163,7 +163,9 @@ See [Usage](https://vadivam.praveenjuge.com/docs/usage.md#accessibility).
 - [Icon catalog](https://vadivam.praveenjuge.com/): browse every icon; each is also served at `https://vadivam.praveenjuge.com/icons/<kebab-name>.svg`.
 - [shadcn/ui](https://vadivam.praveenjuge.com/docs/shadcn.md): `npx shadcn@latest add https://vadivam.praveenjuge.com/r/<kebab-name>.json` copies a self-contained React icon component into the project.
 - [AI agents](https://vadivam.praveenjuge.com/docs/ai-agents.md): how agents should consume Vadivam.
+- [Categories and naming](https://vadivam.praveenjuge.com/docs/categories.md): name forms per package, tags, and every category with its icon count.
 - [Design guide](https://vadivam.praveenjuge.com/docs/design-guide.md): the drawing rules every icon follows.
+- [How icons are built](https://vadivam.praveenjuge.com/docs/how-icons-are-built.md): the icon pipeline and every rule an SVG must pass.
 - [MCP server](https://vadivam.praveenjuge.com/docs/mcp.md): tools, hosted endpoint, and local setup.
 - [Contributing](https://vadivam.praveenjuge.com/docs/contributing.md): add icons or change packages.
 - [Changelog](https://vadivam.praveenjuge.com/changelog.md): release notes, newest first.

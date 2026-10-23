@@ -67,4 +67,4 @@ import { DynamicIcon } from "vadivam-vue/dynamic";
 </template>
 ```
 
-The `/dynamic` entry point also exports `iconNames` and `dynamicIconImports`. Use static imports for names known in source and read [Dynamic icons](/docs/dynamic-icons) before accepting arbitrary runtime strings. See [Usage, styling, and accessibility](/docs/usage) for shared SVG guidance.
+The `/dynamic` entry point also exports `iconNames` and `dynamicIconImports`. Use static imports for names known in source and read [Dynamic icons](/docs/dynamic-icons) before accepting arbitrary runtime strings. See [Usage](/docs/usage) and [Accessibility](/docs/accessibility) for shared SVG guidance.

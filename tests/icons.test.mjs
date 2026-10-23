@@ -4,6 +4,7 @@ import {
   normalizeSvg,
   readIcons,
   shuffleUnique,
+  updateCategoryTableMarkers,
   updateIconCountMarkers,
   validateIconMetadata,
   validateLucideIconNames,
@@ -223,6 +224,26 @@ describe("icon validation", () => {
     );
     expect(() => updateIconCountMarkers("Ships 240 icons.", 260)).toThrow(
       "missing vadivam icon count markers",
+    );
+  });
+
+  test("rewrites the marked categories table with per-category icon counts", () => {
+    const content = [
+      "Intro.",
+      "{/* <!-- vadivam-categories:start --> */}",
+      "",
+      "stale table",
+      "",
+      "{/* <!-- vadivam-categories:end --> */}",
+    ].join("\n");
+    const updated = updateCategoryTableMarkers(content, ["activity", "check"]);
+    expect(updated).toStartWith("Intro.\n{/* <!-- vadivam-categories:start --> */}\n\n| Category | Icons | Description |\n");
+    expect(updated).toEndWith("|\n\n{/* <!-- vadivam-categories:end --> */}");
+    expect(updated).not.toContain("stale table");
+    expect(updated).toContain("| [Medical](/?category=medical) | 1 |");
+    expect(updateCategoryTableMarkers(updated, ["activity", "check"])).toBe(updated);
+    expect(() => updateCategoryTableMarkers("No markers.", ["activity"])).toThrow(
+      "missing vadivam categories markers",
     );
   });
 });

@@ -65,4 +65,4 @@ Svelte's `/dynamic` entry point is a default component export:
 
 The fallback prop is a Svelte snippet. The `iconNames` list and lazy import map are exported from `vadivam-svelte/dynamicIconImports`, not from the default dynamic component module.
 
-Use static imports for known names. See [Dynamic icons](/docs/dynamic-icons) and [Usage, styling, and accessibility](/docs/usage).
+Use static imports for known names. See [Dynamic icons](/docs/dynamic-icons), [Usage](/docs/usage), and [Accessibility](/docs/accessibility).

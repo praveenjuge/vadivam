@@ -1,5 +1,7 @@
 ---
 title: Core SVG and JavaScript
+sidebar:
+  label: SVG and JavaScript
 description: Use the core Vadivam package for optimized SVG assets, icon-node data, catalog metadata, sprites, and browser DOM helpers.
 related:
   - /docs/usage
@@ -189,4 +191,4 @@ Each metadata record includes `name`, `componentName`, `fileName`, `svgPath`, `t
 
 The root entry point uses two similar names with different meanings: `icons` is the component-name-to-icon-node registry, while `manifest` is the metadata array. The dedicated `vadivam/manifest` entry point exports its metadata array as `icons`.
 
-Continue with [common usage, styling, and accessibility](/docs/usage).
+Continue with [usage and styling](/docs/usage) and [accessibility](/docs/accessibility).

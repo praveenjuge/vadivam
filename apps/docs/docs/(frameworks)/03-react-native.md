@@ -69,4 +69,4 @@ import { DynamicIcon } from "vadivam-react-native/dynamic";
 
 The package also exposes `/icons`, `/icons/*`, and `/dynamicIconImports` entries. Dynamic names are kebab-case and load per-icon modules; use static imports when names are known in source.
 
-React Native accessibility uses platform props rather than web ARIA. Add `accessible` and `accessibilityLabel` when the icon itself conveys meaning, or hide/reduce duplicate announcements when adjacent text already names the control. See [common accessibility guidance](/docs/usage#accessibility) and [Dynamic icons](/docs/dynamic-icons).
+React Native accessibility uses platform props rather than web ARIA. Add `accessible` and `accessibilityLabel` when the icon itself conveys meaning, or hide/reduce duplicate announcements when adjacent text already names the control. See [common accessibility guidance](/docs/accessibility) and [Dynamic icons](/docs/dynamic-icons).

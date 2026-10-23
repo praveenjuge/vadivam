@@ -61,4 +61,4 @@ The generated lazy import map and `iconNames` are available from `vadivam-astro/
 
 The root package also exports a generic `Icon`, `createVadivamIcon`, icon definitions, and related types for advanced custom-icon use. There is no `VadivamProvider` in the Astro package, so pass defaults through your own wrapper component if needed.
 
-See [Dynamic icons](/docs/dynamic-icons) and [Usage, styling, and accessibility](/docs/usage).
+See [Dynamic icons](/docs/dynamic-icons), [Usage](/docs/usage), and [Accessibility](/docs/accessibility).

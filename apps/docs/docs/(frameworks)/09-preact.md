@@ -63,4 +63,4 @@ import { DynamicIcon } from "vadivam-preact/dynamic";
 
 The `/dynamic` entry point exports `DynamicIcon`, `iconNames`, and `dynamicIconImports`. Dynamic components accept normal icon props, a kebab-case `name`, and optional Preact children as a fallback.
 
-Use static imports for known names. See [Dynamic icons](/docs/dynamic-icons) and [Usage, styling, and accessibility](/docs/usage).
+Use static imports for known names. See [Dynamic icons](/docs/dynamic-icons), [Usage](/docs/usage), and [Accessibility](/docs/accessibility).
