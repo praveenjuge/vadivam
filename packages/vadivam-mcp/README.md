@@ -1,6 +1,6 @@
 # vadivam-mcp
 
-An MCP server for searching 24px outline icons and getting SVG or framework code. AI agents use it to find the right Vadivam icon by name, synonym, or category instead of guessing names.
+An MCP server for searching 24px outline and solid icons and getting SVG or framework code. AI agents use it to find the right Vadivam icon by name, synonym, or category instead of guessing names.
 
 [Browse icons](https://vadivam.praveenjuge.com) · [MCP docs](https://vadivam.praveenjuge.com/docs/mcp) · [Source](https://github.com/praveenjuge/vadivam/tree/main/packages/vadivam-mcp) · [GitHub](https://github.com/praveenjuge/vadivam)
 

@@ -1,7 +1,7 @@
 {
   "name": "vadivam",
   "version": "0.0.66",
-  "description": "Pixel-perfect 24px outline SVG icons with tree-shakeable ESM imports and metadata.",
+  "description": "Pixel-perfect 24px outline and solid SVG icons with tree-shakeable ESM imports and metadata.",
   "license": "MIT",
   "author": "Praveen Juge",
   "repository": {

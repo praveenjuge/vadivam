@@ -1,6 +1,6 @@
 # vadivam-angular
 
-Tree-shakeable 24px outline SVG icon directives for Angular.
+Tree-shakeable 24px outline and solid SVG icon directives for Angular.
 
 [Browse icons](https://vadivam.praveenjuge.com) · [Angular docs](https://vadivam.praveenjuge.com/docs/angular) · [Source](https://github.com/praveenjuge/vadivam/tree/main/packages/vadivam-angular) · [GitHub](https://github.com/praveenjuge/vadivam)
 
@@ -28,6 +28,14 @@ export class Example {}
 - Native SVG attributes plus size, color, stroke width, and accessible titles
 - Tree-shakeable named and per-icon imports
 - Static directives and typed dynamic icon APIs
+
+Every icon also has a solid twin in `vadivam-angular/solid`. Solid directives have the same class names, with `Solid` in their selectors:
+
+```ts
+import { Activity } from "vadivam-angular/solid";
+
+// <svg vadivamSolidActivity></svg>
+```
 
 Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
 

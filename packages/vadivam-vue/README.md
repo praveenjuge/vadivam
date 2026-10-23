@@ -1,6 +1,6 @@
 # vadivam-vue
 
-Tree-shakeable 24px outline SVG icons for Vue.
+Tree-shakeable 24px outline and solid SVG icons for Vue.
 
 [Browse icons](https://vadivam.praveenjuge.com) · [Vue docs](https://vadivam.praveenjuge.com/docs/vue) · [Source](https://github.com/praveenjuge/vadivam/tree/main/packages/vadivam-vue) · [GitHub](https://github.com/praveenjuge/vadivam)
 
@@ -27,6 +27,12 @@ import { Activity, VadivamProvider } from "vadivam-vue";
 - Native SVG attributes plus size, color, stroke width, and accessible titles
 - Tree-shakeable named and per-icon imports
 - Provider and typed dynamic icon APIs
+
+Every icon also has a solid twin with the same name in `vadivam-vue/solid`. Solid icons fill their shapes with `color` and take no stroke props:
+
+```js
+import { Activity } from "vadivam-vue/solid";
+```
 
 Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
 
