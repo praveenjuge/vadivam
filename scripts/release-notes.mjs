@@ -18,22 +18,29 @@ const uniqueSorted = (values) => [...new Set(values)].sort();
 
 export function summarizeReleaseDiff(diff) {
   const icons = { added: [], changed: [], removed: [] };
+  // Each icon is listed once, whichever of its styles changed. A solid twin
+  // added or removed while its outline stays is an update to that icon.
+  const solidOnly = { added: [], removed: [] };
+  const record = (kind, file) =>
+    (file.startsWith("icons-solid/") && kind !== "changed" ? solidOnly : icons)[kind].push(iconName(file));
   const changedFiles = [];
   for (const line of diff.split("\n").filter(Boolean)) {
     const [status, ...files] = line.split("\t");
     changedFiles.push(...files);
-    // Each icon is listed once, whichever of its styles changed.
     const iconFiles = files.filter((file) => /^icons(?:-solid)?\//.test(file) && file.endsWith(".svg"));
     if (status.startsWith("R") && iconFiles.length === 2) {
-      icons.removed.push(iconName(iconFiles[0]));
-      icons.added.push(iconName(iconFiles[1]));
+      record("removed", iconFiles[0]);
+      record("added", iconFiles[1]);
     } else if (status === "A") {
-      icons.added.push(...iconFiles.map(iconName));
+      for (const file of iconFiles) record("added", file);
     } else if (status === "D") {
-      icons.removed.push(...iconFiles.map(iconName));
-    } else if (iconFiles.length) {
-      icons.changed.push(...iconFiles.map(iconName));
+      for (const file of iconFiles) record("removed", file);
+    } else {
+      for (const file of iconFiles) record("changed", file);
     }
+  }
+  for (const kind of ["added", "removed"]) {
+    for (const name of solidOnly[kind]) (icons[kind].includes(name) ? icons[kind] : icons.changed).push(name);
   }
 
   const surfaces = [];

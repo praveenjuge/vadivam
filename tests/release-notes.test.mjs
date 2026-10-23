@@ -8,6 +8,11 @@ describe("release notes", () => {
     expect(renderReleaseNotes(summary, 242)).toContain("**Updated:** `activity`");
   });
 
+  test("lists a solid twin added to an existing icon as an update", () => {
+    const summary = summarizeReleaseDiff(["A\ticons-solid/bell.svg", "D\ticons-solid/x.svg"].join("\n"));
+    expect(summary.icons).toEqual({ added: [], changed: ["bell", "x"], removed: [] });
+  });
+
   test("summarizes icon additions, updates, removals, renames, and surfaces", () => {
     const summary = summarizeReleaseDiff([
       "A\ticons/bell.svg",
