@@ -900,8 +900,10 @@ describe("compiled Figma plugin", () => {
       "https://registry.npmjs.org/vadivam/latest": JSON.stringify({ version: "9.9.9" }),
       "https://cdn.jsdelivr.net/npm/vadivam@9.9.9/dist/sprite.svg": sprite,
     };
+    let onFetch = () => {};
     const fetch = async (url: string) => {
       fetched.push(url);
+      onFetch();
       const body = routes[url];
       return { ok: body !== undefined, status: body === undefined ? 404 : 200, text: async () => body ?? "" };
     };
@@ -924,6 +926,20 @@ describe("compiled Figma plugin", () => {
     await waitFor(() => messages.some((message) => message.type === "catalog"));
 
     const last = () => messages[messages.length - 1];
+    // Switching pages while the icons download stops before anything is added,
+    // since the artwork was fetched for the first page's style.
+    onFetch = () => {
+      figmaMock.currentPage = otherPage;
+    };
+    await ui.onmessage({ type: "add-remote", source: "npm" });
+    expect(last()).toEqual({
+      type: "error",
+      message: `The page changed while icons downloaded; go back to ${page.name} and add them again`,
+    });
+    expect(otherPage.children.map((node: any) => node.name)).toEqual(["trash"]);
+    onFetch = () => {};
+    figmaMock.currentPage = page;
+
     await ui.onmessage({ type: "check-remote", source: "npm" });
     expect(last()).toEqual({
       type: "remote-checked",

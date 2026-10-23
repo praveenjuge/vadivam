@@ -564,8 +564,13 @@ async function checkRemote(sourceValue: unknown): Promise<void> {
 // keep their artwork, so edits made in Figma are never overwritten.
 async function addRemote(sourceValue: unknown): Promise<void> {
   const source = parseRemoteSource(sourceValue);
+  // The artwork downloaded is for this page's style, so it lands only here.
+  const page = figma.currentPage;
   const remote = await readRemoteCatalog(source, true);
   const { icons, failed } = await remote.loadSvgs(await missingRemoteIcons(remote));
+  if (figma.currentPage !== page) {
+    throw new Error(`The page changed while icons downloaded; go back to ${page.name} and add them again`);
+  }
 
   const added: string[] = [];
   const frames: FrameNode[] = [];

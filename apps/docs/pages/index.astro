@@ -790,10 +790,13 @@ const structuredData = site
       let statusTimer: ReturnType<typeof setTimeout> | undefined;
 
       // Rebuilt from the tile's inline paths; the build checks this matches the manifest.
+      // The grid's own tile always shows the current style; a search result's
+      // copy of it can be one style behind when the search no longer matches it.
       const currentIcon = (): IconRef | null => {
         if (!selected || !templates) return null;
-        const paths = Array.from(selected.querySelectorAll("path"), (path) => `<path d="${path.getAttribute("d")}"/>`);
         const name = nameOf(selected);
+        const tile = entryByName.get(name)?.card ?? selected;
+        const paths = Array.from(tile.querySelectorAll("path"), (path) => `<path d="${path.getAttribute("d")}"/>`);
         const openTag = iconStyle === "solid" ? templates.solid.svgOpenTag : templates.svgOpenTag;
         return { name, component: pascalCase(name), svg: `${openTag}\n${paths.join("")}\n</svg>\n`, style: iconStyle };
       };
