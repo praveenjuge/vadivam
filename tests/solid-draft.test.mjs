@@ -39,6 +39,19 @@ describe("solid drafts", () => {
     expect(area(draftSolid(PK, outline("circle-off"), { base: saved }))).toBeCloseTo(area(off), 0);
   });
 
+  test("reads a saved base's overlapping elements as one filled area", () => {
+    // Two overlapping squares, 10x10 each, sharing a 4x4 corner.
+    const svg = solidSvg("M4 4h10v10H4z").replace("\n</svg>", '\n<path d="M10 10h10v10H10z"/>\n</svg>');
+    const base = solidPath(PK, svg);
+    expect(area(base)).toBeCloseTo(184, 1);
+    expect(area(solidPath(PK, svg.replace('<path d="M10 10h10v10H10z"/>', '<rect x="10" y="10" width="10" height="10"/>')))).toBeCloseTo(184, 1);
+    // Redrafting an -off icon only clears the slash and its gap.
+    const off = draftSolid(PK, ["M2 2l20 20"], { base });
+    const clearance = ink("M2 2l20 20", 6.5);
+    const outside = (path) => area(PK.MakeFromOp(path, clearance, PK.PathOp.DIFFERENCE));
+    expect(outside(off)).toBeCloseTo(outside(base), 1);
+  });
+
   test("leaves out subpaths listed under drop", () => {
     // Without its spokes, the cog keeps the fill they were cut from.
     const withSpokes = area(draftSolid(PK, outline("cog")));

@@ -490,8 +490,26 @@ const svgoConfig = {
   ],
 };
 
-function optimizeSvg(svg, file) {
-  const result = optimize(svg, { ...svgoConfig, path: file });
+// Solid icons take their paint from the root, so a shape the source leaves
+// unpainted is dropped before its fill="none" is stripped and it turns to ink.
+// Unused ids are cleaned up first, since SVGO skips a shape that has one.
+const filledSvgoConfig = {
+  ...svgoConfig,
+  plugins: [
+    {
+      name: "preset-default",
+      params: {
+        overrides: {
+          convertShapeToPath: false,
+          removeUselessStrokeAndFill: { removeNone: true },
+        },
+      },
+    },
+  ],
+};
+
+function optimizeSvg(svg, file, config = svgoConfig) {
+  const result = optimize(svg, { ...config, path: file });
   if (result.error) throw new Error(`${file}: ${result.error}`);
   return result.data;
 }
@@ -542,7 +560,7 @@ function normalizeFilledSvg(svg, file, style) {
   const pathPattern = /(<path\b[^>]*\sd=")([^"]*)("[^>]*>)/g;
   const smooth = (content) =>
     content.replace(pathPattern, (_match, prefix, d, suffix) => `${prefix}${smoothCorners(d)}${suffix}`);
-  let optimized = optimizeSvg(svg, file);
+  let optimized = optimizeSvg(svg, file, filledSvgoConfig);
   // The root's fill-rule replaces each shape's own, so a path Figma fills by
   // nonzero winding is redrawn first to fill the same area by evenodd.
   const rootRule = optimized.match(/<svg\b[^>]*>/)?.[0].match(/\sfill-rule="([^"]*)"/)?.[1];

@@ -879,11 +879,36 @@ export function toPathData(path) {
   return parts.join("");
 }
 
-// The filled area of a solid SVG, as drafts are built.
+// Path data for each filled element of an SVG, in document order.
+function elementPathData(svg) {
+  const shapes = [];
+  for (const [, tag, attrs] of svg.matchAll(/<(path|circle|ellipse|rect|polygon|polyline)\b([^>]*)>/g)) {
+    const attr = (name) => attrs.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1];
+    const number = (name) => Number(attr(name) ?? 0);
+    if (tag === "path") shapes.push(attr("d") ?? "");
+    else if (tag === "circle" || tag === "ellipse") {
+      const [cx, cy] = [number("cx"), number("cy")];
+      const [rx, ry] = tag === "circle" ? [number("r"), number("r")] : [number("rx"), number("ry")];
+      shapes.push(`M${cx - rx} ${cy}a${rx} ${ry} 0 1 0 ${2 * rx} 0a${rx} ${ry} 0 1 0 ${-2 * rx} 0z`);
+    } else if (tag === "rect") {
+      shapes.push(`M${number("x")} ${number("y")}h${number("width")}v${number("height")}h${-number("width")}z`);
+    } else shapes.push(`M${(attr("points") ?? "").trim()}z`);
+  }
+  return shapes;
+}
+
+// The filled area of a solid SVG, as drafts are built. Each element fills by
+// the root's even-odd rule on its own, and elements add up, so two that
+// overlap stay ink instead of cutting a hole in each other.
 export function solidPath(PK, svg) {
-  const path = PK.FromSVGString(pathDataOf(svg).join(" ")).transform(scale, 0, 0, 0, scale, 0, 0, 0, 1);
-  path.setFillType(PK.FillType.EVENODD);
-  return path.simplify() ?? path;
+  let filled = null;
+  for (const d of elementPathData(svg)) {
+    const path = PK.FromSVGString(d).transform(scale, 0, 0, 0, scale, 0, 0, 0, 1);
+    path.setFillType(PK.FillType.EVENODD);
+    const shape = path.simplify() ?? path;
+    filled = filled ? (PK.MakeFromOp(filled, shape, PK.PathOp.UNION) ?? filled) : shape;
+  }
+  return filled ?? new PK.SkPath();
 }
 
 export function solidSvg(pathData) {

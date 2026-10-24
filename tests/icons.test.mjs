@@ -284,6 +284,24 @@ describe("solid icon validation", () => {
     expect(filledArea(evenOdd)).toBeCloseTo(400 - 64, 1);
   });
 
+  test("drops unpainted shapes instead of filling them", async () => {
+    const PK = await loadPathKit();
+    const filledArea = (svg) => area(solidPath(PK, normalizeSvg(svg, "unpainted.svg", styles.solid)));
+    const square = '<path d="M8 8h8v8H8z" fill="black"/>';
+    const hidden = [
+      '<path d="M2 2h20v20H2z" fill="none"/>',
+      '<path d="M2 2h20v20H2z" fill="black" fill-opacity="0"/>',
+      '<path id="frame" d="M2 2h20v20H2z" fill="none"/>',
+      '<g fill="none"><path d="M2 2h20v20H2z"/></g>',
+    ];
+    for (const shape of hidden) {
+      const svg = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">${shape}${square}</svg>`;
+      expect(filledArea(svg)).toBeCloseTo(64, 1);
+    }
+    const unpainted = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">${hidden[0]}</svg>`;
+    expect(() => normalizeSvg(unpainted, "unpainted.svg", styles.solid)).toThrow("unpainted.svg:");
+  });
+
   test("normalizes a Figma export to the solid root", () => {
     const exported = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M2 12a10 10 0 1 0 20 0 10 10 0 1 0-20 0" fill="black"/></svg>`;
     const normalized = normalizeSvg(exported, "export.svg", styles.solid);
