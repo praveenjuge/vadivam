@@ -1,6 +1,6 @@
 # vadivam
 
-Tree-shakeable 24px outline SVG icons for JavaScript, with raw assets and metadata.
+Tree-shakeable 24px outline and solid SVG icons for JavaScript, with raw assets and metadata.
 
 [Browse icons](https://vadivam.praveenjuge.com) · [Core docs](https://vadivam.praveenjuge.com/docs/core) · [Source](https://github.com/praveenjuge/vadivam/tree/main/packages/vadivam) · [GitHub](https://github.com/praveenjuge/vadivam)
 
@@ -39,6 +39,12 @@ createIcons({ icons });
 - DOM replacement with configurable attributes, roots, and templates
 - Complete icon metadata from `vadivam/manifest`
 - A codemod that moves a Lucide project to Vadivam: `npx vadivam migrate-lucide --write` ([guide](https://vadivam.praveenjuge.com/docs/migrate-from-lucide))
+
+Every icon also has a solid twin with the same name in `vadivam/solid`, with its own strings, sprite, and DOM helpers, plus the `vadivam/font/vadivam-solid.css` icon font:
+
+```js
+import { Activity, createElement } from "vadivam/solid";
+```
 
 Package family: [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
 

@@ -13,6 +13,7 @@ const exactPackageInputs = new Set([
 export function isReleasablePath(path) {
   return (
     path.startsWith("icons/") ||
+    path.startsWith("icons-solid/") ||
     path.startsWith("packages/") ||
     path.startsWith("apps/figma-plugin/") ||
     path.startsWith("scripts/generators/") ||

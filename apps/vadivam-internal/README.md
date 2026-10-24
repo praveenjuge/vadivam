@@ -13,11 +13,11 @@ The plugin has six tabs: **Create**, **Replace**, **Arrange**, **Rename**, **Aud
 
 ## Create or update the Community library
 
-In the **Library** tab, choose **Create library** to generate one `Vadivam Icons` component set from every SVG in the root `icons/` folder. Each canonical icon is a 24×24 variant under the searchable **Icon** property. The component set is a simple white horizontal auto-layout frame with wrapping enabled, exactly 40 icons per row, 24 px padding, and 24 px horizontal and vertical gaps.
+In the **Library** tab, choose **Create library** to generate one `Vadivam Icons` component set from every SVG in the root `icons/` and `icons-solid/` folders. Each canonical icon is two 24×24 variants under the searchable **Icon** property, one per **Style**: `Outline` and `Solid`. The component set is a simple white horizontal auto-layout frame with wrapping enabled, exactly 40 icons per row, 24 px padding, and 24 px horizontal and vertical gaps.
 
 All library text is short and public facing. The component set has a one-line usage note linked to the Vadivam site. Each variant's description lists its category titles and Lucide search tags from the root `metadata/lucide.json`, and links to its icon page, such as `https://vadivam.praveenjuge.com/icons/align-center-vertical`.
 
-After changing `icons/`, rebuild and run the internal plugin in the library file, then choose **Update library**. Existing main components are updated in place so published instances keep their component identities, new canonical icons are added in alphabetical order, and custom or retired variants are retained. If the page contains multiple plugin-generated sets, select the intended set before updating it.
+After changing `icons/`, rebuild and run the internal plugin in the library file, then choose **Update library**. Existing main components are updated in place so published instances keep their component identities, new canonical icons are added in alphabetical order, and custom or retired variants are retained. A library made before solid icons keeps each outline component, which gains `Style=Outline`, and gets its solid variant beside it. If the page contains multiple plugin-generated sets, select the intended set before updating it.
 
 The latest stable canonical Lucide icon names and the default popularity order from [lucide.dev/icons](https://lucide.dev/icons/) are stored locally under `src/data/` and bundled into the plugin, so Figma does not depend on cross-origin network access. Popularity follows Lucide's icon-page visitor ranking over the previous 12 months. The plugin scans every page for named top-level `24×24` nodes, and the **Create** tab makes frames for the next missing Lucide names on the current page with the canonical white fill, visible red `2 px` grid, SVG export settings, `40 px` column step, and `72 px` row step. New batches wrap at the column count set in **Arrange**.
 
@@ -39,3 +39,8 @@ Icons added to the repository after this plugin build can go straight into this 
 - **npm latest** resolves the `vadivam` package's `latest` tag to an exact version and reads that version's `dist/sprite.svg` from jsDelivr.
 
 The plugin lists every icon that no top-level 24×24 frame in the file has yet, on any page. A frame counts under any spelling of its name, so `ArrowRight`, `arrow_right`, and deprecated aliases like `alert-circle` all match. **Add** creates a frame on the current page for each one, set up like the ones **Create** makes with the downloaded artwork inside, and sorts the page's icon frames A–Z with the **Arrange** column count so they land in place. Existing frames keep their artwork and are never changed, so edits made in Figma are safe; no component library is needed. Downloads are untrusted: names must be kebab-case, and each SVG must be a 24×24 path-only drawing with no scripts, styles, links, or other elements, or it is skipped and listed with the reason. The whole add is one undo step. These are the plugin's only network requests, and the manifest allows only those four hosts.
+
+## Solid icons
+
+Solid icons live on their own page: any page whose name contains `Solid`. Their frames have the same names as the outline frames, so the two styles never clash. Every tab works on the current page's style: **Create** and **Replace** look for names only on pages of that style, **New from GitHub or npm** reads `icons-solid/` on GitHub or `dist/solid/sprite.svg` from npm, and **Audit** checks a Solid page for filled artwork with no strokes instead of 2 px round strokes with no fill.
+

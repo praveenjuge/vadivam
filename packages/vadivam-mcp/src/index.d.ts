@@ -21,6 +21,8 @@ export type IconFormat =
   | "iconify"
   | "shadcn";
 
+export type IconStyle = "outline" | "solid";
+
 export type UsageFramework =
   | "core"
   | "react"
@@ -38,6 +40,8 @@ export interface VadivamMcpIcon {
   tags: readonly string[];
   categories: readonly string[];
   svg: string;
+  /** The solid twin's SVG. */
+  solidSvg?: string;
 }
 
 export interface VadivamMcpCategory {
@@ -68,6 +72,8 @@ export interface SuggestResult {
 }
 
 export interface RenderOptions {
+  /** Default "outline". Solid icons ignore the stroke options. */
+  style?: IconStyle;
   size?: number;
   strokeWidth?: number;
   color?: string;
@@ -80,6 +86,8 @@ export interface Usage {
   packageName: string;
   install: string;
   example: string;
+  /** The same example with the solid icon. */
+  solid: string;
   dynamic: string;
   docs: string;
 }

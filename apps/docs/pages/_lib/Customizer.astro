@@ -1,6 +1,7 @@
 ---
 // Size, stroke, and color controls bound to the page's settings store with
-// `bindCustomizer`. `compact` drops the presets for the homepage drawer.
+// `bindCustomizer`. `compact` drops the presets for the homepage drawer. The
+// stroke controls are marked `data-stroke-setting`, so a solid icon can hide them.
 interface Props {
   compact?: boolean;
   class?: string;
@@ -35,7 +36,7 @@ const buttonClass =
     }
   </div>
 
-  <div class="grid gap-1.5">
+  <div class="grid gap-1.5" data-stroke-setting>
     <div class={labelClass}>
       <span>Stroke width</span>
       <output class={valueClass} data-output="strokeWidth">2</output>
@@ -56,7 +57,7 @@ const buttonClass =
   </div>
 
   <div class="flex items-center justify-between gap-2">
-    <label class="inline-flex items-center gap-2 text-xs text-muted-foreground">
+    <label class="inline-flex items-center gap-2 text-xs text-muted-foreground" data-stroke-setting>
       <input class="accent-accent" type="checkbox" data-setting="absoluteStrokeWidth" />
       Absolute stroke width
     </label>

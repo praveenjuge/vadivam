@@ -5,7 +5,7 @@ import path from "node:path";
 // import `./data.js` and `./snippets.js`, which only exist in dist: the icon
 // data is generated from the canonical icons and the snippets are the shared
 // copy formats from scripts/snippets.mjs.
-export async function buildMcpPackage(icons, categories, { packageDirectory, root }) {
+export async function buildMcpPackage(icons, categories, { packageDirectory, root, solidIcons = [] }) {
   const dist = path.join(packageDirectory, "dist");
   const source = path.join(packageDirectory, "src");
   await rm(dist, { recursive: true, force: true });
@@ -18,12 +18,14 @@ export async function buildMcpPackage(icons, categories, { packageDirectory, roo
   }
   await chmod(path.join(dist, "cli.js"), 0o755);
   await copyFile(path.join(root, "scripts/snippets.mjs"), path.join(dist, "snippets.js"));
+  const solidSvgs = new Map(solidIcons.map(({ name, svg }) => [name, svg.trim()]));
   const data = icons.map(({ name, componentName, tags, categories: ids, svg }) => ({
     name,
     componentName,
     tags,
     categories: ids,
     svg: svg.trim(),
+    ...(solidSvgs.has(name) ? { solidSvg: solidSvgs.get(name) } : {}),
   }));
   // Lucide's popularity ranks break ties when suggest_icons ranks matches.
   const { icons: rankings } = JSON.parse(

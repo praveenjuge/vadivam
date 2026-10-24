@@ -87,6 +87,27 @@ Each file exports the component by name (`ArrowRight`), with an `Icon` suffix (`
 
 Icons are `aria-hidden="true"` unless you pass `title`, an `aria-*` label, or a `role`. All other SVG props, including `className` and `ref` (React 19), are passed to the `<svg>`. Edit `vadivam-icon.tsx` to change defaults for every installed icon.
 
+## Solid icons
+
+Every icon's [solid](/docs/design-guide#solid) twin is in a second registry at `/r/solid/`. Add it beside `@vadivam`:
+
+```json
+{
+  "registries": {
+    "@vadivam": "https://vadivam.praveenjuge.com/r/{name}.json",
+    "@vadivam-solid": "https://vadivam.praveenjuge.com/r/solid/{name}.json"
+  }
+}
+```
+
+```sh
+npx shadcn@latest add @vadivam-solid/house
+# or by URL
+npx shadcn@latest add https://vadivam.praveenjuge.com/r/solid/house.json
+```
+
+Solid icons install under `components/icons/solid/`, with their own base component, so both styles of an icon can live in one project. They take `size`, `color`, and `title`. `color` sets the fill, and there are no stroke props.
+
 ## When to use the package instead
 
 Use [`vadivam-react`](/docs/react) when you need many icons, `VadivamProvider` defaults, or [dynamic icons](/docs/dynamic-icons) by runtime name. Package updates pick up redrawn icons automatically; registry files only change when you run `shadcn add` again with `--overwrite`.

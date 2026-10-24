@@ -1,3 +1,5 @@
+export type IconStyle = "outline" | "solid";
+
 export type PluginToUiMessage =
   | { type: "catalog"; count: number }
   | { type: "complete"; message: string }
@@ -11,6 +13,6 @@ export type PluginToUiMessage =
   | { type: "error"; message: string };
 
 export type UiToPluginMessage =
-  | { type: "choose"; iconName: string }
+  | { type: "choose"; iconName: string; style?: IconStyle }
   | { type: "confirm-replace"; requestId: string; accepted: boolean }
   | { type: "swap-lucide" };

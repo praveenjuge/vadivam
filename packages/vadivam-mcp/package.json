@@ -1,7 +1,7 @@
 {
   "name": "vadivam-mcp",
   "version": "0.0.66",
-  "description": "MCP server for AI agents to search Vadivam's 24px outline icons and get SVG or framework code.",
+  "description": "MCP server for AI agents to search Vadivam's 24px outline and solid icons and get SVG or framework code.",
   "license": "MIT",
   "author": "Praveen Juge",
   "repository": {

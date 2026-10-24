@@ -18,21 +18,29 @@ const uniqueSorted = (values) => [...new Set(values)].sort();
 
 export function summarizeReleaseDiff(diff) {
   const icons = { added: [], changed: [], removed: [] };
+  // Each icon is listed once, whichever of its styles changed. A solid twin
+  // added or removed while its outline stays is an update to that icon.
+  const solidOnly = { added: [], removed: [] };
+  const record = (kind, file) =>
+    (file.startsWith("icons-solid/") && kind !== "changed" ? solidOnly : icons)[kind].push(iconName(file));
   const changedFiles = [];
   for (const line of diff.split("\n").filter(Boolean)) {
     const [status, ...files] = line.split("\t");
     changedFiles.push(...files);
-    const iconFiles = files.filter((file) => file.startsWith("icons/") && file.endsWith(".svg"));
+    const iconFiles = files.filter((file) => /^icons(?:-solid)?\//.test(file) && file.endsWith(".svg"));
     if (status.startsWith("R") && iconFiles.length === 2) {
-      icons.removed.push(iconName(iconFiles[0]));
-      icons.added.push(iconName(iconFiles[1]));
+      record("removed", iconFiles[0]);
+      record("added", iconFiles[1]);
     } else if (status === "A") {
-      icons.added.push(...iconFiles.map(iconName));
+      for (const file of iconFiles) record("added", file);
     } else if (status === "D") {
-      icons.removed.push(...iconFiles.map(iconName));
-    } else if (iconFiles.length) {
-      icons.changed.push(...iconFiles.map(iconName));
+      for (const file of iconFiles) record("removed", file);
+    } else {
+      for (const file of iconFiles) record("changed", file);
     }
+  }
+  for (const kind of ["added", "removed"]) {
+    for (const name of solidOnly[kind]) (icons[kind].includes(name) ? icons[kind] : icons.changed).push(name);
   }
 
   const surfaces = [];
@@ -80,8 +88,8 @@ export function renderReleaseNotes(summary, totalIcons, version) {
 
 function gitDiff(from, to) {
   const args = from
-    ? ["diff", "--name-status", "--find-renames", `${from}..${to}`, "--", "icons", "packages", "apps/docs", "apps/figma-plugin", "README.md", "CONTRIBUTING.md", "scripts", ".github/workflows"]
-    : ["show", "--pretty=", "--name-status", to, "--", "icons", "packages", "apps/docs", "apps/figma-plugin", "README.md", "CONTRIBUTING.md", "scripts", ".github/workflows"];
+    ? ["diff", "--name-status", "--find-renames", `${from}..${to}`, "--", "icons", "icons-solid", "packages", "apps/docs", "apps/figma-plugin", "README.md", "CONTRIBUTING.md", "scripts", ".github/workflows"]
+    : ["show", "--pretty=", "--name-status", to, "--", "icons", "icons-solid", "packages", "apps/docs", "apps/figma-plugin", "README.md", "CONTRIBUTING.md", "scripts", ".github/workflows"];
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
   if (result.status !== 0) throw new Error(result.stderr || "Unable to read release diff");
   return result.stdout;

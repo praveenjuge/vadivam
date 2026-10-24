@@ -83,6 +83,33 @@ export class GenericIconComponent {
 
 Use a static icon directive when possible; it gives Angular a direct dependency on only that icon.
 
+## Solid icons
+
+Every icon has a [solid](/docs/design-guide#solid) twin in the `vadivam-angular/solid` entry point. Solid directives have the same class names, and their selectors carry `Solid`, so both styles can be used in one template:
+
+```ts
+import { Component, input } from "@angular/core";
+import { House } from "vadivam-angular";
+import { House as HouseSolid } from "vadivam-angular/solid";
+
+@Component({
+  selector: "app-home-tab",
+  imports: [House, HouseSolid],
+  template: `
+    @if (active()) {
+      <svg vadivamSolidHouse size="20" title="Home"></svg>
+    } @else {
+      <svg vadivamHouse size="20" title="Home"></svg>
+    }
+  `,
+})
+export class HomeTab {
+  readonly active = input(false);
+}
+```
+
+Solid icons fill their shapes with `color` and ignore `strokeWidth` and `absoluteStrokeWidth`. `provideVadivamConfig` sets defaults for both styles. The generic and dynamic directives are `svg[vadivamSolidIcon]` and `svg[vadivamSolidDynamicIcon]`.
+
 ## Runtime names
 
 ```ts

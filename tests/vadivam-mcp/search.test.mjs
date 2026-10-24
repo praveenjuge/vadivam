@@ -224,6 +224,46 @@ describe("get_icon formats", () => {
   });
 });
 
+describe("get_icon solid style", () => {
+  const activity = findIcon("activity");
+
+  test("every icon carries its solid SVG", () => {
+    for (const name of ["activity", "house", "x"]) {
+      expect(findIcon(name).solidSvg).toStartWith('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd">');
+    }
+  });
+
+  test("svg paints the fill and ignores stroke options", () => {
+    expect(renderIcon(activity, "svg", { style: "solid" })).toBe(activity.solidSvg);
+    const svg = renderIcon(activity, "svg", { style: "solid", size: 32, color: "#f00", strokeWidth: 1.5 });
+    expect(svg).toContain('width="32"');
+    expect(svg).toContain('fill="#f00"');
+    expect(svg).not.toContain("stroke");
+    expect(renderIcon(activity, "css-mask", { style: "solid" })).toContain("fill='%23000'");
+  });
+
+  test("framework snippets import from the /solid entry without stroke props", () => {
+    expect(renderIcon(activity, "react", { style: "solid", size: 20, strokeWidth: 3 })).toBe(
+      'import { Activity } from "vadivam-react/solid";\n\n<Activity size={20} />',
+    );
+    expect(renderIcon(activity, "angular", { style: "solid" })).toContain("<svg vadivamSolidActivity></svg>");
+  });
+
+  test("asset formats point at the solid files", () => {
+    expect(renderIcon(activity, "cdn", { style: "solid" })).toBe(
+      `https://cdn.jsdelivr.net/npm/vadivam@${version}/dist/solid/icons/activity.svg`,
+    );
+    expect(renderIcon(activity, "sprite", { style: "solid" })).toContain("#vadivam-solid-activity");
+    expect(renderIcon(activity, "font", { style: "solid" })).toBe(
+      '<i class="vadivam-solid-icon vadivam-icon-activity" aria-hidden="true"></i>',
+    );
+    expect(renderIcon(activity, "shadcn", { style: "solid" })).toBe(
+      "npx shadcn@latest add https://vadivam.praveenjuge.com/r/solid/activity.json",
+    );
+    expect(() => renderIcon(activity, "iconify", { style: "solid" })).toThrow(/outline icons only/);
+  });
+});
+
 describe("get_usage", () => {
   test("links each framework to its docs page", () => {
     for (const framework of ["core", "react", "react-native", "vue", "svelte", "solid", "angular", "astro", "preact"]) {
@@ -231,6 +271,7 @@ describe("get_usage", () => {
       expect(usage.docs).toBe(`https://vadivam.praveenjuge.com/docs/${framework}`);
       expect(usage.install).toStartWith(`npm install ${usage.packageName}`);
       expect(usage.example).toContain(usage.packageName);
+      expect(usage.solid).toContain(`${usage.packageName}/solid`);
     }
     expect(usageFor("react-native").install).toContain("react-native-svg");
   });

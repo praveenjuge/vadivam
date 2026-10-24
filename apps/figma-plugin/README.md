@@ -1,6 +1,6 @@
 # Vadivam Icons for Figma
 
-Public Figma plugin for searching and inserting the canonical Vadivam icon set as editable local components, and for swapping Lucide icons to Vadivam. What it does for designers is documented at [vadivam.praveenjuge.com/docs/figma-plugin](https://vadivam.praveenjuge.com/docs/figma-plugin); keep that page in step with behavior changes. The catalog is bundled from the repository's validated `icons/` directory and works without network access.
+Public Figma plugin for searching and inserting the canonical Vadivam icon set as editable local components, and for swapping Lucide icons to Vadivam. What it does for designers is documented at [vadivam.praveenjuge.com/docs/figma-plugin](https://vadivam.praveenjuge.com/docs/figma-plugin); keep that page in step with behavior changes. The catalog is bundled from the repository's validated `icons/` and `icons-solid/` directories and works without network access.
 
 The UI previews icons from one SVG sprite parsed with the HTML, keeps search fields precomputed, and renders matches in batches as the grid scrolls. The canvas bundle stores each icon's SVG body without the shared root element.
 
@@ -28,4 +28,4 @@ Use `bun run figma-plugin:dev` while editing and `bun run test:figma-plugin` bef
 - Empty files, auto-layout parents, tagged components with instances, and selected instances.
 - Confirm the plugin requests no permissions and reports no network domains.
 
-The plugin stores only its schema version and canonical icon name as plugin data on components it creates. It collects no personal data and makes no network requests.
+The plugin stores only its schema version, canonical icon name, and `style` for solid icons as plugin data on components it creates. It collects no personal data and makes no network requests.

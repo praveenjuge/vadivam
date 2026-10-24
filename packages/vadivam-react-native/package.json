@@ -1,7 +1,7 @@
 {
   "name": "vadivam-react-native",
   "version": "0.0.66",
-  "description": "Pixel-perfect 24px outline icons for React Native and Expo, powered by react-native-svg.",
+  "description": "Pixel-perfect 24px outline and solid icons for React Native and Expo, powered by react-native-svg.",
   "license": "MIT",
   "author": "Praveen Juge",
   "repository": {
@@ -74,6 +74,36 @@
       "react-native": "./dist/icons/*.js",
       "import": "./dist/icons/*.js",
       "default": "./dist/icons/*.js"
+    },
+    "./solid": {
+      "types": "./dist/solid/index.d.ts",
+      "react-native": "./dist/solid/index.js",
+      "import": "./dist/solid/index.js",
+      "default": "./dist/solid/index.js"
+    },
+    "./solid/icons": {
+      "types": "./dist/solid/icons/index.d.ts",
+      "react-native": "./dist/solid/icons/index.js",
+      "import": "./dist/solid/icons/index.js",
+      "default": "./dist/solid/icons/index.js"
+    },
+    "./solid/dynamic": {
+      "types": "./dist/solid/dynamic.d.ts",
+      "react-native": "./dist/solid/dynamic.js",
+      "import": "./dist/solid/dynamic.js",
+      "default": "./dist/solid/dynamic.js"
+    },
+    "./solid/dynamicIconImports": {
+      "types": "./dist/solid/dynamicIconImports.d.ts",
+      "react-native": "./dist/solid/dynamicIconImports.js",
+      "import": "./dist/solid/dynamicIconImports.js",
+      "default": "./dist/solid/dynamicIconImports.js"
+    },
+    "./solid/icons/*": {
+      "types": "./dist/solid/icons/*.d.ts",
+      "react-native": "./dist/solid/icons/*.js",
+      "import": "./dist/solid/icons/*.js",
+      "default": "./dist/solid/icons/*.js"
     },
     "./package.json": "./package.json"
   },

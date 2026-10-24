@@ -46,6 +46,26 @@ export function Toolbar() {
 
 The root entry point also exports `useVadivamContext`, a generic `Icon`, `createVadivamIcon`, and the icon-node registry for advanced use.
 
+## Solid icons
+
+Every icon has a [solid](/docs/design-guide#solid) twin with the same name in `vadivam-solid/solid`. The second `solid` is the icon style, not the framework:
+
+```tsx
+import { Show } from "solid-js";
+import { House } from "vadivam-solid";
+import { House as HouseSolid } from "vadivam-solid/solid";
+
+export function HomeTab(props: { active: boolean }) {
+  return (
+    <Show when={props.active} fallback={<House size={20} title="Home" />}>
+      <HouseSolid size={20} title="Home" />
+    </Show>
+  );
+}
+```
+
+Solid icons fill their shapes with `color` and have no stroke props. `VadivamProvider` sets defaults for both styles, and `vadivam-solid/solid/icons/house` and `vadivam-solid/solid/dynamic` work like their outline counterparts.
+
 ## Per-icon imports
 
 ```ts

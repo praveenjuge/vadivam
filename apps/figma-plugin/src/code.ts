@@ -1,5 +1,5 @@
-import icons, { lucideAliases, svgRoot } from "vadivam:catalog";
-import type { PluginToUiMessage, UiToPluginMessage } from "./protocol";
+import icons, { lucideAliases, solidSvgRoot, svgRoot } from "vadivam:catalog";
+import type { IconStyle, PluginToUiMessage, UiToPluginMessage } from "./protocol";
 
 const UI_WIDTH = 320;
 const UI_HEIGHT = 480;
@@ -25,6 +25,7 @@ interface PendingReplacement {
   requestId: string;
   targetId: string;
   iconName: string;
+  style: IconStyle;
 }
 
 let pendingReplacement: PendingReplacement | null = null;
@@ -56,8 +57,14 @@ function messageFromError(error: unknown): string {
   return error instanceof Error ? error.message : "Unexpected plugin error";
 }
 
-function iconMetadata(name: string): string {
-  return JSON.stringify({ schema: PLUGIN_DATA_SCHEMA, iconName: name });
+// Outline components carry no style, as before solid icons existed.
+function iconMetadata(name: string, style: IconStyle): string {
+  return JSON.stringify({ schema: PLUGIN_DATA_SCHEMA, iconName: name, ...(style === "solid" ? { style } : {}) });
+}
+
+// A solid component is named after its icon with a `-solid` suffix.
+function componentName(name: string, style: IconStyle): string {
+  return style === "solid" ? `${name}-solid` : name;
 }
 
 function taggedIconName(node: BaseNode & PluginDataMixin): string | null {
@@ -76,9 +83,9 @@ function taggedIconName(node: BaseNode & PluginDataMixin): string | null {
 }
 
 // Category titles and tags are plain words, so Figma's asset search finds the component by them.
-function iconDescription(icon: CatalogIcon): string {
+function iconDescription(icon: CatalogIcon, style: IconStyle): string {
   return [
-    "24 px outline icon from Vadivam.",
+    `24 px ${style} icon from Vadivam.`,
     icon.categories.length > 0 ? `**Categories:** ${icon.categories.join(", ")}` : "",
     icon.tags.length > 0 ? `**Tags:** ${icon.tags.join(", ")}` : "",
   ]
@@ -86,12 +93,12 @@ function iconDescription(icon: CatalogIcon): string {
     .join("\n\n");
 }
 
-function tagComponent(component: ComponentNode, icon: CatalogIcon): void {
+function tagComponent(component: ComponentNode, icon: CatalogIcon, style: IconStyle): void {
   const name = icon.name;
-  component.name = name;
-  component.setPluginData(PLUGIN_DATA_KEY, iconMetadata(name));
-  component.setRelaunchData({ replace: `Replace ${name}` });
-  component.descriptionMarkdown = iconDescription(icon);
+  component.name = componentName(name, style);
+  component.setPluginData(PLUGIN_DATA_KEY, iconMetadata(name, style));
+  component.setRelaunchData({ replace: `Replace ${componentName(name, style)}` });
+  component.descriptionMarkdown = iconDescription(icon, style);
   component.documentationLinks = [
     { uri: `${DOCUMENTATION_URL}/icons/${encodeURIComponent(name)}` },
   ];
@@ -108,15 +115,15 @@ function tagComponent(component: ComponentNode, icon: CatalogIcon): void {
   ];
 }
 
-function iconSvg(icon: CatalogIcon): string {
-  return `${svgRoot}${icon.body}</svg>`;
+function iconSvg(icon: CatalogIcon, style: IconStyle): string {
+  return style === "solid" ? `${solidSvgRoot}${icon.solidBody}</svg>` : `${svgRoot}${icon.body}</svg>`;
 }
 
-function createComponent(icon: CatalogIcon): ComponentNode {
-  const frame = figma.createNodeFromSvg(iconSvg(icon));
+function createComponent(icon: CatalogIcon, style: IconStyle = "outline"): ComponentNode {
+  const frame = figma.createNodeFromSvg(iconSvg(icon, style));
   try {
     const component = figma.createComponentFromNode(frame);
-    tagComponent(component, icon);
+    tagComponent(component, icon, style);
     return component;
   } catch (error) {
     if (!frame.removed) frame.remove();
@@ -137,9 +144,9 @@ function clonePaints(paints: readonly Paint[]): Paint[] {
   return JSON.parse(JSON.stringify(paints)) as Paint[];
 }
 
-function uniformStrokePaint(node: ChildrenMixin): Paint[] | null {
+function uniformPaint(node: ChildrenMixin, key: "strokes" | "fills"): Paint[] | null {
   const strokes = geometryNodes(node)
-    .map((child) => child.strokes as readonly Paint[] | typeof figma.mixed)
+    .map((child) => child[key] as readonly Paint[] | typeof figma.mixed)
     .filter(
       (paints): paints is readonly Paint[] =>
         paints !== figma.mixed && paints.length > 0,
@@ -151,9 +158,27 @@ function uniformStrokePaint(node: ChildrenMixin): Paint[] | null {
     : null;
 }
 
+function uniformStrokePaint(node: ChildrenMixin): Paint[] | null {
+  return uniformPaint(node, "strokes");
+}
+
 function applyStrokePaint(node: ChildrenMixin, paints: readonly Paint[] | null): void {
   if (!paints) return;
   for (const child of geometryNodes(node)) child.strokes = clonePaints(paints);
+}
+
+// An icon's color is its stroke when outline and its fill when solid, so a
+// replacement moves the color across when the style changes.
+function iconPaint(node: ChildrenMixin): Paint[] | null {
+  return uniformPaint(node, "strokes") ?? uniformPaint(node, "fills");
+}
+
+function applyIconPaint(node: ChildrenMixin, paints: readonly Paint[] | null, style: IconStyle): void {
+  if (!paints) return;
+  for (const child of geometryNodes(node)) {
+    if (style === "solid") child.fills = clonePaints(paints);
+    else child.strokes = clonePaints(paints);
+  }
 }
 
 function scaleChildren(
@@ -229,15 +254,15 @@ figma.on("selectionchange", () => {
   }
 });
 
-function replaceComponentGlyph(component: ComponentNode, icon: CatalogIcon): void {
-  const paint = uniformStrokePaint(component);
+function replaceComponentGlyph(component: ComponentNode, icon: CatalogIcon, style: IconStyle = "outline"): void {
+  const paint = iconPaint(component);
   const oldChildren = [...component.children];
-  const source = figma.createNodeFromSvg(iconSvg(icon));
+  const source = figma.createNodeFromSvg(iconSvg(icon, style));
   const sourceWidth = source.width;
   const sourceHeight = source.height;
   const newChildren = [...source.children];
   scaleChildren(newChildren, sourceWidth, sourceHeight, component.width, component.height);
-  applyStrokePaint(source, paint);
+  applyIconPaint(source, paint, style);
   const moved: SceneNode[] = [];
   try {
     for (const child of newChildren) {
@@ -251,21 +276,21 @@ function replaceComponentGlyph(component: ComponentNode, icon: CatalogIcon): voi
   }
   for (const child of oldChildren) child.remove();
   source.remove();
-  tagComponent(component, icon);
+  tagComponent(component, icon, style);
   figma.currentPage.selection = [component];
 }
 
-function replaceInstance(instance: InstanceNode, icon: CatalogIcon): void {
+function replaceInstance(instance: InstanceNode, icon: CatalogIcon, style: IconStyle): void {
   const parent = instance.parent;
   if (!parent || !("insertChild" in parent)) {
     throw new Error("This icon cannot be replaced in its current parent");
   }
   const index = parent.children.indexOf(instance);
-  const paint = uniformStrokePaint(instance);
-  const component = createComponent(icon);
+  const paint = iconPaint(instance);
+  const component = createComponent(icon, style);
   try {
     resizeIcon(component, instance.width, instance.height);
-    applyStrokePaint(component, paint);
+    applyIconPaint(component, paint, style);
     parent.insertChild(Math.max(0, index), component);
     copyLayoutContext(instance, component);
     instance.remove();
@@ -494,7 +519,7 @@ async function swapLucideIcons(): Promise<void> {
   );
 }
 
-async function performChoice(iconName: string): Promise<void> {
+async function performChoice(iconName: string, style: IconStyle = "outline"): Promise<void> {
   const icon = catalog.get(iconName);
   if (!icon) throw new Error("Unknown Vadivam icon");
   const selection = figma.currentPage.selection;
@@ -511,7 +536,7 @@ async function performChoice(iconName: string): Promise<void> {
       const instances = await selected.getInstancesAsync();
       if (instances.length > 0) {
         const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        pendingReplacement = { requestId, targetId: selected.id, iconName };
+        pendingReplacement = { requestId, targetId: selected.id, iconName, style };
         post({
           type: "confirm-replace",
           requestId,
@@ -520,24 +545,24 @@ async function performChoice(iconName: string): Promise<void> {
         });
         return;
       }
-      replaceComponentGlyph(selected, icon);
+      replaceComponentGlyph(selected, icon, style);
       figma.commitUndo();
-      complete(`Replaced with ${iconName}`);
+      complete(`Replaced with ${componentName(iconName, style)}`);
       return;
     }
     if (await taggedInstance(selected)) {
-      replaceInstance(selected as InstanceNode, icon);
+      replaceInstance(selected as InstanceNode, icon, style);
       figma.commitUndo();
-      complete(`Replaced this use with ${iconName}`);
+      complete(`Replaced this use with ${componentName(iconName, style)}`);
       return;
     }
   }
 
-  const component = createComponent(icon);
+  const component = createComponent(icon, style);
   lastInsertedComponentId = component.id;
   placeComponent(component, previousInsertion);
   figma.commitUndo();
-  complete(`Inserted ${iconName}`);
+  complete(`Inserted ${componentName(iconName, style)}`);
 }
 
 async function confirmReplacement(requestId: string, accepted: boolean): Promise<void> {
@@ -552,9 +577,9 @@ async function confirmReplacement(requestId: string, accepted: boolean): Promise
   if (!node || node.type !== "COMPONENT" || !taggedIconName(node) || !icon) {
     throw new Error("The selected component is no longer available");
   }
-  replaceComponentGlyph(node, icon);
+  replaceComponentGlyph(node, icon, pending.style);
   figma.commitUndo();
-  complete(`Replaced with ${icon.name}`);
+  complete(`Replaced with ${componentName(icon.name, pending.style)}`);
 }
 
 figma.ui.onmessage = async (message: unknown): Promise<void> => {
@@ -565,7 +590,7 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
   const request = message as UiToPluginMessage;
   try {
     if (request.type === "choose" && typeof request.iconName === "string") {
-      await performChoice(request.iconName);
+      await performChoice(request.iconName, request.style === "solid" ? "solid" : "outline");
     } else if (
       request.type === "confirm-replace" &&
       typeof request.requestId === "string" &&

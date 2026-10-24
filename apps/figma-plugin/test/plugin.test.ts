@@ -402,6 +402,31 @@ describe("compiled Figma plugin", () => {
     expect(harness.commits).toHaveLength(5);
   });
 
+  test("inserts solid icons and moves an icon's color between stroke and fill", async () => {
+    const harness = createHarness();
+    await runPlugin(harness);
+
+    await harness.ui.onmessage({ type: "choose", iconName: "search", style: "solid" });
+    const solid = harness.page.selection[0];
+    expect(solid).toMatchObject({ type: "COMPONENT", name: "search-solid", relaunchData: { replace: "Replace search-solid" } });
+    expect(JSON.parse(solid.getPluginData("vadivam"))).toEqual({ schema: 1, iconName: "search", style: "solid" });
+    expect(solid.descriptionMarkdown).toStartWith("24 px solid icon from Vadivam.");
+    expect(harness.notifications[harness.notifications.length - 1]?.message).toBe("Inserted search-solid");
+
+    // An outline component colored red becomes a red solid one.
+    harness.page.selection = [];
+    await harness.ui.onmessage({ type: "choose", iconName: "heart" });
+    const outline = harness.page.selection[0];
+    const red = [{ type: "SOLID", color: { r: 1, g: 0, b: 0 } }];
+    for (const child of outline.children) child.strokes = red;
+    // Inserting another icon makes heart a plain selection, not the last insertion.
+    await harness.ui.onmessage({ type: "choose", iconName: "star" });
+    harness.page.selection = [outline];
+    await harness.ui.onmessage({ type: "choose", iconName: "heart", style: "solid" });
+    expect(outline.name).toBe("heart-solid");
+    for (const child of outline.children) expect(child.fills).toEqual(red);
+  });
+
   test("finds Lucide icons in the selection and swaps them for Vadivam components", async () => {
     const harness = createHarness();
     await runPlugin(harness);

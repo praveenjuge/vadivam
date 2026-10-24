@@ -170,12 +170,43 @@ createIcons({
 
 `root` may be an `Element`, `Document`, or `DocumentFragment`. Set `inTemplates` to recurse into `<template>` contents. Placeholder attributes override attributes supplied through `attrs`.
 
+## Solid icons
+
+Every icon has a [solid](/docs/design-guide#solid) twin with the same name. The `vadivam/solid` entry has the same layout as the root, with filled artwork:
+
+```js
+import houseSvgUrl from "vadivam/solid/icons/house.svg";
+import houseSvg from "vadivam/solid/strings/house";
+import spriteUrl from "vadivam/solid/sprite.svg";
+import { House, createElement, createIcons } from "vadivam/solid";
+
+const svg = createElement(House, { width: 20, height: 20, "aria-label": "Home" });
+```
+
+The solid `createElement` and `createIcons` default to `fill="currentColor"` and `fill-rule="evenodd"`, with no stroke. Solid sprite symbols are named `vadivam-solid-{name}`, so both sprites can be inlined in one page:
+
+```html
+<svg width="24" height="24" fill="currentColor" fill-rule="evenodd" aria-hidden="true">
+  <use href="/sprite-solid.svg#vadivam-solid-house"></use>
+</svg>
+```
+
+The solid font is a separate family, Vadivam Icons Solid, on the same codepoints and icon classes as the outline font. Swap the base class to switch styles:
+
+```js
+import "vadivam/font/vadivam-solid.css";
+```
+
+```html
+<i class="vadivam-solid-icon vadivam-icon-house" aria-hidden="true"></i>
+```
+
 ## Manifest and metadata
 
 Use `vadivam/manifest` to inspect the complete catalog:
 
 ```ts
-import { categories, iconNames, icons, iconsByName } from "vadivam/manifest";
+import { categories, iconNames, icons, iconsByName, styles } from "vadivam/manifest";
 
 console.log(iconNames.includes("activity"));
 console.log(iconsByName.activity.componentName); // "Activity"
@@ -187,7 +218,7 @@ const weatherIcons = icons.filter((icon) => icon.categories.includes("weather"))
 console.log(categories.find((category) => category.id === "weather")?.title);
 ```
 
-Each metadata record includes `name`, `componentName`, `fileName`, `svgPath`, `tags`, `categories`, `svg`, and `iconNode`. `tags` are search synonyms and `categories` are ids from the exported `categories` list (`id`, `title`, `description`). AI agents can run the same search through the [MCP server](/docs/mcp).
+Each metadata record includes `name`, `componentName`, `fileName`, `svgPath`, `tags`, `categories`, `svg`, and `iconNode`, plus `solid` with the solid twin's `svgPath`, `svg`, and `iconNode`. The `styles` export lists the styles every icon is drawn in, `["outline", "solid"]`. `tags` are search synonyms and `categories` are ids from the exported `categories` list (`id`, `title`, `description`). AI agents can run the same search through the [MCP server](/docs/mcp).
 
 The root entry point uses two similar names with different meanings: `icons` is the component-name-to-icon-node registry, while `manifest` is the metadata array. The dedicated `vadivam/manifest` entry point exports its metadata array as `icons`.
 

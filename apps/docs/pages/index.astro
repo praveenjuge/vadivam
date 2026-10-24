@@ -9,7 +9,7 @@ import pkg from "../../../package.json";
 import ActionMenus from "./_lib/ActionMenus.astro";
 import Customizer from "./_lib/Customizer.astro";
 import VIcon from "./_lib/VIcon.astro";
-import { SVG_OPEN_TAG, buildSnippetTemplates, serializeForScript } from "./_lib/snippet-templates";
+import { SOLID_SVG_OPEN_TAG, SVG_OPEN_TAG, buildSnippetTemplates, serializeForScript } from "./_lib/snippet-templates";
 
 const { config } = data;
 
@@ -53,6 +53,16 @@ for (const icon of icons) {
   tilePaths.set(icon.name, paths);
 }
 
+// The Solid toggle fetches solid path data and rebuilds the drawer's SVG from
+// it the same way, so check those rebuild exactly too.
+for (const icon of icons) {
+  if (!icon.solid) throw new Error(`${icon.name} has no solid twin`);
+  const paths = Array.from(icon.solid.svg.matchAll(/ d="([^"]*)"/g), (match) => `<path d="${match[1]}"/>`).join("");
+  if (`${SOLID_SVG_OPEN_TAG}\n${paths}\n</svg>\n` !== icon.solid.svg) {
+    throw new Error(`icons-solid/${icon.name}.svg can't be rebuilt from its paths`);
+  }
+}
+
 // Search placeholder examples, cycled until the visitor types. Fail the build
 // if one is renamed or removed.
 const searchExamples = ["coffee", "rocket", "cat", "calendar", "heart", "cloud", "settings", "palette"];
@@ -68,8 +78,14 @@ const chunks = Array.from({ length: Math.ceil(icons.length / chunkSize) }, (_, i
   icons.slice(index * chunkSize, (index + 1) * chunkSize),
 );
 
-const pathCounts = [...new Set(icons.map((icon) => (icon.svg.match(/ d="/g) ?? []).length))].filter((count) => count > 0);
-const snippetTemplates = serializeForScript(await buildSnippetTemplates(config.codeThemes, pathCounts));
+const countPaths = (svg: string) => (svg.match(/ d="/g) ?? []).length;
+const pathCounts = [...new Set(icons.map((icon) => countPaths(icon.svg)))].filter((count) => count > 0);
+const solidPathCounts = [...new Set(icons.map((icon) => countPaths(icon.solid?.svg ?? "")))].filter((count) => count > 0);
+const snippetTemplates = serializeForScript(await buildSnippetTemplates(config.codeThemes, pathCounts, solidPathCounts));
+const styleButtonClass =
+  "inline-flex items-center gap-1.5 rounded-md border-0 bg-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-pressed:bg-muted aria-pressed:text-foreground [&>svg]:size-3.5 [&>svg]:flex-none";
+const outlineStyleIcon = iconsByName.square?.svg ?? "";
+const solidStyleIcon = iconsByName.square?.solid?.svg ?? "";
 
 // PageLayout's built-in JSON-LD is disabled so this page can declare the site
 // identity plus the library's software entity in one graph.
@@ -220,6 +236,14 @@ const structuredData = site
             hidden
             set:html={clearIconSvg}
           />
+        </div>
+        <div class="flex flex-none items-center gap-0.5 rounded-lg border border-border p-0.5" role="group" aria-label="Icon style" id="iconStyle">
+          <button class={styleButtonClass} type="button" data-style="outline" aria-pressed="true" aria-label="Outline">
+            <Fragment set:html={outlineStyleIcon} /><span class="hidden sm:inline" aria-hidden="true">Outline</span>
+          </button>
+          <button class={styleButtonClass} type="button" data-style="solid" aria-pressed="false" aria-label="Solid">
+            <Fragment set:html={solidStyleIcon} /><span class="hidden sm:inline" aria-hidden="true">Solid</span>
+          </button>
         </div>
         <span class="relative flex w-[7.5rem] flex-none sm:w-auto">
           <select
@@ -384,6 +408,7 @@ const structuredData = site
       readTemplates,
       renderPreviews,
       runAction,
+      showStrokeSettings,
       snippetHtml,
       snippetText,
       copyText,
@@ -425,6 +450,7 @@ const structuredData = site
       const drawerCustomize = document.querySelector<HTMLDetailsElement>("#drawerCustomize")!;
       const tabButtons = Array.from(drawer.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
       const cards = Array.from(grid.querySelectorAll<HTMLAnchorElement>(".icon-chunk > a"));
+      const styleButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("#iconStyle [data-style]"));
 
       const templates = readTemplates("snippetTemplates");
       const version = JSON.parse(document.getElementById("siteVersion")?.textContent ?? '""');
@@ -690,6 +716,67 @@ const structuredData = site
       browser.addEventListener("focusout", hideTooltip);
       addEventListener("scroll", hideTooltip, { passive: true, signal });
 
+      // ---- Style --------------------------------------------------------------
+      // Tiles start as outline; the Solid toggle fetches the solid paths once
+      // and swaps them into every tile, keeping the outline paths to swap back.
+      let iconStyle: "outline" | "solid" = "outline";
+      let solidPromise: Promise<Record<string, string[]>> | null = null;
+      const outlinePaths = new Map<Element, Node[]>();
+      const loadSolid = () =>
+        (solidPromise ??= fetch("/icons-solid/index.json")
+          .then((response) => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
+          .catch((error) => {
+            solidPromise = null;
+            throw error;
+          }));
+      const svgPath = (d: string) => {
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", d);
+        return path;
+      };
+
+      // Set by the drawer: repaints it in the new style.
+      let afterStyle = () => {};
+
+      // The latest click wins, even over a solid fetch still in flight.
+      let requestedStyle: "outline" | "solid" = "outline";
+      const setStyle = async (style: "outline" | "solid", { updateUrl = true } = {}) => {
+        requestedStyle = style;
+        if (style === iconStyle) return;
+        let solid: Record<string, string[]> = {};
+        if (style === "solid") {
+          try {
+            solid = await loadSolid();
+          } catch {
+            return;
+          }
+          if (requestedStyle !== style) return;
+        }
+        iconStyle = style;
+        for (const entry of entries) {
+          const svg = entry.card.firstElementChild;
+          if (!svg) continue;
+          if (!outlinePaths.has(svg)) outlinePaths.set(svg, Array.from(svg.childNodes));
+          svg.replaceChildren(...(style === "solid" ? (solid[entry.name] ?? []).map(svgPath) : (outlinePaths.get(svg) ?? [])));
+          entry.clone = undefined;
+        }
+        explorer.dataset.iconStyle = style;
+        for (const button of styleButtons) button.setAttribute("aria-pressed", String(button.dataset.style === style));
+        if (matches) applyFilter();
+        afterStyle();
+        if (updateUrl) {
+          const url = new URL(location.href);
+          if (style === "solid") url.searchParams.set("style", "solid");
+          else url.searchParams.delete("style");
+          history.replaceState(history.state, "", url);
+        }
+      };
+      for (const button of styleButtons) {
+        button.addEventListener("click", () => setStyle(button.dataset.style === "solid" ? "solid" : "outline"));
+        // Fetch the solid paths as soon as the visitor reaches for the toggle.
+        if (button.dataset.style === "solid") button.addEventListener("pointerenter", () => loadSolid().catch(() => {}), { once: true });
+      }
+
       // ---- Drawer -------------------------------------------------------------
       let selected: HTMLAnchorElement | null = null;
       let activeTab = (() => {
@@ -703,11 +790,15 @@ const structuredData = site
       let statusTimer: ReturnType<typeof setTimeout> | undefined;
 
       // Rebuilt from the tile's inline paths; the build checks this matches the manifest.
+      // The grid's own tile always shows the current style; a search result's
+      // copy of it can be one style behind when the search no longer matches it.
       const currentIcon = (): IconRef | null => {
         if (!selected || !templates) return null;
-        const paths = Array.from(selected.querySelectorAll("path"), (path) => `<path d="${path.getAttribute("d")}"/>`);
         const name = nameOf(selected);
-        return { name, component: pascalCase(name), svg: `${templates.svgOpenTag}\n${paths.join("")}\n</svg>\n` };
+        const tile = entryByName.get(name)?.card ?? selected;
+        const paths = Array.from(tile.querySelectorAll("path"), (path) => `<path d="${path.getAttribute("d")}"/>`);
+        const openTag = iconStyle === "solid" ? templates.solid.svgOpenTag : templates.svgOpenTag;
+        return { name, component: pascalCase(name), svg: `${openTag}\n${paths.join("")}\n</svg>\n`, style: iconStyle };
       };
 
       const setStatus = (message: string) => {
@@ -737,6 +828,7 @@ const structuredData = site
       };
 
       const render = () => {
+        showStrokeSettings(drawer, iconStyle);
         const icon = currentIcon();
         if (!icon) return;
         const settings = store.get();
@@ -766,7 +858,7 @@ const structuredData = site
         const name = nameOf(card);
         drawerName.textContent = name;
         drawerComponent.textContent = pascalCase(name);
-        drawerOpenPage.href = `/icons/${name}`;
+        drawerOpenPage.href = `/icons/${name}${iconStyle === "solid" ? "?style=solid" : ""}`;
         render();
         renderMeta();
         loadIndex()?.then(renderMeta);
@@ -1024,13 +1116,22 @@ const structuredData = site
       const wideScreen = matchMedia("(min-width: 768px)");
       drawerCustomize.open = wideScreen.matches;
 
-      // Deep link: `/?icon=name` opens the drawer on that icon.
+      // The drawer follows the tile it shows, which a style change rebuilds.
+      afterStyle = () => {
+        afterFilter();
+        if (selected) drawerOpenPage.href = `/icons/${nameOf(selected)}${iconStyle === "solid" ? "?style=solid" : ""}`;
+        render();
+      };
+
+      // Deep link: `/?icon=name` opens the drawer on that icon, and
+      // `/?style=solid` shows the solid icons.
       const linked = iconParam();
       const linkedCard = linked ? entryByName.get(linked)?.card : null;
       if (linkedCard) {
         openDrawer(linkedCard, { updateUrl: false });
         linkedCard.scrollIntoView({ block: "center" });
       }
+      if (new URLSearchParams(location.search).get("style") === "solid") setStyle("solid", { updateUrl: false });
 
       signal.addEventListener("abort", () => {
         sentinelObserver.disconnect();

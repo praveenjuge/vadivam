@@ -1,0 +1,531 @@
+{
+  "line": [
+    "a-arrow-down",
+    "a-arrow-up",
+    "a-large-small",
+    "ampersand",
+    "ampersands",
+    "anchor",
+    "armenian-dram",
+    "arrow-down-0-1",
+    "arrow-down-1-0",
+    "arrow-down-a-z",
+    "arrow-down-z-a",
+    "arrow-up-0-1",
+    "arrow-up-1-0",
+    "arrow-up-a-z",
+    "arrow-up-z-a",
+    "at-sign",
+    "atom",
+    "bangladeshi-taka",
+    "baseline",
+    "belarusian-ruble",
+    "binary",
+    "bitcoin",
+    "bluetooth",
+    "bluetooth-connected",
+    "bluetooth-off",
+    "bluetooth-searching",
+    "bold",
+    "case-lower",
+    "case-sensitive",
+    "case-upper",
+    "clef-alto",
+    "clef-bass",
+    "clef-treble",
+    "command",
+    "decimals-arrow-left",
+    "decimals-arrow-right",
+    "dollar-sign",
+    "euro",
+    "georgian-lari",
+    "heading",
+    "heading-1",
+    "heading-2",
+    "heading-3",
+    "heading-4",
+    "heading-5",
+    "heading-6",
+    "indian-rupee",
+    "infinity",
+    "italic",
+    "japanese-yen",
+    "kazakh-tenge",
+    "lambda",
+    "languages",
+    "letter-spacing",
+    "letters",
+    "ligature",
+    "link",
+    "link-2",
+    "link-2-off",
+    "nepali-rupee",
+    "omega",
+    "percent",
+    "phi",
+    "philippine-peso",
+    "pi",
+    "pilcrow",
+    "pilcrow-left",
+    "pilcrow-right",
+    "pound-sterling",
+    "power",
+    "rainbow",
+    "regex",
+    "remove-formatting",
+    "russian-ruble",
+    "saudi-riyal",
+    "section",
+    "sigma",
+    "signature",
+    "spell-check",
+    "spell-check-2",
+    "strikethrough",
+    "subscript",
+    "superscript",
+    "swiss-franc",
+    "text-initial",
+    "turkish-lira",
+    "type",
+    "underline",
+    "unlink",
+    "unlink-2",
+    "variable",
+    "whole-word",
+    "zodiac-aquarius",
+    "zodiac-aries",
+    "zodiac-cancer",
+    "zodiac-capricorn",
+    "zodiac-gemini",
+    "zodiac-leo",
+    "zodiac-libra",
+    "zodiac-ophiuchus",
+    "zodiac-pisces",
+    "zodiac-sagittarius",
+    "zodiac-scorpio",
+    "zodiac-taurus",
+    "zodiac-virgo"
+  ],
+  "letters": [
+    "ad",
+    "badge-cent",
+    "badge-euro",
+    "badge-percent",
+    "book-a",
+    "book-type",
+    "calendar-1",
+    "captions",
+    "captions-off",
+    "circle-euro",
+    "circle-parking",
+    "circle-parking-off",
+    "circle-percent",
+    "clipboard-type",
+    "copyleft",
+    "copyright",
+    "creative-commons",
+    "diamond-percent",
+    "file-digit",
+    "file-type",
+    "file-type-corner",
+    "hd",
+    "parking-meter",
+    "receipt-cent",
+    "receipt-euro",
+    "square-function",
+    "square-m",
+    "square-parking",
+    "square-parking-off",
+    "square-percent",
+    "square-pi",
+    "square-pilcrow",
+    "square-radical",
+    "square-sigma",
+    "ticket-percent"
+  ],
+  "manual": [
+    "app-window",
+    "bean",
+    "can",
+    "can-soda",
+    "candy-cane",
+    "cannabis",
+    "car-battery",
+    "caravan",
+    "circuit-board",
+    "clipboard-pen",
+    "construction",
+    "container",
+    "copy-minus",
+    "copy-slash",
+    "cylinder",
+    "database",
+    "database-arrow-down",
+    "database-arrow-up",
+    "database-backup",
+    "database-check",
+    "database-minus",
+    "database-plus",
+    "database-search",
+    "database-x",
+    "database-zap",
+    "door-closed-package",
+    "file-chart-pie",
+    "file-minus-corner",
+    "grid-2x2-check",
+    "grid-2x2-plus",
+    "grid-2x2-x",
+    "square-library",
+    "videotape"
+  ],
+  "icons": {
+    "backpack": {
+      "largestHole": true
+    },
+    "baggage-claim": {
+      "line": [
+        3
+      ]
+    },
+    "bed-double": {
+      "drop": [
+        3
+      ]
+    },
+    "brain": {
+      "drop": [
+        1,
+        3,
+        4,
+        5
+      ]
+    },
+    "brain-circuit": {
+      "drop": [
+        1,
+        2,
+        3
+      ]
+    },
+    "brain-cog": {
+      "drop": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    "bridge": {
+      "mode": "line"
+    },
+    "bring-to-front": {
+      "line": [
+        0,
+        1
+      ]
+    },
+    "card-sim": {
+      "drop": [
+        2
+      ]
+    },
+    "clock-alert": {
+      "front": [
+        2,
+        3
+      ]
+    },
+    "cloud-fog": {
+      "drop": [
+        1
+      ]
+    },
+    "clover": {
+      "mode": "line"
+    },
+    "cog": {
+      "drop": [
+        2,
+        6,
+        10
+      ]
+    },
+    "concierge-bell": {
+      "largestHole": true,
+      "drop": [
+        2
+      ]
+    },
+    "cooking-pot": {
+      "fill": [
+        0
+      ]
+    },
+    "credit-card-check": {
+      "closeCorner": [
+        0
+      ]
+    },
+    "credit-card-minus": {
+      "closeCorner": [
+        1
+      ],
+      "front": [
+        0
+      ]
+    },
+    "credit-card-plus": {
+      "closeCorner": [
+        2
+      ],
+      "front": [
+        0,
+        1
+      ]
+    },
+    "credit-card-x": {
+      "closeCorner": [
+        2
+      ]
+    },
+    "database-check": {
+      "fill": [
+        0
+      ]
+    },
+    "database-x": {
+      "fill": [
+        0
+      ]
+    },
+    "dices": {
+      "fill": [
+        0
+      ]
+    },
+    "external-link": {
+      "closeCorner": [
+        0
+      ],
+      "front": [
+        1,
+        2
+      ]
+    },
+    "fence": {
+      "mode": "line"
+    },
+    "ferris-wheel": {
+      "mode": "line"
+    },
+    "file-badge": {
+      "front": [
+        2,
+        3
+      ]
+    },
+    "file-diff": {
+      "front": [
+        4
+      ]
+    },
+    "file-digit": {
+      "line": [
+        3
+      ]
+    },
+    "file-exclamation-point": {
+      "front": [
+        2,
+        3
+      ]
+    },
+    "file-headphone": {
+      "front": [
+        2,
+        3,
+        4
+      ]
+    },
+    "file-input": {
+      "front": [
+        2,
+        3
+      ]
+    },
+    "file-scan": {
+      "front": [
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    "file-sliders": {
+      "front": [
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    "fishing-rod": {
+      "line": [
+        0
+      ]
+    },
+    "folder-git-2": {
+      "front": [
+        1
+      ]
+    },
+    "folder-input": {
+      "front": [
+        1,
+        2
+      ]
+    },
+    "globe": {
+      "line": [
+        1
+      ]
+    },
+    "goal": {
+      "line": [
+        2
+      ]
+    },
+    "graph-star": {
+      "mode": "line"
+    },
+    "hat-glasses": {
+      "line": [
+        2,
+        3
+      ]
+    },
+    "images": {
+      "fill": [
+        0
+      ]
+    },
+    "lasso-select": {
+      "line": [
+        0
+      ]
+    },
+    "layer-arrow-down": {
+      "front": [
+        1,
+        2
+      ]
+    },
+    "life-buoy": {
+      "mode": "line"
+    },
+    "loader-pinwheel": {
+      "mode": "line"
+    },
+    "lock": {
+      "largestHole": true
+    },
+    "lock-keyhole": {
+      "largestHole": true
+    },
+    "luggage": {
+      "largestHole": true
+    },
+    "message-square-lock": {
+      "largestHole": true
+    },
+    "messages-square": {
+      "fill": [
+        1
+      ],
+      "behind": [
+        1
+      ]
+    },
+    "monitor-pc": {
+      "behind": [
+        3
+      ]
+    },
+    "motorbike": {
+      "mode": "line"
+    },
+    "notepad-text-dashed": {
+      "mode": "line"
+    },
+    "pen-tool": {
+      "mode": "line"
+    },
+    "recycle": {
+      "mode": "line"
+    },
+    "rose": {
+      "behind": [
+        1
+      ]
+    },
+    "shield-ban": {
+      "line": [
+        1
+      ]
+    },
+    "shield-lock": {
+      "largestHole": true
+    },
+    "spool": {
+      "mode": "line"
+    },
+    "stamp": {
+      "line": [
+        3
+      ]
+    },
+    "test-tube": {
+      "fill": [
+        1
+      ]
+    },
+    "test-tubes": {
+      "fill": [
+        0,
+        3
+      ],
+      "drop": [
+        1,
+        4
+      ]
+    },
+    "tool-case": {
+      "largestHole": true
+    },
+    "trash": {
+      "line": [
+        1
+      ]
+    },
+    "usb": {
+      "mode": "line"
+    },
+    "users-round": {
+      "line": [
+        2,
+        3
+      ]
+    },
+    "vector-polygon": {
+      "mode": "line"
+    },
+    "vector-square": {
+      "mode": "line"
+    },
+    "worm": {
+      "mode": "line"
+    }
+  }
+}

@@ -108,6 +108,19 @@ async function exerciseTools(client) {
   expect(react.structuredContent.code).toContain('import { ArrowRight } from "vadivam-react";');
   expect(text(react)).toStartWith("npm install vadivam-react");
 
+  const solid = await client.callTool({
+    name: "get_icon",
+    arguments: { name: "house", format: "vue", style: "solid" },
+  });
+  expect(solid.structuredContent.style).toBe("solid");
+  expect(solid.structuredContent.code).toContain('from "vadivam-vue/solid"');
+
+  const solidIconify = await client.callTool({
+    name: "get_icon",
+    arguments: { name: "house", format: "iconify", style: "solid" },
+  });
+  expect(solidIconify.isError).toBe(true);
+
   const unknown = await client.callTool({ name: "get_icon", arguments: { name: "acitvity" } });
   expect(unknown.isError).toBe(true);
   expect(text(unknown)).toContain("activity");

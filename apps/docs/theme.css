@@ -60,6 +60,14 @@
     stroke-linejoin: round;
     pointer-events: none;
   }
+
+  /* The grid's Solid toggle swaps every tile's paths for its solid twin's,
+     which are filled shapes with cut-outs. */
+  [data-icon-style="solid"] .icon-chunk > a > svg {
+    fill: var(--icon-color, currentColor);
+    fill-rule: evenodd;
+    stroke: none;
+  }
 }
 
 /* Inline diagrams on /docs/design-guide. Each is a 24-unit icon canvas drawn
