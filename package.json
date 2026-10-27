@@ -32,7 +32,7 @@
     "test:figma-plugin": "bun run --cwd apps/figma-plugin test",
     "test:vadivam:built": "publint packages/vadivam && bun test --preload ./tests/setup/happydom.ts tests/vadivam.client.test.mjs && bun test tests/vadivam.test.mjs tests/vadivam-static.test.mjs tests/vadivam-migrate.test.mjs",
     "test:vadivam": "bun run icons:build && bun run test:vadivam:built",
-    "test:react:unit:built": "bun test --preload ./tests/setup/happydom.ts tests/vadivam-react/*.client.test.mjs && bun test tests/vadivam-react/*.ssr.test.mjs tests/vadivam-react/exports.test.mjs",
+    "test:react:unit:built": "bun test --preload ./tests/setup/happydom.ts tests/vadivam-react/*.client.test.mjs && bun test tests/vadivam-react/*.ssr.test.mjs tests/vadivam-react/exports.test.mjs tests/vadivam-react/bundle.test.mjs",
     "test:react:unit": "bun run icons:build && bun run test:react:unit:built",
     "test:vadivam-react:built": "publint packages/vadivam-react && bun run test:react:unit:built",
     "test:vadivam-react": "bun run icons:build && bun run test:vadivam-react:built",

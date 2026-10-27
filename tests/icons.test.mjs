@@ -25,6 +25,7 @@ import {
   smoothCorners,
 } from "../scripts/corner-smoothing.mjs";
 import { cleanPaths } from "../scripts/path-cleanup.mjs";
+import { assertIconNodesPassRuntimePolicy } from "../scripts/generators/runtime-policy.mjs";
 
 const validSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></svg>`;
 
@@ -100,6 +101,23 @@ describe("icon validation", () => {
       expect(icon.svgPath).toBe(`icons/${icon.fileName}`);
       expect(icon.componentName).toMatch(/^[A-Z][A-Za-z0-9]*$/);
     }
+  });
+
+  test("every generated icon node passes the shipped runtime policy unchanged", async () => {
+    await expect(assertIconNodesPassRuntimePolicy(await readIcons())).resolves.toBeUndefined();
+  });
+
+  test("the build rejects icon nodes the runtime policy would change", async () => {
+    const icon = (iconNode) => ({ fileName: "bad.svg", iconNode });
+    await expect(assertIconNodesPassRuntimePolicy([icon([["script", { key: "s" }]])])).rejects.toThrow(
+      "bad.svg: <script> is not allowed at runtime",
+    );
+    await expect(
+      assertIconNodesPassRuntimePolicy([icon([["path", { d: "M4 12h16", onclick: "alert(1)", key: "p" }]])]),
+    ).rejects.toThrow("bad.svg: <path> attribute onclick is not allowed at runtime");
+    await expect(
+      assertIconNodesPassRuntimePolicy([icon([["path", { d: "M4 12h16", stroke: "url(https://example.com/x#a)" }]])]),
+    ).rejects.toThrow("bad.svg: <path> attribute stroke is not allowed at runtime");
   });
 
   test("loads canonical names from the pinned Lucide release", async () => {

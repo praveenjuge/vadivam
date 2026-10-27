@@ -25,6 +25,7 @@ import { buildSolidPackage } from "./generators/solid.mjs";
 import { buildSveltePackage } from "./generators/svelte.mjs";
 import { buildVuePackage } from "./generators/vue.mjs";
 import {
+  assertIconNodesPassRuntimePolicy,
   runtimePolicyRecursiveSource,
   runtimePolicySource,
   svgElementTypeSource,
@@ -781,8 +782,12 @@ async function buildReactPackage(icons) {
     `import type { IconNode } from "./types.js";\nexport declare function sanitizeIconNode(iconNode: unknown): IconNode;\nexport declare function sanitizePaint(value: unknown, fallback?: string): string | number;\nexport declare function sanitizeRootAttributes(attrs: unknown, allowEventFunctions?: boolean): Record<string, unknown>;\n`,
   );
   await writeFile(
+    path.join(reactDist, "IconBase.js"),
+    `"use client";\nimport React, { forwardRef } from "react";\nimport defaultAttributes from "./defaultAttributes.js";\nimport { useVadivamContext } from "./context.js";\n\nfunction mergeClasses(...values) {\n  return values.flatMap((value) => typeof value === "string" ? value.split(/\\s+/) : []).filter((value, index, all) => value && all.indexOf(value) === index).join(" ");\n}\nfunction hasA11yProp(props) {\n  return Object.keys(props).some((name) => name.startsWith("aria-") || name === "role" || name === "title");\n}\nfunction toPaint(value) {\n  return typeof value === "string" || typeof value === "number" ? value : "currentColor";\n}\nfunction definedAttributes(props) {\n  const attrs = {};\n  for (const name of Object.keys(props)) if (props[name] != null) attrs[name] = props[name];\n  return attrs;\n}\nexport function renderNode([tag, attrs]) {\n  return React.createElement(tag, attrs);\n}\n\n// Shared by IconBase and the sanitizing Icon, so both render the same markup.\nexport function useIconSvg({ color, size, strokeWidth, absoluteStrokeWidth, className = "", title, children }, ref, rootAttributes, nodes, paint = toPaint) {\n  const context = useVadivamContext();\n  const resolvedSize = size ?? context.size ?? 24;\n  const resolvedStrokeWidth = strokeWidth ?? context.strokeWidth ?? 2;\n  const numericSize = Number(resolvedSize);\n  const numericStrokeWidth = Number(resolvedStrokeWidth);\n  const useAbsoluteStrokeWidth = absoluteStrokeWidth ?? context.absoluteStrokeWidth ?? false;\n  const calculatedStrokeWidth = useAbsoluteStrokeWidth && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStrokeWidth) ? numericStrokeWidth * 24 / numericSize : resolvedStrokeWidth;\n  const labelled = Boolean(title) || hasA11yProp(rootAttributes);\n  return React.createElement(\n    "svg",\n    {\n      ref,\n      ...defaultAttributes,\n      width: resolvedSize,\n      height: resolvedSize,\n      stroke: paint(color ?? context.color),\n      strokeWidth: calculatedStrokeWidth,\n      className: mergeClasses("vadivam", context.className, className),\n      ...(!labelled ? { "aria-hidden": "true" } : {}),\n      ...(title ? { role: "img" } : {}),\n      ...rootAttributes\n    },\n    title ? React.createElement("title", { key: "title" }, title) : null,\n    ...nodes,\n    children\n  );\n}\n\n// Built-in icons only. Their nodes are checked against the runtime policy when\n// the package is generated, so they skip the sanitizer and their elements are\n// created once per icon.\nconst renderedNodes = new WeakMap();\nexport const IconBase = forwardRef(({ color, size, strokeWidth, absoluteStrokeWidth, className, title, children, iconNode, ...rest }, ref) => {\n  let nodes = renderedNodes.get(iconNode);\n  if (!nodes) renderedNodes.set(iconNode, nodes = iconNode.map(renderNode));\n  return useIconSvg({ color, size, strokeWidth, absoluteStrokeWidth, className, title, children }, ref, definedAttributes(rest), nodes);\n});\nIconBase.displayName = "IconBase";\n`,
+  );
+  await writeFile(
     path.join(reactDist, "Icon.js"),
-    `"use client";\nimport React, { forwardRef } from "react";\nimport defaultAttributes from "./defaultAttributes.js";\nimport { sanitizeIconNode, sanitizePaint, sanitizeRootAttributes } from "./runtimePolicy.js";\nimport { useVadivamContext } from "./context.js";\n\nfunction mergeClasses(...values) {\n  return values.flatMap((value) => typeof value === "string" ? value.split(/\\s+/) : []).filter((value, index, all) => value && all.indexOf(value) === index).join(" ");\n}\nfunction hasA11yProp(props) {\n  return Object.keys(props).some((name) => name.startsWith("aria-") || name === "role" || name === "title");\n}\nfunction renderNode([tag, attrs]) {\n  return React.createElement(tag, attrs);\n}\n\nexport const Icon = forwardRef(({ color, size, strokeWidth, absoluteStrokeWidth, className = "", title, children, iconNode = [], ...rest }, ref) => {\n  const context = useVadivamContext();\n  const resolvedSize = size ?? context.size ?? 24;\n  const resolvedStrokeWidth = strokeWidth ?? context.strokeWidth ?? 2;\n  const numericSize = Number(resolvedSize);\n  const numericStrokeWidth = Number(resolvedStrokeWidth);\n  const useAbsoluteStrokeWidth = absoluteStrokeWidth ?? context.absoluteStrokeWidth ?? false;\n  const calculatedStrokeWidth = useAbsoluteStrokeWidth && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStrokeWidth) ? numericStrokeWidth * 24 / numericSize : resolvedStrokeWidth;\n  const safeRootAttributes = sanitizeRootAttributes(rest, true);\n  const labelled = Boolean(title) || hasA11yProp(safeRootAttributes);\n  return React.createElement(\n    "svg",\n    {\n      ref,\n      ...defaultAttributes,\n      width: resolvedSize,\n      height: resolvedSize,\n      stroke: sanitizePaint(color ?? context.color),\n      strokeWidth: calculatedStrokeWidth,\n      className: mergeClasses("vadivam", context.className, className),\n      ...(!labelled ? { "aria-hidden": "true" } : {}),\n      ...(title ? { role: "img" } : {}),\n      ...safeRootAttributes\n    },\n    title ? React.createElement("title", { key: "title" }, title) : null,\n    ...sanitizeIconNode(iconNode).map(renderNode),\n    children\n  );\n});\nIcon.displayName = "Icon";\nexport default Icon;\n`,
+    `"use client";\nimport { forwardRef } from "react";\nimport { renderNode, useIconSvg } from "./IconBase.js";\nimport { sanitizeIconNode, sanitizePaint, sanitizeRootAttributes } from "./runtimePolicy.js";\n\n// Renders caller-supplied icon nodes, so nodes, root props and paint are sanitized on every render.\nexport const Icon = forwardRef(({ color, size, strokeWidth, absoluteStrokeWidth, className, title, children, iconNode, ...rest }, ref) =>\n  useIconSvg({ color, size, strokeWidth, absoluteStrokeWidth, className, title, children }, ref, sanitizeRootAttributes(rest, true), sanitizeIconNode(iconNode).map(renderNode), sanitizePaint)\n);\nIcon.displayName = "Icon";\nexport default Icon;\n`,
   );
   await writeFile(
     path.join(reactDist, "Icon.d.ts"),
@@ -790,17 +795,21 @@ async function buildReactPackage(icons) {
   );
   await writeFile(
     path.join(reactDist, "createIcon.js"),
-    `import React, { forwardRef } from "react";\nimport Icon from "./Icon.js";\n\nfunction toKebabCase(value) {\n  return value.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/[ _]+/g, "-").toLowerCase();\n}\nfunction toPascalCase(value) {\n  return value.split(/[-_ ]+/).filter(Boolean).map((part) => part[0].toUpperCase() + part.slice(1)).join("");\n}\nexport function createIcon(iconName, iconNode) {\n  const Component = forwardRef(({ className, ...props }, ref) => React.createElement(Icon, { ...props, ref, iconNode, className: [\`vadivam-${"${toKebabCase(iconName)}"}\`, className].filter(Boolean).join(" ") }));\n  Component.displayName = toPascalCase(iconName);\n  return Component;\n}\nexport const createVadivamIcon = createIcon;\n`,
+    `import Icon from "./Icon.js";\nimport { wrapIcon } from "./defineIcon.js";\n\nfunction toKebabCase(value) {\n  return value.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/[ _]+/g, "-").toLowerCase();\n}\nfunction toPascalCase(value) {\n  return value.split(/[-_ ]+/).filter(Boolean).map((part) => part[0].toUpperCase() + part.slice(1)).join("");\n}\nexport function createIcon(iconName, iconNode) {\n  return wrapIcon(Icon, \`vadivam-\${toKebabCase(iconName)}\`, toPascalCase(iconName), iconNode);\n}\nexport const createVadivamIcon = createIcon;\n`,
   );
   await writeFile(
     path.join(reactDist, "createIcon.d.ts"),
     `import type { IconNode, VadivamIcon } from "./types.js";\nexport declare function createIcon(iconName: string, iconNode: IconNode): VadivamIcon;\nexport { createIcon as createVadivamIcon };\n`,
   );
+  await writeFile(
+    path.join(reactDist, "defineIcon.js"),
+    `import React, { forwardRef } from "react";\nimport { IconBase } from "./IconBase.js";\n\nexport function wrapIcon(Base, iconClass, displayName, iconNode) {\n  const Component = forwardRef(({ className, ...props }, ref) => React.createElement(Base, { ...props, ref, iconNode, className: [iconClass, className].filter(Boolean).join(" ") }));\n  Component.displayName = displayName;\n  return Component;\n}\nexport function defineIcon(name, displayName, iconNode) {\n  return wrapIcon(IconBase, \`vadivam-\${name}\`, displayName, iconNode);\n}\n`,
+  );
 
   for (const icon of icons) {
     await writeFile(
       path.join(reactDist, "icons", `${icon.name}.js`),
-      `import { createIcon } from "../createIcon.js";\nexport const __iconNode = ${JSON.stringify(icon.iconNode)};\nconst ${icon.componentName} = createIcon("${icon.name}", __iconNode);\nexport default ${icon.componentName};\n`,
+      `import { defineIcon } from "../defineIcon.js";\nexport const __iconNode = ${JSON.stringify(icon.iconNode)};\nconst ${icon.componentName} = /* @__PURE__ */ defineIcon("${icon.name}", "${icon.componentName}", __iconNode);\nexport default ${icon.componentName};\n`,
     );
     await writeFile(
       path.join(reactDist, "icons", `${icon.name}.d.ts`),
@@ -859,7 +868,7 @@ async function buildReactPackage(icons) {
   );
   await writeFile(
     path.join(reactDist, "dynamic.js"),
-    `"use client";\nimport React, { forwardRef } from "react";\nimport dynamicIconImports from "./dynamicIconImports.js";\n\nexport const iconNames = Object.keys(dynamicIconImports);\nexport const DynamicIcon = forwardRef(({ name, fallback = null, ...props }, ref) => {\n  const importer = dynamicIconImports[name];\n  const Component = React.useMemo(() => importer ? React.lazy(importer) : null, [importer]);\n  if (!Component) return fallback;\n  return React.createElement(React.Suspense, { fallback }, React.createElement(Component, { ...props, ref }));\n});\nDynamicIcon.displayName = "DynamicIcon";\nexport { dynamicIconImports };\nexport default DynamicIcon;\n`,
+    `"use client";\nimport React, { forwardRef } from "react";\nimport dynamicIconImports from "./dynamicIconImports.js";\nimport { sanitizePaint, sanitizeRootAttributes } from "./runtimePolicy.js";\n\nexport const iconNames = Object.keys(dynamicIconImports);\n// Names and props here often come from runtime data, so this entry keeps the\n// root-prop and paint sanitizer that statically imported icons skip.\nexport const DynamicIcon = forwardRef(({ name, fallback = null, color, size, strokeWidth, absoluteStrokeWidth, className, title, children, ...rest }, ref) => {\n  const importer = Object.prototype.hasOwnProperty.call(dynamicIconImports, name) ? dynamicIconImports[name] : undefined;\n  const Component = React.useMemo(() => importer ? React.lazy(importer) : null, [importer]);\n  if (!Component) return fallback;\n  const props = { ...sanitizeRootAttributes(rest, true), color: color == null ? color : sanitizePaint(color), size, strokeWidth, absoluteStrokeWidth, className, title, ref };\n  return React.createElement(React.Suspense, { fallback }, React.createElement(Component, props, children));\n});\nDynamicIcon.displayName = "DynamicIcon";\nexport { dynamicIconImports };\nexport default DynamicIcon;\n`,
   );
   await writeFile(
     path.join(reactDist, "dynamic.d.ts"),
@@ -1037,6 +1046,7 @@ export async function buildOg() {
 
 export async function build() {
   const icons = await readIcons();
+  await assertIconNodesPassRuntimePolicy(icons);
   await synchronizeDocCounts(icons.map((icon) => icon.name));
   await buildRawPackage(icons);
   await buildReactPackage(icons);

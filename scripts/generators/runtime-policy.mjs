@@ -178,3 +178,28 @@ export function sanitizeRootAttributes(attrs${types.unknown}, allowEventFunction
 export const runtimePolicySource = buildRuntimePolicy();
 export const runtimePolicyRecursiveSource = buildRuntimePolicy(false, true);
 export const runtimePolicyTypeScriptSource = buildRuntimePolicy(true);
+
+// Generated components render built-in icon nodes without the runtime
+// sanitizer, so every node must already be exactly what the shipped policy
+// would keep: no tag or attribute it drops, and no value it rejects.
+export async function assertIconNodesPassRuntimePolicy(icons) {
+  const { sanitizeIconNode } = await import(
+    `data:text/javascript;base64,${Buffer.from(runtimePolicySource).toString("base64")}`
+  );
+  const problems = [];
+  for (const icon of icons) {
+    for (const [tag, attrs] of icon.iconNode) {
+      const [safeNode] = sanitizeIconNode([[tag, attrs]]);
+      if (!safeNode) {
+        problems.push(`${icon.fileName}: <${tag}> is not allowed at runtime`);
+        continue;
+      }
+      for (const [name, value] of Object.entries(attrs)) {
+        if (safeNode[1][name] !== value) {
+          problems.push(`${icon.fileName}: <${tag}> attribute ${name} is not allowed at runtime`);
+        }
+      }
+    }
+  }
+  if (problems.length) throw new Error(problems.join("\n"));
+}

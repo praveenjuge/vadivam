@@ -62,4 +62,38 @@ describe("DynamicIcon (client)", () => {
     expect(svg.getAttribute("data-dyn")).toBe("yes");
     expect(ref.current).toBe(svg);
   });
+
+  test("keeps sanitizing root props and paint for runtime-loaded icons", async () => {
+    const { container } = render(
+      createElement(DynamicIcon, {
+        name: "activity",
+        fallback: null,
+        href: "javascript:alert(1)",
+        color: "url(https://example.com/stroke.svg#x)",
+        fill: "url(https://example.com/paint.svg#x)",
+        style: { color: "red", backgroundImage: "url(https://example.com/track.png)" },
+        "data-dyn": "yes",
+      })
+    );
+    await waitFor(() => {
+      expect(container.querySelector("svg")).not.toBeNull();
+    });
+    const svg = container.querySelector("svg");
+    expect(svg.getAttribute("href")).toBeNull();
+    expect(svg.getAttribute("stroke")).toBe("currentColor");
+    expect(svg.getAttribute("fill")).toBe("none");
+    expect(svg.style.color).toBe("red");
+    expect(svg.style.backgroundImage).toBe("");
+    expect(svg.getAttribute("data-dyn")).toBe("yes");
+  });
+
+  test("renders the fallback for inherited object keys", () => {
+    for (const name of ["constructor", "toString", "__proto__"]) {
+      const { container, unmount } = render(
+        createElement(DynamicIcon, { name, fallback: createElement("span", { "data-testid": "fb" }) })
+      );
+      expect(container.querySelector('[data-testid="fb"]')).not.toBeNull();
+      unmount();
+    }
+  });
 });
