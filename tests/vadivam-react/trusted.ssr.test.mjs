@@ -38,7 +38,7 @@ function markup(Component, props, provider, children) {
 
 describe("built-in icon render path", () => {
   test.each(sample)("%s renders the same markup as the sanitizing path", async (name) => {
-    const { default: BuiltIn, __iconNode } = await dynamicIconImports[name]();
+    const { default: BuiltIn, __iconNode } = await import(`vadivam-react/icons/${name}`);
     const Reference = createIcon(name, __iconNode);
     expect(BuiltIn.displayName).toBe(Reference.displayName);
     for (const props of propSets) {
