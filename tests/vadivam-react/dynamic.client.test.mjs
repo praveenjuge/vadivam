@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createElement, createRef } from "react";
 import { render, waitFor } from "@testing-library/react";
+import { VadivamProvider } from "vadivam-react";
 import { DynamicIcon, iconNames } from "vadivam-react/dynamic";
 
 describe("DynamicIcon (client)", () => {
@@ -85,6 +86,30 @@ describe("DynamicIcon (client)", () => {
     expect(svg.style.color).toBe("red");
     expect(svg.style.backgroundImage).toBe("");
     expect(svg.getAttribute("data-dyn")).toBe("yes");
+  });
+
+  test("sanitizes a color inherited from VadivamProvider", async () => {
+    const { container } = render(
+      createElement(
+        VadivamProvider,
+        { color: "url(https://example.com/stroke.svg#x)" },
+        createElement(DynamicIcon, { name: "activity", fallback: null })
+      )
+    );
+    await waitFor(() => {
+      expect(container.querySelector("svg")).not.toBeNull();
+    });
+    expect(container.querySelector("svg").getAttribute("stroke")).toBe("currentColor");
+  });
+
+  test("keeps a safe color inherited from VadivamProvider", async () => {
+    const { container } = render(
+      createElement(VadivamProvider, { color: "purple" }, createElement(DynamicIcon, { name: "activity", fallback: null }))
+    );
+    await waitFor(() => {
+      expect(container.querySelector("svg")).not.toBeNull();
+    });
+    expect(container.querySelector("svg").getAttribute("stroke")).toBe("purple");
   });
 
   test("renders the fallback for inherited object keys", () => {
