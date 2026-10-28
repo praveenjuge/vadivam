@@ -259,6 +259,9 @@ function asArray(value) {
   return Array.isArray(value) ? value : [value];
 }
 
+// A closepath followed straight by a drawing command, with no move to start the next subpath.
+const subpathWithoutMove = /([zZ])\s*(?=[a-ln-yA-LN-Y])/g;
+
 export function validateSvgContent(svg, file = "inline.svg") {
   const node = parseSvg(svg, file);
   for (const [attr, value] of Object.entries(rootAttrs)) {
@@ -336,6 +339,8 @@ export function validateSvgContent(svg, file = "inline.svg") {
   assertInkInsidePadding(shapes, file);
   const paths = shapes.filter(([tag]) => tag === "path").map(([, attrs]) => attrs.d);
   assertCleanPaths(paths, file);
+  const unmoved = paths.filter((d) => d.search(subpathWithoutMove) >= 0).length;
+  assert(unmoved === 0, `${file}: ${unmoved} path(s) start a subpath after "z" without a move; WebKit draws it from the wrong point, so add "m0 0" after the "z"`);
   assertStrokesMeet(shapes.map(([tag, attrs]) => elementPathData(tag, attrs)), file);
 }
 
@@ -485,7 +490,12 @@ export function normalizeSvg(svg, file) {
   const cleaned = optimizeSvg(replacePaths(first, cleanPaths(pathData(first)).paths), file);
   const original = pathData(cleaned);
   const smoothed = replacePaths(cleaned, reattachEnds(original, original.map((d) => smoothCorners(d))));
-  const optimized = optimizeSvg(smoothed, file);
+  // SVGO drops the move after a closepath when the next subpath starts where
+  // the last one began; WebKit draws some of those from the wrong point.
+  const optimized = optimizeSvg(smoothed, file).replace(pathPattern, (match, prefix, d, suffix) =>
+    // A lineto right after the move is written the way SVGO writes it, so optimizing again changes nothing.
+    `${prefix}${d.replace(subpathWithoutMove, "$1m0 0").replace(/([zZ]m0 0)l(?=\d|\.)/g, "$1 ").replace(/([zZ]m0 0)l(?=-)/g, "$1")}${suffix}`,
+  );
   const open = optimized.match(/<svg\b[^>]*>/);
   const close = optimized.lastIndexOf("</svg>");
   assert(open && close > -1, `${file}: optimized SVG is missing root`);

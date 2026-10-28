@@ -488,6 +488,22 @@ describe("path cleanup", () => {
   });
 });
 
+describe("subpath starts", () => {
+  test("rejects a subpath that starts after z without a move", () => {
+    expect(() => validateSvgContent(validSvg.replace("M4 12h16", "M4 4h6v6H4zh6"), "move.svg")).toThrow('start a subpath after "z" without a move');
+  });
+
+  test("optimization starts every subpath with a move", () => {
+    const svg = validSvg.replace("M4 12h16", "M4 4h6v6H4za3 3 0 0 0 3 3");
+    expect(normalizeSvg(svg, "move.svg")).not.toMatch(/[zZ]\s*[a-ln-yA-LN-Y]/);
+  });
+
+  test("optimizing a restored move again changes nothing", () => {
+    const once = normalizeSvg(validSvg.replace("M4 12h16", "M4 4h6v6H4zM4 4l2 2"), "move.svg");
+    expect(normalizeSvg(once, "move.svg")).toBe(once);
+  });
+});
+
 describe("stroke joins", () => {
   test("rejects a stroke that stops 1px short of another", () => {
     expect(() => validateSvgContent(validSvg.replace("M4 12h16", "M4 12h16M12 4v7"), "joins.svg")).toThrow("1 stroke end(s) stop short of another stroke");
