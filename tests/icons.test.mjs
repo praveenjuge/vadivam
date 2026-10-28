@@ -453,7 +453,13 @@ describe("path cleanup", () => {
 
   test("keeps dots drawn as tiny lines", () => {
     const d = "M4 12h10M18 12h.01";
-    expect(cleanPaths([d])).toEqual({ paths: [d], debris: 0, joins: 0, merges: 0, snaps: 0 });
+    expect(cleanPaths([d])).toEqual({ paths: [d], debris: 0, joins: 0, merges: 0, nodes: 0, snaps: 0 });
+  });
+
+  test("removes stray nodes shorter than 0.05px inside a stroke", () => {
+    const { paths, nodes } = cleanPaths(["M4 12h8l.02.01L20 12"]);
+    expect(nodes).toBe(1);
+    expect(paths).toEqual(["M4 12L20 12"]);
   });
 
   test("snaps lines just off the whole-pixel grid and what meets them", () => {
@@ -479,6 +485,25 @@ describe("path cleanup", () => {
     expect(normalized).toContain('<path d="M4 12h16M8 6v12"/>');
     expect(() => validateSvgContent(normalized, "split.svg")).not.toThrow();
     expect(normalizeSvg(normalized, "split.svg")).toBe(normalized);
+  });
+});
+
+describe("stroke joins", () => {
+  test("rejects a stroke that stops 1px short of another", () => {
+    expect(() => validateSvgContent(validSvg.replace("M4 12h16", "M4 12h16M12 4v7"), "joins.svg")).toThrow("1 stroke end(s) stop short of another stroke");
+  });
+
+  test("rejects the same near miss drawn with <line> elements", () => {
+    const svg = validSvg.replace('<path d="M4 12h16"/>', '<line x1="4" y1="12" x2="20" y2="12"/><line x1="12" y1="4" x2="12" y2="11"/>');
+    expect(() => validateSvgContent(svg, "joins.svg")).toThrow("1 stroke end(s) stop short of another stroke");
+  });
+
+  test.each([
+    ["a stroke that meets another", "M4 12h16M12 4v8"],
+    ["a stroke that overhangs another", "M4 12h16M12 4v9"],
+    ["a 2px gap", "M4 12h16M12 4v5"],
+  ])("accepts %s", (_name, d) => {
+    expect(() => validateSvgContent(validSvg.replace("M4 12h16", d), "joins.svg")).not.toThrow();
   });
 });
 

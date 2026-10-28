@@ -354,6 +354,25 @@ function numbers(value) {
  * Centerline points that bound one SVG shape element, given its tag and
  * geometry attributes (unprefixed names such as `d`, `cx`, or `points`).
  */
+/** Path data for any allowed shape element, so stroke checks see every element alike. */
+export function elementPathData(tag, attrs) {
+  const value = (name) => Number(attrs[name] ?? 0);
+  if (tag === "path") return String(attrs.d ?? "");
+  if (tag === "line") return `M${value("x1")} ${value("y1")}L${value("x2")} ${value("y2")}`;
+  if (tag === "polyline" || tag === "polygon") {
+    const list = numbers(attrs.points);
+    return `M${list.join(" ")}${tag === "polygon" ? "Z" : ""}`;
+  }
+  if (tag === "rect") return `M${value("x")} ${value("y")}h${value("width")}v${value("height")}h${-value("width")}Z`;
+  if (tag === "circle" || tag === "ellipse") {
+    const rx = tag === "circle" ? value("r") : value("rx");
+    const ry = tag === "circle" ? value("r") : value("ry");
+    const [cx, cy] = [value("cx"), value("cy")];
+    return `M${cx - rx} ${cy}A${rx} ${ry} 0 1 0 ${cx + rx} ${cy}A${rx} ${ry} 0 1 0 ${cx - rx} ${cy}Z`;
+  }
+  return "";
+}
+
 export function elementPoints(tag, attrs) {
   const value = (name) => Number(attrs[name] ?? 0);
   if (tag === "path") {
@@ -517,6 +536,50 @@ function smoothedRectCorners(subpath, box, gaps, tolerance) {
   const half = Math.min(box.maxX - box.minX, box.maxY - box.minY) / 2;
   if ((1 + smoothing) * r > half + tolerance) return null;
   return { r, smoothing: Math.round(smoothing * 100) / 100 };
+}
+
+/**
+ * Stroke ends that stop 0.3–2px short of another stroke's centerline. With a
+ * 2px stroke the two overlap without meeting and render as a blob. An end
+ * already past the other centerline is an overhang drawn on purpose, and is
+ * not counted. Returns [{ point, distance }].
+ */
+export function shortStrokeEnds(subpaths) {
+  const samples = subpaths.map((subpath) => sampleSubpath(subpath, 0.05));
+  const lengths = samples.map((points) => points.length * 0.05);
+  const ends = [];
+  subpaths.forEach((subpath, index) => {
+    const last = subpath.segments.at(-1);
+    if (!last || lengths[index] < 0.1 || subpath.closed || samePoint(subpath.start, last.to, 1e-3)) return;
+    for (const atStart of [true, false]) {
+      const point = atStart ? subpath.start : last.to;
+      let nearest = null;
+      let distance = Infinity;
+      samples.forEach((points, other) => {
+        if (lengths[other] < 0.1) return;
+        points.forEach((sample, position) => {
+          const d = Math.hypot(sample[0] - point[0], sample[1] - point[1]);
+          // The stroke's own body counts only where it folds back toward this end.
+          if (other === index) {
+            const along = (atStart ? position : points.length - 1 - position) * 0.05;
+            if (along <= Math.max(4, 3 * d)) return;
+          }
+          if (d < distance) {
+            distance = d;
+            nearest = sample;
+          }
+        });
+      });
+      if (!(distance >= 0.3 && distance < 2)) continue;
+      const segment = atStart ? subpath.segments[0] : last;
+      const along = sampleSegment(segment, 64);
+      const inner = atStart ? along[1] : along.at(-2);
+      const direction = [point[0] - inner[0], point[1] - inner[1]];
+      if (direction[0] * (nearest[0] - point[0]) + direction[1] * (nearest[1] - point[1]) <= 0) continue;
+      ends.push({ point, distance });
+    }
+  });
+  return ends;
 }
 
 /** Shortest distance between two point samples, pruned by their bounding boxes. */
