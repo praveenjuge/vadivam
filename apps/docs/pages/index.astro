@@ -32,10 +32,6 @@ const toolLinks: HeroLink[] = [
 const logoClass = "me-1 inline-block size-3.5 align-[-0.15em] object-contain";
 const inlineLinkClass =
   "whitespace-nowrap text-foreground no-underline decoration-border underline-offset-4 transition-colors hover:underline hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
-const promptButtonClass =
-  "group inline-flex flex-none items-center gap-1.5 rounded-md border-0 bg-foreground px-2.5 py-1.5 text-xs font-medium text-background transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background";
-const quietLinkClass =
-  "border-0 bg-transparent p-0 text-xs text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 const iconButtonClass =
   "grid size-7 flex-none place-items-center rounded-md border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 disabled:hover:bg-transparent";
 const smallCopyClass =
@@ -185,20 +181,20 @@ const structuredData = site
             </Fragment>
           ))}.
         </p>
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
+        <div class="pt-1">
           <button
             class="group inline-flex items-center gap-2 rounded-md border-0 bg-transparent p-0 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4 focus-visible:ring-offset-background"
             type="button"
-            data-agent-prompt-copy
+            id="agentPromptCopy"
           >
-            <span class="flex group-data-[copied]:hidden"><VIcon name="sparkles" size={15} /></span>
-            <span class="hidden group-data-[copied]:flex"><VIcon name="check" size={15} /></span>
-            <span class="group-data-[copied]:hidden">Copy prompt for AI agents</span>
-            <span class="hidden group-data-[copied]:inline">Copied. Paste it into your agent</span>
-            <span class="flex transition-transform group-hover:translate-x-0.5 group-data-[copied]:hidden"><VIcon name="arrow-right" size={14} /></span>
+            <span class="flex group-data-[state]:hidden"><VIcon name="sparkles" size={15} /></span>
+            <span class="hidden group-data-[state=copied]:flex"><VIcon name="check" size={15} /></span>
+            <span class="hidden group-data-[state=failed]:flex"><VIcon name="x" size={15} /></span>
+            <span class="group-data-[state]:hidden">Copy prompt for AI agents</span>
+            <span class="hidden group-data-[state=copied]:inline">Copied. Paste it into your agent</span>
+            <span class="hidden group-data-[state=failed]:inline">Your browser blocked copying. Try again</span>
+            <span class="flex transition-transform group-hover:translate-x-0.5 group-data-[state]:hidden"><VIcon name="arrow-right" size={14} /></span>
           </button>
-          <span class="h-3.5 w-px bg-border" aria-hidden="true"></span>
-          <button class={quietLinkClass} type="button" popovertarget="agentPrompt">View prompt</button>
           <span class="sr-only" id="agentPromptStatus" aria-live="polite"></span>
         </div>
       </div>
@@ -206,29 +202,6 @@ const structuredData = site
         <IconSketch />
       </div>
     </header>
-      <div
-        class="m-auto w-[min(42rem,calc(100vw-2rem))] max-h-[min(36rem,calc(100dvh-4rem))] overflow-hidden rounded-blume border border-border bg-background p-0 text-foreground shadow-lg backdrop:bg-black/30 open:flex open:flex-col"
-        id="agentPrompt"
-        popover
-        aria-label="Prompt for AI agents"
-      >
-        <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
-          <p class="m-0 text-sm font-medium">Prompt for AI agents</p>
-          <button class={iconButtonClass} type="button" popovertarget="agentPrompt" popovertargetaction="hide" aria-label="Close"><VIcon name="x" size={16} /></button>
-        </div>
-        <pre class="m-0 min-h-0 flex-1 overflow-auto whitespace-pre-wrap bg-transparent px-4 py-3 font-mono text-[0.75rem] leading-relaxed text-muted-foreground" id="agentPromptText">{agentPrompt}</pre>
-        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-4 py-2.5">
-          <p class="m-0 text-xs text-muted-foreground">
-            Paste into Claude Code, Cursor, Codex, Copilot, or any coding agent. <a class="text-foreground underline underline-offset-4" href="/docs/ai-agents">How agents use Vadivam</a>
-          </p>
-          <button class={promptButtonClass} type="button" data-agent-prompt-copy>
-            <span class="flex group-data-[copied]:hidden"><VIcon name="copy" size={13} /></span>
-            <span class="hidden group-data-[copied]:flex"><VIcon name="check" size={13} /></span>
-            <span class="group-data-[copied]:hidden">Copy prompt</span>
-            <span class="hidden group-data-[copied]:inline">Copied</span>
-          </button>
-        </div>
-      </div>
 
     <section aria-label="Icon library">
       {/* Sticky under Blume's 4rem header, so search stays at hand while browsing. */}
@@ -415,6 +388,7 @@ const structuredData = site
   </footer>
 
   <script is:inline type="application/json" id="snippetTemplates" set:html={snippetTemplates}></script>
+  <script is:inline type="application/json" id="agentPrompt" set:html={serializeForScript(agentPrompt)}></script>
   <script is:inline type="application/json" id="siteVersion" set:html={JSON.stringify(pkg.version)}></script>
 
   <script>
@@ -936,29 +910,28 @@ const structuredData = site
         tab.addEventListener("click", () => chooseTab(tab.dataset.tab ?? "react"));
       }
 
-      const agentPromptText = document.querySelector<HTMLElement>("#agentPromptText")!;
+      const agentPrompt: string = JSON.parse(document.getElementById("agentPrompt")?.textContent ?? '""');
       const agentPromptStatus = document.querySelector<HTMLElement>("#agentPromptStatus")!;
       let agentPromptTimer: ReturnType<typeof setTimeout> | undefined;
-      const agentPromptButtons = document.querySelectorAll<HTMLButtonElement>("[data-agent-prompt-copy]");
-      for (const button of agentPromptButtons) {
-        button.addEventListener("click", async () => {
-          try {
-            await copyText(agentPromptText.textContent ?? "");
-            clearTimeout(agentPromptTimer);
-            for (const other of agentPromptButtons) delete other.dataset.copied;
-            button.dataset.copied = "";
-            agentPromptStatus.textContent = "Prompt copied. Paste it into your agent.";
-            agentPromptTimer = setTimeout(() => {
-              delete button.dataset.copied;
-              agentPromptStatus.textContent = "";
-            }, 2400);
-          } catch {
-            // Clipboard access can be refused; show the prompt selected so it can be copied by hand.
-            document.querySelector<HTMLElement>("#agentPrompt:not(:popover-open)")?.showPopover();
-            getSelection()?.selectAllChildren(agentPromptText);
-          }
-        });
-      }
+      document.querySelector("#agentPromptCopy")?.addEventListener("click", async (event) => {
+        const button = event.currentTarget as HTMLButtonElement;
+        let copied = true;
+        try {
+          await copyText(agentPrompt);
+        } catch {
+          // Clipboard access can be refused; say so on the button instead of failing silently.
+          copied = false;
+        }
+        button.dataset.state = copied ? "copied" : "failed";
+        agentPromptStatus.textContent = copied
+          ? "Prompt copied. Paste it into your agent."
+          : "Your browser blocked copying. Try again.";
+        clearTimeout(agentPromptTimer);
+        agentPromptTimer = setTimeout(() => {
+          delete button.dataset.state;
+          agentPromptStatus.textContent = "";
+        }, 2400);
+      });
       signal.addEventListener("abort", () => clearTimeout(agentPromptTimer));
 
       document.querySelector("#drawerClose")?.addEventListener("click", () => closeDrawer());

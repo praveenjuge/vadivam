@@ -20,7 +20,7 @@ Use Vadivam when you need consistent, pixel-perfect 24px outline icons in a web 
 
 ## Set up a project with one prompt
 
-On the [homepage](/), **Copy prompt for AI agents** copies a setup prompt to paste into Claude Code, Cursor, Codex, Copilot, or any other coding agent. **View prompt** shows the full text first. The prompt points the agent at the skill below, has it install only the package that matches the project, and covers the Lucide codemod, the shadcn/ui registry, the MCP server, and the Iconify prefix.
+On the [homepage](/), **Copy prompt for AI agents** copies a setup prompt to paste into Claude Code, Cursor, Codex, Copilot, or any other coding agent. The prompt points the agent at the skill below, has it install only the package that matches the project, and covers the Lucide codemod, the shadcn/ui registry, the MCP server, and the Iconify prefix.
 
 ## How an agent should consume Vadivam
 
