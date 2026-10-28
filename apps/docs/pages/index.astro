@@ -162,7 +162,7 @@ const structuredData = site
         <h1 class="m-0 text-balance text-[clamp(1.625rem,3vw,2.25rem)] font-semibold leading-[1.1] tracking-[-0.03em]">
           Icons shaped for interfaces.
         </h1>
-        <p class="m-0 max-w-[62rem] text-sm leading-relaxed text-muted-foreground">
+        <p class="m-0 max-w-[62rem] text-balance text-sm leading-relaxed text-muted-foreground">
           <em class="text-foreground">Vadivam</em> (<span lang="ta">வடிவம்</span>) is Tamil for “shape.” Free, open-source icons for{" "}
           {packageLinks.map((link, index) => (
             <Fragment>
@@ -255,7 +255,7 @@ const structuredData = site
           </select>
           <VIcon name="chevron-down" size={16} class="pointer-events-none absolute inset-y-0 end-3 items-center text-muted-foreground" />
         </span>
-        <p class="sr-only m-0 flex-none text-xs tabular-nums text-muted-foreground lg:not-sr-only" id="resultCount" aria-live="polite">{icons.length} icons</p>
+        <p class="sr-only" id="resultCount" aria-live="polite">{icons.length} icons</p>
       </div>
 
       <div class="icon-browser pt-3" id="iconBrowser">

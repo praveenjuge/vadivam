@@ -125,8 +125,8 @@
   fill-opacity: 0.42;
 }
 
-/* The hero's drawing (pages/_lib/IconSketch.astro): eight icons, each drawn
-   in its own three-second slot of a 24-second loop. The grid and keylines
+/* The hero's drawing (pages/_lib/IconSketch.astro): sixteen icons, each
+   drawn in its own three-second slot of a 48-second loop. The grid and keylines
    use a light blue so they read as guides, not as part of the icon. */
 .icon-sketch {
   --sketch-guide: oklch(0.7 0.13 240);
@@ -161,25 +161,25 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-dasharray: 1;
-  animation: icon-sketch 24s linear calc(var(--sketch-index) * 3s) infinite both;
+  animation: icon-sketch 48s linear calc(var(--sketch-index) * 3s) infinite both;
 }
 @keyframes icon-sketch {
   0% {
     stroke-dashoffset: 1;
     opacity: 0;
   }
-  0.2% {
+  0.1% {
     opacity: 1;
   }
-  6% {
+  3% {
     stroke-dashoffset: 0;
     animation-timing-function: ease-out;
   }
-  10.5% {
+  5.25% {
     stroke-dashoffset: 0;
     opacity: 1;
   }
-  12.5%,
+  6.25%,
   100% {
     stroke-dashoffset: 0;
     opacity: 0;
@@ -193,5 +193,21 @@
   }
   .icon-sketch-icon[data-still] {
     opacity: 1;
+  }
+}
+
+/* Blume centers the header tabs; here they sit at the end, beside the search
+   and theme buttons. Below `lg` the header's spacer pushes both to the end;
+   from `lg` the header is a flex row and the tabs' auto margin does it. */
+[data-blume-header] > nav {
+  order: 1;
+  margin-inline-start: auto;
+}
+[data-blume-header] > :last-child {
+  order: 2;
+}
+@media (width >= 64rem) {
+  [data-blume-header] {
+    display: flex;
   }
 }

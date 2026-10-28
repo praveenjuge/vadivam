@@ -4,8 +4,25 @@
 // costs no script; `.icon-sketch` in theme.css holds the timing.
 import { iconsByName } from "vadivam/manifest";
 
-// The keyframes in theme.css assume eight icons, three seconds each.
-const names = ["rocket", "heart", "coffee", "camera", "palette", "cloud", "bell", "leaf"] as const;
+// The keyframes in theme.css assume sixteen icons, three seconds each.
+const names = [
+  "rocket",
+  "heart",
+  "coffee",
+  "camera",
+  "palette",
+  "cloud",
+  "bell",
+  "leaf",
+  "cat",
+  "umbrella",
+  "lightbulb",
+  "gift",
+  "compass",
+  "headphones",
+  "plane",
+  "flower",
+] as const;
 const sketches = names.map((name) => {
   const svg = iconsByName[name]?.svg;
   if (!svg) throw new Error(`Hero sketch icon "${name}" is not in the set`);
