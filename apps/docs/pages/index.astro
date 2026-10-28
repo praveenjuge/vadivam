@@ -183,17 +183,17 @@ const structuredData = site
         </p>
         <div class="pt-1">
           <button
-            class="group inline-flex items-center gap-2 rounded-md border-0 bg-transparent p-0 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+            class="group inline-flex h-8 items-center gap-1.5 rounded-lg border-0 bg-foreground px-3 text-[0.8125rem] font-medium text-background shadow-sm transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             type="button"
             id="agentPromptCopy"
           >
-            <span class="flex group-data-[state]:hidden"><VIcon name="sparkles" size={15} /></span>
-            <span class="hidden group-data-[state=copied]:flex"><VIcon name="check" size={15} /></span>
-            <span class="hidden group-data-[state=failed]:flex"><VIcon name="x" size={15} /></span>
+            <span class="flex group-data-[state]:hidden"><VIcon name="sparkles" size={14} /></span>
+            <span class="hidden group-data-[state=copied]:flex"><VIcon name="check" size={14} /></span>
+            <span class="hidden group-data-[state=failed]:flex"><VIcon name="x" size={14} /></span>
             <span class="group-data-[state]:hidden">Copy prompt for AI agents</span>
             <span class="hidden group-data-[state=copied]:inline">Copied. Paste it into your agent</span>
             <span class="hidden group-data-[state=failed]:inline">Your browser blocked copying. Copy it from below</span>
-            <span class="flex transition-transform group-hover:translate-x-0.5 group-data-[state]:hidden"><VIcon name="arrow-right" size={14} /></span>
+            <span class="flex transition-transform group-hover:translate-x-0.5 group-data-[state]:hidden"><VIcon name="arrow-right" size={13} /></span>
           </button>
           <span class="sr-only" id="agentPromptStatus" aria-live="polite"></span>
           {/* Shown, with its text selected, only when the browser refuses the clipboard. */}
