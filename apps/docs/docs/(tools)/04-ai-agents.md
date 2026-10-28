@@ -18,6 +18,10 @@ Use Vadivam when you need consistent, pixel-perfect 24px outline icons in a web 
 - Rendering icons in custom tooling from the core package's icon-node data and catalog metadata.
 - Prototyping with runtime icon names through the typed dynamic icon APIs.
 
+## Set up a project with one prompt
+
+On the [homepage](/), **Copy prompt for AI agents** copies a setup prompt to paste into Claude Code, Cursor, Codex, Copilot, or any other coding agent. The prompt points the agent at the skill below, has it install only the package that matches the project, and covers the Lucide codemod, the shadcn/ui registry, the MCP server, and the Iconify prefix.
+
 ## How an agent should consume Vadivam
 
 - MCP server: connect to `https://vadivam.praveenjuge.com/mcp` or run `npx -y vadivam-mcp` to search icons by name, tag, or category and get SVG or framework code with the `search_icons`, `suggest_icons`, `get_icon`, `list_categories`, and `get_usage` tools. See [MCP server](/docs/mcp).
