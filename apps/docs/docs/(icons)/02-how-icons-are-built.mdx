@@ -82,7 +82,13 @@ Icon files are treated as untrusted input. `bun run icons:optimize` and `bun run
 
 Because every published icon has passed these checks, Vadivam SVGs carry no scripts, styles, links, external references, or event handlers, and are safe to inline in HTML, email, or user-facing documents.
 
-`bun run icons:build` also checks every generated icon node against the runtime policy the framework packages ship, and fails if that policy would drop any element, attribute, or value. This is why [React](/docs/react) components render named icons without sanitizing them in the browser.
+`bun run icons:build` also checks every generated icon node against the runtime policy the framework packages ship, and fails if that policy would drop any element, attribute, or value. Named icons rely on that check instead of sanitizing their own icon data on every render:
+
+- [React](/docs/react) named icons skip the runtime sanitizer entirely. React already blocks `javascript:` URLs and ignores string event handlers.
+- [Preact](/docs/preact), [Vue](/docs/vue), and [Solid](/docs/solid) named icons skip the icon-node sanitizer, so it drops out of app bundles, but still sanitize root props and `color`, because these frameworks render string event handlers and `innerHTML` as given.
+- [Svelte](/docs/svelte), [Astro](/docs/astro), and [Angular](/docs/angular) icons accept caller icon data on every icon, so they keep the sanitizer and skip it only for the icon's own generated data.
+
+`Icon`, `createVadivamIcon`, and the dynamic APIs still sanitize everything that comes from outside the package.
 
 ## What gets built
 
