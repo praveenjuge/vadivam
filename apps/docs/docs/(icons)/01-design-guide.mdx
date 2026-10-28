@@ -31,8 +31,9 @@ These rules describe how the Vadivam icons are drawn. The numbers come from meas
 
 - **Checked.** The canvas is `24×24` with `viewBox="0 0 24 24"`.
 - **Checked.** Keep 1px of padding. With round caps and joins, a 2px stroke reaches 1px past its centerline in every direction, so ink stays inside 1–23 and centerlines stay inside 2–22. All 1,903 icons pass.
-- Use the live area. 81.6% of icons reach the padding line on at least one side, and the median icon's ink is 22px across its larger dimension. Only 12.6% stay inside 2–22. Line arrows are the exception; see [Arrows](#arrows).
-- Center the drawing. In 98.6% of icons, the center of the ink's bounding box is within 0.5px of (12, 12). Asymmetric icons may shift for optical balance, as arrows do.
+- Use the live area. 81.2% of icons reach the padding line on at least one side, and the median icon's ink is 22px across its larger dimension. Only 13.0% stay inside 2–22. Line arrows are the exception; see [Arrows](#arrows).
+- Center the drawing. In 98.6% of icons, the center of the ink's bounding box is within 0.5px of (12, 12).
+- Center asymmetric icons optically. When most of the ink sits on one side, a box-centered icon looks shifted toward it. Move the icon by whole pixels until the center of its ink box and its ink centroid fall on either side of (12, 12), as [arrows](#arrows) do. The same rule moves `chevron-first`, `chevron-last`, the sort arrows such as `arrow-down-a-z`, `gauge`, `wine`, `triangle-right`, and objects standing on a ground line such as `door-closed` and `microscope`. Icons that align to an edge by meaning, such as `align-*` and the `chart-*` axes, stay where they are.
 
 ## Stroke
 
@@ -53,11 +54,12 @@ These rules describe how the Vadivam icons are drawn. The numbers come from meas
 
 A 2px stroke centered on a whole-number coordinate covers exactly two pixel rows at 24px, so it renders solid. Centered on a half pixel, the same stroke covers one full row and two half rows, and renders blurred. So, for crisp edges:
 
-- Put horizontal and vertical lines on whole-pixel coordinates. 93.6% of the set's 6,933 horizontal and vertical straight segments do (94.4% of those at least 2px long). In 87.7% of icons, every one does.
+- Put horizontal and vertical lines on whole-pixel coordinates. 97.2% of the set's 6,858 horizontal and vertical straight segments do (98.0% of those at least 2px long). In 94.5% of icons, every one does.
+- Move an off-grid line only when the drawing survives it. Move it with the corners that carry it, or move the whole detail, as `file` does with its 4–20 frame. Keep the move only if every arrowhead stays centered on its shaft, no gap gets narrower, and a symmetric shape stays symmetric. The `bell`, `corner-*` arrow, `pencil`, and `user-group` families keep their off-grid lines because no move passes.
 - **Checked.** A horizontal or vertical line at least 1px long that sits less than 0.1px off a whole pixel is an export slip, not a choice. `bun run icons:optimize` snaps it onto the whole pixel, along with every point that shares its coordinate, so strokes meeting it move with it. Lines 0.1px or more off, such as those on half pixels, are left as drawn.
-- Start rectangles on whole pixels: 96.4% of rectangle corners do.
-- Center circles on whole pixels where you can (75.6%), or on half pixels (13.6%) when an odd-sized detail needs it.
-- Let curves and diagonals follow the shape. Only 44.4% of all vertices are on whole pixels, because arc and curve endpoints land wherever the shape puts them, and smoothed corners start part-way along each edge. Of 3,120 diagonal segments, 39% run at 45°.
+- Start rectangles on whole pixels: 97.1% of rectangle corners do.
+- Center circles on whole pixels where you can (77.4%), or on half pixels (17.4%) when an odd-sized detail needs it.
+- Let curves and diagonals follow the shape. Only 45.4% of all vertices are on whole pixels, because arc and curve endpoints land wherever the shape puts them, and smoothed corners start part-way along each edge. Of 2,634 diagonal segments, 33% run at 45°.
 - Path data keeps at most 3 decimal places. `bun run icons:optimize` rounds it.
 
 ## Keyline shapes
@@ -76,13 +78,13 @@ Start from these base shapes. Each is drawn as its own icon, so it can be checke
 | Shape | Geometry | Defined by | Measured use |
 | --- | --- | --- | --- |
 | Circle | r 10 at (12, 12) | [`circle`](/?icon=circle) | 77 full circles, all centered on (12, 12) |
-| Square | 20×20 at (2, 2), r 6 | [`square`](/?icon=square) | 82 rectangles at 20×20, 80 of them with r 6 |
-| Portrait | 14×20 at (5, 2), r 4 | [`rectangle-vertical`](/?icon=rectangle-vertical) | 13 rectangles at 14×20, at r 4 or r 3 |
-| Landscape | 20×14 at (2, 5), r 4 | [`rectangle-horizontal`](/?icon=rectangle-horizontal) | 16 rectangles at 20×14, all with r 4 (the `monitor` family) |
+| Square | 20×20 at (2, 2), r 6 | [`square`](/?icon=square) | 83 rectangles at 20×20, 81 of them with r 6 |
+| Portrait | 14×20 at (5, 2), r 4 | [`rectangle-vertical`](/?icon=rectangle-vertical) | 15 rectangles at 14×20, at r 4 or r 3 |
+| Landscape | 20×14 at (2, 5), r 4 | [`rectangle-horizontal`](/?icon=rectangle-horizontal) | 15 rectangles at 20×14, all with r 4 (the `monitor` family) |
 
-Landscape frames usually need more height than 14px. The common alternatives are 20×18 at (2, 4) with r 5.5, used 8 times (the `calendar` family), and 16×12 at (2, 6) with r 3.75, used 8 times. Both radii are the largest that leave room for full corner smoothing on the shorter side.
+Landscape frames usually need more height than 14px. The common alternatives are 20×18 at (2, 4) with r 5.5, used 15 times (the `calendar` family), and 16×12 at (2, 6) with r 3.75, used 8 times. Both radii are the largest that leave room for full corner smoothing on the shorter side.
 
-Small circles use radius 2 (79 circles), 3 (56), 1 (35), 3.5 (31), or 2.5 (30).
+Small circles use radius 2 (79 circles), 3 (56), 1 (35), 3.5 (31), or 2.5 (31).
 
 ### Arrows
 
@@ -112,17 +114,17 @@ An arrow is an open shape, so drawn to the padding it looks larger than a circle
 </div>
 </Visibility>
 
-- Round every rectangle. None of the 338 axis-aligned rectangles in the set has a sharp corner.
+- Round every rectangle. None of the 343 axis-aligned rectangles in the set has a sharp corner.
 - Make the radius about 30% of the rectangle's shorter side, on a 0.5px step where you can. The median ratio is 0.30; 80% of rectangles fall between 0.29 and 0.50.
-- For sides of 8px or more, the common radii are 6 (84 rectangles), 2.5 (49), 4 (37), and 3 (18).
-- For sides under 8px, the common radii are 2 (40), 1.5 (18), and 2.5 (18). A 4px-wide bar becomes a pill with r 2.
-- Draw corners as circular arcs, then let `bun run icons:optimize` smooth them. Don't draw the smoothing by hand. The set has 6,858 circular arc commands with a median radius of 3.5.
+- For sides of 8px or more, the common radii are 6 (84 rectangles), 2.5 (46), 4 (36), and 3 (18).
+- For sides under 8px, the common radii are 2 (43), 1.5 (18), and 2.5 (18). A 4px-wide bar becomes a pill with r 2.
+- Draw corners as circular arcs, then let `bun run icons:optimize` smooth them. Don't draw the smoothing by hand. The set has 6,862 circular arc commands with a median radius of 3.5.
 
 ### Corner smoothing
 
-- **Checked.** Smooth every rounded corner at 60%, the same curve as iOS and Figma's iOS preset. A smoothed corner leaves the straight edge on a cubic curve, turns through a shorter arc of the same radius, and eases back onto the next edge, so the bend has no sudden start. `bun run icons:optimize` applies it to every circular arc that meets two straight lines tangentially, using the construction in `scripts/corner-smoothing.mjs`, and `bun run icons:check` rejects any such corner left as a plain arc. 2,880 of the set's 2,881 such corners are smoothed; the last is below.
-- Leave room for it. A 60% corner reaches 1.6 times its radius along each edge, so it fits when the radius is at most the edge ÷ 3.2 (6.25 on a 20px side, 2.5 on an 8px side). Where it doesn't fit on an edge of 8px or more, optimize tightens the radius to the largest 0.25px step that does: a 20×18 frame gets r 5.5, and an 8×8 tile gets r 2.5. 2,189 corners (76.0%) are at the full 60%.
-- On edges under 8px, and at corners sharper than 90°, the radius is kept and the corner gets as much smoothing as the edge allows, as Figma does. Tightening a sharp corner would push its tip outward. These 691 corners have a median smoothing of 33%. A corner with room for less than 5% smoothing keeps its plain arc, since that little is invisible: the r 7 corner in `webcam-off` has only 0.05px of straight edge on each side.
+- **Checked.** Smooth every rounded corner at 60%, the same curve as iOS and Figma's iOS preset. A smoothed corner leaves the straight edge on a cubic curve, turns through a shorter arc of the same radius, and eases back onto the next edge, so the bend has no sudden start. `bun run icons:optimize` applies it to every circular arc that meets two straight lines tangentially, using the construction in `scripts/corner-smoothing.mjs`, and `bun run icons:check` rejects any such corner left as a plain arc. 2,869 of the set's 2,870 such corners are smoothed; the last is below.
+- Leave room for it. A 60% corner reaches 1.6 times its radius along each edge, so it fits when the radius is at most the edge ÷ 3.2 (6.25 on a 20px side, 2.5 on an 8px side). Where it doesn't fit on an edge of 8px or more, optimize tightens the radius to the largest 0.25px step that does: a 20×18 frame gets r 5.5, and an 8×8 tile gets r 2.5. 2,201 corners (76.7%) are at the full 60%.
+- On edges under 8px, and at corners sharper than 90°, the radius is kept and the corner gets as much smoothing as the edge allows, as Figma does. Tightening a sharp corner would push its tip outward. These 668 corners have a median smoothing of 33%. A corner with room for less than 5% smoothing keeps its plain arc, since that little is invisible: the r 7 corner in `webcam-off` has only 0.05px of straight edge on each side.
 - Some arcs are not corners and stay circular: bends that turn less than 30°, arcs with no straight line on one side (pill ends, curved stroke ends), and corners where another stroke attaches at the end of the arc, such as the pins on some `calendar-*` icons and folded file corners.
 
 Lucide uses circular 2px corners on shapes 8px and up and 1px below. Vadivam's larger, smoothed radii are what give it its softer look, so don't copy Lucide's corners.
@@ -139,9 +141,9 @@ Lucide uses circular 2px corners on shapes 8px and up and 1px below. Vadivam's l
 
 Separate parts of an icon either join or leave a readable gap:
 
-- Leave a 2px gap between separate elements by default. In the set, 68.7% of separate parts that come within 6px of each other keep at least 2px; 2px is the most common gap (1,322 pairs).
-- Never go below 1.5px. 1.5px is the second most common gap (1,309 pairs), used where 2px doesn't fit, such as the dot under a bar. In 87.2% of icons with separate parts, every gap is at least 1.5px.
-- Don't leave a near miss. If two strokes come closer than 1.5px, join them. 63 icons, including `image`, `earth`, and `train-front-tunnel`, have a stroke ending 0.3–2px short of another, so the strokes merge into a blob without meeting.
+- Leave a 2px gap between separate elements by default. In the set, 69.8% of separate parts that come within 6px of each other keep at least 2px; 2px is the most common gap (1,350 pairs).
+- Never go below 1.5px. 1.5px is the second most common gap (1,294 pairs), used where 2px doesn't fit, such as the dot under a bar. In 89.3% of icons with separate parts, every gap is at least 1.5px.
+- **Checked.** Don't leave a near miss. A stroke that ends 0.3–2px short of another stroke's centerline overlaps it without meeting it, so the two merge into a blob. Join them, or keep at least 1.5px between them. A stroke that runs on past another one on purpose, like the towers of `bridge` or the pins on `calendar-*`, is an overhang, not a near miss.
 
 These figures measure the gap between separate subpaths: their centerline distance minus the 2px stroke. Gaps within a single subpath, such as between the turns of a spiral, are not measured.
 
@@ -162,7 +164,7 @@ Compare a new icon with `circle` and `square` at 24px. Its ink should look about
 - Icons above about 36% (`grid-3x3`, `fence`, and `table-columns-split` are around 44–46%) are as dense as an icon should get. Simplify before going further.
 - Reuse base shapes exactly. `square-plus` draws the `square` frame unchanged, and so do 49 of the 78 `square-*` icons. 33 of the 48 `circle-*` icons contain the full r 10 circle. The rest break the frame for dashes or to make room for a badge, but keep its geometry.
 - Put modifiers, such as a plus or a slash, in the same place and at the same size across a family.
-- Keep icons simple. The median icon is 1 `<path>` with 3 subpaths and 13 segments. 1,347 icons use 1 path, 532 use 2, 23 use 3, and 1 uses 4. The most complex has 14 subpaths.
+- Keep icons simple. The median icon is 1 `<path>` with 3 subpaths and 13 segments. 1,348 icons use 1 path, 531 use 2, 23 use 3, and 1 uses 4. The most complex has 14 subpaths.
 
 ## Naming
 

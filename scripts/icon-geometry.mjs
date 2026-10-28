@@ -519,6 +519,50 @@ function smoothedRectCorners(subpath, box, gaps, tolerance) {
   return { r, smoothing: Math.round(smoothing * 100) / 100 };
 }
 
+/**
+ * Stroke ends that stop 0.3–2px short of another stroke's centerline. With a
+ * 2px stroke the two overlap without meeting and render as a blob. An end
+ * already past the other centerline is an overhang drawn on purpose, and is
+ * not counted. Returns [{ point, distance }].
+ */
+export function shortStrokeEnds(subpaths) {
+  const samples = subpaths.map((subpath) => sampleSubpath(subpath, 0.05));
+  const lengths = samples.map((points) => points.length * 0.05);
+  const ends = [];
+  subpaths.forEach((subpath, index) => {
+    const last = subpath.segments.at(-1);
+    if (!last || lengths[index] < 0.1 || subpath.closed || samePoint(subpath.start, last.to, 1e-3)) return;
+    for (const atStart of [true, false]) {
+      const point = atStart ? subpath.start : last.to;
+      let nearest = null;
+      let distance = Infinity;
+      samples.forEach((points, other) => {
+        if (lengths[other] < 0.1) return;
+        points.forEach((sample, position) => {
+          const d = Math.hypot(sample[0] - point[0], sample[1] - point[1]);
+          // The stroke's own body counts only where it folds back toward this end.
+          if (other === index) {
+            const along = (atStart ? position : points.length - 1 - position) * 0.05;
+            if (along <= Math.max(4, 3 * d)) return;
+          }
+          if (d < distance) {
+            distance = d;
+            nearest = sample;
+          }
+        });
+      });
+      if (!(distance >= 0.3 && distance < 2)) continue;
+      const segment = atStart ? subpath.segments[0] : last;
+      const along = sampleSegment(segment, 64);
+      const inner = atStart ? along[1] : along.at(-2);
+      const direction = [point[0] - inner[0], point[1] - inner[1]];
+      if (direction[0] * (nearest[0] - point[0]) + direction[1] * (nearest[1] - point[1]) <= 0) continue;
+      ends.push({ point, distance });
+    }
+  });
+  return ends;
+}
+
 /** Shortest distance between two point samples, pruned by their bounding boxes. */
 function minDistance(a, b, boxA, boxB, limit) {
   const gapX = Math.max(0, boxA.minX - boxB.maxX, boxB.minX - boxA.maxX);

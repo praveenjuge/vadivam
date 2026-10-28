@@ -141,15 +141,19 @@ function joinSubpaths(subpaths) {
   return { subpaths: output, joins: links.size / 2 };
 }
 
-// Straight runs split into pieces become one line, and zero-length lines go.
+// Straight runs split into pieces become one line, and lines shorter than a
+// stub inside a longer stroke go: they are stray nodes from the export.
 function mergeLines(subpath) {
   const segments = [];
   let merges = 0;
+  let nodes = 0;
   for (const segment of subpath.segments) {
     const last = segments.at(-1);
-    if (segment.type === "L" && subpath.segments.length > 1 && distance(segment.from, segment.to) <= 1e-4) {
+    const length = distance(segment.from, segment.to);
+    if (segment.type === "L" && !segment.closing && subpath.segments.length > 1 && length < stubLength) {
       if (last) last.to = segment.to;
-      merges += 1;
+      if (length <= 1e-4) merges += 1;
+      else nodes += 1;
       continue;
     }
     if (last?.type === "L" && segment.type === "L") {
@@ -163,7 +167,7 @@ function mergeLines(subpath) {
     }
     segments.push({ ...segment });
   }
-  return { subpath: { ...subpath, segments }, merges };
+  return { subpath: { ...subpath, segments }, merges, nodes };
 }
 
 /** Coordinates of horizontal (axis 1) and vertical (axis 0) lines just off a whole pixel. */
@@ -213,7 +217,7 @@ export function cleanPaths(paths) {
   const long = all.map((subpath) => subpathLength(subpath) >= stubLength);
   // Only stubs need the other strokes sampled, to see whether they are hidden.
   const samples = long.every(Boolean) ? [] : all.map((subpath, index) => (long[index] ? sampleSubpath(subpath, 0.02) : null));
-  const counts = { debris: 0, joins: 0, merges: 0, snaps: 0 };
+  const counts = { debris: 0, joins: 0, merges: 0, nodes: 0, snaps: 0 };
   const lines = offGridLines(all);
   counts.snaps = new Set(lines.map(({ axis, value }) => `${axis}:${value}`)).size;
   const cleaned = parsed.map((subpaths) => {
@@ -233,10 +237,11 @@ export function cleanPaths(paths) {
     return snapped.map((subpath) => {
       const merged = mergeLines(subpath);
       counts.merges += merged.merges;
+      counts.nodes += merged.nodes;
       return merged.subpath;
     });
   });
-  const changed = counts.debris + counts.joins + counts.merges + counts.snaps > 0;
+  const changed = counts.debris + counts.joins + counts.merges + counts.nodes + counts.snaps > 0;
   return {
     paths: changed ? cleaned.map((subpaths) => (subpaths.length ? serializePath(subpaths) : null)) : paths,
     ...counts,

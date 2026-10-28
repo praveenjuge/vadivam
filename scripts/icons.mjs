@@ -10,7 +10,7 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
-import { inkBounds } from "./icon-geometry.mjs";
+import { inkBounds, parsePath, shortStrokeEnds } from "./icon-geometry.mjs";
 import { findUnsmoothedCorners, reattachEnds, smoothCorners } from "./corner-smoothing.mjs";
 import { cleanPaths, gridTolerance } from "./path-cleanup.mjs";
 import { optimize } from "svgo";
@@ -334,7 +334,9 @@ export function validateSvgContent(svg, file = "inline.svg") {
   visit(node, "svg");
   assert(count > 0, `${file}: no drawable elements found`);
   assertInkInsidePadding(shapes, file);
-  assertCleanPaths(shapes.filter(([tag]) => tag === "path").map(([, attrs]) => attrs.d), file);
+  const paths = shapes.filter(([tag]) => tag === "path").map(([, attrs]) => attrs.d);
+  assertCleanPaths(paths, file);
+  assertStrokesMeet(paths, file);
 }
 
 // Every rounded corner between two straight lines must use the smoothed
@@ -382,16 +384,27 @@ function assertInkInsidePadding(shapes, file) {
 // strokes split where they meet, and no lines just off the whole-pixel grid.
 function assertCleanPaths(paths, file) {
   if (paths.length === 0) return;
-  const { debris, joins, merges, snaps } = cleanPaths(paths);
+  const { debris, joins, merges, nodes, snaps } = cleanPaths(paths);
   const problems = [
     debris && `${debris} stray subpath(s)`,
     joins && `${joins} stroke(s) split where they meet`,
     merges && `${merges} straight line(s) split in pieces`,
+    nodes && `${nodes} line(s) shorter than 0.05px inside a stroke`,
     snaps && `${snaps} line(s) less than ${gridTolerance}px off the whole-pixel grid`,
   ].filter(Boolean);
   assert(
     problems.length === 0,
     `${file}: ${problems.join(", ")}; run bun run icons:optimize to clean the path data`,
+  );
+}
+
+// A stroke that stops just short of another overlaps it without meeting it.
+function assertStrokesMeet(paths, file) {
+  const ends = shortStrokeEnds(paths.flatMap((d) => parsePath(d)));
+  const format = (value) => Number(value.toFixed(2));
+  assert(
+    ends.length === 0,
+    `${file}: ${ends.length} stroke end(s) stop short of another stroke (first ${format(ends[0]?.distance ?? 0)}px short near ${format(ends[0]?.point[0] ?? 0)}, ${format(ends[0]?.point[1] ?? 0)}); join them, or leave a gap of at least 1.5px`,
   );
 }
 
