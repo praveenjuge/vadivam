@@ -140,7 +140,9 @@ describe("website SEO", () => {
     );
     expect(html).toContain("Free, open-source icons for");
     expect(html).toContain("Copy prompt for AI agents");
-    expect(html).toContain("Set up Vadivam icons in this project");
+    // The prompt ships in a hidden, read-only textarea that the copy button
+    // reveals with its text selected when the browser blocks the clipboard.
+    expect(html).toMatch(/<textarea[^>]*id="agentPromptText"[^>]*readonly[^>]*hidden[^>]*>Set up Vadivam icons in this project/);
     expect(html).toContain('href="/icons/activity"');
     expect(html).toContain('data-tab="react-native"');
     expect(html).toContain("vadivam-react-native");

@@ -192,10 +192,18 @@ const structuredData = site
             <span class="hidden group-data-[state=failed]:flex"><VIcon name="x" size={15} /></span>
             <span class="group-data-[state]:hidden">Copy prompt for AI agents</span>
             <span class="hidden group-data-[state=copied]:inline">Copied. Paste it into your agent</span>
-            <span class="hidden group-data-[state=failed]:inline">Your browser blocked copying. Try again</span>
+            <span class="hidden group-data-[state=failed]:inline">Your browser blocked copying. Copy it from below</span>
             <span class="flex transition-transform group-hover:translate-x-0.5 group-data-[state]:hidden"><VIcon name="arrow-right" size={14} /></span>
           </button>
           <span class="sr-only" id="agentPromptStatus" aria-live="polite"></span>
+          {/* Shown, with its text selected, only when the browser refuses the clipboard. */}
+          <textarea
+            class="mt-3 block h-40 w-full max-w-[62rem] resize-y rounded-lg border border-border bg-muted/40 p-3 font-mono text-[0.75rem] leading-relaxed text-foreground outline-none focus:border-accent"
+            id="agentPromptText"
+            aria-label="Prompt for AI agents"
+            readonly
+            hidden
+          >{agentPrompt}</textarea>
         </div>
       </div>
       <div class="hidden size-36 md:block lg:size-40">
@@ -388,7 +396,6 @@ const structuredData = site
   </footer>
 
   <script is:inline type="application/json" id="snippetTemplates" set:html={snippetTemplates}></script>
-  <script is:inline type="application/json" id="agentPrompt" set:html={serializeForScript(agentPrompt)}></script>
   <script is:inline type="application/json" id="siteVersion" set:html={JSON.stringify(pkg.version)}></script>
 
   <script>
@@ -910,22 +917,25 @@ const structuredData = site
         tab.addEventListener("click", () => chooseTab(tab.dataset.tab ?? "react"));
       }
 
-      const agentPrompt: string = JSON.parse(document.getElementById("agentPrompt")?.textContent ?? '""');
+      const agentPromptText = document.querySelector<HTMLTextAreaElement>("#agentPromptText")!;
       const agentPromptStatus = document.querySelector<HTMLElement>("#agentPromptStatus")!;
       let agentPromptTimer: ReturnType<typeof setTimeout> | undefined;
       document.querySelector("#agentPromptCopy")?.addEventListener("click", async (event) => {
         const button = event.currentTarget as HTMLButtonElement;
         let copied = true;
         try {
-          await copyText(agentPrompt);
+          await copyText(agentPromptText.value);
         } catch {
-          // Clipboard access can be refused; say so on the button instead of failing silently.
+          // Clipboard access can be refused; show the prompt selected so it can be copied by hand.
           copied = false;
+          agentPromptText.hidden = false;
+          agentPromptText.focus();
+          agentPromptText.select();
         }
         button.dataset.state = copied ? "copied" : "failed";
         agentPromptStatus.textContent = copied
           ? "Prompt copied. Paste it into your agent."
-          : "Your browser blocked copying. Try again.";
+          : "Your browser blocked copying. The prompt is selected below.";
         clearTimeout(agentPromptTimer);
         agentPromptTimer = setTimeout(() => {
           delete button.dataset.state;
