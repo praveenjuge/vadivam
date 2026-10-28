@@ -9,21 +9,33 @@ import pkg from "../../../package.json";
 import ActionMenus from "./_lib/ActionMenus.astro";
 import Customizer from "./_lib/Customizer.astro";
 import VIcon from "./_lib/VIcon.astro";
+import { agentPrompt } from "./_lib/agent-prompt";
+import IconSketch from "./_lib/IconSketch.astro";
 import { SVG_OPEN_TAG, buildSnippetTemplates, serializeForScript } from "./_lib/snippet-templates";
 
 const { config } = data;
 
-const figmaIcon = `<svg viewBox="0 0 38 57" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path fill="#F24E1E" d="M0 9.5C0 4.253 4.253 0 9.5 0H19v19H9.5C4.253 19 0 14.747 0 9.5Z"/><path fill="#FF7262" d="M19 0h9.5C33.747 0 38 4.253 38 9.5S33.747 19 28.5 19H19V0Z"/><path fill="#A259FF" d="M0 28.5C0 23.253 4.253 19 9.5 19H19v19H9.5C4.253 38 0 33.747 0 28.5Z"/><path fill="#1ABCFE" d="M19 19h9.5C33.747 19 38 23.253 38 28.5S33.747 38 28.5 38H19V19Z"/><path fill="#0ACF83" d="M0 47.5C0 42.253 4.253 38 9.5 38H19v9.5C19 52.747 14.747 57 9.5 57S0 52.747 0 47.5Z"/></svg>`;
 
 const codeTabs = [...frameworks.map(({ id, label }) => ({ id, label })), { id: "svg", label: "SVG" }];
-// The install line follows the same framework choice as the drawer's tabs.
-const installTargets = [
-  ...frameworks.map(({ id, label, packageName }) => ({ id, label, packageName })),
-  { id: "svg", label: "SVG / JS", packageName: "vadivam" },
+// The hero's sentence names every package and tool, each with its mark.
+type HeroLink = { label: string; href: string; logo?: string; logoClass?: string; icon?: "file-code" | "bot"; external?: boolean };
+const packageLinks: HeroLink[] = [
+  ...frameworks.map(({ id, label }) => ({ label, href: `/docs/${id}`, logo: id === "react-native" ? "react" : id })),
+  { label: "SVG", href: "/docs/core", icon: "file-code" },
 ];
-
-const linkClass =
-  "inline-flex flex-none items-center gap-1.5 rounded-md px-1.5 py-1 text-xs text-muted-foreground no-underline transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const toolLinks: HeroLink[] = [
+  { label: "shadcn/ui", href: "/docs/shadcn", logo: "shadcn", logoClass: "dark:invert" },
+  { label: "MCP", href: "/docs/mcp", icon: "bot" },
+  { label: "Iconify", href: "https://icon-sets.iconify.design/vadivam/", logo: "iconify", external: true },
+  { label: "Figma", href: "https://www.figma.com/community/plugin/1661323620355050204/vadivam-icons", logo: "figma", external: true },
+];
+const logoClass = "me-1 inline-block size-3.5 align-[-0.15em] object-contain";
+const inlineLinkClass =
+  "whitespace-nowrap text-foreground no-underline decoration-border underline-offset-4 transition-colors hover:underline hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const promptButtonClass =
+  "group inline-flex flex-none items-center gap-1.5 rounded-md border-0 bg-foreground px-2.5 py-1.5 text-xs font-medium text-background transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+const quietLinkClass =
+  "border-0 bg-transparent p-0 text-xs text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 const iconButtonClass =
   "grid size-7 flex-none place-items-center rounded-md border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 disabled:hover:bg-transparent";
 const smallCopyClass =
@@ -140,7 +152,7 @@ const structuredData = site
   {structuredData && <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />}
 
   <main id="iconExplorer" class="w-full px-4 pb-8 md:px-6">
-    <header class="grid gap-x-10 gap-y-5 pt-6 pb-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+    <header class="grid gap-x-10 gap-y-5 pt-6 pb-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
       <div class="grid min-w-0 gap-2.5">
         <p class="m-0 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[0.7rem] uppercase tracking-[0.08em] text-muted-foreground">
           <span>{iconCount} icons</span>
@@ -154,41 +166,69 @@ const structuredData = site
         <h1 class="m-0 text-balance text-[clamp(1.625rem,3vw,2.25rem)] font-semibold leading-[1.1] tracking-[-0.03em]">
           Icons shaped for interfaces.
         </h1>
-        <p class="m-0 max-w-[58ch] text-sm text-muted-foreground">
-          <em class="text-foreground">Vadivam</em> (<span lang="ta">வடிவம்</span>) is Tamil for “shape.” A free, open-source icon
-          set made for designers and developers building thoughtful digital experiences.
+        <p class="m-0 max-w-[62rem] text-sm leading-relaxed text-muted-foreground">
+          <em class="text-foreground">Vadivam</em> (<span lang="ta">வடிவம்</span>) is Tamil for “shape.” Free, open-source icons for{" "}
+          {packageLinks.map((link, index) => (
+            <Fragment>
+              {index > 0 && (index === packageLinks.length - 1 ? ", and " : ", ")}
+              <a class={inlineLinkClass} href={link.href}>
+                {link.logo ? <img class:list={[logoClass, link.logoClass]} src={`/frameworks/${link.logo}.svg`} width="14" height="14" alt="" /> : <VIcon name={link.icon!} size={14} class="me-1 align-[-0.15em]" />}{link.label}
+              </a>
+            </Fragment>
+          ))}, with{" "}
+          {toolLinks.map((link, index) => (
+            <Fragment>
+              {index > 0 && (index === toolLinks.length - 1 ? ", and " : ", ")}
+              <a class={inlineLinkClass} href={link.href} {...(link.external && { target: "_blank", rel: "noreferrer" })}>
+                {link.logo ? <img class:list={[logoClass, link.logoClass]} src={`/frameworks/${link.logo}.svg`} width="14" height="14" alt="" /> : <VIcon name={link.icon!} size={14} class="me-1 align-[-0.15em]" />}{link.label}
+              </a>
+            </Fragment>
+          ))}.
         </p>
-      </div>
-
-      <div class="grid min-w-0 gap-2.5 lg:w-[26rem]">
-        <div class="flex min-w-0 items-center rounded-lg border border-border bg-muted/40 ps-1 pe-1 text-sm">
-          <label class="sr-only" for="installTarget">Package</label>
-          <span class="group relative flex flex-none">
-            <select
-              class="cursor-pointer appearance-none rounded-md border-0 bg-transparent py-1.5 ps-2 pe-7 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
-              id="installTarget"
-            >
-              {installTargets.map((target) => (
-                <option value={target.id} data-package={target.packageName}>{target.label}</option>
-              ))}
-            </select>
-            <VIcon name="chevron-down" size={14} class="pointer-events-none absolute inset-y-0 end-2 items-center text-muted-foreground group-hover:text-foreground" />
-          </span>
-          <span class="h-5 w-px flex-none bg-border" aria-hidden="true"></span>
-          <code class="min-w-0 flex-1 truncate bg-transparent px-2.5 py-2 font-mono text-[0.8rem] text-foreground" id="installCommand">npm i vadivam-react</code>
-          <button class:list={[iconButtonClass, "data-[copied]:text-accent"]} type="button" id="installCopy" aria-label="Copy install command"><VIcon name="copy" size={15} /></button>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
+          <button
+            class="group inline-flex items-center gap-2 rounded-md border-0 bg-transparent p-0 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+            type="button"
+            data-agent-prompt-copy
+          >
+            <span class="flex group-data-[copied]:hidden"><VIcon name="sparkles" size={15} /></span>
+            <span class="hidden group-data-[copied]:flex"><VIcon name="check" size={15} /></span>
+            <span class="group-data-[copied]:hidden">Copy prompt for AI agents</span>
+            <span class="hidden group-data-[copied]:inline">Copied. Paste it into your agent</span>
+            <span class="flex transition-transform group-hover:translate-x-0.5 group-data-[copied]:hidden"><VIcon name="arrow-right" size={14} /></span>
+          </button>
+          <span class="h-3.5 w-px bg-border" aria-hidden="true"></span>
+          <button class={quietLinkClass} type="button" popovertarget="agentPrompt">View prompt</button>
+          <span class="sr-only" id="agentPromptStatus" aria-live="polite"></span>
         </div>
-        <nav class="flex flex-wrap items-center gap-x-1 gap-y-1" aria-label="Resources">
-          <a class={linkClass} href="/docs"><VIcon name="book-open" size={14} />Docs</a>
-          <a class={linkClass} href="https://www.figma.com/community/plugin/1661323620355050204/vadivam-icons" target="_blank" rel="noreferrer">
-            <span class="inline-flex size-3.5 [&>svg]:size-3.5" set:html={figmaIcon} />Figma
-          </a>
-          <a class={linkClass} href="/docs/shadcn"><VIcon name="blocks" size={14} />shadcn/ui</a>
-          <a class={linkClass} href="/docs/mcp"><VIcon name="bot" size={14} />MCP</a>
-          <a class={linkClass} href="https://icon-sets.iconify.design/vadivam/" target="_blank" rel="noreferrer"><img class="size-3.5" src="/frameworks/iconify.svg" width="14" height="14" alt="" />Iconify</a>
-        </nav>
+      </div>
+      <div class="hidden size-36 md:block lg:size-40">
+        <IconSketch />
       </div>
     </header>
+      <div
+        class="m-auto w-[min(42rem,calc(100vw-2rem))] max-h-[min(36rem,calc(100dvh-4rem))] overflow-hidden rounded-blume border border-border bg-background p-0 text-foreground shadow-lg backdrop:bg-black/30 open:flex open:flex-col"
+        id="agentPrompt"
+        popover
+        aria-label="Prompt for AI agents"
+      >
+        <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
+          <p class="m-0 text-sm font-medium">Prompt for AI agents</p>
+          <button class={iconButtonClass} type="button" popovertarget="agentPrompt" popovertargetaction="hide" aria-label="Close"><VIcon name="x" size={16} /></button>
+        </div>
+        <pre class="m-0 min-h-0 flex-1 overflow-auto whitespace-pre-wrap bg-transparent px-4 py-3 font-mono text-[0.75rem] leading-relaxed text-muted-foreground" id="agentPromptText">{agentPrompt}</pre>
+        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-4 py-2.5">
+          <p class="m-0 text-xs text-muted-foreground">
+            Paste into Claude Code, Cursor, Codex, Copilot, or any coding agent. <a class="text-foreground underline underline-offset-4" href="/docs/ai-agents">How agents use Vadivam</a>
+          </p>
+          <button class={promptButtonClass} type="button" data-agent-prompt-copy>
+            <span class="flex group-data-[copied]:hidden"><VIcon name="copy" size={13} /></span>
+            <span class="hidden group-data-[copied]:flex"><VIcon name="check" size={13} /></span>
+            <span class="group-data-[copied]:hidden">Copy prompt</span>
+            <span class="hidden group-data-[copied]:inline">Copied</span>
+          </button>
+        </div>
+      </div>
 
     <section aria-label="Icon library">
       {/* Sticky under Blume's 4rem header, so search stays at hand while browsing. */}
@@ -411,8 +451,6 @@ const structuredData = site
       const results = document.querySelector<HTMLElement>("#iconResults")!;
       const emptyState = document.querySelector<HTMLElement>("#emptyState")!;
       const emptyQuery = document.querySelector<HTMLElement>("#emptyQuery")!;
-      const installTarget = document.querySelector<HTMLSelectElement>("#installTarget")!;
-      const installCommand = document.querySelector<HTMLElement>("#installCommand")!;
       const tooltip = document.querySelector<HTMLElement>("#iconTooltip")!;
       const drawer = document.querySelector<HTMLElement>("#iconDrawer")!;
       const drawerName = document.querySelector<HTMLElement>("#drawerName")!;
@@ -885,11 +923,6 @@ const structuredData = site
         signal.addEventListener("abort", () => clearTimeout(timer));
       }
 
-      // The hero's install line and the drawer's tabs share one framework choice.
-      const syncInstall = () => {
-        installTarget.value = activeTab;
-        installCommand.textContent = `npm i ${installTarget.selectedOptions[0]?.dataset.package ?? "vadivam-react"}`;
-      };
       const chooseTab = (tab: string) => {
         activeTab = tab;
         try {
@@ -897,29 +930,36 @@ const structuredData = site
         } catch {
           // Storage can be unavailable; the tab still switches.
         }
-        syncInstall();
         render();
       };
       for (const tab of tabButtons) {
         tab.addEventListener("click", () => chooseTab(tab.dataset.tab ?? "react"));
       }
-      installTarget.addEventListener("change", () => chooseTab(installTarget.value));
-      document.querySelector("#installCopy")?.addEventListener("click", async (event) => {
-        const button = event.currentTarget as HTMLButtonElement;
-        try {
-          await copyText(installCommand.textContent ?? "");
-          button.setAttribute("aria-label", "Copied");
-          button.dataset.copied = "";
-          setTimeout(() => {
-            button.setAttribute("aria-label", "Copy install command");
-            delete button.dataset.copied;
-          }, 1500);
-        } catch {
-          // Clipboard access can be refused; select the command so it can be copied by hand.
-          getSelection()?.selectAllChildren(installCommand);
-        }
-      });
-      syncInstall();
+
+      const agentPromptText = document.querySelector<HTMLElement>("#agentPromptText")!;
+      const agentPromptStatus = document.querySelector<HTMLElement>("#agentPromptStatus")!;
+      let agentPromptTimer: ReturnType<typeof setTimeout> | undefined;
+      const agentPromptButtons = document.querySelectorAll<HTMLButtonElement>("[data-agent-prompt-copy]");
+      for (const button of agentPromptButtons) {
+        button.addEventListener("click", async () => {
+          try {
+            await copyText(agentPromptText.textContent ?? "");
+            clearTimeout(agentPromptTimer);
+            for (const other of agentPromptButtons) delete other.dataset.copied;
+            button.dataset.copied = "";
+            agentPromptStatus.textContent = "Prompt copied. Paste it into your agent.";
+            agentPromptTimer = setTimeout(() => {
+              delete button.dataset.copied;
+              agentPromptStatus.textContent = "";
+            }, 2400);
+          } catch {
+            // Clipboard access can be refused; show the prompt selected so it can be copied by hand.
+            document.querySelector<HTMLElement>("#agentPrompt:not(:popover-open)")?.showPopover();
+            getSelection()?.selectAllChildren(agentPromptText);
+          }
+        });
+      }
+      signal.addEventListener("abort", () => clearTimeout(agentPromptTimer));
 
       document.querySelector("#drawerClose")?.addEventListener("click", () => closeDrawer());
       document.querySelector("#drawerPrev")?.addEventListener("click", () => step(-1));

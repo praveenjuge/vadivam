@@ -138,9 +138,9 @@ describe("website SEO", () => {
     expect(html).toContain(
       '<meta content="@praveenjuge" name="twitter:creator">',
     );
-    expect(html).toContain(
-      "A free, open-source icon set made for designers and developers building thoughtful digital experiences.",
-    );
+    expect(html).toContain("Free, open-source icons for");
+    expect(html).toContain("Copy prompt for AI agents");
+    expect(html).toContain("Set up Vadivam icons in this project");
     expect(html).toContain('href="/icons/activity"');
     expect(html).toContain('data-tab="react-native"');
     expect(html).toContain("vadivam-react-native");
