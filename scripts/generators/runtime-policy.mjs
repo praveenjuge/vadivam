@@ -30,17 +30,19 @@ function buildRuntimePolicy(typeScript = false, preserveChildren = false) {
     nodeCast: typeScript ? " as [SVGElementType, Record<string, unknown>, unknown?]" : "",
     regexMatch: typeScript ? ": RegExpExecArray | null" : "",
   };
-  return `const SAFE_ICON_TAGS = new Set(${JSON.stringify(svgElementTypes)});
+  return `// Pure annotations let bundlers drop the icon-node policy when only the
+// root-attribute and paint sanitizers are imported.
+const SAFE_ICON_TAGS = /* @__PURE__ */ new Set(${JSON.stringify(svgElementTypes)});
 const GEOMETRY_ATTRIBUTES = {
-  circle: new Set(["cx", "cy", "r"]),
-  ellipse: new Set(["cx", "cy", "rx", "ry"]),
-  line: new Set(["x1", "y1", "x2", "y2"]),
-  path: new Set(["d", "pathLength"]),
-  polygon: new Set(["points", "pathLength"]),
-  polyline: new Set(["points", "pathLength"]),
-  rect: new Set(["x", "y", "width", "height", "rx", "ry", "pathLength"]),
+  circle: /* @__PURE__ */ new Set(["cx", "cy", "r"]),
+  ellipse: /* @__PURE__ */ new Set(["cx", "cy", "rx", "ry"]),
+  line: /* @__PURE__ */ new Set(["x1", "y1", "x2", "y2"]),
+  path: /* @__PURE__ */ new Set(["d", "pathLength"]),
+  polygon: /* @__PURE__ */ new Set(["points", "pathLength"]),
+  polyline: /* @__PURE__ */ new Set(["points", "pathLength"]),
+  rect: /* @__PURE__ */ new Set(["x", "y", "width", "height", "rx", "ry", "pathLength"]),
 };
-const PRESENTATION_ATTRIBUTES = new Set([
+const PRESENTATION_ATTRIBUTES = /* @__PURE__ */ new Set([
   "class", "className", "id", "role", "key", "opacity", "transform",
   "clip-rule", "clipRule", "fill", "fill-opacity", "fillOpacity", "fill-rule", "fillRule",
   "shape-rendering", "shapeRendering", "stroke", "stroke-dasharray", "strokeDasharray",

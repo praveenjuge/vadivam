@@ -19,6 +19,13 @@ export async function writeRuntimePolicy(dist) {
   );
 }
 
+// Svelte and Astro icons accept an iconNode prop, so they keep the node
+// sanitizer and skip it only for the nodes generated with the package.
+export async function writeTrustedIconNodes(dist) {
+  await write(dist, "trustedIconNodes.js", `// Icon nodes generated with the package. They passed the runtime policy when\n// the package was built, so Icon renders them without sanitizing them again.\nexport const trustedIconNodes = new WeakSet();\n`);
+  await write(dist, "trustedIconNodes.d.ts", `export declare const trustedIconNodes: WeakSet<object>;\n`);
+}
+
 export { svgElementTypeSource };
 
 export function iconNameType(icons) {
