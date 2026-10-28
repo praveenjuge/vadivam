@@ -497,6 +497,11 @@ describe("subpath starts", () => {
     const svg = validSvg.replace("M4 12h16", "M4 4h6v6H4za3 3 0 0 0 3 3");
     expect(normalizeSvg(svg, "move.svg")).not.toMatch(/[zZ]\s*[a-ln-yA-LN-Y]/);
   });
+
+  test("optimizing a restored move again changes nothing", () => {
+    const once = normalizeSvg(validSvg.replace("M4 12h16", "M4 4h6v6H4zM4 4l2 2"), "move.svg");
+    expect(normalizeSvg(once, "move.svg")).toBe(once);
+  });
 });
 
 describe("stroke joins", () => {

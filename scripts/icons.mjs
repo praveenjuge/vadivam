@@ -493,7 +493,8 @@ export function normalizeSvg(svg, file) {
   // SVGO drops the move after a closepath when the next subpath starts where
   // the last one began; WebKit draws some of those from the wrong point.
   const optimized = optimizeSvg(smoothed, file).replace(pathPattern, (match, prefix, d, suffix) =>
-    `${prefix}${d.replace(subpathWithoutMove, "$1m0 0")}${suffix}`,
+    // A lineto right after the move is written the way SVGO writes it, so optimizing again changes nothing.
+    `${prefix}${d.replace(subpathWithoutMove, "$1m0 0").replace(/([zZ]m0 0)l(?=\d|\.)/g, "$1 ").replace(/([zZ]m0 0)l(?=-)/g, "$1")}${suffix}`,
   );
   const open = optimized.match(/<svg\b[^>]*>/);
   const close = optimized.lastIndexOf("</svg>");
