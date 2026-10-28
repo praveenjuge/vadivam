@@ -31,8 +31,8 @@ These rules describe how the Vadivam icons are drawn. The numbers come from meas
 
 - **Checked.** The canvas is `24×24` with `viewBox="0 0 24 24"`.
 - **Checked.** Keep 1px of padding. With round caps and joins, a 2px stroke reaches 1px past its centerline in every direction, so ink stays inside 1–23 and centerlines stay inside 2–22. All 1,903 icons pass.
-- Use the live area. 82.4% of icons reach the padding line on at least one side, and the median icon's ink is 22px across its larger dimension. Only 11.8% stay inside 2–22.
-- Center the drawing. In 99.1% of icons, the center of the ink's bounding box is within 0.5px of (12, 12). Asymmetric icons may shift for optical balance.
+- Use the live area. 81.6% of icons reach the padding line on at least one side, and the median icon's ink is 22px across its larger dimension. Only 12.6% stay inside 2–22. Line arrows are the exception; see [Arrows](#arrows).
+- Center the drawing. In 98.6% of icons, the center of the ink's bounding box is within 0.5px of (12, 12). Asymmetric icons may shift for optical balance, as arrows do.
 
 ## Stroke
 
@@ -84,6 +84,24 @@ Landscape frames usually need more height than 14px. The common alternatives are
 
 Small circles use radius 2 (79 circles), 3 (56), 1 (35), 3.5 (31), or 2.5 (30).
 
+### Arrows
+
+<Visibility for="web">
+<div className="guide-figures">
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The arrow-right icon: a 16px shaft from 3 to 19 with a head 14px across"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><g className="guide-keyline"><rect x="2" y="2" width="20" height="20" rx="0"/></g><g className="guide-icon"><path d="M3 12h16m-6.562-7a13.53 13.53 0 0 0 4.667 5.681L19 12l-1.895 1.319A13.53 13.53 0 0 0 12.438 19"/></g></svg><figcaption><code>arrow-right</code>: 16px shaft, 1px toward the tail</figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The arrow-up-right icon: a diagonal arrow in a 12 by 12 box"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><g className="guide-keyline"><rect x="2" y="2" width="20" height="20" rx="0"/></g><g className="guide-icon"><path d="M5.5 18.5 17.208 6.792M8.137 6.5a12.8 12.8 0 0 0 6.921.678l2.15-.386-.386 2.15a12.8 12.8 0 0 0 .678 6.921"/></g></svg><figcaption><code>arrow-up-right</code>: 12×12, 0.5px toward the tail</figcaption></figure>
+<figure className="guide-figure"><svg viewBox="-0.5 -0.5 25 25" role="img" aria-label="The arrow-left-right icon: two 16px shafts with heads 8px across"><path className="guide-grid" d="M0 0h24M0 0v24M0 1h24M1 0v24M0 2h24M2 0v24M0 3h24M3 0v24M0 4h24M4 0v24M0 5h24M5 0v24M0 6h24M6 0v24M0 7h24M7 0v24M0 8h24M8 0v24M0 9h24M9 0v24M0 10h24M10 0v24M0 11h24M11 0v24M0 12h24M12 0v24M0 13h24M13 0v24M0 14h24M14 0v24M0 15h24M15 0v24M0 16h24M16 0v24M0 17h24M17 0v24M0 18h24M18 0v24M0 19h24M19 0v24M0 20h24M20 0v24M0 21h24M21 0v24M0 22h24M22 0v24M0 23h24M23 0v24M0 24h24M24 0v24"/><g className="guide-keyline"><rect x="2" y="2" width="20" height="20" rx="0"/></g><g className="guide-icon"><path d="M20 7H4m6 4a8.64 8.64 0 0 0-3.639-2.974L4 7l2.361-1.026A8.64 8.64 0 0 0 10 3M4 17h16m-6-4a8.64 8.64 0 0 0 3.639 2.974L20 17l-2.361 1.026A8.64 8.64 0 0 0 14 21"/></g></svg><figcaption><code>arrow-left-right</code>: small heads, 8px across</figcaption></figure>
+</div>
+</Visibility>
+
+An arrow is an open shape, so drawn to the padding it looks larger than a circle or square of the same width. Line arrows stay inside the live area:
+
+- A single arrow has a 16px shaft and a head 14px across and about 6.5px deep. The head keeps Vadivam's swept shape: a short straight tip at 35° to the shaft that curves outward into each barb.
+- Paired arrows, such as `arrow-left-right`, and the arrow in sort icons use the narrow head, 8px across and 6px deep. Sort icons keep a 20px shaft so it matches the letters beside it.
+- Diagonal arrows fit a 12×12 box, so their length matches a straight arrow's.
+- A bar sits 4px from the tip or tail, as in `arrow-right-to-line` and `arrow-right-from-line`.
+- Center an arrow optically. The head carries most of the ink, so a geometrically centered arrow looks shifted toward where it points. Move it toward its tail until the center of its ink box and its ink centroid fall on either side of (12, 12), about equally far from it: 1px for single arrows and `to-line` arrows, 0.5px each way for diagonals. Arrows with a bar at the tail are already balanced.
+
 ## Corner radius
 
 <Visibility for="web">
@@ -121,8 +139,8 @@ Lucide uses circular 2px corners on shapes 8px and up and 1px below. Vadivam's l
 
 Separate parts of an icon either join or leave a readable gap:
 
-- Leave a 2px gap between separate elements by default. In the set, 68.7% of separate parts that come within 6px of each other keep at least 2px; 2px is the most common gap (1,320 pairs).
-- Never go below 1.5px. 1.5px is the second most common gap (1,310 pairs), used where 2px doesn't fit, such as the dot under a bar. In 86.9% of icons with separate parts, every gap is at least 1.5px.
+- Leave a 2px gap between separate elements by default. In the set, 68.7% of separate parts that come within 6px of each other keep at least 2px; 2px is the most common gap (1,322 pairs).
+- Never go below 1.5px. 1.5px is the second most common gap (1,309 pairs), used where 2px doesn't fit, such as the dot under a bar. In 87.2% of icons with separate parts, every gap is at least 1.5px.
 - Don't leave a near miss. If two strokes come closer than 1.5px, join them. 63 icons, including `image`, `earth`, and `train-front-tunnel`, have a stroke ending 0.3–2px short of another, so the strokes merge into a blob without meeting.
 
 These figures measure the gap between separate subpaths: their centerline distance minus the 2px stroke. Gaps within a single subpath, such as between the turns of a spiral, are not measured.
@@ -140,7 +158,7 @@ These figures measure the gap between separate subpaths: their centerline distan
 
 Compare a new icon with `circle` and `square` at 24px. Its ink should look about as dark as theirs.
 
-- `circle` covers 21.7% of the canvas with ink and `square` 24.3%. Across the set, the median is 26.3%, and 90% of icons fall between 15.5% and 36.2%.
+- `circle` covers 21.7% of the canvas with ink and `square` 24.3%. Across the set, the median is 26.3%, and 90% of icons fall between 15.4% and 36.2%.
 - Icons above about 36% (`grid-3x3`, `fence`, and `table-columns-split` are around 44–46%) are as dense as an icon should get. Simplify before going further.
 - Reuse base shapes exactly. `square-plus` draws the `square` frame unchanged, and so do 49 of the 78 `square-*` icons. 33 of the 48 `circle-*` icons contain the full r 10 circle. The rest break the frame for dashes or to make room for a badge, but keep its geometry.
 - Put modifiers, such as a plus or a slash, in the same place and at the same size across a family.
