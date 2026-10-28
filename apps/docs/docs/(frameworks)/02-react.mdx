@@ -102,6 +102,8 @@ import Search from "vadivam-react/icons/search";
 
 The root package also exports the generic `Icon`, `createIcon`/`createVadivamIcon`, icon nodes, and related TypeScript types for advanced custom-icon use.
 
+Named icons render their generated icon data directly. That data is checked when the package is built, so importing icons does not add the runtime sanitizer to your bundle, and their props reach the `<svg>` as they would on any React SVG element. `Icon` and `createIcon` take icon data from outside the package, so they still sanitize icon nodes, root props, and `color` on every render. `DynamicIcon` loads the same built-in icons, but its props often come from runtime data, so it still sanitizes root props and `color`, including a color inherited from `VadivamProvider`. See [Custom icon data](/docs/dynamic-icons#custom-icon-data).
+
 ## Runtime names
 
 ```tsx

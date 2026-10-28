@@ -82,6 +82,8 @@ Icon files are treated as untrusted input. `bun run icons:optimize` and `bun run
 
 Because every published icon has passed these checks, Vadivam SVGs carry no scripts, styles, links, external references, or event handlers, and are safe to inline in HTML, email, or user-facing documents.
 
+`bun run icons:build` also checks every generated icon node against the runtime policy the framework packages ship, and fails if that policy would drop any element, attribute, or value. This is why [React](/docs/react) components render named icons without sanitizing them in the browser.
+
 ## What gets built
 
 From each validated SVG, `bun run icons:build` generates:
