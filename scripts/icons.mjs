@@ -10,7 +10,7 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
-import { inkBounds, parsePath, shortStrokeEnds } from "./icon-geometry.mjs";
+import { elementPathData, inkBounds, parsePath, shortStrokeEnds } from "./icon-geometry.mjs";
 import { findUnsmoothedCorners, reattachEnds, smoothCorners } from "./corner-smoothing.mjs";
 import { cleanPaths, gridTolerance } from "./path-cleanup.mjs";
 import { optimize } from "svgo";
@@ -336,7 +336,7 @@ export function validateSvgContent(svg, file = "inline.svg") {
   assertInkInsidePadding(shapes, file);
   const paths = shapes.filter(([tag]) => tag === "path").map(([, attrs]) => attrs.d);
   assertCleanPaths(paths, file);
-  assertStrokesMeet(paths, file);
+  assertStrokesMeet(shapes.map(([tag, attrs]) => elementPathData(tag, attrs)), file);
 }
 
 // Every rounded corner between two straight lines must use the smoothed

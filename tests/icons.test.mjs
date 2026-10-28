@@ -459,7 +459,7 @@ describe("path cleanup", () => {
   test("removes stray nodes shorter than 0.05px inside a stroke", () => {
     const { paths, nodes } = cleanPaths(["M4 12h8l.02.01L20 12"]);
     expect(nodes).toBe(1);
-    expect(paths).toEqual(["M4 12L12.02 12.01L20 12"]);
+    expect(paths).toEqual(["M4 12L20 12"]);
   });
 
   test("snaps lines just off the whole-pixel grid and what meets them", () => {
@@ -491,6 +491,11 @@ describe("path cleanup", () => {
 describe("stroke joins", () => {
   test("rejects a stroke that stops 1px short of another", () => {
     expect(() => validateSvgContent(validSvg.replace("M4 12h16", "M4 12h16M12 4v7"), "joins.svg")).toThrow("1 stroke end(s) stop short of another stroke");
+  });
+
+  test("rejects the same near miss drawn with <line> elements", () => {
+    const svg = validSvg.replace('<path d="M4 12h16"/>', '<line x1="4" y1="12" x2="20" y2="12"/><line x1="12" y1="4" x2="12" y2="11"/>');
+    expect(() => validateSvgContent(svg, "joins.svg")).toThrow("1 stroke end(s) stop short of another stroke");
   });
 
   test.each([

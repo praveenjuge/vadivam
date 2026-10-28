@@ -142,16 +142,21 @@ function joinSubpaths(subpaths) {
 }
 
 // Straight runs split into pieces become one line, and lines shorter than a
-// stub inside a longer stroke go: they are stray nodes from the export.
+// stub inside a longer stroke go: they are stray nodes from the export. The
+// next segment starts where the stub did, so the lines around it keep their
+// direction and can still merge.
 function mergeLines(subpath) {
   const segments = [];
   let merges = 0;
   let nodes = 0;
-  for (const segment of subpath.segments) {
+  let carry = null;
+  for (const original of subpath.segments) {
+    const segment = carry ? { ...original, from: carry } : original;
+    carry = null;
     const last = segments.at(-1);
     const length = distance(segment.from, segment.to);
     if (segment.type === "L" && !segment.closing && subpath.segments.length > 1 && length < stubLength) {
-      if (last) last.to = segment.to;
+      carry = segment.from;
       if (length <= 1e-4) merges += 1;
       else nodes += 1;
       continue;

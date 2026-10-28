@@ -354,6 +354,25 @@ function numbers(value) {
  * Centerline points that bound one SVG shape element, given its tag and
  * geometry attributes (unprefixed names such as `d`, `cx`, or `points`).
  */
+/** Path data for any allowed shape element, so stroke checks see every element alike. */
+export function elementPathData(tag, attrs) {
+  const value = (name) => Number(attrs[name] ?? 0);
+  if (tag === "path") return String(attrs.d ?? "");
+  if (tag === "line") return `M${value("x1")} ${value("y1")}L${value("x2")} ${value("y2")}`;
+  if (tag === "polyline" || tag === "polygon") {
+    const list = numbers(attrs.points);
+    return `M${list.join(" ")}${tag === "polygon" ? "Z" : ""}`;
+  }
+  if (tag === "rect") return `M${value("x")} ${value("y")}h${value("width")}v${value("height")}h${-value("width")}Z`;
+  if (tag === "circle" || tag === "ellipse") {
+    const rx = tag === "circle" ? value("r") : value("rx");
+    const ry = tag === "circle" ? value("r") : value("ry");
+    const [cx, cy] = [value("cx"), value("cy")];
+    return `M${cx - rx} ${cy}A${rx} ${ry} 0 1 0 ${cx + rx} ${cy}A${rx} ${ry} 0 1 0 ${cx - rx} ${cy}Z`;
+  }
+  return "";
+}
+
 export function elementPoints(tag, attrs) {
   const value = (name) => Number(attrs[name] ?? 0);
   if (tag === "path") {
