@@ -81,4 +81,4 @@ For `lucide-static` files, use the matching `vadivam` assets: `vadivam/icons/<na
 
 ## Compare the drawings
 
-Each icon page, such as `/icons/arrow-right`, shows the Vadivam drawing next to the Lucide one, plus an overlay of the two. Vadivam follows a stricter [design guide](/docs/design-guide): whole-pixel lines, smoothed corners, and consistent keylines.
+Each icon page, such as `/icons/arrow-right`, can switch its large preview between the Vadivam drawing, the Lucide one, an overlay of the two, and a split view with a draggable divider. In the compare views, the real-size row below it shows both drawings at 16 to 48px, and the view options switch the preview between light and dark backgrounds. Vadivam follows a stricter [design guide](/docs/design-guide): whole-pixel lines, smoothed corners, and consistent keylines.

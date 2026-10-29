@@ -48,6 +48,14 @@ const related = relatedIcons(icon.name);
 const lucide = lucideSvg(c);
 const sized = (markup: string, size: number) =>
   markup.replace(/ width="24"/, ` width="${size}"`).replace(/ height="24"/, ` height="${size}"`);
+// How the zoomed preview draws the icon; the last three need Lucide's drawing.
+const compareModes = [
+  { id: "vadivam", label: "Vadivam", title: "Vadivam's drawing" },
+  { id: "lucide", label: "Lucide", title: `Lucide ${lucideVersion}'s drawing` },
+  { id: "overlay", label: "Overlay", title: "Vadivam drawn over Lucide" },
+  { id: "split", label: "Split", title: "Drag to compare Vadivam and Lucide" },
+];
+const realSizes = [16, 20, 24, 32, 48];
 const primaryCategory = icon.categories[0];
 const updated = lastModified
   ? new Date(`${lastModified}T00:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })
@@ -65,16 +73,18 @@ const pageDescription = `${c} is a free, open-source 24px outline icon from Vadi
 const chipClass =
   "rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground no-underline transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 const tabClass =
-  "flex-none rounded-md border border-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-selected:border-accent aria-selected:bg-accent aria-selected:text-accent-foreground";
+  "flex-none border-0 border-b-2 border-transparent bg-transparent px-0.5 py-2.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-selected:border-foreground aria-selected:text-foreground";
 const segmentClass =
-  "rounded-md border border-transparent bg-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-pressed:border-border aria-pressed:bg-background aria-pressed:text-foreground";
-const sectionClass = "m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground";
-const stepClass =
-  "inline-flex items-center gap-1 rounded-md px-2 py-1 font-mono text-xs text-muted-foreground no-underline transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
-const miniButtonClass =
-  "grid size-5 flex-none place-items-center rounded border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+  "rounded-md border border-transparent bg-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-pressed:border-border aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-xs";
+const sectionClass = "m-0 text-sm font-medium text-foreground";
+const ghostButtonClass =
+  "grid size-8 flex-none place-items-center rounded-md border-0 bg-transparent p-0 text-muted-foreground no-underline transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const nameChipClass =
+  "inline-flex items-center gap-1 rounded-md border-0 bg-muted py-0.5 ps-1.5 pe-1 font-mono text-xs text-foreground transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 const iconButtonClass =
   "grid size-7 flex-none place-items-center rounded-md border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const menuClass =
+  "m-0 min-w-52 rounded-md border border-border bg-background p-3 text-foreground shadow-lg [position:fixed] [inset:auto]";
 
 // PageLayout's built-in JSON-LD is disabled so this page can describe the icon,
 // its image, and its breadcrumb trail in one graph (blume's default would emit
@@ -145,77 +155,123 @@ const structuredData = site
   structuredDataEnabled={false}
   page={{ title: pageTitle, description: pageDescription, route: `/icons/${icon.name}` }}
 >
-  <main id="iconDetail" class="mx-auto w-full max-w-5xl px-4 pt-4 pb-16 md:px-6">
-    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
+  <main id="iconDetail" class="mx-auto w-full max-w-5xl px-4 pt-4 pb-20 md:px-6">
+    <div class="flex items-center justify-between gap-4 text-sm">
       <nav class="flex min-w-0 items-center gap-1.5 text-muted-foreground" aria-label="Breadcrumb">
         <a class="no-underline hover:text-foreground" href="/">Icons</a>
         {primaryCategory && (
           <>
             <span aria-hidden="true">/</span>
-            <a class="no-underline hover:text-foreground" href={`/?category=${primaryCategory}`}>{categoryTitles.get(primaryCategory) ?? primaryCategory}</a>
+            <a class="truncate no-underline hover:text-foreground" href={`/?category=${primaryCategory}`}>{categoryTitles.get(primaryCategory) ?? primaryCategory}</a>
           </>
         )}
-        <span aria-hidden="true">/</span>
-        <span class="truncate text-foreground" aria-current="page">{c}</span>
       </nav>
-      <nav class="flex flex-none items-center gap-1" aria-label="Previous and next icon">
+      <nav class="-me-2 flex flex-none items-center" aria-label="Previous and next icon">
         {previous && (
-          <a class={stepClass} href={`/icons/${previous.name}`} rel="prev" title={previous.name}>
-            <VIcon name="chevron-left" size={14} /><span class="max-w-[9rem] truncate">{previous.name}</span>
+          <a class={ghostButtonClass} href={`/icons/${previous.name}`} rel="prev" title={`Previous: ${previous.name}`} aria-label={`Previous icon, ${previous.name}`}>
+            <VIcon name="chevron-left" size={16} />
           </a>
         )}
         {next && (
-          <a class={stepClass} href={`/icons/${next.name}`} rel="next" title={next.name}>
-            <span class="max-w-[9rem] truncate">{next.name}</span><VIcon name="chevron-right" size={14} />
+          <a class={ghostButtonClass} href={`/icons/${next.name}`} rel="next" title={`Next: ${next.name}`} aria-label={`Next icon, ${next.name}`}>
+            <VIcon name="chevron-right" size={16} />
           </a>
         )}
       </nav>
     </div>
 
-    <header class="mt-5 grid gap-2">
-      <h1 class="m-0 min-w-0 break-words text-[clamp(1.5rem,3vw,2rem)] font-semibold leading-tight tracking-[-0.02em]">{c}</h1>
-      <div class="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-        <span class="inline-flex items-center gap-0.5 rounded-md bg-muted px-1.5 py-0.5">
-          <code class="bg-transparent text-xs text-foreground">{icon.name}</code>
-          <button class={miniButtonClass} type="button" data-action="copy-name" aria-label="Copy icon name"><VIcon name="copy" size={12} /></button>
-        </span>
-        {icon.categories.map((id) => (
-          <a class={chipClass} href={`/?category=${id}`}>{categoryTitles.get(id) ?? id}</a>
-        ))}
-      </div>
-    </header>
-
-    <section class="mt-6 grid border-y border-border lg:grid-cols-[minmax(0,1fr)_19rem]" aria-label="Preview and export">
-      <div class="grid content-start gap-4 py-4 lg:pe-6">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="flex gap-0.5 rounded-lg bg-muted p-0.5" role="group" aria-label="Preview background">
-            <button class={segmentClass} type="button" data-background="auto" aria-pressed="true">Auto</button>
-            <button class={segmentClass} type="button" data-background="light" aria-pressed="false">Light</button>
-            <button class={segmentClass} type="button" data-background="dark" aria-pressed="false">Dark</button>
-          </div>
-          <label class="inline-flex items-center gap-2 text-xs text-muted-foreground">
-            <input class="accent-accent" type="checkbox" id="pixelGrid" checked />
-            Pixel grid
-          </label>
-        </div>
-        <div class="grid gap-6 rounded-lg px-4 py-8 text-foreground" id="previewStage" data-background="auto">
-          <div class="relative mx-auto aspect-square w-full max-w-60">
-            <div class="absolute inset-0 [&>svg]:size-full" data-icon-preview="240" data-zoom aria-hidden="true" set:html={svg.replace(/ width="24"/, ' width="240"').replace(/ height="24"/, ' height="240"')} />
-            <div class="pixel-grid pointer-events-none absolute inset-0" id="pixelGridOverlay" aria-hidden="true"></div>
-          </div>
-          <div class="flex items-end justify-center gap-[clamp(1rem,5vw,2.5rem)]" aria-label="Size previews">
-            {[16, 20, 24, 32, 48].map((size) => (
-              <div class="grid justify-items-center gap-1.5">
-                <div class="grid place-items-center" data-icon-preview={size} set:html={svg.replace(/ width="24"/, ` width="${size}"`).replace(/ height="24"/, ` height="${size}"`)} />
-                <span class="font-mono text-[0.65rem] opacity-60">{size}</span>
+    <section class="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-10" aria-label="Preview and export">
+      <div class="relative grid content-start overflow-hidden rounded-xl text-foreground" id="previewStage" data-background="auto" data-compare="vadivam" style="--split: 50%">
+        <div class="flex items-center justify-between gap-2 p-3">
+          {lucide ? (
+            <div class="flex gap-0.5 rounded-lg bg-[color-mix(in_oklab,currentColor_6%,transparent)] p-0.5" role="group" aria-label="Preview drawing">
+              {compareModes.map((mode, index) => (
+                <button class={segmentClass} type="button" data-compare-mode={mode.id} aria-pressed={index === 0 ? "true" : "false"} title={mode.title}>{mode.label}</button>
+              ))}
+            </div>
+          ) : <span />}
+          <button class={ghostButtonClass} type="button" popovertarget="viewMenu" aria-haspopup="dialog" aria-label="View options" title="View options">
+            <VIcon name="settings-2" size={16} />
+          </button>
+          <div class={menuClass} id="viewMenu" popover data-menu role="dialog" aria-label="View options">
+            <div class="grid gap-3 text-xs">
+              <div class="grid gap-1.5">
+                <span class="text-muted-foreground">Background</span>
+                <div class="flex gap-0.5 rounded-lg bg-muted p-0.5" role="group" aria-label="Preview background">
+                  <button class:list={[segmentClass, "flex-1"]} type="button" data-background="auto" aria-pressed="true">Auto</button>
+                  <button class:list={[segmentClass, "flex-1"]} type="button" data-background="light" aria-pressed="false">Light</button>
+                  <button class:list={[segmentClass, "flex-1"]} type="button" data-background="dark" aria-pressed="false">Dark</button>
+                </div>
               </div>
-            ))}
+              <label class="flex items-center justify-between gap-2">
+                <span class="text-muted-foreground">Pixel grid</span>
+                <input class="accent-accent" type="checkbox" id="pixelGrid" checked />
+              </label>
+            </div>
           </div>
         </div>
+
+        <div class="compare-zoom relative mx-auto mt-4 mb-10 aspect-square w-[min(15rem,70%)]">
+          {lucide && <div class="compare-layer" data-layer="lucide" data-lucide-preview="240" data-zoom aria-hidden="true" set:html={sized(lucide, 240)} />}
+          <div class="compare-layer" data-layer="vadivam" data-icon-preview="240" data-zoom aria-hidden="true" set:html={sized(svg, 240)} />
+          <div class="pixel-grid pointer-events-none absolute inset-0" id="pixelGridOverlay" aria-hidden="true"></div>
+          {lucide && (
+            <>
+              <span class="compare-label compare-label-start" aria-hidden="true">Vadivam</span>
+              <span class="compare-label compare-label-end" aria-hidden="true">Lucide</span>
+              <div class="compare-divider" aria-hidden="true"><span class="compare-handle"><VIcon name="chevrons-left-right" size={12} /></span></div>
+              <input class="compare-range" type="range" min="0" max="100" step="1" value="50" id="compareRange" aria-label="Split position between Vadivam and Lucide" />
+            </>
+          )}
+        </div>
+
+        <div class="size-strip" aria-label="Real-size previews">
+          <span class="size-strip-label" data-size-layer="lucide" aria-hidden="true">Vadivam</span>
+          {realSizes.map((size) => (
+            <span class="grid place-items-center" data-icon-preview={size} aria-hidden="true" set:html={sized(svg, size)} />
+          ))}
+          {lucide && (
+            <>
+              <span class="size-strip-label" data-size-layer="lucide" aria-hidden="true">Lucide</span>
+              {realSizes.map((size) => (
+                <span class="grid place-items-center" data-size-layer="lucide" data-lucide-preview={size} aria-hidden="true" set:html={sized(lucide, size)} />
+              ))}
+            </>
+          )}
+          <span class="size-strip-label" data-size-layer="lucide" aria-hidden="true"></span>
+          {realSizes.map((size) => (
+            <span class="size-strip-size">{size}</span>
+          ))}
+        </div>
+
+        {lucide && (
+          <p class="compare-note m-0 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 pb-3 text-[0.68rem]" data-size-layer="lucide">
+            <span>
+              Lucide {lucideVersion} © Lucide Contributors, <a class="text-inherit hover:underline" href="https://github.com/lucide-icons/lucide/blob/main/LICENSE">ISC</a>. Same name, grid, and stroke, so swapping keeps your layout.
+            </span>
+            <a class="inline-flex items-center gap-1 text-inherit no-underline hover:underline" href="/docs/migrate-from-lucide">Migrate from Lucide<VIcon name="arrow-right" size={12} /></a>
+          </p>
+        )}
       </div>
 
-      <div class="grid content-start gap-5 border-t border-border py-4 lg:border-t-0 lg:border-l lg:ps-6">
-        <div class="grid gap-2">
+      <div class="grid content-start gap-5">
+        <header class="grid gap-2">
+          <h1 class="m-0 min-w-0 break-words text-[clamp(1.5rem,3vw,1.875rem)] font-semibold leading-tight tracking-[-0.02em]">{c}</h1>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button class={nameChipClass} type="button" data-action="copy-name" title="Copy icon name">{icon.name}<VIcon name="copy" size={12} class="text-muted-foreground" /></button>
+            <button class={nameChipClass} type="button" data-action="copy-component" title="Copy component name">{c}<VIcon name="copy" size={12} class="text-muted-foreground" /></button>
+          </div>
+          <p class="m-0 flex flex-wrap gap-x-1.5 text-xs text-muted-foreground">
+            {icon.categories.map((id, index) => (
+              <>
+                {index > 0 && <span aria-hidden="true">·</span>}
+                <a class="text-muted-foreground no-underline hover:text-foreground" href={`/?category=${id}`}>{categoryTitles.get(id) ?? id}</a>
+              </>
+            ))}
+          </p>
+        </header>
+
+        <div class="relative grid gap-2">
           <button
             class="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-accent bg-accent px-3 py-2 text-sm text-accent-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             type="button"
@@ -224,42 +280,43 @@ const structuredData = site
           <div class="grid grid-cols-2 gap-2 [&>button]:justify-center">
             <ActionMenus id="pageMenu" />
           </div>
-          <p class="m-0 min-h-4 text-center text-xs text-muted-foreground" id="pageStatus" aria-live="polite"></p>
+          <p class="absolute inset-x-0 top-full m-0 mt-1 text-center text-xs text-muted-foreground" id="pageStatus" aria-live="polite"></p>
         </div>
-        <Customizer />
-        <dl class="m-0 grid gap-2 border-t border-border pt-4 text-xs">
-          <div class="flex items-baseline justify-between gap-3">
-            <dt class="text-muted-foreground">Component</dt>
-            <dd class="m-0 flex min-w-0 items-center gap-1">
-              <code class="truncate bg-transparent text-xs">{c}</code>
-              <button class={miniButtonClass} type="button" data-action="copy-component" aria-label="Copy component name"><VIcon name="copy" size={12} /></button>
-            </dd>
-          </div>
-          {updated && (
-            <div class="flex items-baseline justify-between gap-3">
-              <dt class="text-muted-foreground">Updated</dt>
-              <dd class="m-0"><time datetime={lastModified}>{updated}</time></dd>
-            </div>
-          )}
-          <div class="flex items-baseline justify-between gap-3">
-            <dt class="text-muted-foreground">License</dt>
-            <dd class="m-0"><a class="text-foreground" href="https://github.com/praveenjuge/vadivam/blob/main/LICENSE">MIT</a></dd>
-          </div>
-        </dl>
+
+        <details class="customize group mt-2 border-y border-border" id="customize">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-2 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
+            <span class="inline-flex items-center gap-2">
+              Customize
+              <span class="size-1.5 rounded-full bg-accent" id="customizedDot" hidden></span>
+            </span>
+            <span class="inline-flex items-center gap-2 font-mono text-xs text-muted-foreground">
+              <span id="customizeSummary">24px · 2</span>
+              <VIcon name="chevron-down" size={14} class="transition-transform group-open:rotate-180" />
+            </span>
+          </summary>
+          <Customizer class="pb-4" />
+        </details>
+
+        <p class="m-0 text-xs text-muted-foreground">
+          <a class="text-muted-foreground hover:text-foreground" href="https://github.com/praveenjuge/vadivam/blob/main/LICENSE">MIT License</a>
+          {updated && <> · Updated <time datetime={lastModified}>{updated}</time></>}
+        </p>
       </div>
     </section>
 
-    <section class="mt-10" aria-labelledby="codeHeading">
-      <div class="flex flex-wrap items-end justify-between gap-2">
+    <section class="mt-16" aria-labelledby="codeHeading">
+      <div class="flex items-center justify-between gap-2">
         <h2 class={sectionClass} id="codeHeading">Use it</h2>
-        <div class="flex gap-0.5 rounded-lg bg-muted p-0.5" role="group" aria-label="Package manager">
-          {packageManagers.map((manager, index) => (
-            <button class={segmentClass} type="button" data-package-manager={manager} aria-pressed={index === 0 ? "true" : "false"}>{manager}</button>
-          ))}
-        </div>
+        <label class="relative inline-flex items-center text-xs text-muted-foreground">
+          <span class="sr-only">Package manager</span>
+          <select class="appearance-none rounded-md border border-border bg-transparent py-1 ps-2 pe-6 font-mono text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" id="packageManager">
+            {packageManagers.map((manager) => <option value={manager}>{manager}</option>)}
+          </select>
+          <VIcon name="chevron-down" size={12} class="pointer-events-none absolute end-1.5" />
+        </label>
       </div>
-      <div class="mt-3 grid gap-2" data-tabgroup="framework">
-        <div class="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Framework snippet">
+      <div class="mt-3 rounded-xl border border-border" data-tabgroup="framework">
+        <div class="flex gap-4 overflow-x-auto border-b border-border px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Framework snippet">
           {
             snippetTabs.map((tab, index) => (
               <button
@@ -279,27 +336,28 @@ const structuredData = site
         </div>
         {
           snippetTabs.map((tab, index) => (
-            <div class="grid min-w-0 gap-2" id={`panel-${tab.id}`} role="tabpanel" aria-labelledby={`tab-${tab.id}`} hidden={index !== 0}>
-              <div class="flex min-w-0 items-center gap-2 rounded-md border border-border bg-muted/40 ps-3 pe-1">
+            <div class="grid min-w-0" id={`panel-${tab.id}`} role="tabpanel" aria-labelledby={`tab-${tab.id}`} hidden={index !== 0}>
+              <div class="flex min-w-0 items-center gap-2 border-b border-border ps-4 pe-2">
                 <span class="flex-none font-mono text-xs text-muted-foreground select-none" aria-hidden="true">$</span>
-                <code class="min-w-0 flex-1 truncate bg-transparent py-2 font-mono text-[0.78rem]" data-install={tab.packageName}>npm install {tab.packageName}</code>
+                <code class="min-w-0 flex-1 truncate bg-transparent py-2.5 font-mono text-[0.78rem]" data-install={tab.packageName}>npm install {tab.packageName}</code>
                 <button class={iconButtonClass} type="button" data-action="copy-install" data-package={tab.packageName} aria-label={`Copy install command for ${tab.packageName}`}><VIcon name="copy" size={14} /></button>
               </div>
               <div class="snippet-panel relative min-w-0">
                 <div class="prose max-w-none" data-snippet={tab.id} set:html={snippetHtml(templates, tab.id, iconRef, iconDefaults)} />
                 <button
-                  class="absolute end-1.5 top-1.5 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[0.68rem] transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  class="absolute end-2 top-2 z-10 grid size-7 place-items-center rounded-md border-0 bg-background p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   type="button"
                   data-action="copy-snippet"
                   data-snippet-tab={tab.id}
-                ><VIcon name="copy" size={12} /><span>Copy</span></button>
+                  aria-label="Copy snippet"
+                ><VIcon name="copy" size={14} /></button>
               </div>
               {tab.id === "svg" && (
                 <>
-                  <div class="snippet-panel relative min-w-0">
+                  <div class="snippet-panel relative min-w-0 border-t border-border">
                     <CodeBlock lang="ts" code={`import iconUrl from "vadivam/icons/${icon.fileName}";`} icons={false} />
                   </div>
-                  <div class="snippet-panel relative min-w-0">
+                  <div class="snippet-panel relative min-w-0 border-t border-border">
                     <CodeBlock lang="html" code={`<img src="https://cdn.jsdelivr.net/npm/vadivam@${pkg.version}/dist/icons/${icon.fileName}" width="24" height="24" alt="" />`} icons={false} />
                   </div>
                 </>
@@ -310,99 +368,51 @@ const structuredData = site
       </div>
     </section>
 
-    {lucide && (
-      <section class="mt-10" aria-labelledby="lucideHeading">
-        <div class="flex flex-wrap items-end justify-between gap-2">
-          <h2 class={sectionClass} id="lucideHeading">Compared with Lucide</h2>
-          <a class="inline-flex items-center gap-1 text-xs text-muted-foreground no-underline hover:text-foreground" href="/docs/migrate-from-lucide">Migrate from Lucide<VIcon name="arrow-right" size={12} /></a>
-        </div>
-        <div class="mt-3 grid grid-cols-3 border-y border-border" id="lucideCompare">
-          <figure class="compare-tile">
-            <div class="compare-stage">
-              <div class="compare-layer" aria-hidden="true" set:html={sized(svg, 160)} />
-              <div class="pixel-grid compare-layer" aria-hidden="true"></div>
-            </div>
-            <div class="compare-sizes" aria-hidden="true" set:html={sized(svg, 24) + sized(svg, 16)} />
-            <figcaption>Vadivam</figcaption>
-          </figure>
-          <figure class="compare-tile">
-            <div class="compare-stage">
-              <div class="compare-layer" aria-hidden="true" set:html={sized(lucide, 160)} />
-              <div class="pixel-grid compare-layer" aria-hidden="true"></div>
-            </div>
-            <div class="compare-sizes" aria-hidden="true" set:html={sized(lucide, 24) + sized(lucide, 16)} />
-            <figcaption>Lucide {lucideVersion}</figcaption>
-          </figure>
-          <figure class="compare-tile">
-            <div class="compare-stage">
-              <div class="compare-layer compare-lucide" aria-hidden="true" set:html={sized(lucide, 160)} />
-              <div class="compare-layer compare-vadivam" aria-hidden="true" set:html={sized(svg, 160)} />
-              <div class="pixel-grid compare-layer" aria-hidden="true"></div>
-            </div>
-            <div class="compare-sizes" aria-hidden="true">
-              <span class="compare-key"><span class="compare-swatch compare-vadivam"></span>Vadivam</span>
-              <span class="compare-key"><span class="compare-swatch compare-lucide"></span>Lucide</span>
-            </div>
-            <figcaption>Overlay</figcaption>
-          </figure>
-        </div>
-        <p class="m-0 mt-2 text-xs text-muted-foreground">
-          Same name, 24px grid, and 2px stroke, so swapping keeps your layout. Lucide drawing © Lucide Contributors, <a class="text-muted-foreground hover:text-foreground" href="https://github.com/lucide-icons/lucide/blob/main/LICENSE">ISC License</a>.
-        </p>
-      </section>
-    )}
-
-    {icon.tags.length > 0 && (
-      <section class="mt-10" aria-labelledby="tagsHeading">
-        <h2 class={sectionClass} id="tagsHeading">Tags</h2>
-        <div class="mt-3 flex flex-wrap gap-1.5">
-          {icon.tags.map((tag) => (
-            <a class={chipClass} href={`/?q=${encodeURIComponent(tag)}`}>{tag}</a>
-          ))}
-        </div>
-      </section>
-    )}
-
-    {related.length > 0 && (
-      <section class="mt-10" aria-labelledby="relatedHeading">
+    {(related.length > 0 || icon.tags.length > 0) && (
+      <section class="mt-16" aria-labelledby="relatedHeading">
         <h2 class={sectionClass} id="relatedHeading">Related icons</h2>
-        <div class="mt-3 grid grid-cols-3 gap-1 sm:grid-cols-6">
-          {related.map((item) => (
-            <a class="related-tile" href={`/icons/${item.name}`}>
-              <span aria-hidden="true" set:html={item.svg} />
-              <span class="related-name">{item.name}</span>
-            </a>
-          ))}
-        </div>
+        {related.length > 0 && (
+          <div class="mt-3 grid grid-cols-3 gap-1 sm:grid-cols-6">
+            {related.map((item) => (
+              <a class="related-tile" href={`/icons/${item.name}`}>
+                <span aria-hidden="true" set:html={item.svg} />
+                <span class="related-name">{item.name}</span>
+              </a>
+            ))}
+          </div>
+        )}
+        {icon.tags.length > 0 && (
+          <div class="mt-4 flex flex-wrap items-center gap-1.5">
+            <span class="me-1 text-xs text-muted-foreground">Tags</span>
+            {icon.tags.map((tag) => (
+              <a class={chipClass} href={`/?q=${encodeURIComponent(tag)}`}>{tag}</a>
+            ))}
+          </div>
+        )}
       </section>
     )}
 
-    <section class="mt-10" aria-labelledby="moreHeading">
-      <h2 class={sectionClass} id="moreHeading">Learn more</h2>
-      <ul class="m-0 mt-3 list-none divide-y divide-border border-y border-border p-0">
-        {guides.map((guide) => (
-          <li class="m-0 p-0">
-            <a class="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 py-3 text-sm text-foreground no-underline sm:grid-cols-[9rem_minmax(0,1fr)_auto]" href={guide.href}>
-              <span class="font-medium">{guide.title}</span>
-              <span class="col-start-1 row-start-2 text-muted-foreground sm:col-start-2 sm:row-start-1">{guide.description}</span>
-              <span class="col-start-2 row-span-2 row-start-1 text-muted-foreground transition-transform group-hover:translate-x-0.5 sm:col-start-3 sm:row-span-1"><VIcon name="arrow-right" size={14} /></span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <nav class="mt-16 grid gap-x-6 border-t border-border pt-6 sm:grid-cols-2 lg:grid-cols-4" aria-label="Learn more">
+      {guides.map((guide) => (
+        <a class="group grid gap-1 py-2 text-foreground no-underline" href={guide.href}>
+          <span class="inline-flex items-center gap-1 text-sm font-medium">{guide.title}<VIcon name="arrow-right" size={12} class="text-muted-foreground transition-transform group-hover:translate-x-0.5" /></span>
+          <span class="text-xs text-muted-foreground">{guide.description}</span>
+        </a>
+      ))}
+    </nav>
   </main>
 
   {structuredData && <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />}
 
   <script is:inline type="application/json" id="snippetTemplates" set:html={serializeForScript(templates)}></script>
-  <script is:inline type="application/json" id="iconData" set:html={serializeForScript({ icon: iconRef, version: pkg.version })}></script>
+  <script is:inline type="application/json" id="iconData" set:html={serializeForScript({ icon: iconRef, lucide, version: pkg.version })}></script>
 
   <script>
     import {
       bindCustomizer,
       copyText,
       createSettingsStore,
+      isDefaultSettings,
       readTemplates,
       renderPreviews,
       runAction,
@@ -422,8 +432,14 @@ const structuredData = site
       const stage = document.querySelector<HTMLElement>("#previewStage")!;
       const gridToggle = document.querySelector<HTMLInputElement>("#pixelGrid")!;
       const overlay = document.querySelector<HTMLElement>("#pixelGridOverlay")!;
+      const summary = document.querySelector<HTMLElement>("#customizeSummary")!;
+      const customizedDot = document.querySelector<HTMLElement>("#customizedDot")!;
       const templates = readTemplates("snippetTemplates");
-      const { icon, version } = JSON.parse(document.getElementById("iconData")?.textContent ?? "{}") as { icon: IconRef; version: string };
+      const { icon, lucide, version } = JSON.parse(document.getElementById("iconData")?.textContent ?? "{}") as {
+        icon: IconRef;
+        lucide: string | null;
+        version: string;
+      };
       const store = createSettingsStore({ url: true });
       const tabKey = "vadivam:tab";
       const backgroundKey = "vadivam:preview-background";
@@ -474,23 +490,21 @@ const structuredData = site
 
       // One package manager choice rewrites every tab's install line.
       const managerKey = "vadivam:package-manager";
+      const packageManagers = ["npm", "pnpm", "bun", "yarn"];
       const installCommand = (manager: string, packageName: string) =>
         `${manager} ${manager === "npm" ? "install" : "add"} ${packageName}`;
+      const managerSelect = detail.querySelector<HTMLSelectElement>("#packageManager")!;
       const setManager = (manager: string) => {
-        const buttons = Array.from(detail.querySelectorAll<HTMLElement>("[data-package-manager]"));
-        if (!buttons.some((button) => button.dataset.packageManager === manager)) return;
-        for (const button of buttons) button.setAttribute("aria-pressed", String(button.dataset.packageManager === manager));
+        if (!packageManagers.includes(manager)) return;
+        managerSelect.value = manager;
         for (const line of detail.querySelectorAll<HTMLElement>("[data-install]")) {
           line.textContent = installCommand(manager, line.dataset.install ?? "");
         }
       };
-      const currentManager = () =>
-        detail.querySelector<HTMLElement>('[data-package-manager][aria-pressed="true"]')?.dataset.packageManager ?? "npm";
-      detail.querySelector('[aria-label="Package manager"]')?.addEventListener("click", (event) => {
-        const manager = (event.target as HTMLElement).closest<HTMLElement>("[data-package-manager]")?.dataset.packageManager;
-        if (!manager) return;
-        setManager(manager);
-        remember(managerKey, manager);
+      const currentManager = () => managerSelect.value;
+      managerSelect.addEventListener("change", () => {
+        setManager(managerSelect.value);
+        remember(managerKey, managerSelect.value);
       });
       setManager(recall(managerKey) ?? "npm");
 
@@ -508,6 +522,26 @@ const structuredData = site
       });
       setBackground(recall(backgroundKey) ?? "auto");
 
+      // The zoomed preview shows Vadivam, Lucide, both overlaid, or a split
+      // with a draggable divider; the choice is remembered like the others.
+      const compareKey = "vadivam:compare";
+      const setCompare = (mode: string) => {
+        const buttons = Array.from(detail.querySelectorAll<HTMLElement>("[data-compare-mode]"));
+        if (!buttons.some((button) => button.dataset.compareMode === mode)) return;
+        stage.dataset.compare = mode;
+        for (const button of buttons) button.setAttribute("aria-pressed", String(button.dataset.compareMode === mode));
+      };
+      detail.querySelector('[aria-label="Preview drawing"]')?.addEventListener("click", (event) => {
+        const mode = (event.target as HTMLElement).closest<HTMLElement>("[data-compare-mode]")?.dataset.compareMode;
+        if (!mode) return;
+        setCompare(mode);
+        remember(compareKey, mode);
+      });
+      setCompare(recall(compareKey) ?? "vadivam");
+      document.querySelector<HTMLInputElement>("#compareRange")?.addEventListener("input", (event) => {
+        stage.style.setProperty("--split", `${(event.target as HTMLInputElement).value}%`);
+      });
+
       gridToggle.addEventListener("change", () => {
         overlay.hidden = !gridToggle.checked;
         remember("vadivam:pixel-grid", String(gridToggle.checked));
@@ -519,6 +553,9 @@ const structuredData = site
       if (customizer) bindCustomizer(customizer, store);
       store.subscribe((settings) => {
         renderPreviews(detail, icon, settings);
+        if (lucide) renderPreviews(detail, { ...icon, svg: lucide }, settings, "lucide-preview");
+        summary.textContent = `${settings.size}px · ${settings.strokeWidth}${settings.color === "currentColor" ? "" : ` · ${settings.color}`}`;
+        customizedDot.hidden = isDefaultSettings(settings);
         for (const panel of detail.querySelectorAll<HTMLElement>("[data-snippet]")) {
           panel.innerHTML = snippetHtml(templates, panel.dataset.snippet ?? "react", icon, settings);
         }
@@ -626,28 +663,8 @@ const structuredData = site
     white-space: nowrap;
   }
 
-  #iconDetail .compare-tile {
-    display: grid;
-    align-content: start;
-    gap: 0.75rem;
-    min-width: 0;
-    margin: 0;
-    padding: 1rem 0.5rem;
-  }
-
-  #iconDetail .compare-tile + .compare-tile {
-    border-inline-start: 1px solid var(--color-border);
-  }
-
-  #iconDetail .compare-stage {
-    position: relative;
-    width: 100%;
-    max-width: 10rem;
-    aspect-ratio: 1;
-    margin-inline: auto;
-    color: var(--color-foreground);
-  }
-
+  /* The zoomed preview stacks Lucide under Vadivam; the stage's
+     data-compare picks which drawings show and how. */
   #iconDetail .compare-layer {
     position: absolute;
     inset: 0;
@@ -658,52 +675,139 @@ const structuredData = site
     height: 100%;
   }
 
-  #iconDetail .compare-sizes {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem 0.75rem;
-    min-height: 1.5rem;
-    font-size: 0.65rem;
-    color: var(--color-muted-foreground);
+  #iconDetail .compare-label,
+  #iconDetail .compare-divider,
+  #iconDetail .compare-range,
+  #previewStage[data-compare="vadivam"] [data-layer="lucide"],
+  #previewStage[data-compare="lucide"] [data-layer="vadivam"],
+  #previewStage[data-compare="vadivam"] [data-size-layer="lucide"] {
+    display: none;
   }
 
-  #iconDetail .compare-sizes > svg {
-    color: var(--color-foreground);
+  #previewStage[data-compare="overlay"] .compare-label,
+  #previewStage[data-compare="split"] .compare-label,
+  #previewStage[data-compare="split"] .compare-divider,
+  #previewStage[data-compare="split"] .compare-range {
+    display: block;
   }
 
-  #iconDetail .compare-tile figcaption {
-    font-size: 0.75rem;
-    text-align: center;
-    color: var(--color-muted-foreground);
+  #iconDetail .compare-label {
+    position: absolute;
+    top: -1.5rem;
+    font-size: 0.68rem;
+    line-height: 1rem;
+    opacity: 0.6;
   }
 
-  /* Vadivam draws in the accent over Lucide's faded drawing. */
-  #iconDetail .compare-vadivam {
+  #iconDetail .compare-label-start {
+    left: 0;
+  }
+
+  #iconDetail .compare-label-end {
+    right: 0;
+  }
+
+  /* Overlay: Vadivam in the accent over Lucide's faded drawing. Each label
+     doubles as the legend for its color. */
+  #previewStage[data-compare="overlay"] [data-layer="vadivam"] svg,
+  #previewStage[data-compare="overlay"] .compare-label-start {
+    stroke: var(--color-accent);
     color: var(--color-accent);
+    opacity: 1;
   }
 
-  #iconDetail .compare-lucide {
-    color: color-mix(in oklab, var(--color-foreground) 35%, transparent);
+  #previewStage[data-compare="overlay"] [data-layer="lucide"] svg {
+    stroke: color-mix(in oklab, currentColor 30%, transparent);
   }
 
-  #iconDetail .compare-key {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    white-space: nowrap;
+  /* Split: Vadivam left of the divider, Lucide right of it. */
+  #previewStage[data-compare="split"] [data-layer="vadivam"] {
+    clip-path: inset(0 calc(100% - var(--split)) 0 0);
   }
 
-  #iconDetail .compare-swatch {
-    width: 0.625rem;
-    height: 0.625rem;
+  #previewStage[data-compare="split"] [data-layer="lucide"] {
+    clip-path: inset(0 0 0 var(--split));
+  }
+
+  #iconDetail .compare-divider {
+    position: absolute;
+    top: -0.5rem;
+    bottom: -0.5rem;
+    left: var(--split);
+    width: 0;
+    border-left: 1px solid var(--color-accent);
+    pointer-events: none;
+  }
+
+  #iconDetail .compare-handle {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
     border-radius: 9999px;
-    background: currentColor;
+    background: var(--color-accent);
+    color: var(--color-accent-foreground);
+    transform: translate(-50%, -50%);
+  }
+
+  #iconDetail .compare-zoom:has(.compare-range:focus-visible) .compare-handle {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* An invisible range input covers the drawing, so dragging anywhere on it,
+     or the arrow keys, move the divider. */
+  #iconDetail .compare-range {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: ew-resize;
+  }
+
+  /* Real sizes under the zoomed drawing: one row for Vadivam, plus a
+     labelled Lucide row in the compare modes. */
+  #iconDetail .size-strip {
+    display: grid;
+    grid-template-columns: 3.5rem repeat(5, minmax(0, 1fr));
+    align-items: center;
+    row-gap: 0.75rem;
+    padding: 0 1rem 1.25rem;
+  }
+
+  #previewStage[data-compare="vadivam"] .size-strip {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    max-width: 24rem;
+    width: 100%;
+    margin-inline: auto;
+  }
+
+  #iconDetail .size-strip-label {
+    font-size: 0.68rem;
+    opacity: 0.6;
+  }
+
+  #iconDetail .size-strip-size {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.65rem;
+    text-align: center;
+    opacity: 0.5;
+  }
+
+  #iconDetail .compare-note {
+    opacity: 0.6;
   }
 
   #iconDetail .snippet-panel pre.astro-code {
     margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     font-size: 0.78rem;
   }
 

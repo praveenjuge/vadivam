@@ -314,10 +314,14 @@ export function bindCustomizer(element: HTMLElement, store: SettingsStore) {
   });
 }
 
-/** Paint every `[data-icon-preview]` inside `root` with the customized icon. */
-export function renderPreviews(root: ParentNode, icon: IconRef, settings: IconSettings) {
-  for (const preview of root.querySelectorAll<HTMLElement>("[data-icon-preview]")) {
-    const pixels = Number(preview.dataset.iconPreview) || settings.size;
+/**
+ * Paint every `[data-<attribute>]` inside `root` with the customized icon; the
+ * attribute value is the preview's pixel size. Icon pages paint Lucide's
+ * drawing into `data-lucide-preview` slots the same way.
+ */
+export function renderPreviews(root: ParentNode, icon: IconRef, settings: IconSettings, attribute = "icon-preview") {
+  for (const preview of root.querySelectorAll<HTMLElement>(`[data-${attribute}]`)) {
+    const pixels = Number(preview.getAttribute(`data-${attribute}`)) || settings.size;
     // A zoomed preview magnifies the icon at the chosen size; a sized preview
     // renders it at that size, so `absoluteStrokeWidth` adjusts its stroke.
     const markup = "zoom" in preview.dataset
