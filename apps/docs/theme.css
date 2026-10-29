@@ -61,9 +61,9 @@
     pointer-events: none;
   }
 
-  /* The grid's Solid toggle swaps every tile's paths for its solid twin's,
-     which are filled shapes with cut-outs. */
-  [data-icon-style="solid"] .icon-chunk > a > svg {
+  /* The grid's Solid toggle swaps a tile's paths for its solid twin's, which
+     are filled shapes with cut-outs, and marks the tile once it has them. */
+  .icon-chunk > a[data-style="solid"] > svg {
     fill: var(--icon-color, currentColor);
     fill-rule: evenodd;
     stroke: none;
@@ -194,6 +194,11 @@
   }
 }
 /* Without motion, the first icon stays drawn. */
+/* An off-screen animation still restyles every frame, so the drawing pauses
+   while it's out of view. */
+.icon-sketch[data-paused] .icon-sketch-icon {
+  animation-play-state: paused;
+}
 @media (prefers-reduced-motion: reduce) {
   .icon-sketch-icon {
     animation: none;

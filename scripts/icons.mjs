@@ -14,6 +14,7 @@ import { elementPathData, inkBounds, parsePath, shortStrokeEnds } from "./icon-g
 import { findUnsmoothedCorners, reattachEnds, smoothCorners } from "./corner-smoothing.mjs";
 import { cleanPaths, gridTolerance } from "./path-cleanup.mjs";
 import { evenOddPathData, loadPathKit } from "./solid-draft.mjs";
+import { iconDataDir, iconDataFiles } from "./web-data.mjs";
 import { optimize } from "svgo";
 import { Resvg } from "@resvg/resvg-js";
 import { buildAngularPackage } from "./generators/angular.mjs";
@@ -64,8 +65,10 @@ const composePackage = path.join(root, "packages/vadivam-compose");
 const mcpPackage = path.join(root, "packages/vadivam-mcp");
 const skillSource = path.join(root, "apps/docs/skills/vadivam-icons/SKILL.md");
 const rawSkills = path.join(root, "packages/vadivam/skills");
-const webIconsDir = path.join(root, "apps/docs/public/icons");
-const webSolidIconsDir = path.join(root, "apps/docs/public/icons-solid");
+const webRoot = path.join(root, "apps/docs/public");
+const webIconsDir = path.join(webRoot, "icons");
+const webIconDataDir = path.join(webRoot, iconDataDir);
+const webSolidIconsDir = path.join(webRoot, "icons-solid");
 const shadcnRegistryDir = path.join(root, "apps/docs/public/r");
 const previewPath = path.join(root, "apps/docs/public/preview.png");
 const ogPath = path.join(root, "apps/docs/public/og.png");
@@ -955,8 +958,10 @@ export default createIcons;
 async function buildWebAssets(icons, solidIcons = []) {
   await rm(webIconsDir, { recursive: true, force: true });
   await rm(webSolidIconsDir, { recursive: true, force: true });
+  await rm(webIconDataDir, { recursive: true, force: true });
   await mkdir(webIconsDir, { recursive: true });
   await mkdir(webSolidIconsDir, { recursive: true });
+  await mkdir(webIconDataDir, { recursive: true });
   for (const icon of icons) {
     await copyFile(
       path.join(iconsDir, icon.fileName),
@@ -969,20 +974,16 @@ async function buildWebAssets(icons, solidIcons = []) {
       path.join(webSolidIconsDir, icon.fileName),
     );
   }
-  // The homepage's Outline/Solid toggle fetches the solid path data on first
-  // use, so the solid set never weighs down the page.
-  await writeFile(
-    path.join(webSolidIconsDir, "index.json"),
-    JSON.stringify(Object.fromEntries(solidIcons.map((icon) => [icon.name, icon.iconNode.map(([, attrs]) => attrs.d)]))),
+  // The homepage loads its search index and each grid chunk's solid paths on
+  // demand, so neither weighs down its HTML.
+  const solidByName = new Map(solidIcons.map((icon) => [icon.name, icon]));
+  const { searchIndex, solidChunks } = iconDataFiles(
+    icons.map((icon) => ({ ...icon, solid: solidByName.get(icon.name) })),
+    iconCategories,
   );
-  // The homepage fetches this lazily so tags never weigh down its HTML.
-  await writeFile(
-    path.join(webIconsDir, "index.json"),
-    JSON.stringify({
-      categories: Object.fromEntries(iconCategories.map(({ id, title }) => [id, title])),
-      icons: icons.map((icon) => [icon.name, icon.tags, icon.categories.join(" ")]),
-    }),
-  );
+  for (const file of [searchIndex, ...solidChunks]) {
+    await writeFile(path.join(webRoot, file.path), file.contents);
+  }
 }
 
 export async function buildPreview() {

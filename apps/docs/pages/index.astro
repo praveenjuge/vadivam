@@ -2,9 +2,12 @@
 import PageLayout from "blume/components/layout/PageLayout.astro";
 import GithubInfo from "blume/components/content/GithubInfo.astro";
 import data from "blume:data";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { categories, icons, iconsByName } from "vadivam/manifest";
 import { iconLastmods } from "../../../scripts/icon-lastmods.mjs";
 import { frameworks } from "../../../scripts/snippets.mjs";
+import { gridChunkSize, iconDataFiles } from "../../../scripts/web-data.mjs";
 import pkg from "../../../package.json";
 import ActionMenus from "./_lib/ActionMenus.astro";
 import Customizer from "./_lib/Customizer.astro";
@@ -62,8 +65,8 @@ for (const icon of icons) {
   tilePaths.set(icon.name, paths);
 }
 
-// The Solid toggle fetches solid path data and rebuilds the drawer's SVG from
-// it the same way, so check those rebuild exactly too.
+// The Solid toggle fetches solid path data and rebuilds tiles and the drawer's
+// SVG from it the same way, so check those rebuild exactly too.
 for (const icon of icons) {
   if (!icon.solid) throw new Error(`${icon.name} has no solid twin`);
   const paths = Array.from(icon.solid.svg.matchAll(/ d="([^"]*)"/g), (match) => `<path d="${match[1]}"/>`).join("");
@@ -80,12 +83,20 @@ for (const name of searchExamples) {
 }
 const iconCount = icons.length.toLocaleString("en-US");
 
-// 120 divides every column count the grid uses (5, 8, 10, 24), so chunks
-// stack without ragged rows. See `.icon-chunk`.
-const chunkSize = 120;
-const chunks = Array.from({ length: Math.ceil(icons.length / chunkSize) }, (_, index) =>
-  icons.slice(index * chunkSize, (index + 1) * chunkSize),
+// Chunks stack without ragged rows (see `.icon-chunk`), and each one names the
+// file holding its solid paths.
+const chunks = Array.from({ length: Math.ceil(icons.length / gridChunkSize) }, (_, index) =>
+  icons.slice(index * gridChunkSize, (index + 1) * gridChunkSize),
 );
+
+// `bun run icons:build` writes these files from the same manifest, so a
+// missing one means the public folder is stale.
+const { searchIndex, solidChunks } = iconDataFiles(icons, categories);
+for (const file of [searchIndex, ...solidChunks]) {
+  if (!existsSync(path.join(process.cwd(), "public", file.path))) {
+    throw new Error(`public/${file.path} is missing. Run \`bun run icons:build\`.`);
+  }
+}
 
 const countPaths = (svg: string) => (svg.match(/ d="/g) ?? []).length;
 const pathCounts = [...new Set(icons.map((icon) => countPaths(icon.svg)))].filter((count) => count > 0);
@@ -245,6 +256,7 @@ const structuredData = site
             placeholder={`Search ${iconCount} icons`}
             aria-label="Search icons"
             data-examples={searchExamples.join(" ")}
+            data-index={`/${searchIndex.path}`}
             aria-describedby="resultCount"
             aria-keyshortcuts="/"
             autocomplete="off"
@@ -294,10 +306,12 @@ const structuredData = site
       <div class="icon-browser pt-3" id="iconBrowser">
         <div class="icon-grid" id="iconGrid">
           {
-            chunks.map((chunk) => (
-              <div class="icon-chunk">
+            chunks.map((chunk, index) => (
+              <div class="icon-chunk" data-solid={`/${solidChunks[index]!.path}`}>
+                {/* A click opens the drawer, so hovering a tile shouldn't
+                    prefetch its page the way Astro prefetches other links. */}
                 {chunk.map((icon) => (
-                  <a href={`/icons/${icon.name}`} aria-label={icon.name}><svg viewBox="0 0 24 24" set:html={tilePaths.get(icon.name)} /></a>
+                  <a href={`/icons/${icon.name}`} aria-label={icon.name} data-astro-prefetch="false"><svg viewBox="0 0 24 24" set:html={tilePaths.get(icon.name)} /></a>
                 ))}
               </div>
             ))
@@ -477,7 +491,7 @@ const structuredData = site
       const drawerTags = document.querySelector<HTMLElement>("#drawerTags")!;
       const drawerCustomize = document.querySelector<HTMLDetailsElement>("#drawerCustomize")!;
       const tabButtons = Array.from(drawer.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
-      const cards = Array.from(grid.querySelectorAll<HTMLAnchorElement>(".icon-chunk > a"));
+      const chunkElements = Array.from(grid.querySelectorAll<HTMLElement>(":scope > .icon-chunk"));
       const styleSwitch = document.querySelector<HTMLButtonElement>("#iconStyle")!;
 
       const templates = readTemplates("snippetTemplates");
@@ -490,28 +504,114 @@ const structuredData = site
       const pascalCase = (name: string) =>
         name.split("-").filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("");
 
-      // ---- Search index -------------------------------------------------------
-      // Names are in the HTML; tags and categories load on first search intent.
+      // ---- Icons --------------------------------------------------------------
+      // Names and outline paths are in the HTML; tags, categories, and solid
+      // paths load on demand.
       type Entry = {
         card: HTMLAnchorElement;
         clone?: HTMLAnchorElement;
         name: string;
+        /** The index of the grid chunk holding the card. */
+        chunk: number;
         words: string;
         /** The name without hyphens, so component names like `ArrowUp` match. */
         compact: string;
         tags: string[];
         categories: string[];
+        outline?: string[];
+        solid?: string[];
       };
-      const entries: Entry[] = cards.map((card) => {
-        const name = nameOf(card);
-        return { card, name, words: name.replaceAll("-", " "), compact: name.replaceAll("-", ""), tags: [], categories: [] };
-      });
+      const chunkEntries: Entry[][] = chunkElements.map((chunkElement, chunk) =>
+        Array.from(chunkElement.querySelectorAll<HTMLAnchorElement>(":scope > a"), (card) => {
+          const name = nameOf(card);
+          return { card, name, chunk, words: name.replaceAll("-", " "), compact: name.replaceAll("-", ""), tags: [], categories: [] };
+        }),
+      );
+      const entries = chunkEntries.flat();
       const entryByName = new Map(entries.map((entry) => [entry.name, entry]));
+
+      // ---- Style --------------------------------------------------------------
+      // Tiles start as outline. Solid paths load one grid chunk at a time, so
+      // the Solid toggle fetches only the chunks in view and the rest follow as
+      // they scroll near. A tile marks its painted style in `data-style`, which
+      // the CSS reads, so a tile still waiting on its paths keeps its look.
+      let iconStyle: "outline" | "solid" = "outline";
+      const solidLoads = new Map<number, Promise<void>>();
+      const loadSolidChunk = (chunk: number) => {
+        let promise = solidLoads.get(chunk);
+        if (!promise) {
+          promise = fetch(chunkElements[chunk]?.dataset.solid ?? "")
+            .then((response) => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
+            .then((paths: string[][]) => {
+              chunkEntries[chunk]?.forEach((entry, index) => (entry.solid = paths[index]));
+            })
+            .catch((error) => {
+              // Forget the failure so the next request retries.
+              solidLoads.delete(chunk);
+              throw error;
+            });
+          solidLoads.set(chunk, promise);
+        }
+        return promise;
+      };
+      const pathData = (tile: Element) => Array.from(tile.querySelectorAll("path"), (path) => path.getAttribute("d") ?? "");
+      const svgPath = (d: string) => {
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", d);
+        return path;
+      };
+
+      // Shows a tile, the grid's or a search result's copy, in the current
+      // style, loading its chunk's solid paths first when they're missing.
+      const paint = (tile: HTMLAnchorElement, entry: Entry) => {
+        const style = iconStyle;
+        if ((tile.dataset.style ?? "outline") === style) return;
+        // A card that was never painted still holds its outline paths.
+        entry.outline ??= pathData(entry.card);
+        const paths = style === "solid" ? entry.solid : entry.outline;
+        if (!paths) {
+          loadSolidChunk(entry.chunk).then(() => paint(tile, entry), () => {});
+          return;
+        }
+        tile.firstElementChild?.replaceChildren(...paths.map(svgPath));
+        if (style === "solid") tile.dataset.style = "solid";
+        else delete tile.dataset.style;
+        // New-tab and copied links open the icon page in the same style.
+        tile.setAttribute("href", style === "solid" ? `/icons/${entry.name}?style=solid` : `/icons/${entry.name}`);
+      };
+      const paintChunk = (chunk: number) => {
+        for (const entry of chunkEntries[chunk] ?? []) paint(entry.card, entry);
+      };
+      const chunksInView = () =>
+        chunkElements.flatMap((chunkElement, chunk) => {
+          const { top, bottom } = chunkElement.getBoundingClientRect();
+          return bottom > 0 && top < innerHeight ? [chunk] : [];
+        });
+      // Chunks within half a screen of the viewport. Ones still in the last
+      // style catch up as they scroll near.
+      const nearChunks = new Set<number>();
+      const chunkObserver = new IntersectionObserver(
+        (observed) => {
+          for (const item of observed) {
+            const chunk = chunkElements.indexOf(item.target as HTMLElement);
+            if (!item.isIntersecting) nearChunks.delete(chunk);
+            else {
+              nearChunks.add(chunk);
+              paintChunk(chunk);
+            }
+          }
+        },
+        { rootMargin: "50% 0px" },
+      );
+      for (const chunkElement of chunkElements) chunkObserver.observe(chunkElement);
+
+      // ---- Search index -------------------------------------------------------
+      // Tags and categories load on first search intent.
       let categoryTitles: Record<string, string> = {};
       let indexPromise: Promise<void> | null = null;
 
       const loadIndex = () =>
-        (indexPromise ??= fetch("/icons/index.json")
+        (indexPromise ??= fetch(search.dataset.index ?? "")
           .then((response) => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
           .then((index: { categories: Record<string, string>; icons: [string, string[], string][] }) => {
             categoryTitles = index.categories;
@@ -567,6 +667,7 @@ const structuredData = site
           entry.clone = entry.card.cloneNode(true) as HTMLAnchorElement;
           entry.clone.setAttribute("aria-current", "false");
         }
+        paint(entry.clone, entry);
         return entry.clone;
       };
 
@@ -744,37 +845,25 @@ const structuredData = site
       browser.addEventListener("focusout", hideTooltip);
       addEventListener("scroll", hideTooltip, { passive: true, signal });
 
-      // ---- Style --------------------------------------------------------------
-      // Tiles start as outline; the Solid toggle fetches the solid paths once
-      // and swaps them into every tile, keeping the outline paths to swap back.
-      let iconStyle: "outline" | "solid" = "outline";
-      let solidPromise: Promise<Record<string, string[]>> | null = null;
-      const outlinePaths = new Map<Element, Node[]>();
-      const loadSolid = () =>
-        (solidPromise ??= fetch("/icons-solid/index.json")
-          .then((response) => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
-          .catch((error) => {
-            solidPromise = null;
-            throw error;
-          }));
-      const svgPath = (d: string) => {
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("d", d);
-        return path;
-      };
-
+      // ---- Style switch -------------------------------------------------------
       // Set by the drawer: repaints it in the new style.
       let afterStyle = () => {};
 
-      // The latest click wins, even over a solid fetch still in flight.
+      // The latest click wins, even over solid paths still loading.
       let requestedStyle: "outline" | "solid" = "outline";
       const setStyle = async (style: "outline" | "solid", { updateUrl = true } = {}) => {
         requestedStyle = style;
         if (style === iconStyle) return;
-        let solid: Record<string, string[]> = {};
+        // The chunks in view, the rendered search results, and the drawer's
+        // icon switch together once their paths are in. Chunks just out of
+        // view follow as theirs load.
+        const shown = matches ? matches.slice(0, renderedCount) : [];
         if (style === "solid") {
+          const needed = new Set([...chunksInView(), ...shown.map((entry) => entry.chunk)]);
+          const drawerEntry = selectedEntry();
+          if (drawerEntry) needed.add(drawerEntry.chunk);
           try {
-            solid = await loadSolid();
+            await Promise.all(Array.from(needed, loadSolidChunk));
           } catch {
             // Fall back to the shown style so the next click retries solid.
             if (requestedStyle === style) requestedStyle = iconStyle;
@@ -783,18 +872,9 @@ const structuredData = site
           if (requestedStyle !== style) return;
         }
         iconStyle = style;
-        for (const entry of entries) {
-          const svg = entry.card.firstElementChild;
-          if (!svg) continue;
-          if (!outlinePaths.has(svg)) outlinePaths.set(svg, Array.from(svg.childNodes));
-          svg.replaceChildren(...(style === "solid" ? (solid[entry.name] ?? []).map(svgPath) : (outlinePaths.get(svg) ?? [])));
-          // New-tab and copied links open the icon page in the same style.
-          entry.card.setAttribute("href", style === "solid" ? `/icons/${entry.name}?style=solid` : `/icons/${entry.name}`);
-          entry.clone = undefined;
-        }
-        explorer.dataset.iconStyle = style;
+        for (const chunk of new Set([...chunksInView(), ...nearChunks])) paintChunk(chunk);
+        for (const entry of shown) cloneOf(entry);
         styleSwitch.setAttribute("aria-checked", String(style === "solid"));
-        if (matches) applyFilter();
         afterStyle();
         if (updateUrl) {
           const url = new URL(location.href);
@@ -806,8 +886,14 @@ const structuredData = site
       // Each click flips the last requested style, so quick repeat clicks
       // still alternate while the solid paths are loading.
       styleSwitch.addEventListener("click", () => setStyle(requestedStyle === "solid" ? "outline" : "solid"));
-      // Fetch the solid paths as soon as the visitor reaches for the toggle.
-      styleSwitch.addEventListener("pointerenter", () => loadSolid().catch(() => {}), { once: true });
+      // Fetch the chunks in view as soon as the visitor reaches for the toggle.
+      styleSwitch.addEventListener(
+        "pointerenter",
+        () => {
+          for (const chunk of chunksInView()) loadSolidChunk(chunk).catch(() => {});
+        },
+        { once: true },
+      );
 
       // ---- Drawer -------------------------------------------------------------
       let selected: HTMLAnchorElement | null = null;
@@ -821,16 +907,19 @@ const structuredData = site
       if (!tabButtons.some((button) => button.dataset.tab === activeTab)) activeTab = "react";
       let statusTimer: ReturnType<typeof setTimeout> | undefined;
 
-      // Rebuilt from the tile's inline paths; the build checks this matches the manifest.
-      // The grid's own tile always shows the current style; a search result's
-      // copy of it can be one style behind when the search no longer matches it.
+      const selectedEntry = () => (selected ? entryByName.get(nameOf(selected)) : undefined);
+
+      // Rebuilt from the icon's path data; the build checks this matches the
+      // manifest. Null while the icon's solid paths are still loading.
       const currentIcon = (): IconRef | null => {
-        if (!selected || !templates) return null;
-        const name = nameOf(selected);
-        const tile = entryByName.get(name)?.card ?? selected;
-        const paths = Array.from(tile.querySelectorAll("path"), (path) => `<path d="${path.getAttribute("d")}"/>`);
+        const entry = selectedEntry();
+        if (!entry || !templates) return null;
+        entry.outline ??= pathData(entry.card);
+        const paths = iconStyle === "solid" ? entry.solid : entry.outline;
+        if (!paths) return null;
         const openTag = iconStyle === "solid" ? templates.solid.svgOpenTag : templates.svgOpenTag;
-        return { name, component: pascalCase(name), svg: `${openTag}\n${paths.join("")}\n</svg>\n`, style: iconStyle };
+        const svg = `${openTag}\n${paths.map((d) => `<path d="${d}"/>`).join("")}\n</svg>\n`;
+        return { name: entry.name, component: pascalCase(entry.name), svg, style: iconStyle };
       };
 
       const setStatus = (message: string) => {
@@ -850,7 +939,7 @@ const structuredData = site
       };
 
       const renderMeta = () => {
-        const entry = selected ? entryByName.get(nameOf(selected)) : null;
+        const entry = selectedEntry();
         if (!entry) return;
         drawerCategories.replaceChildren(
           ...entry.categories.map((id) => chip(categoryTitles[id] ?? id, { "data-filter-category": id })),
@@ -862,7 +951,12 @@ const structuredData = site
       const render = () => {
         showStrokeSettings(drawer, iconStyle);
         const icon = currentIcon();
-        if (!icon) return;
+        if (!icon) {
+          // Stepping in solid can reach a chunk that hasn't loaded yet.
+          const entry = selectedEntry();
+          if (entry && iconStyle === "solid") loadSolidChunk(entry.chunk).then(render, () => {});
+          return;
+        }
         const settings = store.get();
         drawerCode.innerHTML = snippetHtml(templates, activeTab, icon, settings);
         renderPreviews(drawer, icon, settings);
@@ -873,7 +967,7 @@ const structuredData = site
       // grid) by entry, so they never force unrendered matches into the DOM.
       const visibleEntries = () => matches ?? entries;
       const selectedIndex = () => {
-        const entry = selected ? entryByName.get(nameOf(selected)) : undefined;
+        const entry = selectedEntry();
         return entry ? visibleEntries().indexOf(entry) : -1;
       };
 
@@ -1171,6 +1265,7 @@ const structuredData = site
 
       signal.addEventListener("abort", () => {
         sentinelObserver.disconnect();
+        chunkObserver.disconnect();
         resizeObserver.disconnect();
         openObserver.disconnect();
       });

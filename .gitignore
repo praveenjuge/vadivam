@@ -10,6 +10,7 @@ packages/vadivam-angular/.generated
 packages/vadivam/skills
 apps/docs/public/icons
 apps/docs/public/icons-solid
+apps/docs/public/icon-data
 apps/docs/public/r
 
 # Integration test apps (build artifacts; per-app bun.lock IS tracked)
