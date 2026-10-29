@@ -251,8 +251,12 @@
     "grid-2x2-check",
     "grid-2x2-plus",
     "grid-2x2-x",
+    "share-2",
+    "shelving-unit",
     "square-library",
-    "videotape"
+    "utensils",
+    "videotape",
+    "wind-arrow-down"
   ],
   "icons": {
     "backpack": {
