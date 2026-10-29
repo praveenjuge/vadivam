@@ -6,7 +6,7 @@ Pixel-perfect 24px outline icons for Jetpack Compose and Android Views.
 
 ```kotlin
 dependencies {
-    implementation("com.praveenjuge:vadivam-compose:0.0.73")
+    implementation("com.praveenjuge:vadivam-compose:0.0.74")
 }
 ```
 

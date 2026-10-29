@@ -8,7 +8,7 @@ Tree-shakeable 24px outline SVG icons for Qwik.
 [![downloads](https://img.shields.io/npm/dw/vadivam-qwik?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam-qwik)
 [![license](https://img.shields.io/npm/l/vadivam-qwik?style=flat-square&color=111)](https://github.com/praveenjuge/vadivam/blob/main/LICENSE)
 
-![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/docs/public/preview.png?v=0.0.73)
+![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/docs/public/preview.png?v=0.0.74)
 
 ```sh
 npm install vadivam-qwik
