@@ -776,6 +776,8 @@ const structuredData = site
           try {
             solid = await loadSolid();
           } catch {
+            // Fall back to the shown style so the next click retries solid.
+            if (requestedStyle === style) requestedStyle = iconStyle;
             return;
           }
           if (requestedStyle !== style) return;
