@@ -36,6 +36,39 @@ const decode = (text) =>
     .replace(/&#(\d+);/g, (_, decimal) => String.fromCodePoint(Number(decimal)))
     .replace(/&([a-z]+);/gi, (match, name) => entities[name] ?? match);
 
+// The rendered text nodes and placeholders of a page, outside scripts and styles.
+const textNodes = (html) => {
+  const texts = [];
+  let current = "";
+  let skipping = 0;
+  new HTMLRewriter()
+    .on("script, style", {
+      element(element) {
+        skipping++;
+        element.onEndTag(() => {
+          skipping--;
+        });
+      },
+    })
+    .on("[placeholder]", {
+      element(element) {
+        texts.push(decode(element.getAttribute("placeholder")));
+      },
+    })
+    .onDocument({
+      text(chunk) {
+        if (skipping) return;
+        current += chunk.text;
+        if (chunk.lastInTextNode) {
+          texts.push(decode(current));
+          current = "";
+        }
+      },
+    })
+    .transform(html);
+  return texts;
+};
+
 describe("docs fonts", () => {
   const pages = htmlFiles(clientDir);
   const home = readFileSync(path.join(clientDir, "index.html"), "utf8");
@@ -61,24 +94,21 @@ describe("docs fonts", () => {
 
   test("fonts cover what the pages use, and keep in-word characters in the core", () => {
     const eligible = new Set(parseRange(manifest.eligible));
+    const texts = pages.flatMap((page) => textNodes(readFileSync(page, "utf8")));
     const failures = new Set();
     for (const family of manifest.families) {
       const missing = new Set(parseRange(family.missing));
       const covered = new Set(parseRange(family.faces.flatMap((face) => face.unicodeRange)));
       const core = new Set(family.faces.filter((face) => face.subset === "latin").flatMap((face) => parseRange(face.unicodeRange)));
-      for (const page of pages) {
-        const html = readFileSync(page, "utf8").replace(/<(script|style)\b[\s\S]*?<\/\1>|<!--[\s\S]*?-->/g, "");
-        const texts = [...html.split(/<[^>]*>/), ...[...html.matchAll(/placeholder="([^"]*)"/g)].map(([, text]) => text)];
-        for (const text of texts.map(decode)) {
-          const chars = [...text];
-          chars.forEach((char, index) => {
-            const code = char.codePointAt(0);
-            if (!eligible.has(code) || missing.has(code)) return;
-            if (!covered.has(code)) failures.add(`${family.name} lacks U+${code.toString(16).toUpperCase()} (${char})`);
-            const inWord = /\p{M}/u.test(char) || `${chars[index - 1] ?? ""}${chars[index + 1] ?? ""}`.trim();
-            if (inWord && !core.has(code)) failures.add(`${family.name} serves U+${code.toString(16).toUpperCase()} (${char}), used inside a word, from the extended file`);
-          });
-        }
+      for (const text of texts) {
+        const chars = [...text];
+        chars.forEach((char, index) => {
+          const code = char.codePointAt(0);
+          if (!eligible.has(code) || missing.has(code)) return;
+          if (!covered.has(code)) failures.add(`${family.name} lacks U+${code.toString(16).toUpperCase()} (${char})`);
+          const inWord = /\p{M}/u.test(char) || `${chars[index - 1] ?? ""}${chars[index + 1] ?? ""}`.trim();
+          if (inWord && !core.has(code)) failures.add(`${family.name} serves U+${code.toString(16).toUpperCase()} (${char}), used inside a word, from the extended file`);
+        });
       }
     }
     expect([...failures], rerun).toEqual([]);
