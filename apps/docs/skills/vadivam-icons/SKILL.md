@@ -1,11 +1,11 @@
 ---
 name: vadivam-icons
-description: "Use Vadivam, an open-source set of pixel-perfect 24px outline icons, as SVG assets, SVG strings, a sprite, an icon font, or components for React, React Native, Vue, Svelte, Solid, Angular, Astro, Preact, Qwik, Lit, Flutter, and Jetpack Compose, or the <vadivam-icon> element for plain HTML. Use when a task picks an icon by meaning (search by name, tag, or category), installs or imports a vadivam package (vadivam, vadivam-react, vadivam-react-native, vadivam-vue, vadivam-svelte, vadivam-solid, vadivam-angular, vadivam-astro, vadivam-preact, vadivam-qwik, vadivam-lit, the vadivam Flutter package, com.praveenjuge:vadivam-compose), sets up the vadivam-mcp MCP server, adds an icon through the shadcn registry, sizes, colors, or labels Vadivam icons, renders an icon from a runtime name with DynamicIcon or iconNames, sets shared defaults with VadivamProvider or provideVadivamConfig, or contributes icons to Vadivam."
+description: "Use Vadivam, an open-source set of pixel-perfect 24px outline icons, as SVG assets, SVG strings, a sprite, an icon font, or components for web frameworks, React Native, Flutter, and Jetpack Compose. Use when a task picks an icon by meaning (search by name, tag, or category), installs or imports a vadivam package (vadivam, vadivam-react, vadivam-react-native, vadivam-vue, vadivam-svelte, vadivam-solid, vadivam-angular, vadivam-astro, vadivam-preact, vadivam-qwik, vadivam-lit, the vadivam Flutter package, com.praveenjuge:vadivam-compose), sets up the vadivam-mcp MCP server, adds an icon through the shadcn registry, sizes, colors, or labels Vadivam icons, renders an icon from a runtime name with DynamicIcon or iconNames, sets shared defaults with VadivamProvider or provideVadivamConfig, or contributes icons to Vadivam."
 ---
 
 # Vadivam Icons
 
-Vadivam is an open-source set of pixel-perfect 24px outline icons. Use optimized SVG assets, browser JavaScript helpers, or native components for React, React Native, Vue, Svelte, Solid, Angular, Astro, Preact, Qwik, Lit, Flutter, and Jetpack Compose. Every npm package is ESM-only and publishes tree-shakeable named and per-icon exports.
+Vadivam is an open-source set of pixel-perfect 24px outline icons. Use optimized SVG assets, browser JavaScript helpers, a `<vadivam-icon>` element, or native components for web frameworks, React Native, Flutter, and Jetpack Compose. Every npm package is ESM-only and publishes tree-shakeable named and per-icon exports.
 
 ## Setup
 
