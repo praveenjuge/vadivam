@@ -6,7 +6,7 @@ import { filesystem, githubReleases } from "blume/sources";
 export default defineConfig({
   title: "Vadivam Icons",
   description:
-    "Browse pixel-perfect, open-source 24px outline icons for SVG, React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.",
+    "Browse and copy pixel-perfect, open-source 24px outline icons for the web, React Native, Flutter, and Jetpack Compose.",
   analytics: [cloudflare({ token: "aab722c0300445d9b5c73b06de1a4fc6" })],
   content: {
     sources: [

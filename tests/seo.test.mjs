@@ -132,7 +132,7 @@ describe("website SEO", () => {
     expect(html).toContain('"@type":"WebSite"');
     expect(html).not.toContain("SearchAction");
     expect(html).toContain(
-      "Browse pixel-perfect, open-source 24px outline icons for SVG, React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.",
+      "Browse and copy pixel-perfect, open-source 24px outline icons for the web, React Native, Flutter, and Jetpack Compose.",
     );
     expect(html).toContain('<meta content="@praveenjuge" name="twitter:site">');
     expect(html).toContain(

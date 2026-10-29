@@ -103,6 +103,7 @@ export const nativePackages = [
   {
     name: "vadivam (pub.dev)",
     directory: "packages/vadivam-flutter",
+    releaseLink: "[vadivam for Flutter](https://pub.dev/packages/vadivam)",
     versionFile: "packages/vadivam-flutter/pubspec.yaml",
     versionPattern: /^version: (.+)$/m,
     versionLine: (version) => `version: ${version}`,
@@ -110,6 +111,7 @@ export const nativePackages = [
   {
     name: "com.praveenjuge:vadivam-compose",
     directory: "packages/vadivam-compose",
+    releaseLink: "[vadivam-compose](https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose)",
     versionFile: "packages/vadivam-compose/gradle.properties",
     versionPattern: /^VERSION_NAME=(.+)$/m,
     versionLine: (version) => `VERSION_NAME=${version}`,
