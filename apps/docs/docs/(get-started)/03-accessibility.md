@@ -32,11 +32,13 @@ If an icon conveys information not present as visible text, give it an accessibl
 <Activity role="img" aria-label="Service is active" />
 ```
 
-Framework components also support a `title` prop, which inserts an SVG `<title>` and marks the icon as an image:
+Most framework components also support a `title` prop, which inserts an SVG `<title>` and marks the icon as an image:
 
 ```tsx
 <Activity title="Service is active" />
 ```
+
+Lit icons and the [`<vadivam-icon>` element](/docs/html) take a `label` instead. In Flutter, pass `semanticLabel`; in Jetpack Compose, pass `contentDescription`.
 
 For React Native, use native accessibility props such as `accessibilityLabel`:
 

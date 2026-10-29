@@ -13,7 +13,7 @@ Use Vadivam when you need consistent, pixel-perfect 24px outline icons in a web 
 
 ## When to use this
 
-- Adding icons to a React, React Native, Vue, Svelte, Solid, Angular, Astro, Preact, Qwik, Lit, Flutter, or Jetpack Compose interface - install the matching package and import icons by name.
+- Adding icons to an app in any [supported framework](/docs/installation) - install the matching package and import icons by name.
 - Adding icons to plain HTML or htmx - load `vadivam/elements` and use `<vadivam-icon name="…">`.
 - Copying raw SVG markup or SVG files directly into a design, static site, or email.
 - Rendering icons in custom tooling from the core package's icon-node data and catalog metadata.
