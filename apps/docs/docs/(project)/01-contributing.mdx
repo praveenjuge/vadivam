@@ -52,13 +52,17 @@ Keep pull requests focused and describe visible changes and package API changes.
 
 ## Add or update an icon
 
-Add or replace only the source SVG in `icons/`, named after the icon's current Lucide name. Draw it to the [design guide](/docs/design-guide), then follow [How icons are built](/docs/how-icons-are-built) to normalize, validate, and build it:
+Add or replace only the source SVG in `icons/`, named after the icon's current Lucide name. Draw it to the [design guide](/docs/design-guide), then follow [How icons are built](/docs/how-icons-are-built) to normalize, validate, and build it. A new icon first needs its Lucide tags and categories, since `metadata/lucide.json` lists only icons that have a drawing, and a font codepoint:
 
 ```sh
+bun run icons:metadata -- /path/to/lucide-checkout  # new icons: tags and categories
+bun run icons:font-codepoints                       # new icons: font codepoints
 bun run icons:optimize  # clean paths and smooth corners in place
 bun run icons:check     # validate without writing
 bun run icons:build     # regenerate packages and site assets
 ```
+
+The Lucide checkout must be on the release tag pinned as `lucideVersion` in `metadata/lucide.json`. Commit the updated `metadata/lucide.json` and `scripts/font-codepoints.json` with the SVG.
 
 Do not hand-edit generated output to fix an icon; correct the canonical SVG and regenerate.
 

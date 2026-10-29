@@ -9,7 +9,7 @@ search:
   keywords: [lucide, lucide-react, migrate, migration, codemod, replace, drop-in]
 ---
 
-Vadivam covers every current Lucide icon name, redrawn on the same 24px grid with the same 2px stroke. Each framework package mirrors the matching Lucide package, so most projects switch by renaming the package and the `Lucide` prefix. Layouts stay the same because the canvas, stroke, and props are unchanged.
+Vadivam redraws Lucide's icons under the same names, on the same 24px grid with the same 2px stroke. New Lucide icons are drawn in batches, so the newest few can be missing for a release; the codemod lists any import Vadivam doesn't export yet. Each framework package mirrors the matching Lucide package, so most projects switch by renaming the package and the `Lucide` prefix. Layouts stay the same because the canvas, stroke, and props are unchanged.
 
 ## Run the codemod
 
@@ -25,7 +25,7 @@ Pass paths to limit the run, such as `npx vadivam migrate-lucide src --write`. I
 - rewrites Lucide imports, dynamic `import()` calls, `require()` calls, and test mocks to the matching Vadivam package
 - maps `/dynamic`, `/dynamicIconImports`, and per-icon paths such as `lucide-react/dist/esm/icons/bell` to their Vadivam equivalents
 - renames `Lucide` names imported or required from Lucide, and their uses outside strings (a re-export keeps its public name, as in `VadivamBell as LucideBell`): `LucideBell` becomes `VadivamBell`, `LucideProps` becomes `VadivamProps`, and `createLucideIcon` becomes `createVadivamIcon`
-- imports deprecated Lucide aliases from their current name under the old local name, such as `CircleAlert as AlertCircle` and `House as Home`, so the rest of the file stays as written
+- imports deprecated and alias Lucide names from their current name under the old local name, such as `CircleAlert as AlertCircle`, `House as Home`, and `LetterB as Bold`, so the rest of the file stays as written
 - replaces Lucide dependencies in each `package.json` with the matching Vadivam package
 - changes `data-lucide` attributes to `data-vadivam`, and `.lucide` CSS classes to `.vadivam` in stylesheets and component `<style>` blocks
 

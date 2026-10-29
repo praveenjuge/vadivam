@@ -2,7 +2,7 @@
 
 <!-- vadivam-icon-count:start -->
 
-Vadivam is a free, open-source library of 1903 pixel-perfect 24px outline SVG icons for React, React Native, Vue, Svelte, Solid, Angular, Astro, Preact, Qwik, Lit, Flutter, Jetpack Compose, and plain HTML.
+Vadivam is a free, open-source library of 1949 pixel-perfect 24px outline SVG icons for React, React Native, Vue, Svelte, Solid, Angular, Astro, Preact, Qwik, Lit, Flutter, Jetpack Compose, and plain HTML.
 
 <!-- vadivam-icon-count:end -->
 
@@ -49,7 +49,7 @@ export function Example() {
 }
 ```
 
-Coming from Lucide? Every Lucide icon name works in Vadivam, and one command moves a project over: `npx vadivam migrate-lucide --write`. See [Migrate from Lucide](https://vadivam.praveenjuge.com/docs/migrate-from-lucide).
+Coming from Lucide? Vadivam icons keep their Lucide names, and one command moves a project over: `npx vadivam migrate-lucide --write`. See [Migrate from Lucide](https://vadivam.praveenjuge.com/docs/migrate-from-lucide).
 
 Plain HTML and htmx can load `<vadivam-icon name="activity">` from `vadivam/elements` with one script tag. Every package supports tree-shakeable named and per-icon imports. Framework packages also provide dynamic icon APIs for data-driven names.
 
