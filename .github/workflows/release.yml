@@ -85,8 +85,11 @@ jobs:
           TAG_NAME: ${{ github.ref_name }}
         run: |
           previous_tag=$(git describe --tags --abbrev=0 "$TAG_NAME^" 2>/dev/null || true)
-          bun scripts/release-notes.mjs "$previous_tag" "$TAG_NAME" > release-notes.md
-          gh release create "$TAG_NAME" "vadivam-figma-${TAG_NAME}.zip#Vadivam Icons for Figma" "vadivam-android-drawables-${TAG_NAME}.zip#Android vector drawables" --title "$TAG_NAME" --notes-file release-notes.md --generate-notes --verify-tag
+          # GitHub's generated notes are fetched here instead of with
+          # --generate-notes so release-notes.mjs can escape HTML in PR titles.
+          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG_NAME" ${previous_tag:+-f previous_tag_name="$previous_tag"} --jq .body > generated-notes.md
+          bun scripts/release-notes.mjs "$previous_tag" "$TAG_NAME" generated-notes.md > release-notes.md
+          gh release create "$TAG_NAME" "vadivam-figma-${TAG_NAME}.zip#Vadivam Icons for Figma" "vadivam-android-drawables-${TAG_NAME}.zip#Android vector drawables" --title "$TAG_NAME" --notes-file release-notes.md --verify-tag
 
       # The registry checks that the npm package carries the matching mcpName,
       # so this runs only after npm serves the new vadivam-mcp version. It runs
