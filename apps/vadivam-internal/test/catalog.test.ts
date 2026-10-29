@@ -92,9 +92,9 @@ describe("parseLucideCatalog", () => {
     ).toThrow("not sorted by popularity");
   });
 
-  test("bundles every canonical Lucide 1.61.0 name in official popularity order", () => {
+  test("bundles every canonical Lucide 1.64.0 name in official popularity order", () => {
     const catalog = parseLucideCatalog(rankings, resolveLucideIconName);
-    expect(catalog.lucideVersion).toBe("1.61.0");
+    expect(catalog.lucideVersion).toBe("1.64.0");
     expect(catalog.icons).toHaveLength(lucideIconNames.length);
     expect(catalog.icons.map((icon) => icon.name).sort()).toEqual(
       Array.from(lucideIconNames),
