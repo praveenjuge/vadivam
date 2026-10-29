@@ -1,7 +1,8 @@
 ---
 // The homepage hero's drawing: icons sketched one after another on the 24px
-// canvas, over the grid and keylines from the design guide. Pure CSS, so it
-// costs no script; `.icon-sketch` in theme.css holds the timing.
+// canvas, over the grid and keylines from the design guide. The drawing is
+// CSS; `.icon-sketch` in theme.css holds the timing, and a small script pauses
+// it while it's out of view.
 import { iconsByName } from "vadivam/manifest";
 
 // The keyframes in theme.css assume sixteen icons, three seconds each.
@@ -61,3 +62,16 @@ const gridLines = Array.from({ length: 25 }, (_, index) => index);
     ))
   }
 </svg>
+
+<script>
+  // Astro's client router swaps pages without reloading, so watch the drawing
+  // on every page load and stop before the next swap.
+  document.addEventListener("astro:page-load", () => {
+    const sketch = document.querySelector(".icon-sketch");
+    if (!sketch) return;
+    // Entries arrive oldest first, so the last one is the current state.
+    const observer = new IntersectionObserver((entries) => sketch.toggleAttribute("data-paused", !entries.at(-1)?.isIntersecting));
+    observer.observe(sketch);
+    document.addEventListener("astro:before-swap", () => observer.disconnect(), { once: true });
+  });
+</script>

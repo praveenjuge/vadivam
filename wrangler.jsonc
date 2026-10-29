@@ -26,6 +26,7 @@
     "run_worker_first": [
       "/*",
       "!/r/*",
+      "!/icon-data/*",
       "!/_astro/*",
       "!/*.md",
       "!/*.mdx",

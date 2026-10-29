@@ -82,20 +82,37 @@ describe("website SEO", () => {
 
   test("homepage stays lean: path-only tiles, lazy tags, and a size budget", () => {
     const html = readDist("index.html");
-    // Tiles carry only path data; presentation attributes live in CSS.
-    expect(html).toContain('<a href="/icons/activity" aria-label="activity"><svg viewBox="0 0 24 24"><path');
+    // Tiles carry only path data; presentation attributes live in CSS. A click
+    // opens the drawer, so tiles opt out of Astro's hover prefetch.
+    expect(html).toContain('<a href="/icons/activity" aria-label="activity" data-astro-prefetch="false"><svg viewBox="0 0 24 24"><path');
     // Tiles render in chunks of 120 so off-screen chunks skip style and layout.
-    const chunks = html.split('<div class="icon-chunk">').length - 1;
-    expect(chunks).toBe(Math.ceil(icons.length / 120));
+    const chunks = [...html.matchAll(/<div class="icon-chunk" data-solid="\/(icon-data\/solid-\d+\.[0-9a-f]{10}\.json)">/g)];
+    expect(chunks).toHaveLength(Math.ceil(icons.length / 120));
     expect(Buffer.byteLength(html, "utf8")).toBeLessThan(1024 * 1024);
+    // Each chunk's solid paths load on demand, in tile order.
+    const solid = chunks.flatMap(([, file]) => JSON.parse(readDist(file)));
+    expect(solid).toEqual(icons.map((icon) => icon.solid.iconNode.map(([, { d }]) => d)));
     // Tags and categories load on demand, so they never weigh down the HTML.
     expect(html).not.toContain("heart rate monitor");
-    const index = JSON.parse(readDist("icons", "index.json"));
+    const indexPath = html.match(/data-index="\/(icon-data\/search\.[0-9a-f]{10}\.json)"/)?.[1];
+    expect(indexPath).toBeDefined();
+    const index = JSON.parse(readDist(indexPath));
     expect(index.icons.map(([name]) => name)).toEqual(icons.map((icon) => icon.name));
     expect(index.icons.find(([name]) => name === "activity")[1]).toContain("heart rate monitor");
     // Tags are arrays, so tags containing separators such as "->|" survive.
     expect(index.icons.find(([name]) => name === "arrow-right-to-line")[1]).toContain("->|");
     expect(index.categories.arrows).toBe("Arrows");
+  });
+
+  test("homepage icon data is served from the asset layer and cached for good", () => {
+    // Content-hashed names change whenever the data does.
+    const rules = JSON.parse(
+      readFileSync(path.join(root, "apps/docs/dist/server/wrangler.json"), "utf8"),
+    ).assets?.run_worker_first;
+    expect(rules).toContain("!/icon-data/*");
+    expect(readDist("_headers")).toMatch(
+      /^\/icon-data\/\*\n {2}Cache-Control: public, max-age=31536000, immutable$/m,
+    );
   });
 
   test("icon pages show Lucide tags and categories with filter links", () => {
