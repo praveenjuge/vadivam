@@ -30,6 +30,7 @@
     "vadivam": "dist/cli.js"
   },
   "sideEffects": [
+    "./dist/elements.js",
     "./dist/font/vadivam.css"
   ],
   "files": [
@@ -48,6 +49,11 @@
       "types": "./dist/manifest.d.ts",
       "import": "./dist/manifest.js",
       "default": "./dist/manifest.js"
+    },
+    "./elements": {
+      "types": "./dist/elements.d.ts",
+      "import": "./dist/elements.js",
+      "default": "./dist/elements.js"
     },
     "./icons/*.svg": "./dist/icons/*.svg",
     "./icons/*": {

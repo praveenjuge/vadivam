@@ -1,6 +1,7 @@
 import activitySvg from "vadivam/strings/activity";
 import spriteUrl from "vadivam/sprite.svg";
 import "vadivam/font/vadivam.css";
+import "vadivam/elements";
 
 const stringHost = document.querySelector("#string-host");
 stringHost.innerHTML = activitySvg;

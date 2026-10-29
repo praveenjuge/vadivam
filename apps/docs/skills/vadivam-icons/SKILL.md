@@ -1,18 +1,18 @@
 ---
 name: vadivam-icons
-description: "Use Vadivam, an open-source set of pixel-perfect 24px outline icons, as SVG assets, SVG strings, a sprite, an icon font, or components for React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact. Use when a task picks an icon by meaning (search by name, tag, or category), installs or imports a vadivam package (vadivam, vadivam-react, vadivam-react-native, vadivam-vue, vadivam-svelte, vadivam-solid, vadivam-angular, vadivam-astro, vadivam-preact), sets up the vadivam-mcp MCP server, adds an icon through the shadcn registry, sizes, colors, or labels Vadivam icons, renders an icon from a runtime name with DynamicIcon or iconNames, sets shared defaults with VadivamProvider or provideVadivamConfig, or contributes icons to Vadivam."
+description: "Use Vadivam, an open-source set of pixel-perfect 24px outline icons, as SVG assets, SVG strings, a sprite, an icon font, or components for React, React Native, Vue, Svelte, Solid, Angular, Astro, Preact, Qwik, Lit, Flutter, and Jetpack Compose, or the <vadivam-icon> element for plain HTML. Use when a task picks an icon by meaning (search by name, tag, or category), installs or imports a vadivam package (vadivam, vadivam-react, vadivam-react-native, vadivam-vue, vadivam-svelte, vadivam-solid, vadivam-angular, vadivam-astro, vadivam-preact, vadivam-qwik, vadivam-lit, the vadivam Flutter package, com.praveenjuge:vadivam-compose), sets up the vadivam-mcp MCP server, adds an icon through the shadcn registry, sizes, colors, or labels Vadivam icons, renders an icon from a runtime name with DynamicIcon or iconNames, sets shared defaults with VadivamProvider or provideVadivamConfig, or contributes icons to Vadivam."
 ---
 
 # Vadivam Icons
 
-Vadivam is an open-source set of pixel-perfect 24px outline icons. Use optimized SVG assets, browser JavaScript helpers, or native components for React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact. Every package is ESM-only and publishes tree-shakeable named and per-icon exports.
+Vadivam is an open-source set of pixel-perfect 24px outline icons. Use optimized SVG assets, browser JavaScript helpers, or native components for React, React Native, Vue, Svelte, Solid, Angular, Astro, Preact, Qwik, Lit, Flutter, and Jetpack Compose. Every npm package is ESM-only and publishes tree-shakeable named and per-icon exports.
 
 ## Setup
 
 Install only the package for the environment where the icons render:
 
 ```sh
-# SVG assets and browser JavaScript
+# SVG assets, browser JavaScript, and <vadivam-icon> for plain HTML and htmx
 npm install vadivam
 
 # Web frameworks
@@ -23,12 +23,19 @@ npm install vadivam-solid
 npm install vadivam-angular
 npm install vadivam-astro
 npm install vadivam-preact
+npm install vadivam-qwik
+npm install vadivam-lit
 
 # React Native or Expo
 npm install vadivam-react-native react-native-svg
+
+# Flutter
+flutter pub add vadivam
+
+# Jetpack Compose (build.gradle.kts): implementation("com.praveenjuge:vadivam-compose:<version>")
 ```
 
-Peer ranges: React 18 or newer; React Native 0.71+ with React 18–19 and `react-native-svg` 12–15; Vue 3.5; Svelte 5.56+; Solid 1.9; Angular 22; Astro 7; Preact 10.29. See [Installation](https://vadivam.praveenjuge.com/docs/installation.md).
+Peer ranges: React 18 or newer; React Native 0.71+ with React 18–19 and `react-native-svg` 12–15; Vue 3.5; Svelte 5.56+; Solid 1.9; Angular 22; Astro 7; Preact 10.29; Qwik 2; Lit 3; Flutter 3.29+; Android API 23+ with Compose UI 1.8+. See [Installation](https://vadivam.praveenjuge.com/docs/installation.md).
 
 ## Core concepts
 
@@ -114,7 +121,7 @@ An icon's own props override provider values. Angular uses `provideVadivamConfig
    <DynamicIcon name="activity" size={20} fallback={null} />;
    ```
 
-React, React Native, Vue, Solid, and Preact export a named `DynamicIcon`; Svelte and Astro export it as the default; Angular uses the `vadivamDynamicIcon` directive. See [Dynamic icons](https://vadivam.praveenjuge.com/docs/dynamic-icons.md).
+React, React Native, Vue, Solid, Preact, and Lit export a named `DynamicIcon`; Svelte and Astro export it as the default; Angular uses the `vadivamDynamicIcon` directive. Qwik uses the `icons` registry, Flutter `VadivamIcons.all[name]`, Compose `VadivamIcons.byName(name)`, and plain HTML `<vadivam-icon name="…">`. See [Dynamic icons](https://vadivam.praveenjuge.com/docs/dynamic-icons.md).
 
 ### Use raw SVGs without a framework
 

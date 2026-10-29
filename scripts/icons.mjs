@@ -17,8 +17,13 @@ import { optimize } from "svgo";
 import { Resvg } from "@resvg/resvg-js";
 import { buildAngularPackage } from "./generators/angular.mjs";
 import { buildAstroPackage } from "./generators/astro.mjs";
+import { buildComposePackage } from "./generators/compose.mjs";
+import { buildElements } from "./generators/elements.mjs";
+import { buildFlutterPackage } from "./generators/flutter.mjs";
+import { buildLitPackage } from "./generators/lit.mjs";
 import { buildMcpPackage } from "./generators/mcp.mjs";
 import { buildPreactPackage } from "./generators/preact.mjs";
+import { buildQwikPackage } from "./generators/qwik.mjs";
 import { buildReactNativePackage } from "./generators/react-native.mjs";
 import { buildShadcnRegistry } from "./generators/shadcn.mjs";
 import { buildSolidPackage } from "./generators/solid.mjs";
@@ -48,6 +53,10 @@ const solidDist = path.join(root, "packages/vadivam-solid/dist");
 const angularPackage = path.join(root, "packages/vadivam-angular");
 const astroDist = path.join(root, "packages/vadivam-astro/dist");
 const preactDist = path.join(root, "packages/vadivam-preact/dist");
+const litDist = path.join(root, "packages/vadivam-lit/dist");
+const qwikDist = path.join(root, "packages/vadivam-qwik/dist");
+const flutterPackage = path.join(root, "packages/vadivam-flutter");
+const composePackage = path.join(root, "packages/vadivam-compose");
 const mcpPackage = path.join(root, "packages/vadivam-mcp");
 const skillSource = path.join(root, "apps/docs/skills/vadivam-icons/SKILL.md");
 const rawSkills = path.join(root, "packages/vadivam/skills");
@@ -745,6 +754,7 @@ export default createIcons;
     path.join(rawDist, "index.d.ts"),
     `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\nexport { icons as manifest, iconNames, iconsByName, categories } from "./manifest.js";\n${rawNamedExports}\nexport type { CreateIconsOptions } from "./createIcons.js";\nexport type { IconCategoryId, VadivamIconCategory, VadivamIconMetadata } from "./manifest.js";\nexport type { IconName, IconNode, Icons, SVGElementType, SVGProps } from "./types.js";\n`,
   );
+  await buildElements(icons, rawDist);
   await buildStaticAssets(icons, {
     iconsDirectory: iconsDir,
     outputDirectory: rawDist,
@@ -1080,6 +1090,10 @@ export async function build() {
   await buildAngularPackage(icons, angularPackage, root);
   await buildAstroPackage(icons, astroDist);
   await buildPreactPackage(icons, preactDist);
+  await buildLitPackage(icons, litDist);
+  await buildQwikPackage(icons, qwikDist);
+  await buildFlutterPackage(icons, flutterPackage);
+  await buildComposePackage(icons, composePackage);
   await buildMcpPackage(icons, iconCategories, { packageDirectory: mcpPackage, root });
   await buildWebAssets(icons);
   await buildShadcnRegistry(icons, shadcnRegistryDir);

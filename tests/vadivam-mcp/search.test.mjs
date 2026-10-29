@@ -201,6 +201,8 @@ describe("get_icon formats", () => {
       preact: "vadivam-preact",
       astro: "vadivam-astro",
       angular: "vadivam-angular",
+      qwik: "vadivam-qwik",
+      lit: "vadivam-lit",
     };
     for (const [format, packageName] of Object.entries(packages)) {
       const code = renderIcon(activity, format, { size: 20 });
@@ -208,6 +210,8 @@ describe("get_icon formats", () => {
       expect(code).toContain("Activity");
       expect(code).toContain("20");
     }
+    expect(renderIcon(activity, "flutter", { size: 20 })).toBe("import 'package:vadivam/vadivam.dart';\n\nVadivamIcon(VadivamIcons.activity, size: 20)");
+    expect(renderIcon(activity, "compose", { size: 20 })).toContain("modifier = Modifier.size(20.dp)");
   });
 
   test("asset and integration formats", () => {
@@ -226,12 +230,15 @@ describe("get_icon formats", () => {
 
 describe("get_usage", () => {
   test("links each framework to its docs page", () => {
-    for (const framework of ["core", "react", "react-native", "vue", "svelte", "solid", "angular", "astro", "preact"]) {
+    for (const framework of ["core", "react", "react-native", "vue", "svelte", "solid", "angular", "astro", "preact", "qwik", "lit"]) {
       const usage = usageFor(framework);
       expect(usage.docs).toBe(`https://vadivam.praveenjuge.com/docs/${framework}`);
       expect(usage.install).toStartWith(`npm install ${usage.packageName}`);
       expect(usage.example).toContain(usage.packageName);
     }
     expect(usageFor("react-native").install).toContain("react-native-svg");
+    expect(usageFor("flutter").install).toBe("flutter pub add vadivam");
+    expect(usageFor("compose").install).toBe(`implementation("com.praveenjuge:vadivam-compose:${version}")`);
+    expect(usageFor("compose").docs).toBe("https://vadivam.praveenjuge.com/docs/compose");
   });
 });

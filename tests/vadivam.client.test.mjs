@@ -126,3 +126,68 @@ describe("vadivam browser API", () => {
     warning.mockRestore();
   });
 });
+
+describe("<vadivam-icon>", () => {
+  const rendered = async (element) => {
+    for (let attempt = 0; attempt < 50 && !element.shadowRoot?.querySelector("svg path"); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    return element.shadowRoot.querySelector("svg");
+  };
+
+  test("registers once and lazy-loads the named icon", async () => {
+    const { VadivamIconElement, iconNames } = await import("vadivam/elements");
+    expect(customElements.get("vadivam-icon")).toBe(VadivamIconElement);
+    expect(iconNames).toContain("activity");
+    const element = document.createElement("vadivam-icon");
+    element.setAttribute("name", "activity");
+    document.body.append(element);
+    const svg = await rendered(element);
+    expect(svg.getAttribute("class")).toBe("vadivam vadivam-activity");
+    expect(svg.getAttribute("part")).toBe("svg");
+    expect(svg.getAttribute("stroke")).toBe("currentColor");
+    expect(svg.getAttribute("stroke-width")).toBe("2");
+    expect(svg.getAttribute("aria-hidden")).toBe("true");
+    expect(element.shadowRoot.querySelector("style").textContent).toContain("width:24px;height:24px");
+    element.remove();
+  });
+
+  test("applies size, color, stroke, and label attributes", async () => {
+    await import("vadivam/elements");
+    const host = document.createElement("div");
+    host.innerHTML = '<vadivam-icon name="search" size="48" color="navy" stroke-width="2" absolute-stroke-width label="Search"></vadivam-icon>';
+    document.body.append(host);
+    const element = host.firstElementChild;
+    const svg = await rendered(element);
+    expect(svg.getAttribute("stroke")).toBe("navy");
+    expect(svg.getAttribute("stroke-width")).toBe("2");
+    expect(svg.querySelector("path").getAttribute("vector-effect")).toBe("non-scaling-stroke");
+    expect(svg.getAttribute("role")).toBe("img");
+    expect(svg.getAttribute("aria-label")).toBe("Search");
+    expect(svg.querySelector("title").textContent).toBe("Search");
+    expect(element.shadowRoot.querySelector("style").textContent).toContain("width:48px;height:48px");
+
+    element.setAttribute("name", "activity");
+    element.setAttribute("absolute-stroke-width", "false");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(element.shadowRoot.querySelector("svg path").getAttribute("vector-effect")).toBeNull();
+    expect(element.shadowRoot.querySelectorAll("svg")).toHaveLength(1);
+    expect(element.shadowRoot.querySelector("svg").getAttribute("class")).toBe("vadivam vadivam-activity");
+    host.remove();
+  });
+
+  test("ignores unknown names and unsafe attribute values", async () => {
+    await import("vadivam/elements");
+    const element = document.createElement("vadivam-icon");
+    element.setAttribute("name", "__proto__");
+    element.setAttribute("color", "url(https://example.com/paint.svg#x)");
+    element.setAttribute("size", "10px;background:url(https://example.com)");
+    document.body.append(element);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const svg = element.shadowRoot.querySelector("svg");
+    expect(svg.querySelector("path")).toBeNull();
+    expect(svg.getAttribute("stroke")).toBe("currentColor");
+    expect(element.shadowRoot.querySelector("style").textContent).not.toContain("example.com");
+    element.remove();
+  });
+});

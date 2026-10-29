@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { mcpServerManifest, publishablePackages } from "./packages.mjs";
+import { mcpServerManifest, nativePackages, publishablePackages } from "./packages.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const requested = process.argv[2] ?? process.env.TAG_NAME;
@@ -24,6 +24,13 @@ for (const { name, directory } of manifests) {
   }
 }
 
+for (const { name, versionFile, versionPattern } of nativePackages) {
+  const version = (await readFile(path.join(root, versionFile), "utf8")).match(versionPattern)?.[1].trim();
+  if (version !== expected) {
+    throw new Error(`${name} version ${version} in ${versionFile} does not match ${requested}`);
+  }
+}
+
 const server = JSON.parse(await readFile(path.join(root, mcpServerManifest), "utf8"));
 for (const version of [server.version, ...server.packages.map((entry) => entry.version)]) {
   if (version !== expected) {
@@ -31,4 +38,4 @@ for (const version of [server.version, ...server.packages.map((entry) => entry.v
   }
 }
 
-console.log(`All ${manifests.length} versioned projects and the MCP server manifest match v${expected}.`);
+console.log(`All ${manifests.length + nativePackages.length} versioned projects and the MCP server manifest match v${expected}.`);

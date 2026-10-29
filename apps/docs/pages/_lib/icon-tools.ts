@@ -5,6 +5,7 @@ import {
   componentSnippet,
   cssMaskSnippet,
   customizeSvg,
+  dartIconName,
   effectiveStrokeWidth,
   fontSnippet,
   iconDefaults,
@@ -147,7 +148,9 @@ export function snippetHtml(templates: SnippetTemplates | null, tab: string, ico
   if (!framework) return fallback();
   const props = propsSource(tab, settings).trimStart();
   const html = props ? framework.props.split(templates.props).join(escapeHtml(props)) : framework.plain;
-  return html.split(templates.component).join(icon.component);
+  return html
+    .split(templates.component).join(icon.component)
+    .split(templates.dartComponent).join(dartIconName(icon.component));
 }
 
 export interface CopyFormat {

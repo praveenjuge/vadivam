@@ -18,9 +18,10 @@ const { config } = data;
 
 const codeTabs = [...frameworks.map(({ id, label }) => ({ id, label })), { id: "svg", label: "SVG" }];
 // The hero's sentence names every package and tool, each with its mark.
-type HeroLink = { label: string; href: string; logo?: string; logoClass?: string; icon?: "file-code" | "bot"; external?: boolean };
+type HeroLink = { label: string; href: string; logo?: string; logoClass?: string; icon?: "file-code" | "code-xml" | "bot"; external?: boolean };
 const packageLinks: HeroLink[] = [
   ...frameworks.map(({ id, label }) => ({ label, href: `/docs/${id}`, logo: id === "react-native" ? "react" : id })),
+  { label: "HTML", href: "/docs/html", icon: "code-xml" },
   { label: "SVG", href: "/docs/core", icon: "file-code" },
 ];
 const toolLinks: HeroLink[] = [

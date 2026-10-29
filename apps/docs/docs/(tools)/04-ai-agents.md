@@ -13,7 +13,8 @@ Use Vadivam when you need consistent, pixel-perfect 24px outline icons in a web 
 
 ## When to use this
 
-- Adding icons to a React, React Native, Vue, Svelte, Solid, Angular, Astro, or Preact interface - install the matching framework package and import icons by name.
+- Adding icons to a React, React Native, Vue, Svelte, Solid, Angular, Astro, Preact, Qwik, Lit, Flutter, or Jetpack Compose interface - install the matching package and import icons by name.
+- Adding icons to plain HTML or htmx - load `vadivam/elements` and use `<vadivam-icon name="…">`.
 - Copying raw SVG markup or SVG files directly into a design, static site, or email.
 - Rendering icons in custom tooling from the core package's icon-node data and catalog metadata.
 - Prototyping with runtime icon names through the typed dynamic icon APIs.
@@ -29,7 +30,7 @@ On the [homepage](/), **Copy prompt for AI agents** copies a setup prompt to pas
 - Agent skill: `https://vadivam.praveenjuge.com/skill.md` teaches an agent to find, install, import, size, label, and dynamically load Vadivam icons, with links to each docs page. It is also listed in `https://vadivam.praveenjuge.com/.well-known/agent-skills/index.json` and ships in the `vadivam` package at `skills/vadivam-icons/SKILL.md`.
 - Icon catalog: browse and search every icon at `https://vadivam.praveenjuge.com/`; each icon is also served as an optimized SVG file at `https://vadivam.praveenjuge.com/icons/<kebab-name>.svg` (for example `/icons/activity.svg`).
 - Icon metadata: `vadivam/manifest` gives every icon's `tags` (search synonyms) and `categories`, plus the `categories` list, for finding icons offline. [Categories and naming](/docs/categories) lists every category and how names map to each package.
-- Packages: `vadivam` for raw SVG assets and browser JavaScript, `vadivam-react`, `vadivam-vue`, `vadivam-svelte`, `vadivam-solid`, `vadivam-angular`, `vadivam-astro`, `vadivam-preact`, and `vadivam-react-native` for framework components. All packages are ESM-only with tree-shakeable named and per-icon exports.
+- Packages: `vadivam` for raw SVG assets and browser JavaScript, `vadivam-react`, `vadivam-vue`, `vadivam-svelte`, `vadivam-solid`, `vadivam-angular`, `vadivam-astro`, `vadivam-preact`, `vadivam-qwik`, `vadivam-lit`, and `vadivam-react-native` for framework components. All npm packages are ESM-only with tree-shakeable named and per-icon exports. Flutter uses `vadivam` from pub.dev and Jetpack Compose uses `com.praveenjuge:vadivam-compose` from Maven Central.
 - shadcn/ui registry: `https://vadivam.praveenjuge.com/r/<kebab-name>.json` is a registry item per icon, indexed at `https://vadivam.praveenjuge.com/r/registry.json`. Install with `npx shadcn@latest add` (see [shadcn/ui](/docs/shadcn)).
 - Icon names are kebab-case (`activity`, `arrow-right`, `trash`); framework packages type them as `IconName` and export an `iconNames` list for validation.
 
