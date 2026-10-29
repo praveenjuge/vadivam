@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { area, draftSolid, loadPathKit, pathDataOf, solidPath, solidSvg, toPathData } from "../scripts/solid-draft.mjs";
+import { area, draftSolid, loadPathKit, pathDataOf, solidPath, solidSvg, spliceCorner, toPathData } from "../scripts/solid-draft.mjs";
 
 const PK = await loadPathKit();
 const outline = (name) => pathDataOf(readFileSync(new URL(`../icons/${name}.svg`, import.meta.url), "utf8"));
@@ -119,6 +119,18 @@ describe("solid drafts", () => {
     const drafted = draftSolid(PK, outline("disc-3"));
     expect(coverage(drafted, [16.2, 7.8])).toBeLessThan(0.05);
     expect(coverage(drafted, [12, 5])).toBeGreaterThan(0.95);
+  });
+
+  test("clips a corner to another icon's solid but keeps the icon's own cuts there", () => {
+    const hints = JSON.parse(readFileSync(new URL("../metadata/solid-hints.json", import.meta.url), "utf8"));
+    const file = draftSolid(PK, outline("file"));
+    // A bump past file's top edge goes, and a 2px cut inside the fold stays.
+    const bumped = PK.MakeFromOp(file, ink("M10 0.5h2", 1), PK.PathOp.UNION);
+    const cut = PK.MakeFromOp(bumped, ink("M10 6h1", 2), PK.PathOp.DIFFERENCE);
+    const clipped = spliceCorner(PK, cut, file, hints.corners.fileFold);
+    expect(coverage(clipped, [11, 0.25])).toBeLessThan(0.05);
+    expect(coverage(clipped, [10.5, 6])).toBeLessThan(0.05);
+    expect(coverage(clipped, [6, 6])).toBeGreaterThan(0.95);
   });
 
   test("writes conic arcs as cubics that keep the shape", () => {

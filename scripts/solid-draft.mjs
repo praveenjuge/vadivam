@@ -911,6 +911,16 @@ export function solidPath(PK, svg) {
   return filled ?? new PK.SkPath();
 }
 
+// Clips the solid inside `polygon`, path data in icon units, to another
+// icon's solid, so icons that share a feature, like the folded corner of every
+// file icon, draw it the same way however their outlines break it apart. Cuts
+// the icon's own details make inside the polygon stay.
+export function spliceCorner(PK, solid, from, polygon) {
+  const ops = makeOps(PK);
+  const region = PK.FromSVGString(polygon).transform(scale, 0, 0, 0, scale, 0, 0, 0, 1);
+  return ops.difference(solid, ops.difference(region, from));
+}
+
 export function solidSvg(pathData) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd">\n<path d="${pathData}"/>\n</svg>\n`;
 }
@@ -955,7 +965,14 @@ async function main(args) {
     } else if (baseName && existsSync(path.join(iconsDir, `${baseName}.svg`))) {
       base = await draft(baseName);
     }
-    const solid = draftSolid(PK, pathDataOf(svg), { base, hints: hintsFor(name) });
+    let solid = draftSolid(PK, pathDataOf(svg), { base, hints: hintsFor(name) });
+    const corner = hints.icons?.[name]?.corner;
+    if (corner) {
+      const from = redrafted(corner.from)
+        ? await draft(corner.from)
+        : solidPath(PK, await readFile(path.join(solidDir, `${corner.from}.svg`), "utf8"));
+      solid = spliceCorner(PK, solid, from, hints.corners[corner.region]);
+    }
     drafted.set(name, solid);
     return solid;
   };

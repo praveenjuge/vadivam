@@ -247,7 +247,11 @@
     "database-zap",
     "door-closed-package",
     "file-chart-pie",
-    "file-minus-corner",
+    "file-down",
+    "file-up",
+    "file-user",
+    "folder-search",
+    "folder-users",
     "grid-2x2-check",
     "grid-2x2-plus",
     "grid-2x2-x",
@@ -258,6 +262,9 @@
     "videotape",
     "wind-arrow-down"
   ],
+  "corners": {
+    "fileFold": "M8.5 -1H25V13.75H19.25L17 10.5H12.5L11.5 9.5V4L8.5 2.5Z"
+  },
   "icons": {
     "backpack": {
       "largestHole": true
@@ -400,40 +407,196 @@
     "ferris-wheel": {
       "mode": "line"
     },
+    "file-archive": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
     "file-badge": {
       "front": [
         2,
         3
-      ]
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-box": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-braces": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-braces-corner": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-chart-column": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-chart-pie": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-check": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-check-corner": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-clock": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-code": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-code-corner": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-cog": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
     },
     "file-diff": {
       "front": [
         4
-      ]
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
     },
     "file-digit": {
       "line": [
         3
-      ]
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
     },
     "file-exclamation-point": {
       "front": [
         2,
         3
-      ]
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
     },
     "file-headphone": {
       "front": [
         2,
         3,
         4
-      ]
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
     },
     "file-input": {
       "front": [
         2,
         3
-      ]
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-key": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-lock": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-minus": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-minus-corner": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-music": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-output": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-pen": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-play": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-plus": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-plus-corner": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
     },
     "file-scan": {
       "front": [
@@ -441,7 +604,17 @@
         3,
         4,
         5
-      ]
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-search-corner": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
     },
     "file-sliders": {
       "front": [
@@ -449,7 +622,53 @@
         3,
         4,
         5
-      ]
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-terminal": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-text": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-type": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-type-corner": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-video-camera": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-volume": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-x-corner": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
     },
     "fishing-rod": {
       "line": [
