@@ -15,7 +15,7 @@ Dynamic names are kebab-case values such as `activity`, `arrow-right`, and `tras
 
 ## Component API
 
-React, React Native, Vue, Solid, and Preact export a named `DynamicIcon` from their `/dynamic` entry point. Svelte and Astro expose their dynamic component as the default export, and Angular uses a standalone directive. Pick your framework:
+React, React Native, Vue, Solid, Preact, and Lit export a named `DynamicIcon` from their `/dynamic` entry point. Svelte and Astro expose their dynamic component as the default export, and Angular uses a standalone directive. Qwik, Flutter, and Compose look icons up in a registry instead, and in plain HTML the [`<vadivam-icon>` element](/docs/html) takes a `name` attribute. Pick your framework:
 
 <Tabs syncKey="framework">
   <Tab title="React">
@@ -109,6 +109,48 @@ import DynamicIcon from "vadivam-astro/dynamic";
 import { DynamicIcon } from "vadivam-preact/dynamic";
 
 <DynamicIcon name="activity" size={20} fallback={null} />;
+```
+
+  </Tab>
+  <Tab title="Lit">
+
+```ts
+import { DynamicIcon } from "vadivam-lit/dynamic";
+
+html`${DynamicIcon({ name: "activity", size: 20, fallback: "" })}`;
+```
+
+  </Tab>
+  <Tab title="Qwik">
+
+```tsx
+import { icons } from "vadivam-qwik";
+
+const Icon = icons.Activity;
+<Icon size={20} />;
+```
+
+  </Tab>
+  <Tab title="HTML">
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/npm/vadivam/dist/elements.js"></script>
+<vadivam-icon name="activity" size="20"></vadivam-icon>
+```
+
+  </Tab>
+  <Tab title="Flutter">
+
+```dart
+final icon = VadivamIcons.all['activity'];
+if (icon != null) VadivamIcon(icon, size: 20);
+```
+
+  </Tab>
+  <Tab title="Compose">
+
+```kotlin
+VadivamIcons.byName("activity")?.let { Icon(it, contentDescription = null) }
 ```
 
   </Tab>

@@ -72,6 +72,13 @@ jobs:
             dist/ui.html \
             README.md
 
+      - name: Package Android vector drawables
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          cd packages/vadivam-compose/src/main/res
+          zip -qr "../../../../../vadivam-android-drawables-${TAG_NAME}.zip" drawable
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -79,7 +86,7 @@ jobs:
         run: |
           previous_tag=$(git describe --tags --abbrev=0 "$TAG_NAME^" 2>/dev/null || true)
           bun scripts/release-notes.mjs "$previous_tag" "$TAG_NAME" > release-notes.md
-          gh release create "$TAG_NAME" "vadivam-figma-${TAG_NAME}.zip#Vadivam Icons for Figma" --title "$TAG_NAME" --notes-file release-notes.md --generate-notes --verify-tag
+          gh release create "$TAG_NAME" "vadivam-figma-${TAG_NAME}.zip#Vadivam Icons for Figma" "vadivam-android-drawables-${TAG_NAME}.zip#Android vector drawables" --title "$TAG_NAME" --notes-file release-notes.md --generate-notes --verify-tag
 
       # The registry checks that the npm package carries the matching mcpName,
       # so this runs only after npm serves the new vadivam-mcp version. It runs
@@ -100,3 +107,110 @@ jobs:
           curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz -C "$RUNNER_TEMP" mcp-publisher
           "$RUNNER_TEMP/mcp-publisher" login github-oidc
           "$RUNNER_TEMP/mcp-publisher" publish
+
+  # pub.dev accepts GitHub's OIDC token only from a workflow started by a tag
+  # push that matches the package's tag pattern (v{{version}}). The first
+  # version of a package has to be published by hand before this works.
+  publish-flutter:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Skip a version pub.dev already has
+        id: existing
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          if curl -fsS -o /dev/null "https://pub.dev/api/packages/vadivam/versions/${TAG_NAME#v}"; then
+            echo "vadivam ${TAG_NAME#v} is already on pub.dev."
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Bun
+        if: steps.existing.outputs.published != 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+
+      - name: Build icons
+        if: steps.existing.outputs.published != 'true'
+        run: bun install --frozen-lockfile && bun run icons:build
+
+      # setup-dart exchanges the OIDC token for pub.dev credentials, which the
+      # Flutter SDK's pub then uses.
+      - name: Setup Dart
+        if: steps.existing.outputs.published != 'true'
+        uses: dart-lang/setup-dart@v1
+
+      - name: Setup Flutter
+        if: steps.existing.outputs.published != 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Publish to pub.dev
+        if: steps.existing.outputs.published != 'true'
+        working-directory: packages/vadivam-flutter
+        run: |
+          flutter pub get
+          flutter pub publish --force
+
+  # Signed with the release GPG key and uploaded through the Central Portal,
+  # which releases the deployment once it validates.
+  publish-compose:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Skip a version Maven Central already has
+        id: existing
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          version="${TAG_NAME#v}"
+          if curl -fsS -o /dev/null "https://repo1.maven.org/maven2/com/praveenjuge/vadivam-compose/$version/vadivam-compose-$version.pom"; then
+            echo "com.praveenjuge:vadivam-compose:$version is already on Maven Central."
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Bun
+        if: steps.existing.outputs.published != 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+
+      - name: Build icons
+        if: steps.existing.outputs.published != 'true'
+        run: bun install --frozen-lockfile && bun run icons:build
+
+      - name: Setup Java
+        if: steps.existing.outputs.published != 'true'
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        if: steps.existing.outputs.published != 'true'
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: 9.8.2
+
+      - name: Publish to Maven Central
+        if: steps.existing.outputs.published != 'true'
+        working-directory: packages/vadivam-compose
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_SIGNING_KEY_PASSWORD }}
+        run: gradle publishToMavenCentral --console=plain

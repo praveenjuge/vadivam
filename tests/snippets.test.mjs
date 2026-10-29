@@ -5,6 +5,7 @@ import {
   customizeSvg,
   effectiveStrokeWidth,
   frameworks,
+  installCommand,
   propsSource,
   resolveOptions,
   svgBase64,
@@ -18,11 +19,15 @@ const custom = { size: 32, strokeWidth: 1.5, color: "#e11d48", absoluteStrokeWid
 
 describe("copy formats", () => {
   test("default settings render a bare component for every framework", () => {
-    for (const { id, packageName } of frameworks) {
+    for (const { id, packageName, registry } of frameworks.filter((framework) => framework.registry === "npm")) {
       const snippet = componentSnippet(id, "ArrowRight");
       expect(snippet).toContain(`from "${packageName}"`);
       expect(propsSource(id, {})).toBe("");
+      expect(registry).toBe("npm");
     }
+    expect(componentSnippet("lit", "ArrowRight")).toContain("html`${ArrowRight()}`");
+    expect(componentSnippet("flutter", "ArrowRight")).toBe("import 'package:vadivam/vadivam.dart';\n\nVadivamIcon(VadivamIcons.arrowRight)");
+    expect(componentSnippet("compose", "ArrowRight")).toContain("imageVector = VadivamIcons.ArrowRight,\n    contentDescription = null,\n)");
     expect(componentSnippet("angular", "ArrowRight")).toContain("<svg vadivamArrowRight></svg>");
   });
 
@@ -30,6 +35,18 @@ describe("copy formats", () => {
     expect(propsSource("react", custom)).toBe(' size={32} color="#e11d48" strokeWidth={1.5} absoluteStrokeWidth');
     expect(propsSource("vue", custom)).toBe(' :size="32" color="#e11d48" :stroke-width="1.5" :absolute-stroke-width="true"');
     expect(propsSource("angular", custom)).toBe(' [size]="32" color="#e11d48" [strokeWidth]="1.5" [absoluteStrokeWidth]="true"');
+    expect(propsSource("lit", custom)).toBe('{ size: 32, color: "#e11d48", strokeWidth: 1.5, absoluteStrokeWidth: true }');
+    expect(propsSource("flutter", custom)).toBe(", size: 32, color: Color(0xFFE11D48), strokeWidth: 1.5, absoluteStrokeWidth: true");
+    expect(propsSource("flutter", { color: "red" })).toBe("");
+    expect(componentSnippet("compose", "ArrowRight", custom)).toContain(
+      "VadivamIcons.ArrowRight.withStrokeWidth(1.5f, absoluteSize = 32.dp),\n    contentDescription = null,\n    modifier = Modifier.size(32.dp),\n    tint = Color(0xFFE11D48),\n)",
+    );
+  });
+
+  test("install commands follow each package's registry", () => {
+    expect(installCommand("qwik", { manager: "bun" })).toBe("bun add vadivam-qwik");
+    expect(installCommand("flutter", { manager: "bun" })).toBe("flutter pub add vadivam");
+    expect(installCommand("compose", { version: "1.2.3" })).toBe('implementation("com.praveenjuge:vadivam-compose:1.2.3")');
   });
 
   test("customized SVG matches the components' absolute stroke math", () => {

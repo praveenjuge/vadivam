@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install the correct Vadivam icon package and required peer dependencies for React, React Native, Vue, Svelte, Solid, Angular, Astro, or Preact.
+description: Install the right Vadivam icon package and peer dependencies for React, Vue, Svelte, Angular, Astro, Qwik, Lit, Flutter, Compose, and more.
 related:
   - /docs/usage
   - /docs/react
@@ -10,7 +10,7 @@ search:
   keywords: [npm, pnpm, yarn, bun, setup, peer dependencies]
 ---
 
-Install only the package for the environment where the icons render. Every Vadivam package is ESM-only and publishes tree-shakeable named and per-icon exports.
+Install only the package for the environment where the icons render. Every Vadivam npm package is ESM-only and publishes tree-shakeable named and per-icon exports.
 
 ## Package commands
 
@@ -18,7 +18,7 @@ Install only the package for the environment where the icons render. Every Vadiv
   <Step title="Install the package for your stack">
 
 ```sh
-# SVG assets and browser JavaScript
+# SVG assets, browser JavaScript, and <vadivam-icon> for HTML and htmx
 npm install vadivam
 
 # Web frameworks
@@ -29,10 +29,17 @@ npm install vadivam-solid
 npm install vadivam-angular
 npm install vadivam-astro
 npm install vadivam-preact
+npm install vadivam-qwik
+npm install vadivam-lit
 
 # React Native or Expo
 npm install vadivam-react-native react-native-svg
+
+# Flutter
+flutter pub add vadivam
 ```
+
+For Jetpack Compose and Android Views, add `com.praveenjuge:vadivam-compose` from Maven Central. See [Jetpack Compose](/docs/compose).
 
   </Step>
   <Step title="Use your package manager">
@@ -87,6 +94,10 @@ The current packages declare these peer ranges:
 | `vadivam-angular`      | Angular 22                                                    |
 | `vadivam-astro`        | Astro 7                                                       |
 | `vadivam-preact`       | Preact 10.29                                                  |
+| `vadivam-qwik`         | Qwik 2 (`@qwik.dev/core`)                                     |
+| `vadivam-lit`          | Lit 3                                                         |
+
+The Flutter package needs Flutter 3.29 or newer. The Compose package needs Android API 23 or newer and Compose UI 1.8 or newer.
 
 Check the installed package's peer dependency warnings when upgrading a framework. The package export maps are intentionally version-specific for several framework integrations.
 

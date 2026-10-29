@@ -70,7 +70,7 @@ Run the full project checks before submitting:
 bun run test
 ```
 
-It regenerates the packages, runs every unit test, builds and checks the docs site, and builds every framework integration app, checking the plain HTML, Vue, Svelte, Solid, Angular, Astro, and Preact apps in Chromium. Focused commands are available while iterating:
+It regenerates the packages, runs every unit test, builds and checks the docs site, and builds every framework integration app, checking the plain HTML, Vue, Svelte, Solid, Angular, Astro, Preact, Qwik, and Lit apps in Chromium. Focused commands are available while iterating:
 
 | Command | Checks |
 | --- | --- |
@@ -81,6 +81,9 @@ It regenerates the packages, runs every unit test, builds and checks the docs si
 | `bun run test:vadivam-mcp` | MCP server |
 | `bun run test:shadcn` | shadcn/ui registry, including a real `shadcn add` |
 | `bun run test:integration` | Framework integration app builds, their Chromium checks, and the Expo app |
+| `bun run test:native` | Flutter and Compose packages: analyze, widget and unit tests, a pub.dev dry run, and an Android library build |
+
+`bun run test` doesn't need native toolchains. `bun run test:native` needs the Flutter SDK, a JDK (17 or newer), Gradle 9, and the Android SDK; CI runs it on every pull request.
 
 ## Documentation changes
 

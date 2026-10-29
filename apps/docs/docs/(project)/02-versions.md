@@ -11,7 +11,7 @@ search:
 
 ## One version for every package
 
-Every Vadivam package shares one version number: `vadivam`, the eight framework packages, and `vadivam-mcp` are released together from the same icon source. When you use more than one package, keep them on the same version, and upgrade them together.
+Every Vadivam package shares one version number: `vadivam`, the ten npm framework packages, `vadivam-mcp`, the Flutter package on pub.dev, and the Compose library on Maven Central are released together from the same icon source. When you use more than one package, keep them on the same version, and upgrade them together.
 
 Vadivam is before 1.0, so any release can change an API. Read the [changelog](/changelog) before upgrading. It lists the icons added or redrawn and the package changes in each release.
 
@@ -21,9 +21,11 @@ Icon names follow the pinned Lucide release. A release that moves to a newer Luc
 
 A release is published only from a commit that passed the full test suite:
 
-- Production builds of real apps that install the freshly built packages: Next.js, Vite with React, TanStack Start, Vue, Svelte, Solid, Angular, Astro, Preact, and a plain HTML page. The plain HTML, Vue, Svelte, Solid, Angular, Astro, and Preact apps are also served and checked in Chromium.
+- Production builds of real apps that install the freshly built packages: Next.js, Vite with React, TanStack Start, Vue, Svelte, Solid, Angular, Astro, Preact, Qwik, Lit, and a plain HTML page with `<vadivam-icon>`. The plain HTML, Vue, Svelte, Solid, Angular, Astro, Preact, Qwik, and Lit apps are also served and checked in Chromium.
 - React Native through an Expo app, exported for Android and iOS.
-- React server rendering in a true server environment, with no DOM, alongside client rendering tests.
+- React server rendering in a true server environment, with no DOM, alongside client rendering tests, and Lit server rendering with Lit SSR.
+- The Flutter package through `flutter analyze`, widget tests that draw every icon, and a pub.dev dry run.
+- The Compose library through an Android release build and unit tests that build every icon's `ImageVector`.
 - The [shadcn/ui registry](/docs/shadcn), installed with the real `shadcn` CLI into a fresh project.
 - The [MCP server](/docs/mcp) tools, over both stdio and HTTP.
 - Every icon, against the rules in [How icons are built](/docs/how-icons-are-built).
@@ -38,4 +40,6 @@ Packages are published from GitHub Actions through npm Trusted Publishing, with 
 npm audit signatures
 ```
 
-Each [GitHub release](https://github.com/praveenjuge/vadivam/releases) also carries the matching [Figma plugin](/docs/figma-plugin) build, and the MCP server's entry in the [MCP Registry](https://registry.modelcontextprotocol.io) is published from the same release.
+The Flutter package is published to pub.dev from the same workflow with GitHub's OIDC identity, and the Compose library is signed and uploaded to Maven Central.
+
+Each [GitHub release](https://github.com/praveenjuge/vadivam/releases) also carries the matching [Figma plugin](/docs/figma-plugin) build and the [Android vector drawables](/docs/compose#android-views), and the MCP server's entry in the [MCP Registry](https://registry.modelcontextprotocol.io) is published from the same release.

@@ -121,11 +121,13 @@ async function validatePackage({
   if (name === "vadivam") {
     if (
       JSON.stringify(manifest.sideEffects) !==
-      JSON.stringify(["./dist/font/vadivam.css"])
+      JSON.stringify(["./dist/elements.js", "./dist/font/vadivam.css"])
     ) {
-      throw new Error(`${name}: font CSS must be preserved as a side effect`);
+      throw new Error(`${name}: elements and font CSS must be preserved as side effects`);
     }
     const requiredStaticAssets = [
+      "dist/elements.d.ts",
+      "dist/elements.js",
       "dist/font/vadivam.css",
       "dist/font/vadivam.woff2",
       "dist/sprite.svg",

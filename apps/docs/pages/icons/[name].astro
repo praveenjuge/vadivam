@@ -4,7 +4,7 @@ import CodeBlock from "blume/components/content/CodeBlock.astro";
 import data from "blume:data";
 import { categories, icons, iconsByName } from "vadivam/manifest";
 import { iconLastmods } from "../../../../scripts/icon-lastmods.mjs";
-import { frameworks, iconDefaults } from "../../../../scripts/snippets.mjs";
+import { frameworks, iconDefaults, installCommand } from "../../../../scripts/snippets.mjs";
 import pkg from "../../../../package.json";
 import ActionMenus from "../_lib/ActionMenus.astro";
 import Customizer from "../_lib/Customizer.astro";
@@ -38,8 +38,15 @@ const pathCount = String((svg.match(/ d="/g) ?? []).length);
 const templates = { ...allTemplates, svg: { [pathCount]: allTemplates.svg[pathCount] ?? "" } };
 const iconRef = { name: icon.name, component: c, svg };
 const snippetTabs = [
-  ...frameworks.map(({ id, label, packageName }) => ({ id, label, packageName })),
-  { id: "svg", label: "SVG", packageName: "vadivam" },
+  ...frameworks.map(({ id, label, packageName, registry }) => ({
+    id,
+    label,
+    packageName,
+    // Only npm installs follow the package manager switch.
+    npm: registry === "npm",
+    install: installCommand(id, { version: pkg.version }),
+  })),
+  { id: "svg", label: "SVG", packageName: "vadivam", npm: true, install: "npm install vadivam" },
 ];
 const index = icons.findIndex((item) => item.name === icon.name);
 const previous = icons[index - 1];
@@ -282,8 +289,8 @@ const structuredData = site
             <div class="grid min-w-0 gap-2" id={`panel-${tab.id}`} role="tabpanel" aria-labelledby={`tab-${tab.id}`} hidden={index !== 0}>
               <div class="flex min-w-0 items-center gap-2 rounded-md border border-border bg-muted/40 ps-3 pe-1">
                 <span class="flex-none font-mono text-xs text-muted-foreground select-none" aria-hidden="true">$</span>
-                <code class="min-w-0 flex-1 truncate bg-transparent py-2 font-mono text-[0.78rem]" data-install={tab.packageName}>npm install {tab.packageName}</code>
-                <button class={iconButtonClass} type="button" data-action="copy-install" data-package={tab.packageName} aria-label={`Copy install command for ${tab.packageName}`}><VIcon name="copy" size={14} /></button>
+                <code class="min-w-0 flex-1 truncate bg-transparent py-2 font-mono text-[0.78rem]" data-install={tab.npm ? tab.packageName : undefined}>{tab.install}</code>
+                <button class={iconButtonClass} type="button" data-action="copy-install" data-package={tab.packageName} data-command={tab.npm ? undefined : tab.install} aria-label={`Copy install command for ${tab.packageName}`}><VIcon name="copy" size={14} /></button>
               </div>
               <div class="snippet-panel relative min-w-0">
                 <div class="prose max-w-none" data-snippet={tab.id} set:html={snippetHtml(templates, tab.id, iconRef, iconDefaults)} />
@@ -529,7 +536,7 @@ const structuredData = site
         if (!target) return;
         try {
           if (target.dataset.action === "copy-install") {
-            await copyText(installCommand(currentManager(), target.dataset.package ?? ""));
+            await copyText(target.dataset.command ?? installCommand(currentManager(), target.dataset.package ?? ""));
             setStatus("Install command copied.");
           } else if (target.dataset.action === "copy-snippet") {
             await copyText(snippetText(target.dataset.snippetTab ?? "react", icon, store.get()));

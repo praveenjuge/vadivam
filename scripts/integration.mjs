@@ -1,5 +1,5 @@
 // Builds real framework applications against materialized local packages and
-// verifies the seven browser packages from their production output.
+// verifies the browser packages from their production output.
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { cpSync, existsSync, readFileSync, rmSync } from "node:fs";
@@ -33,6 +33,12 @@ const allApps = [
   },
   { name: "astro", packages: ["vadivam-astro"], output: "dist" },
   { name: "preact", packages: ["vadivam-preact"], output: "dist", verifiesFunctionEvents: true },
+  // Qwik's client-only render() doesn't attach onClick$ listeners even on
+  // plain elements, so event props are covered by tests/frameworks instead.
+  { name: "qwik", packages: ["vadivam-qwik"], output: "dist" },
+  // Lit templates can't spread attributes onto the icon, so each one renders
+  // inside a wrapper element that carries its id and click handler.
+  { name: "lit", packages: ["vadivam-lit"], output: "dist", verifiesFunctionEvents: true, wrapped: true },
 ];
 const requestedApps = new Set(process.argv.slice(2));
 const apps = requestedApps.size
@@ -137,6 +143,7 @@ async function verifyBrowser(browser, app, cwd, index) {
         const stringIcon = document.querySelector("#string");
         const spriteIcon = document.querySelector("#sprite-use");
         return (
+          document.querySelector("#element")?.shadowRoot?.querySelector("svg path") &&
           document.fonts.check('24px "Vadivam Icons"') &&
           stringIcon?.querySelector("path, circle, line, polyline, polygon, rect, ellipse") &&
           spriteIcon?.getBBox().width > 0 &&
@@ -147,6 +154,8 @@ async function verifyBrowser(browser, app, cwd, index) {
         const stringIcon = document.querySelector("#string");
         const spriteIcon = document.querySelector("#sprite-use");
         const fontIcon = document.querySelector("#font");
+        const element = document.querySelector("#element");
+        const elementSvg = element.shadowRoot.querySelector("svg");
         const fontStyle = getComputedStyle(fontIcon);
         const pseudo = getComputedStyle(fontIcon, "::before").content.replace(/^['\"]|['\"]$/g, "");
         return {
@@ -160,6 +169,10 @@ async function verifyBrowser(browser, app, cwd, index) {
           stringGeometry: stringIcon.querySelectorAll(
             "path, circle, line, polyline, polygon, rect, ellipse",
           ).length,
+          elementWidth: element.getBoundingClientRect().width,
+          elementStroke: elementSvg.getAttribute("stroke"),
+          elementStrokeWidth: elementSvg.getAttribute("stroke-width"),
+          elementLabel: elementSvg.getAttribute("aria-label"),
         };
       });
       if (errors.length) throw new Error(`${app.name}: ${errors.join(" | ")}`);
@@ -171,7 +184,11 @@ async function verifyBrowser(browser, app, cwd, index) {
         result.fontHeight <= 0 ||
         result.spriteWidth <= 0 ||
         result.spriteHeight <= 0 ||
-        result.stringGeometry <= 0
+        result.stringGeometry <= 0 ||
+        result.elementWidth !== 48 ||
+        result.elementStroke !== "navy" ||
+        result.elementStrokeWidth !== "1" ||
+        result.elementLabel !== "Activity chart"
       ) {
         throw new Error(`${app.name}: invalid static assets ${JSON.stringify(result)}`);
       }
@@ -183,9 +200,9 @@ async function verifyBrowser(browser, app, cwd, index) {
         (id) => document.querySelector(`#${id}`)?.children.length,
       ),
     );
-    const result = await page.evaluate(() => {
+    const result = await page.evaluate((wrapped) => {
       const read = (id) => {
-        const svg = document.querySelector(`#${id}`);
+        const svg = document.querySelector(wrapped ? `#${id} > svg` : `#${id}`);
         return {
           tag: svg?.tagName,
           width: svg?.getAttribute("width"),
@@ -209,7 +226,7 @@ async function verifyBrowser(browser, app, cwd, index) {
         securityRawContent: document.querySelector("#security")?.innerHTML.includes("alert(1)") ?? false,
         title: document.querySelector("#static title")?.textContent,
       };
-    });
+    }, Boolean(app.wrapped));
     if (app.verifiesFunctionEvents) {
       await page.click("#static");
       result.functionEventCount = await page.evaluate(() => window.__vadivamFunctionEventCount ?? 0);
@@ -217,7 +234,7 @@ async function verifyBrowser(browser, app, cwd, index) {
     if (errors.length) throw new Error(`${app.name}: ${errors.join(" | ")}`);
     const icon = result.staticIcon;
     const classNames = icon.className?.split(/\s+/) ?? [];
-    if (icon.tag?.toLowerCase() !== "svg" || icon.width !== "48" || icon.height !== "48" || icon.stroke !== "navy" || icon.strokeWidth !== "1" || icon.paths === 0 || result.title !== "Activity chart" || icon.role !== "img" || icon.ariaHidden !== null || icon.custom !== "yes" || !classNames.includes("vadivam") || !classNames.includes("vadivam-activity") || !classNames.includes("context-icon") || !classNames.includes("consumer-icon") || classNames.length !== new Set(classNames).size) {
+    if (icon.tag?.toLowerCase() !== "svg" || icon.width !== "48" || icon.height !== "48" || icon.stroke !== "navy" || icon.strokeWidth !== "1" || icon.paths === 0 || result.title !== "Activity chart" || icon.role !== "img" || icon.ariaHidden !== null || (!app.wrapped && icon.custom !== "yes") || !classNames.includes("vadivam") || !classNames.includes("vadivam-activity") || !classNames.includes("context-icon") || !classNames.includes("consumer-icon") || classNames.length !== new Set(classNames).size) {
       throw new Error(`${app.name}: invalid static icon ${JSON.stringify(result)}`);
     }
     if (result.direct.paths === 0 || result.dynamic.paths === 0 || result.factory.paths === 0 || result.direct.ariaHidden !== "true" || result.dynamic.ariaHidden !== "true" || result.factory.ariaHidden !== "true" || !result.factory.className?.split(/\s+/).includes("vadivam-factory")) {

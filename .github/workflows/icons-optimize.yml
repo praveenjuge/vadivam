@@ -48,6 +48,24 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # The Flutter and Compose packages build with their own toolchains.
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: 9.8.2
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
       - name: Install Chromium
         if: github.event_name == 'push'
         run: bunx playwright install --with-deps --only-shell chromium
@@ -123,7 +141,7 @@ jobs:
         run: |
           version=$(bun scripts/bump-version.mjs)
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          git add package.json packages/*/package.json packages/vadivam-mcp/server.json apps/figma-plugin/package.json README.md packages/*/README.md
+          git add package.json packages/*/package.json packages/vadivam-mcp/server.json apps/figma-plugin/package.json README.md packages/*/README.md packages/vadivam-flutter/pubspec.yaml packages/vadivam-compose/gradle.properties
           git commit -m "chore(release): v$version"
 
       # The docs build reads the changelog from GitHub Releases. Anonymous API
@@ -142,6 +160,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: bun run test
+
+      # The test suites above build every package first.
+      - name: Test Flutter and Compose packages
+        timeout-minutes: 15
+        run: bun run test:native:built
 
       - name: Check generated inputs
         if: github.event_name == 'pull_request'
@@ -195,11 +218,13 @@ jobs:
               tests/integration/svelte/node_modules
               tests/integration/solid/node_modules
           - shard: compiled-web
-            apps: angular astro preact
+            apps: angular astro preact qwik lit
             cache_paths: |
               tests/integration/angular/node_modules
               tests/integration/astro/node_modules
               tests/integration/preact/node_modules
+              tests/integration/qwik/node_modules
+              tests/integration/lit/node_modules
     steps:
       - name: Checkout
         uses: actions/checkout@v5

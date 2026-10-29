@@ -1,0 +1,5 @@
+lib/src/generated/
+.dart_tool/
+build/
+pubspec.lock
+CHANGELOG.md
