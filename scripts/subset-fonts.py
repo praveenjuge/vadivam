@@ -126,7 +126,8 @@ def fetch(path, sha256):
     if not cached.exists():
         cached.parent.mkdir(parents=True, exist_ok=True)
         url = UPSTREAM + path.replace("[", "%5B").replace("]", "%5D")
-        cached.write_bytes(urllib.request.urlopen(url).read())
+        # The URL is always the https UPSTREAM plus a pinned path from FAMILIES.
+        cached.write_bytes(urllib.request.urlopen(url).read())  # nosec B310
     digest = hashlib.sha256(cached.read_bytes()).hexdigest()
     if digest != sha256:
         cached.unlink()
