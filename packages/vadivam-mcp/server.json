@@ -9,12 +9,12 @@
     "source": "github",
     "subfolder": "packages/vadivam-mcp"
   },
-  "version": "0.0.71",
+  "version": "0.0.72",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "vadivam-mcp",
-      "version": "0.0.71",
+      "version": "0.0.72",
       "transport": {
         "type": "stdio"
       }
