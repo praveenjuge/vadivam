@@ -91,11 +91,19 @@ export default Icon;
   await write(dist, "dynamic.js", `import { until } from "lit/directives/until.js";
 import { nothing } from "lit";
 import dynamicIconImports, { iconNames } from "./dynamicIconImports.js";
+// Loaded icons render synchronously, so later updates keep the same SVG
+// instead of passing through the fallback again.
+const loaded = new Map();
 // Resolves a runtime icon name. Unknown names and failed loads render the fallback.
 export function DynamicIcon({ name, fallback = nothing, ...props } = {}) {
   const importer = Object.prototype.hasOwnProperty.call(dynamicIconImports, name) ? dynamicIconImports[name] : undefined;
   if (!importer) return fallback;
-  return until(importer().then((module) => module.default(props), () => fallback), fallback);
+  const icon = loaded.get(name);
+  if (icon) return icon(props);
+  return until(importer().then((module) => {
+    loaded.set(name, module.default);
+    return module.default(props);
+  }, () => fallback), fallback);
 }
 export { dynamicIconImports, iconNames };
 export default DynamicIcon;

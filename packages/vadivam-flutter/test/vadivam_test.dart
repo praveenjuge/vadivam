@@ -69,4 +69,27 @@ void main() {
     expect(tester.renderObject<RenderCustomPaint>(find.byWidget(paint)).size,
         const Size(24, 24));
   });
+
+  test('path returns a copy that callers can change', () {
+    final copy = VadivamIcons.activity.path..reset();
+    expect(copy.getBounds().isEmpty, isTrue);
+    expect(VadivamIcons.activity.path.getBounds().isEmpty, isFalse);
+  });
+
+  testWidgets('repaints when an icon with the same name has new geometry',
+      (tester) async {
+    const first = VadivamIconData('custom', [0, 2, 12, 1, 22, 12]);
+    const second = VadivamIconData('custom', [0, 12, 2, 1, 12, 22]);
+    await tester.pumpWidget(_app(const VadivamIcon(first)));
+    final painter = tester
+        .widget<CustomPaint>(find.descendant(
+            of: find.byType(VadivamIcon), matching: find.byType(CustomPaint)))
+        .painter!;
+    await tester.pumpWidget(_app(const VadivamIcon(second)));
+    final next = tester
+        .widget<CustomPaint>(find.descendant(
+            of: find.byType(VadivamIcon), matching: find.byType(CustomPaint)))
+        .painter!;
+    expect(next.shouldRepaint(painter), isTrue);
+  });
 }

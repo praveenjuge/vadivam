@@ -34,12 +34,11 @@ function rootAttributes(rest) {
   for (const name of Object.keys(rest)) (QWIK_EVENT.test(name) ? events : attrs)[name] = rest[name];
   return { ...sanitizeRootAttributes(attrs), ...events };
 }
-function classes(...values) { return values.flatMap((value) => typeof value === "string" ? value.split(/\\s+/) : []).filter((value, index, all) => value && all.indexOf(value) === index).join(" "); }
 function hasA11y(props) { return Object.keys(props).some((name) => name.startsWith("aria-") || name === "role"); }
 
 // Renders nodes as given: built-in icons pass nodes checked when the package is
 // built, and Icon passes caller nodes after sanitizing them.
-export function IconBase({ color, size = 24, strokeWidth = 2, absoluteStrokeWidth = false, children, iconNode = [], name, title, class: className, ...rest }) {
+export function IconBase({ color, size = 24, strokeWidth = 2, absoluteStrokeWidth = false, children, iconNode = [], name, title, class: className, ref, ...rest }) {
   const numericSize = Number(size);
   const numericStroke = Number(strokeWidth);
   const stroke = absoluteStrokeWidth && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStroke) ? numericStroke * 24 / numericSize : strokeWidth;
@@ -51,7 +50,11 @@ export function IconBase({ color, size = 24, strokeWidth = 2, absoluteStrokeWidt
     height: size,
     stroke: sanitizePaint(color),
     "stroke-width": stroke,
-    class: classes("vadivam", name && "vadivam-" + name, typeof className === "string" ? className : undefined),
+    // Qwik joins class lists itself, so callers keep string, array, and
+    // object (conditional) forms.
+    class: ["vadivam", name && "vadivam-" + name, className],
+    // A signal or callback ref, passed straight to Qwik like on a plain <svg>.
+    ...(ref ? { ref } : {}),
     ...(!labelled ? { "aria-hidden": "true" } : {}),
     ...(title ? { role: "img" } : {}),
     ...safeRest,

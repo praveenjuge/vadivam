@@ -38,15 +38,12 @@ class VadivamIconData {
 
   static final Expando<Path> _paths = Expando<Path>();
 
-  /// The icon geometry as a Flutter [Path] in the 24 by 24 view box.
-  Path get path => _paths[this] ??= _buildPath(commands);
+  // Built once per icon and shared by every widget that paints it.
+  Path get _cachedPath => _paths[this] ??= _buildPath(commands);
 
-  @override
-  bool operator ==(Object other) =>
-      other is VadivamIconData && other.name == name;
-
-  @override
-  int get hashCode => name.hashCode;
+  /// A copy of the icon geometry as a Flutter [Path] in the 24 by 24 view box,
+  /// safe to transform or extend.
+  Path get path => Path.from(_cachedPath);
 
   @override
   String toString() => 'VadivamIconData($name)';
@@ -186,7 +183,7 @@ class _VadivamPainter extends CustomPainter {
     if (scale <= 0) return;
     canvas.scale(scale);
     canvas.drawPath(
-      icon.path,
+      icon._cachedPath,
       Paint()
         ..style = PaintingStyle.stroke
         ..color = color
@@ -199,7 +196,7 @@ class _VadivamPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_VadivamPainter oldDelegate) =>
-      oldDelegate.icon != icon ||
+      !identical(oldDelegate.icon, icon) ||
       oldDelegate.color != color ||
       oldDelegate.strokeWidth != strokeWidth;
 }

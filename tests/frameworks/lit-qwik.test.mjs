@@ -53,6 +53,16 @@ describe("vadivam-lit", () => {
   test("DynamicIcon renders the fallback for unknown names", () => {
     expect(LitDynamicIcon({ name: "not-an-icon", fallback: "none" })).toBe("none");
   });
+
+  test("DynamicIcon renders a loaded icon synchronously", async () => {
+    const pending = LitDynamicIcon({ name: "activity" });
+    expect(pending.values).toBeDefined();
+    await import("../../packages/vadivam-lit/dist/icons/activity.js");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const html = await litMarkup(LitDynamicIcon({ name: "activity", size: 20 }));
+    expect(html).toContain("vadivam-activity");
+    expect(html).toContain('width="20"');
+  });
 });
 
 describe("vadivam-qwik", () => {
@@ -70,7 +80,7 @@ describe("vadivam-qwik", () => {
     expect(props.width).toBe(48);
     expect(props.stroke).toBe("navy");
     expect(props["stroke-width"]).toBe(1);
-    expect(props.class).toBe("vadivam vadivam-activity app-icon");
+    expect(props.class).toEqual(["vadivam", "vadivam-activity", "app-icon"]);
     expect(props.role).toBe("img");
     expect(props["data-custom"]).toBe("yes");
     expect(props.onload).toBeUndefined();
@@ -78,6 +88,16 @@ describe("vadivam-qwik", () => {
     expect(Object.values(props)).toContain(onClick$);
     const children = [node.children].flat(Infinity).filter(Boolean);
     expect(children.map((child) => child.type)).toEqual(["title", "path"]);
+  });
+
+  test("keeps Qwik's class forms and passes refs through", () => {
+    const props = (node) => ({ ...node.constProps, ...node.varProps });
+    expect(props(qwik.Activity({ class: { active: true } })).class).toEqual(["vadivam", "vadivam-activity", { active: true }]);
+    expect(props(qwik.Activity({ class: ["a", "b"] })).class).toEqual(["vadivam", "vadivam-activity", ["a", "b"]]);
+    const signalRef = { value: undefined };
+    const callbackRef = () => {};
+    expect(props(qwik.Activity({ ref: signalRef })).ref).toBe(signalRef);
+    expect(props(qwik.Activity({ ref: callbackRef })).ref).toBe(callbackRef);
   });
 
   test("Icon sanitizes custom nodes and external paint", () => {
