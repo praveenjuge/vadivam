@@ -232,6 +232,7 @@
     "clipboard-pen",
     "construction",
     "container",
+    "cookie",
     "copy-minus",
     "copy-slash",
     "cylinder",
@@ -246,10 +247,19 @@
     "database-x",
     "database-zap",
     "door-closed-package",
+    "file-braces-corner",
     "file-chart-pie",
+    "file-check-corner",
+    "file-clock",
+    "file-code-corner",
     "file-down",
+    "file-minus-corner",
+    "file-plus-corner",
+    "file-search-corner",
+    "file-type-corner",
     "file-up",
     "file-user",
+    "file-x-corner",
     "flask-conical",
     "flask-conical-off",
     "flower-2",
@@ -395,16 +405,6 @@
         2
       ]
     },
-    "database-check": {
-      "fill": [
-        0
-      ]
-    },
-    "database-x": {
-      "fill": [
-        0
-      ]
-    },
     "dices": {
       "fill": [
         0
@@ -453,12 +453,6 @@
         "region": "fileFold"
       }
     },
-    "file-braces-corner": {
-      "corner": {
-        "from": "file",
-        "region": "fileFold"
-      }
-    },
     "file-chart-column": {
       "corner": {
         "from": "file",
@@ -477,25 +471,7 @@
         "region": "fileFold"
       }
     },
-    "file-check-corner": {
-      "corner": {
-        "from": "file",
-        "region": "fileFold"
-      }
-    },
-    "file-clock": {
-      "corner": {
-        "from": "file",
-        "region": "fileFold"
-      }
-    },
     "file-code": {
-      "corner": {
-        "from": "file",
-        "region": "fileFold"
-      }
-    },
-    "file-code-corner": {
       "corner": {
         "from": "file",
         "region": "fileFold"
@@ -574,12 +550,6 @@
         "region": "fileFold"
       }
     },
-    "file-minus-corner": {
-      "corner": {
-        "from": "file",
-        "region": "fileFold"
-      }
-    },
     "file-music": {
       "corner": {
         "from": "file",
@@ -610,12 +580,6 @@
         "region": "fileFold"
       }
     },
-    "file-plus-corner": {
-      "corner": {
-        "from": "file",
-        "region": "fileFold"
-      }
-    },
     "file-scan": {
       "front": [
         2,
@@ -623,12 +587,6 @@
         4,
         5
       ],
-      "corner": {
-        "from": "file",
-        "region": "fileFold"
-      }
-    },
-    "file-search-corner": {
       "corner": {
         "from": "file",
         "region": "fileFold"
@@ -664,12 +622,6 @@
         "region": "fileFold"
       }
     },
-    "file-type-corner": {
-      "corner": {
-        "from": "file",
-        "region": "fileFold"
-      }
-    },
     "file-video-camera": {
       "corner": {
         "from": "file",
@@ -677,12 +629,6 @@
       }
     },
     "file-volume": {
-      "corner": {
-        "from": "file",
-        "region": "fileFold"
-      }
-    },
-    "file-x-corner": {
       "corner": {
         "from": "file",
         "region": "fileFold"
