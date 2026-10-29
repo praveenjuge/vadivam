@@ -29,12 +29,16 @@ const committedByContent = new Map(
 const committedFile = (url) =>
   committedByContent.get(readFileSync(path.join(clientDir, url)).toString("base64"));
 
-const entities = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+// Built pages use literal UTF-8 and only these named entities. Any other
+// named entity fails loudly rather than slipping past the checks as ASCII.
+const entities = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: "\u00a0" };
 const decode = (text) =>
-  text
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, decimal) => String.fromCodePoint(Number(decimal)))
-    .replace(/&([a-z]+);/gi, (match, name) => entities[name] ?? match);
+  text.replace(/&(?:#x([0-9a-f]+)|#(\d+)|([a-z][a-z0-9]*));/gi, (match, hex, decimal, name) => {
+    if (hex) return String.fromCodePoint(Number.parseInt(hex, 16));
+    if (decimal) return String.fromCodePoint(Number(decimal));
+    if (name in entities) return entities[name];
+    throw new Error(`Unknown HTML entity ${match}: add it to decode() in tests/docs-fonts.test.mjs`);
+  });
 
 // The rendered text nodes and placeholders of a page, outside scripts and styles.
 const textNodes = (html) => {
@@ -72,6 +76,11 @@ const textNodes = (html) => {
 describe("docs fonts", () => {
   const pages = htmlFiles(clientDir);
   const home = readFileSync(path.join(clientDir, "index.html"), "utf8");
+
+  test("entity decoding is single-pass and refuses unknown names", () => {
+    expect(textNodes("<p>caf&#233; &#x2014; &amp;eacute; &#38;eacute;</p>")).toEqual(["café — &eacute; &eacute;"]);
+    expect(() => textNodes("<p>caf&eacute;</p>")).toThrow("Unknown HTML entity &eacute;");
+  });
 
   test("pages preload only core files", () => {
     for (const page of pages) {
