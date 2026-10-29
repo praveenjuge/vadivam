@@ -91,8 +91,9 @@ const countPaths = (svg: string) => (svg.match(/ d="/g) ?? []).length;
 const pathCounts = [...new Set(icons.map((icon) => countPaths(icon.svg)))].filter((count) => count > 0);
 const solidPathCounts = [...new Set(icons.map((icon) => countPaths(icon.solid?.svg ?? "")))].filter((count) => count > 0);
 const snippetTemplates = serializeForScript(await buildSnippetTemplates(config.codeThemes, pathCounts, solidPathCounts));
-const styleButtonClass =
-  "inline-flex items-center gap-1.5 rounded-md border-0 bg-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent aria-pressed:bg-muted aria-pressed:text-foreground [&>svg]:size-3.5 [&>svg]:flex-none";
+// One switch: a click anywhere flips the style, and the active half is shaded.
+const styleSegmentClass =
+  "inline-flex items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors group-hover:text-foreground [&>svg]:size-3.5 [&>svg]:flex-none";
 const outlineStyleIcon = iconsByName.square?.svg ?? "";
 const solidStyleIcon = iconsByName.square?.solid?.svg ?? "";
 
@@ -259,14 +260,21 @@ const structuredData = site
             set:html={clearIconSvg}
           />
         </div>
-        <div class="flex flex-none items-center gap-0.5 rounded-lg border border-border p-0.5" role="group" aria-label="Icon style" id="iconStyle">
-          <button class={styleButtonClass} type="button" data-style="outline" aria-pressed="true" aria-label="Outline">
-            <Fragment set:html={outlineStyleIcon} /><span class="hidden sm:inline" aria-hidden="true">Outline</span>
-          </button>
-          <button class={styleButtonClass} type="button" data-style="solid" aria-pressed="false" aria-label="Solid">
-            <Fragment set:html={solidStyleIcon} /><span class="hidden sm:inline" aria-hidden="true">Solid</span>
-          </button>
-        </div>
+        <button
+          class="group flex flex-none cursor-pointer items-stretch gap-0.5 self-stretch rounded-lg border border-border bg-background p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          type="button"
+          role="switch"
+          aria-checked="false"
+          aria-label="Solid icons"
+          id="iconStyle"
+        >
+          <span class={`${styleSegmentClass} group-aria-[checked=false]:bg-muted group-aria-[checked=false]:text-foreground`} aria-hidden="true">
+            <Fragment set:html={outlineStyleIcon} /><span class="hidden sm:inline">Outline</span>
+          </span>
+          <span class={`${styleSegmentClass} group-aria-checked:bg-muted group-aria-checked:text-foreground`} aria-hidden="true">
+            <Fragment set:html={solidStyleIcon} /><span class="hidden sm:inline">Solid</span>
+          </span>
+        </button>
         <span class="relative flex w-[7.5rem] flex-none sm:w-auto">
           <select
             class="w-full cursor-pointer appearance-none rounded-lg border border-border bg-background py-2 ps-3 pe-9 text-base text-foreground outline-none focus:border-accent md:text-sm"
@@ -470,7 +478,7 @@ const structuredData = site
       const drawerCustomize = document.querySelector<HTMLDetailsElement>("#drawerCustomize")!;
       const tabButtons = Array.from(drawer.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
       const cards = Array.from(grid.querySelectorAll<HTMLAnchorElement>(".icon-chunk > a"));
-      const styleButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("#iconStyle [data-style]"));
+      const styleSwitch = document.querySelector<HTMLButtonElement>("#iconStyle")!;
 
       const templates = readTemplates("snippetTemplates");
       const version = JSON.parse(document.getElementById("siteVersion")?.textContent ?? '""');
@@ -783,7 +791,7 @@ const structuredData = site
           entry.clone = undefined;
         }
         explorer.dataset.iconStyle = style;
-        for (const button of styleButtons) button.setAttribute("aria-pressed", String(button.dataset.style === style));
+        styleSwitch.setAttribute("aria-checked", String(style === "solid"));
         if (matches) applyFilter();
         afterStyle();
         if (updateUrl) {
@@ -793,11 +801,11 @@ const structuredData = site
           history.replaceState(history.state, "", url);
         }
       };
-      for (const button of styleButtons) {
-        button.addEventListener("click", () => setStyle(button.dataset.style === "solid" ? "solid" : "outline"));
-        // Fetch the solid paths as soon as the visitor reaches for the toggle.
-        if (button.dataset.style === "solid") button.addEventListener("pointerenter", () => loadSolid().catch(() => {}), { once: true });
-      }
+      // Each click flips the last requested style, so quick repeat clicks
+      // still alternate while the solid paths are loading.
+      styleSwitch.addEventListener("click", () => setStyle(requestedStyle === "solid" ? "outline" : "solid"));
+      // Fetch the solid paths as soon as the visitor reaches for the toggle.
+      styleSwitch.addEventListener("pointerenter", () => loadSolid().catch(() => {}), { once: true });
 
       // ---- Drawer -------------------------------------------------------------
       let selected: HTMLAnchorElement | null = null;
