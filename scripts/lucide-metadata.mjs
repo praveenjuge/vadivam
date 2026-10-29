@@ -74,8 +74,9 @@ export async function readLucideCheckout(checkout) {
       tags: [...new Set(tags.map((tag) => tag.trim().toLowerCase()))],
       categories: [...new Set(iconCategories)],
     };
+    // Lucide also keeps a few live aliases, such as `bold` for `letter-b`.
+    // Vadivam publishes canonical names only, so those rename the same way.
     for (const alias of metadata.aliases ?? []) {
-      if (alias.deprecated !== true) continue;
       if (nameSet.has(alias.name)) {
         throw new Error(`Deprecated Lucide alias is also canonical: ${alias.name}`);
       }
@@ -92,8 +93,16 @@ export async function readLucideCheckout(checkout) {
 
 export async function writeLucideMetadata({ version, categories, icons }) {
   await mkdir(path.dirname(lucideMetadataPath), { recursive: true });
+  // Only drawn icons get an entry, so a Lucide release can be pinned before
+  // every new name has a Vadivam drawing. Rerun after adding icons.
+  const drawn = new Set(
+    (await readdir(path.join(root, "icons")))
+      .filter((fileName) => fileName.endsWith(".svg"))
+      .map((fileName) => fileName.slice(0, -4)),
+  );
   // One line per icon keeps diffs reviewable when Lucide retags an icon.
   const iconLines = Object.keys(icons)
+    .filter((name) => drawn.has(name))
     .sort()
     .map((name) => `    ${JSON.stringify(name)}: ${JSON.stringify(icons[name])}`);
   await writeFile(
