@@ -60,6 +60,12 @@ bun run icons:check     # validate without writing
 bun run icons:build     # regenerate packages and site assets
 ```
 
+A new icon also needs its Lucide tags and categories. `metadata/lucide.json` lists only icons that have a drawing, so after adding an SVG, rerun the metadata step against a Lucide checkout on the pinned release tag (`lucideVersion` in that file):
+
+```sh
+bun run icons:metadata -- /path/to/lucide-checkout
+```
+
 Do not hand-edit generated output to fix an icon; correct the canonical SVG and regenerate.
 
 ## Validate changes
