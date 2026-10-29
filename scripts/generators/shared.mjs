@@ -106,3 +106,52 @@ export const defaultAttributes = {
   strokeLinecap: "round",
   strokeLinejoin: "round",
 };
+
+// Each style is its own entry point with the same layout: outline at the
+// package root and solid under solid/. A style's entry imports the root's
+// context and runtime policy, so one provider sets every style.
+export const packageStyles = {
+  outline: {
+    id: "outline",
+    directory: "",
+    shared: "./",
+    stroked: true,
+    attributes: { fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round" },
+  },
+  solid: {
+    id: "solid",
+    directory: "solid",
+    shared: "../",
+    stroked: false,
+    attributes: { fill: "currentColor", "fill-rule": "evenodd" },
+  },
+};
+
+function camelCase(name) {
+  return name.replace(/-([a-z])/g, (_match, letter) => letter.toUpperCase());
+}
+
+// The root SVG attributes of a style as an object literal, with React-style
+// camelCase names when `camel` is set.
+export function defaultAttributesSource(style, { camel = false } = {}) {
+  const attributes = { xmlns: "http://www.w3.org/2000/svg", width: 24, height: 24, viewBox: "0 0 24 24", ...style.attributes };
+  const entries = Object.entries(attributes).map(([name, value]) => {
+    const key = camel ? camelCase(name) : name;
+    return `${/^[A-Za-z]+$/.test(key) ? key : JSON.stringify(key)}: ${JSON.stringify(value)}`;
+  });
+  return `{ ${entries.join(", ")} }`;
+}
+
+// The stroke props an outline icon takes and a solid icon does not.
+export function strokePropTypes(style) {
+  return style.stroked ? " strokeWidth?: string | number; absoluteStrokeWidth?: boolean;" : "";
+}
+
+// Builds `styleIcons` for every style that has icons, each into its entry.
+export async function buildStyles(dist, iconsByStyle, buildEntry) {
+  for (const [id, styleIcons] of Object.entries(iconsByStyle)) {
+    if (!styleIcons?.length) continue;
+    const style = packageStyles[id];
+    await buildEntry(style.directory ? `${dist}/${style.directory}` : dist, styleIcons, style);
+  }
+}

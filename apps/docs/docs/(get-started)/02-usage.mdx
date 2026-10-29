@@ -39,6 +39,19 @@ import { Activity } from "vadivam-react";
 
 Use the native spelling expected by the framework: for example, `className` in React and `class` in Vue, Svelte, Solid, Astro, Preact, and Qwik. For raw DOM helper attributes, use SVG attribute names such as `stroke-width`.
 
+## Outline and solid
+
+Every icon comes in two styles under the same name: outline, from each package's root, and [solid](/docs/design-guide#solid), from its `/solid` entry. A solid icon covers exactly the outline's footprint, so swapping one for the other, such as for a selected tab, never moves anything:
+
+```tsx
+import { Bell } from "vadivam-react";
+import { Bell as BellSolid } from "vadivam-react/solid";
+
+{unread ? <BellSolid aria-label="Notifications" /> : <Bell aria-label="Notifications" />}
+```
+
+Solid icons take the same `size`, `color`, and `title`, with `color` setting the fill. They have no stroke, so `strokeWidth` and `absoluteStrokeWidth` don't apply.
+
 ## Absolute stroke width
 
 Normally, scaling an SVG also scales its visible stroke. Set `absoluteStrokeWidth` when the stroke should remain visually close to the requested `strokeWidth` at another icon size:

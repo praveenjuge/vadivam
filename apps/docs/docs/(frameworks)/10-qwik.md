@@ -34,6 +34,22 @@ There is no provider: inline components can't read context. Set shared defaults 
 
 The root entry point also exports the `icons` registry, a generic `Icon`, `createVadivamIcon`, and icon nodes for advanced use.
 
+## Solid icons
+
+Every icon has a [solid](/docs/design-guide#solid) twin with the same name in `vadivam-qwik/solid`:
+
+```tsx
+import { House } from "vadivam-qwik";
+import { House as HouseSolid } from "vadivam-qwik/solid";
+
+export const HomeTab = component$(({ active }: { active: boolean }) => {
+  const Icon = active ? HouseSolid : House;
+  return <Icon size={20} title="Home" />;
+});
+```
+
+Solid icons take `size`, `color`, and `title`, and `color` sets the fill. They have no stroke, so `strokeWidth` and `absoluteStrokeWidth` are not props. Per-icon solid imports use `vadivam-qwik/solid/icons/house`.
+
 ## Per-icon imports
 
 ```ts

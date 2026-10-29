@@ -1,5 +1,5 @@
 name: vadivam
-description: Pixel-perfect 24px outline icons for Flutter, drawn as vector strokes with adjustable size, color, and stroke width.
+description: Pixel-perfect 24px outline and solid icons for Flutter, drawn as vectors with adjustable size, color, and stroke width.
 # Kept in step with the npm packages by scripts/bump-version.mjs.
 version: 0.0.75
 homepage: https://vadivam.praveenjuge.com

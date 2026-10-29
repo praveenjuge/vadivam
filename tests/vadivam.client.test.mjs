@@ -176,6 +176,29 @@ describe("<vadivam-icon>", () => {
     host.remove();
   });
 
+  test("draws the solid twin with variant=\"solid\"", async () => {
+    await import("vadivam/elements");
+    const element = document.createElement("vadivam-icon");
+    element.setAttribute("name", "activity");
+    element.setAttribute("variant", "solid");
+    element.setAttribute("color", "navy");
+    element.setAttribute("absolute-stroke-width", "");
+    document.body.append(element);
+    const svg = await rendered(element);
+    expect(svg.getAttribute("fill")).toBe("navy");
+    expect(svg.getAttribute("fill-rule")).toBe("evenodd");
+    expect(svg.getAttribute("stroke")).toBeNull();
+    expect(svg.querySelector("path").getAttribute("vector-effect")).toBeNull();
+    const solidPath = svg.querySelector("path").getAttribute("d");
+
+    element.removeAttribute("variant");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const outline = element.shadowRoot.querySelector("svg");
+    expect(outline.getAttribute("stroke")).toBe("navy");
+    expect(outline.querySelector("path").getAttribute("d")).not.toBe(solidPath);
+    element.remove();
+  });
+
   test("ignores unknown names and unsafe attribute values", async () => {
     await import("vadivam/elements");
     const element = document.createElement("vadivam-icon");

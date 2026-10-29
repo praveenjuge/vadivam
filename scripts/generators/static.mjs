@@ -13,8 +13,12 @@ import path from "node:path";
 export const privateUseStart = 0xe000;
 export const privateUseEnd = 0xf8ff;
 
-const fontName = "vadivam";
-const fontFamily = "Vadivam Icons";
+// One font per style. The solid font reuses the outline font's codepoints and
+// per-icon classes, so only its family and base class differ.
+export const fonts = {
+  outline: { fontName: "vadivam", fontFamily: "Vadivam Icons", baseClass: "vadivam-icon" },
+  solid: { fontName: "vadivam-solid", fontFamily: "Vadivam Icons Solid", baseClass: "vadivam-solid-icon" },
+};
 const fontCacheVersion = "2";
 
 function codepointHex(codepoint) {
@@ -116,11 +120,13 @@ async function buildStrings(icons, outputDirectory) {
   );
 }
 
-export async function buildSprite(icons, outputPath) {
+// Solid symbols carry their style in the id, so both sprites can be inlined
+// into one page.
+export async function buildSprite(icons, outputPath, idPrefix = "vadivam-") {
   const symbols = icons
     .map(
       (icon) =>
-        `  <symbol id="vadivam-${icon.name}" viewBox="0 0 24 24">\n    ${svgBody(icon.svg).replaceAll("\n", "\n    ")}\n  </symbol>`,
+        `  <symbol id="${idPrefix}${icon.name}" viewBox="0 0 24 24">\n    ${svgBody(icon.svg).replaceAll("\n", "\n    ")}\n  </symbol>`,
     )
     .join("\n");
   await writeFile(
@@ -129,7 +135,7 @@ export async function buildSprite(icons, outputPath) {
   );
 }
 
-function fontCss(icons, registry) {
+function fontCss(icons, registry, { fontName, fontFamily, baseClass } = fonts.outline) {
   const classes = icons
     .map(
       ({ name }) =>
@@ -138,13 +144,13 @@ function fontCss(icons, registry) {
     .join("\n");
   return `@font-face {
   font-family: "${fontFamily}";
-  src: url("./vadivam.woff2") format("woff2");
+  src: url("./${fontName}.woff2") format("woff2");
   font-display: block;
   font-style: normal;
   font-weight: normal;
 }
 
-.vadivam-icon {
+.${baseClass} {
   display: inline-block;
   font-family: "${fontFamily}" !important;
   font-style: normal;
@@ -168,9 +174,10 @@ async function packageVersion(root, packageName) {
   return manifest.version;
 }
 
-export async function fontCacheKey(icons, registry, root) {
+export async function fontCacheKey(icons, registry, root, font = fonts.outline) {
   const hash = createHash("sha256");
   hash.update(`vadivam-font-cache:${fontCacheVersion}\n`);
+  if (font !== fonts.outline) hash.update(`${font.fontName}:${font.fontFamily}\n`);
   hash.update(`svgtofont:${await packageVersion(root, "svgtofont")}\n`);
   hash.update(
     `oslllo-svg-fixer:${await packageVersion(root, "oslllo-svg-fixer")}\n`,
@@ -181,11 +188,12 @@ export async function fontCacheKey(icons, registry, root) {
   return hash.digest("hex");
 }
 
-async function generateFont(icons, registry, { iconsDirectory, outputPath, root }) {
+async function generateFont(icons, registry, { iconsDirectory, outputPath, root, font = fonts.outline }) {
+  const { fontName, fontFamily } = font;
   const cacheDirectory = path.join(root, "node_modules", ".cache", "vadivam-font");
   const cachePath = path.join(
     cacheDirectory,
-    `${await fontCacheKey(icons, registry, root)}.woff2`,
+    `${await fontCacheKey(icons, registry, root, font)}.woff2`,
   );
   await mkdir(cacheDirectory, { recursive: true });
   try {
@@ -241,24 +249,26 @@ async function generateFont(icons, registry, { iconsDirectory, outputPath, root 
   }
 }
 
+// Strings and the sprite go in the style's entry; every style's font goes in
+// the package's one font/ folder.
 export async function buildStaticAssets(
   icons,
-  { iconsDirectory, outputDirectory, registryPath, root },
+  { iconsDirectory, outputDirectory, fontDirectory = path.join(outputDirectory, "font"), registryPath, root, font = fonts.outline },
 ) {
   const registry = await readFontCodepoints(registryPath);
   validateFontCodepoints(icons, registry);
 
   const stringsDirectory = path.join(outputDirectory, "strings");
-  const fontDirectory = path.join(outputDirectory, "font");
   await mkdir(fontDirectory, { recursive: true });
   await buildStrings(icons, stringsDirectory);
-  await buildSprite(icons, path.join(outputDirectory, "sprite.svg"));
+  await buildSprite(icons, path.join(outputDirectory, "sprite.svg"), font === fonts.outline ? "vadivam-" : "vadivam-solid-");
   await Promise.all([
-    writeFile(path.join(fontDirectory, "vadivam.css"), fontCss(icons, registry)),
+    writeFile(path.join(fontDirectory, `${font.fontName}.css`), fontCss(icons, registry, font)),
     generateFont(icons, registry, {
       iconsDirectory,
-      outputPath: path.join(fontDirectory, "vadivam.woff2"),
+      outputPath: path.join(fontDirectory, `${font.fontName}.woff2`),
       root,
+      font,
     }),
   ]);
 }

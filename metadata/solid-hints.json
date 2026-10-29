@@ -1,0 +1,810 @@
+{
+  "line": [
+    "a-arrow-down",
+    "a-arrow-up",
+    "a-large-small",
+    "ampersand",
+    "ampersands",
+    "anchor",
+    "armenian-dram",
+    "arrow-down-0-1",
+    "arrow-down-1-0",
+    "arrow-down-a-z",
+    "arrow-down-z-a",
+    "arrow-up-0-1",
+    "arrow-up-1-0",
+    "arrow-up-a-z",
+    "arrow-up-z-a",
+    "at-sign",
+    "atom",
+    "azerbaijani-manat",
+    "bangladeshi-taka",
+    "baseline",
+    "belarusian-ruble",
+    "binary",
+    "bitcoin",
+    "bluetooth",
+    "bluetooth-connected",
+    "bluetooth-off",
+    "bluetooth-searching",
+    "case-lower",
+    "case-sensitive",
+    "case-upper",
+    "clef-alto",
+    "clef-bass",
+    "clef-treble",
+    "command",
+    "decimals-arrow-left",
+    "decimals-arrow-right",
+    "dollar-sign",
+    "emirati-dirham",
+    "euro",
+    "georgian-lari",
+    "heading-1",
+    "heading-2",
+    "heading-3",
+    "heading-4",
+    "heading-5",
+    "heading-6",
+    "indian-rupee",
+    "infinity",
+    "italic",
+    "japanese-yen",
+    "kazakh-tenge",
+    "lambda",
+    "languages",
+    "letter-a",
+    "letter-b",
+    "letter-c",
+    "letter-d",
+    "letter-e",
+    "letter-f",
+    "letter-g",
+    "letter-h",
+    "letter-i",
+    "letter-j",
+    "letter-k",
+    "letter-l",
+    "letter-m",
+    "letter-n",
+    "letter-o",
+    "letter-p",
+    "letter-q",
+    "letter-r",
+    "letter-s",
+    "letter-spacing",
+    "letter-t",
+    "letter-u",
+    "letter-v",
+    "letter-w",
+    "letter-x",
+    "letter-y",
+    "letter-z",
+    "letters",
+    "ligature",
+    "link",
+    "link-2",
+    "link-2-off",
+    "nepali-rupee",
+    "numbers",
+    "omega",
+    "percent",
+    "phi",
+    "philippine-peso",
+    "pi",
+    "pilcrow",
+    "pilcrow-left",
+    "pilcrow-right",
+    "pound-sterling",
+    "power",
+    "rainbow",
+    "regex",
+    "remove-formatting",
+    "russian-ruble",
+    "saudi-riyal",
+    "section",
+    "sigma",
+    "signature",
+    "spell-check",
+    "spell-check-2",
+    "strikethrough",
+    "subscript",
+    "superscript",
+    "swiss-franc",
+    "text-initial",
+    "turkish-lira",
+    "type",
+    "underline",
+    "unlink",
+    "unlink-2",
+    "variable",
+    "whole-word",
+    "zodiac-aquarius",
+    "zodiac-aries",
+    "zodiac-cancer",
+    "zodiac-capricorn",
+    "zodiac-gemini",
+    "zodiac-leo",
+    "zodiac-libra",
+    "zodiac-ophiuchus",
+    "zodiac-pisces",
+    "zodiac-sagittarius",
+    "zodiac-scorpio",
+    "zodiac-taurus",
+    "zodiac-virgo"
+  ],
+  "letters": [
+    "ad",
+    "badge-cent",
+    "badge-euro",
+    "badge-percent",
+    "book-a",
+    "book-type",
+    "calendar-1",
+    "captions",
+    "captions-off",
+    "circle-euro",
+    "circle-letter-a",
+    "circle-letter-b",
+    "circle-letter-c",
+    "circle-letter-d",
+    "circle-letter-e",
+    "circle-letter-f",
+    "circle-letter-g",
+    "circle-letter-h",
+    "circle-letter-i",
+    "circle-letter-j",
+    "circle-letter-k",
+    "circle-letter-l",
+    "circle-letter-m",
+    "circle-letter-n",
+    "circle-letter-o",
+    "circle-letter-p",
+    "circle-letter-p-off",
+    "circle-letter-q",
+    "circle-letter-r",
+    "circle-letter-s",
+    "circle-letter-t",
+    "circle-letter-u",
+    "circle-letter-v",
+    "circle-letter-w",
+    "circle-letter-x",
+    "circle-letter-y",
+    "circle-letter-z",
+    "circle-percent",
+    "clipboard-type",
+    "copyleft",
+    "copyright",
+    "creative-commons",
+    "diamond-percent",
+    "file-digit",
+    "file-type",
+    "file-type-corner",
+    "hd",
+    "parking-meter",
+    "receipt-cent",
+    "receipt-euro",
+    "square-function",
+    "square-letter-a",
+    "square-letter-b",
+    "square-letter-c",
+    "square-letter-d",
+    "square-letter-e",
+    "square-letter-f",
+    "square-letter-g",
+    "square-letter-h",
+    "square-letter-i",
+    "square-letter-j",
+    "square-letter-k",
+    "square-letter-l",
+    "square-letter-m",
+    "square-letter-n",
+    "square-letter-o",
+    "square-letter-p",
+    "square-letter-p-off",
+    "square-letter-q",
+    "square-letter-r",
+    "square-letter-s",
+    "square-letter-t",
+    "square-letter-u",
+    "square-letter-v",
+    "square-letter-w",
+    "square-letter-x",
+    "square-letter-y",
+    "square-letter-z",
+    "square-percent",
+    "square-pi",
+    "square-pilcrow",
+    "square-radical",
+    "square-sigma",
+    "ticket-percent"
+  ],
+  "manual": [
+    "ambulance",
+    "app-window",
+    "archive",
+    "archive-arrow-down",
+    "archive-arrow-up",
+    "archive-x",
+    "bean",
+    "bell",
+    "bell-check",
+    "bell-dot",
+    "bell-electric",
+    "bell-minus",
+    "bell-off",
+    "bell-plus",
+    "bell-ring",
+    "bike",
+    "blend",
+    "blocks",
+    "can",
+    "can-soda",
+    "candy-cane",
+    "cannabis",
+    "car-battery",
+    "caravan",
+    "circuit-board",
+    "clipboard-pen",
+    "construction",
+    "container",
+    "cookie",
+    "copy-minus",
+    "copy-slash",
+    "cylinder",
+    "database",
+    "database-arrow-down",
+    "database-arrow-up",
+    "database-backup",
+    "database-check",
+    "database-minus",
+    "database-plus",
+    "database-search",
+    "database-x",
+    "database-zap",
+    "door-closed-package",
+    "file-braces-corner",
+    "file-chart-pie",
+    "file-check-corner",
+    "file-clock",
+    "file-code-corner",
+    "file-down",
+    "file-minus-corner",
+    "file-plus-corner",
+    "file-search-corner",
+    "file-type-corner",
+    "file-up",
+    "file-user",
+    "file-x-corner",
+    "flask-conical",
+    "flask-conical-off",
+    "flower-2",
+    "folder-git",
+    "folder-search",
+    "folder-users",
+    "gallery-horizontal",
+    "gallery-horizontal-end",
+    "gallery-vertical",
+    "gallery-vertical-end",
+    "glass-water",
+    "glasses",
+    "grid-2x2-check",
+    "grid-2x2-plus",
+    "grid-2x2-x",
+    "hand-helping",
+    "lightbulb",
+    "lightbulb-off",
+    "mail-warning",
+    "pen-tool",
+    "person-standing",
+    "pipette",
+    "pizza",
+    "share-2",
+    "shelving-unit",
+    "square-library",
+    "utensils",
+    "videotape",
+    "wind-arrow-down"
+  ],
+  "corners": {
+    "fileFold": "M8.5 -1H25V13.75H19.25L17 10.5H12.5L11.5 9.5V4L8.5 2.5Z"
+  },
+  "icons": {
+    "backpack": {
+      "largestHole": true
+    },
+    "baggage-claim": {
+      "line": [
+        3
+      ]
+    },
+    "bed-double": {
+      "drop": [
+        3
+      ]
+    },
+    "brain": {
+      "drop": [
+        1,
+        3,
+        4,
+        5
+      ]
+    },
+    "brain-circuit": {
+      "drop": [
+        1,
+        2,
+        3
+      ]
+    },
+    "brain-cog": {
+      "drop": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    "bridge": {
+      "mode": "line"
+    },
+    "bring-to-front": {
+      "line": [
+        0,
+        1
+      ]
+    },
+    "card-sim": {
+      "drop": [
+        2
+      ]
+    },
+    "clock-alert": {
+      "front": [
+        2,
+        3
+      ]
+    },
+    "cloud-fog": {
+      "drop": [
+        1
+      ]
+    },
+    "clover": {
+      "mode": "line"
+    },
+    "cog": {
+      "drop": [
+        2,
+        6,
+        10
+      ]
+    },
+    "concierge-bell": {
+      "largestHole": true,
+      "drop": [
+        2
+      ]
+    },
+    "cooking-pot": {
+      "fill": [
+        0
+      ]
+    },
+    "credit-card-check": {
+      "closeCorner": [
+        0
+      ]
+    },
+    "credit-card-minus": {
+      "closeCorner": [
+        1
+      ],
+      "front": [
+        0
+      ]
+    },
+    "credit-card-plus": {
+      "closeCorner": [
+        2
+      ],
+      "front": [
+        0,
+        1
+      ]
+    },
+    "credit-card-x": {
+      "closeCorner": [
+        2
+      ]
+    },
+    "dices": {
+      "fill": [
+        0
+      ]
+    },
+    "external-link": {
+      "closeCorner": [
+        0
+      ],
+      "front": [
+        1,
+        2
+      ]
+    },
+    "fence": {
+      "mode": "line"
+    },
+    "ferris-wheel": {
+      "mode": "line"
+    },
+    "file-archive": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-badge": {
+      "front": [
+        2,
+        3
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-box": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-braces": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-chart-column": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-chart-pie": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-check": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-code": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-cog": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-diff": {
+      "front": [
+        4
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-digit": {
+      "line": [
+        3
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-exclamation-point": {
+      "front": [
+        2,
+        3
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-headphone": {
+      "front": [
+        2,
+        3,
+        4
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-input": {
+      "front": [
+        2,
+        3
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-key": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-lock": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-minus": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-music": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-output": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-pen": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-play": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-plus": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-scan": {
+      "front": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-sliders": {
+      "front": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-terminal": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-text": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-type": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-video-camera": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "file-volume": {
+      "corner": {
+        "from": "file",
+        "region": "fileFold"
+      }
+    },
+    "fishing-rod": {
+      "line": [
+        0
+      ]
+    },
+    "folder-git-2": {
+      "front": [
+        1
+      ]
+    },
+    "folder-input": {
+      "front": [
+        1,
+        2
+      ]
+    },
+    "globe": {
+      "line": [
+        1
+      ]
+    },
+    "goal": {
+      "line": [
+        2
+      ]
+    },
+    "graph-star": {
+      "mode": "line"
+    },
+    "hat-glasses": {
+      "line": [
+        2,
+        3
+      ]
+    },
+    "images": {
+      "fill": [
+        0
+      ]
+    },
+    "lasso-select": {
+      "line": [
+        0
+      ]
+    },
+    "layer-arrow-down": {
+      "front": [
+        1,
+        2
+      ]
+    },
+    "life-buoy": {
+      "mode": "line"
+    },
+    "loader-pinwheel": {
+      "mode": "line"
+    },
+    "lock": {
+      "largestHole": true
+    },
+    "lock-keyhole": {
+      "largestHole": true
+    },
+    "luggage": {
+      "largestHole": true
+    },
+    "message-square-lock": {
+      "largestHole": true
+    },
+    "messages-square": {
+      "fill": [
+        1
+      ],
+      "behind": [
+        1
+      ]
+    },
+    "monitor-pc": {
+      "behind": [
+        3
+      ]
+    },
+    "motorbike": {
+      "mode": "line"
+    },
+    "notepad-text-dashed": {
+      "mode": "line"
+    },
+    "pen-tool": {
+      "mode": "line"
+    },
+    "recycle": {
+      "mode": "line"
+    },
+    "rose": {
+      "behind": [
+        1
+      ]
+    },
+    "shield-ban": {
+      "line": [
+        1
+      ]
+    },
+    "shield-lock": {
+      "largestHole": true
+    },
+    "spool": {
+      "mode": "line"
+    },
+    "stamp": {
+      "line": [
+        3
+      ]
+    },
+    "test-tube": {
+      "fill": [
+        1
+      ]
+    },
+    "test-tubes": {
+      "fill": [
+        0,
+        3
+      ],
+      "drop": [
+        1,
+        4
+      ]
+    },
+    "tool-case": {
+      "largestHole": true
+    },
+    "trash": {
+      "line": [
+        1
+      ]
+    },
+    "usb": {
+      "mode": "line"
+    },
+    "users-round": {
+      "line": [
+        2,
+        3
+      ]
+    },
+    "vector-polygon": {
+      "mode": "line"
+    },
+    "vector-square": {
+      "mode": "line"
+    },
+    "worm": {
+      "mode": "line"
+    }
+  }
+}

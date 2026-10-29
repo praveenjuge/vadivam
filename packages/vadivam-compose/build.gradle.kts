@@ -45,7 +45,7 @@ mavenPublishing {
 
     pom {
         name.set("Vadivam for Jetpack Compose")
-        description.set("Pixel-perfect 24px outline icons for Jetpack Compose as ImageVectors, plus Android vector drawables.")
+        description.set("Pixel-perfect 24px outline and solid icons for Jetpack Compose as ImageVectors, plus Android vector drawables.")
         inceptionYear.set("2026")
         url.set("https://vadivam.praveenjuge.com/docs/compose")
         licenses {

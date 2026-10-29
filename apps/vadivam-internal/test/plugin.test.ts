@@ -120,10 +120,13 @@ describe("compiled Figma plugin", () => {
     };
 
     const storage = clientStorage({ settings: { columns: 4, tab: "nope" } });
+    const handlers: Record<string, () => void> = {};
     const figmaMock = {
       mixed: Symbol("mixed"),
       showUI() {},
-      on() {},
+      on(event: string, handler: () => void) {
+        handlers[event] = handler;
+      },
       clientStorage: storage,
       ui,
       root: { children: [currentPage] },
@@ -277,6 +280,37 @@ describe("compiled Figma plugin", () => {
     // Audit issues can be selected from the list.
     await ui.onmessage?.({ type: "select", id: "1:1" });
     expect(currentPage.selection).toEqual([existing[1]]);
+
+    // On a Solid page, filled artwork passes and stroked artwork fails.
+    currentPage.name = "Solid";
+    await ui.onmessage?.({ type: "audit" });
+    const solidAudit = [...messages].reverse().find(
+      (message) => (message as { type?: string }).type === "audit",
+    ) as { issues: Array<{ name: string; violations: string[] }> };
+    const solidViolations = (name: string) => solidAudit.issues.find((issue) => issue.name === name)?.violations ?? [];
+    expect(solidViolations("x")).toContain("Solid artwork must have no stroke");
+    expect(solidViolations("x")).toContain("Solid artwork must use fills");
+    expect(solidViolations("check")).not.toContain("Solid artwork must use fills");
+    expect(solidViolations("check")).not.toContain("Stroke weight must be 2 px");
+    currentPage.name = "Vadivam Icons";
+
+    // Moving to a page of the other style rescans for that style's icons.
+    type Catalog = { summary: { existingCount: number } };
+    const catalogs = () => messages.filter((message) => (message as { type?: string }).type === "catalog") as Catalog[];
+    const switchPage = async (page: typeof currentPage) => {
+      const count = catalogs().length;
+      figmaMock.currentPage = page;
+      handlers.currentpagechange?.();
+      await waitFor(() => catalogs().length > count);
+      return lastCatalog().summary.existingCount;
+    };
+    const lastCatalog = () => catalogs()[catalogs().length - 1]!;
+    const outlineCount = lastCatalog().summary.existingCount;
+    const solidPage = { ...currentPage, name: "Vadivam Solid", children: [], selection: [] };
+    figmaMock.root.children.push(solidPage);
+    expect(await switchPage(solidPage)).toBe(0);
+    expect(await switchPage(currentPage)).toBe(outlineCount);
+    figmaMock.root.children.pop();
 
     const savedChildren = currentPage.children.splice(0);
     await ui.onmessage?.({ type: "suggest-names" });
@@ -709,9 +743,9 @@ describe("compiled Figma plugin", () => {
       counterAxisSpacing: 24,
       fills: [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }],
     });
-    expect(componentSet.children).toHaveLength(sourceIconCount);
+    expect(componentSet.children).toHaveLength(sourceIconCount * 2);
     expect(componentSet.descriptionMarkdown).toBe(
-      `${sourceIconCount} open-source outline icons on a 24 px grid. Pick an icon with the **Icon** property and change the stroke color as needed.`,
+      `${sourceIconCount} open-source icons on a 24 px grid, each in an outline and a solid style. Pick an icon with the **Icon** property and a style with **Style**, then change the color as needed.`,
     );
     expect(componentSet.documentationLinks).toEqual([
       { uri: "https://vadivam.praveenjuge.com" },
@@ -719,7 +753,11 @@ describe("compiled Figma plugin", () => {
 
     const firstComponent = componentSet.children[0];
     const firstName = JSON.parse(firstComponent.getPluginData("vadivam-internal")).name;
-    expect(firstComponent.name).toBe(`Icon=${firstName}`);
+    expect(firstComponent.name).toBe(`Icon=${firstName}, Style=Outline`);
+    const firstSolid = componentSet.children[1];
+    expect(firstSolid.name).toBe(`Icon=${firstName}, Style=Solid`);
+    expect(JSON.parse(firstSolid.getPluginData("vadivam-internal"))).toMatchObject({ name: firstName, style: "solid" });
+    expect(firstSolid.descriptionMarkdown).toStartWith("24 px solid icon from Vadivam.");
     expect(firstComponent.documentationLinks).toEqual([
       { uri: `https://vadivam.praveenjuge.com/icons/${firstName}` },
     ]);
@@ -732,23 +770,31 @@ describe("compiled Figma plugin", () => {
       `24 px outline icon from Vadivam.\n\n**Categories:** ${categoryTitles.join(", ")}\n\n**Tags:** ${tags.join(", ")}`,
     );
 
+    // A library from before solid icons: an outline component with no style,
+    // and no solid variant. Updating keeps the component and adds the variant.
+    firstComponent.setPluginData("vadivam-internal", JSON.stringify({ schema: 1, kind: "icon", name: firstName }));
+    firstComponent.name = `Icon=${firstName}`;
+    firstSolid.remove();
     page.selection = [componentSet];
     await ui.onmessage({ type: "sync-library" });
     expect(componentSet.children[0]).toBe(firstComponent);
+    expect(firstComponent.name).toBe(`Icon=${firstName}, Style=Outline`);
+    expect(componentSet.children[1].name).toBe(`Icon=${firstName}, Style=Solid`);
+    expect(componentSet.children).toHaveLength(sourceIconCount * 2);
     expect(commits).toHaveLength(2);
     expect(messages.filter((message) => message.type === "library-synced")).toEqual([
       {
         type: "library-synced",
         count: sourceIconCount,
         created: true,
-        added: sourceIconCount,
+        added: sourceIconCount * 2,
         retained: 0,
       },
       {
         type: "library-synced",
         count: sourceIconCount,
         created: false,
-        added: 0,
+        added: 1,
         retained: 0,
       },
     ]);
@@ -854,8 +900,10 @@ describe("compiled Figma plugin", () => {
       "https://registry.npmjs.org/vadivam/latest": JSON.stringify({ version: "9.9.9" }),
       "https://cdn.jsdelivr.net/npm/vadivam@9.9.9/dist/sprite.svg": sprite,
     };
+    let onFetch = () => {};
     const fetch = async (url: string) => {
       fetched.push(url);
+      onFetch();
       const body = routes[url];
       return { ok: body !== undefined, status: body === undefined ? 404 : 200, text: async () => body ?? "" };
     };
@@ -878,6 +926,20 @@ describe("compiled Figma plugin", () => {
     await waitFor(() => messages.some((message) => message.type === "catalog"));
 
     const last = () => messages[messages.length - 1];
+    // Switching pages while the icons download stops before anything is added,
+    // since the artwork was fetched for the first page's style.
+    onFetch = () => {
+      figmaMock.currentPage = otherPage;
+    };
+    await ui.onmessage({ type: "add-remote", source: "npm" });
+    expect(last()).toEqual({
+      type: "error",
+      message: `The page changed while icons downloaded; go back to ${page.name} and add them again`,
+    });
+    expect(otherPage.children.map((node: any) => node.name)).toEqual(["trash"]);
+    onFetch = () => {};
+    figmaMock.currentPage = page;
+
     await ui.onmessage({ type: "check-remote", source: "npm" });
     expect(last()).toEqual({
       type: "remote-checked",

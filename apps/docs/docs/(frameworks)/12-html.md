@@ -38,6 +38,7 @@ The script registers the element once. Each icon is a separate small module, loa
 ```html
 <vadivam-icon name="activity"></vadivam-icon>
 <vadivam-icon name="search" size="20" color="navy" stroke-width="1.5"></vadivam-icon>
+<vadivam-icon name="heart" variant="solid"></vadivam-icon>
 <button>
   <vadivam-icon name="trash" label="Delete"></vadivam-icon>
 </button>
@@ -46,10 +47,11 @@ The script registers the element once. Each icon is a separate small module, loa
 | Attribute               | Default        | Notes                                                        |
 | ----------------------- | -------------- | ------------------------------------------------------------ |
 | `name`                  |                | Kebab-case icon name, such as `arrow-right`.                 |
+| `variant`               | outline        | `solid` draws the icon's [solid](/docs/design-guide#solid) twin. |
 | `size`                  | `24`           | A number of pixels or a CSS length, such as `1em`.           |
-| `color`                 | `currentColor` | Stroke color. External `url()` paint is ignored.             |
-| `stroke-width`          | `2`            | Stroke width in view-box units.                              |
-| `absolute-stroke-width` | off            | Keeps the stroke the same width in pixels at any size.       |
+| `color`                 | `currentColor` | Stroke color, or fill color for a solid icon. External `url()` paint is ignored. |
+| `stroke-width`          | `2`            | Stroke width in view-box units. Outline icons only.          |
+| `absolute-stroke-width` | off            | Keeps the stroke the same width in pixels at any size. Outline icons only. |
 | `label`                 |                | Accessible name. Without it the icon is hidden from screen readers. |
 
 Changing an attribute, including `name`, re-renders the icon, so htmx swaps and Alpine bindings work without extra setup.

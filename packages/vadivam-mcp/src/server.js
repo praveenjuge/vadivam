@@ -9,6 +9,7 @@ import {
   fontSnippet,
   frameworks,
   frameworksById,
+  iconStyles,
   iconifySnippet,
   installCommand,
   shadcnAddCommand,
@@ -27,11 +28,12 @@ import {
   suggestIcons,
 } from "./search.js";
 
-export const instructions = `Vadivam is an open-source set of ${icons.length} pixel-perfect 24px outline icons (the Lucide icon names, redrawn) for SVG, React, React Native, Vue, Svelte, Solid, Preact, Astro, and Angular.
+export const instructions = `Vadivam is an open-source set of ${icons.length} pixel-perfect 24px icons (the Lucide icon names, redrawn), each in an outline and a solid style, for SVG, React, React Native, Vue, Svelte, Solid, Preact, Astro, and Angular.
 - Always call search_icons first to find a real icon name; never guess names. Search matches names, tags (synonyms), and categories.
 - To pick icons for a whole screen or feature, call suggest_icons with a short description of the UI; it returns candidates for each thing it mentions.
 - Prefer importing components from the framework package (get_usage, then get_icon with format set to the framework) over pasting raw SVG. Use format "svg" only when no package fits.
 - Icon names are kebab-case (arrow-right); components are PascalCase (ArrowRight).
+- Outline is the default. Pass style "solid" to get_icon for the filled twin, such as for a selected tab or an active toggle; solid icons import from the package's /solid entry and take no stroke options.
 - Label meaningful icons (aria-label or title) and hide decorative ones (aria-hidden="true").
 Docs: ${siteUrl}/docs`;
 
@@ -85,9 +87,12 @@ function errorResult(text) {
   return { content: [{ type: "text", text }], isError: true };
 }
 
-/** Code for one icon in one format, with any customization applied. */
+/** Code for one icon in one format and style, with any customization applied. */
 export function renderIcon(icon, format = "svg", options = {}) {
-  const svg = customizeSvg(icon.svg, options);
+  const style = options.style ?? "outline";
+  const source = style === "solid" ? icon.solidSvg : icon.svg;
+  if (!source) throw new Error(`"${icon.name}" has no ${style} style.`);
+  const svg = customizeSvg(source, options);
   if (frameworksById[format]) return componentSnippet(format, icon.componentName, options);
   switch (format) {
     case "svg":
@@ -99,19 +104,19 @@ export function renderIcon(icon, format = "svg", options = {}) {
     case "base64":
       return svgBase64(svg);
     case "css-mask":
-      return cssMaskSnippet(icon.name, icon.svg, options);
+      return cssMaskSnippet(icon.name, source, options);
     case "tailwind":
-      return tailwindMaskSnippet(icon.svg, options);
+      return tailwindMaskSnippet(source, options);
     case "cdn":
-      return cdnUrl(icon.name, version);
+      return cdnUrl(icon.name, version, style);
     case "sprite":
-      return spriteSnippet(icon.name);
+      return spriteSnippet(icon.name, style);
     case "font":
-      return fontSnippet(icon.name);
+      return fontSnippet(icon.name, style);
     case "iconify":
-      return iconifySnippet(icon.name);
+      return iconifySnippet(icon.name, style);
     case "shadcn":
-      return shadcnAddCommand(icon.name);
+      return shadcnAddCommand(icon.name, style);
     default:
       throw new Error(`Unknown format "${format}". Use one of: ${formatIds.join(", ")}.`);
   }
@@ -148,6 +153,9 @@ export function usageFor(frameworkId) {
     packageName,
     install: installFor(frameworkId),
     example,
+    solid: framework
+      ? componentSnippet(frameworkId, "Activity", { size: 20, style: "solid" })
+      : `import { Activity, createElement } from "vadivam/solid";\nimport activitySvg from "vadivam/solid/strings/activity";`,
     dynamic,
     docs: docsUrl(frameworkId),
   };
@@ -249,19 +257,21 @@ export function createVadivamServer() {
     {
       title: "Get icon code",
       description:
-        "Get one icon as SVG, JSX, a framework component snippet, a data URI, CSS mask, Tailwind class, CDN URL, sprite, font, Iconify id, or shadcn command. Unknown names return the closest real names.",
+        "Get one icon, outline or solid, as SVG, JSX, a framework component snippet, a data URI, CSS mask, Tailwind class, CDN URL, sprite, font, Iconify id, or shadcn command. Unknown names return the closest real names.",
       inputSchema: z.object({
         name: z.string().max(100).describe("Icon name from search_icons, such as \"arrow-right\" (PascalCase also works)."),
         format: z.enum(formatIds).optional().describe("Output format (default \"svg\"). Framework ids return an import snippet."),
+        style: z.enum(iconStyles).optional().describe("Icon style (default \"outline\"). \"solid\" is the filled twin, for selected or active states; it ignores stroke options."),
         size: z.number().positive().max(1024).optional().describe("Width and height in pixels (default 24)."),
-        strokeWidth: z.number().positive().max(24).optional().describe("Stroke width (default 2)."),
-        color: z.string().max(64).optional().describe("Stroke color (default currentColor)."),
+        strokeWidth: z.number().positive().max(24).optional().describe("Stroke width (default 2). Outline only."),
+        color: z.string().max(64).optional().describe("Stroke color, or fill color for solid (default currentColor)."),
         absoluteStrokeWidth: z.boolean().optional().describe("Keep the stroke width constant when resizing."),
       }),
       outputSchema: z.object({
         name: z.string(),
         componentName: z.string(),
         format: z.string(),
+        style: z.enum(iconStyles),
         code: z.string(),
         install: z.string().optional(),
         url: z.string(),
@@ -276,12 +286,18 @@ export function createVadivamServer() {
           `Unknown icon "${name}". Closest names: ${suggestions.join(", ")}. Use search_icons to find more.`,
         );
       }
-      const code = renderIcon(icon, format, options);
+      let code;
+      try {
+        code = renderIcon(icon, format, options);
+      } catch (error) {
+        return errorResult(error.message);
+      }
       const install = formatInstall(format);
       const output = {
         name: icon.name,
         componentName: icon.componentName,
         format,
+        style: options.style ?? "outline",
         code,
         ...(install ? { install } : {}),
         url: iconSummary(icon).url,
@@ -334,6 +350,7 @@ export function createVadivamServer() {
         packageName: z.string(),
         install: z.string(),
         example: z.string(),
+        solid: z.string(),
         dynamic: z.string(),
         docs: z.string(),
       }),
@@ -342,7 +359,7 @@ export function createVadivamServer() {
     async ({ framework }) => {
       const usage = usageFor(framework);
       return textResult(
-        `${usage.label} (${usage.packageName})\n\n${usage.install}\n\n${usage.example}\n\nDynamic names: ${usage.dynamic}\nDocs: ${usage.docs}`,
+        `${usage.label} (${usage.packageName})\n\n${usage.install}\n\n${usage.example}\n\nSolid icons:\n${usage.solid}\n\nDynamic names: ${usage.dynamic}\nDocs: ${usage.docs}`,
         usage,
       );
     },

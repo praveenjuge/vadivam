@@ -53,6 +53,16 @@ VadivamIconTheme(
 )
 ```
 
+## Solid icons
+
+Every icon has a [solid](/docs/design-guide#solid) twin with the same name in `VadivamSolidIcons`, drawn as a filled shape:
+
+```dart
+VadivamIcon(active ? VadivamSolidIcons.house : VadivamIcons.house)
+```
+
+`size` and `color` work the same way, and `color` sets the fill. Solid icons have no stroke, so `strokeWidth` and `absoluteStrokeWidth` don't change them. `VadivamSolidIcons.all` looks up a solid icon by name, and `VadivamIconData.filled` tells the two styles apart.
+
 ## Accessibility
 
 Icons are left out of the semantics tree unless you pass `semanticLabel`. Give a label to icons that carry meaning on their own, and leave it out when nearby text already says the same thing. See [Accessibility](/docs/accessibility).

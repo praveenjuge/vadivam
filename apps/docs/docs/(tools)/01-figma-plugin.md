@@ -22,9 +22,10 @@ Open the [plugin page](https://www.figma.com/community/plugin/166132362035505020
 - Search by icon name, by synonym from the icon's tags, or by category title. These are the same matches the [website](/) uses. The category menu narrows the grid.
 - Click an icon, or press <kbd>Enter</kbd> for the first result, to place it in the middle of the viewport. Icons you place one after another line up in a row.
 - Each icon arrives as a 24×24 local component with a 2px centerline stroke, so you can resize it, recolor it, and change its stroke weight like any vector.
+- The switch next to the search field shows the [solid](/docs/design-guide#solid) icons instead. A solid icon arrives as a filled shape named with a `-solid` suffix, such as `search-solid`.
 - Every component carries a short description with its categories, tags, and a link to its icon page, so Figma's asset search finds it by those words later.
 
-To change an icon you placed earlier, select it and pick another icon. The size and stroke color stay the same. Select the component to redraw it and every instance of it, after you confirm; select one instance to change only that use. Figma also shows a **Replace icon** button on placed icons, which reopens the plugin.
+To change an icon you placed earlier, select it and pick another icon, in either style. The size and color stay the same, moving between stroke and fill when the style changes. Select the component to redraw it and every instance of it, after you confirm; select one instance to change only that use. Figma also shows a **Replace icon** button on placed icons, which reopens the plugin.
 
 ## Swap Lucide icons
 
@@ -40,4 +41,4 @@ Moving the code as well? See [Migrate from Lucide](/docs/migrate-from-lucide) fo
 
 ## Privacy
 
-The icon catalog is bundled inside the plugin, so it works offline and makes no network requests. It requests no permissions and collects no personal data. The only data it stores is a schema version and the icon's name, on components it creates, so a placed icon can be replaced later.
+The icon catalog is bundled inside the plugin, so it works offline and makes no network requests. It requests no permissions and collects no personal data. The only data it stores is a schema version, the icon's name, and its style when solid, on components it creates, so a placed icon can be replaced later.

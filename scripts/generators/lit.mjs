@@ -1,4 +1,5 @@
 import {
+  buildStyles,
   dynamicEntries,
   dynamicTypes,
   iconExports,
@@ -7,6 +8,7 @@ import {
   iconRegistryEntries,
   iconRegistryTypes,
   prepareDist,
+  strokePropTypes,
   svgElementTypeSource,
   write,
   writeRuntimePolicy,
@@ -30,13 +32,32 @@ function iconMarkup(icon) {
     .join("");
 }
 
-export async function buildLitPackage(icons, dist) {
+export async function buildLitPackage(icons, dist, solidIcons = []) {
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
-  await write(dist, "types.d.ts", `import type { TemplateResult } from "lit";\nexport type SVGElementType = ${svgElementTypeSource};\nexport type IconNode = readonly [tag: SVGElementType, attrs: Record<string, string | number | boolean>][];\nexport interface VadivamProps { size?: string | number; color?: string; strokeWidth?: string | number; absoluteStrokeWidth?: boolean; class?: string; label?: string; }\nexport type VadivamIcon = (props?: VadivamProps) => TemplateResult;\nexport type IconName = ${iconNameType(icons)};\n`);
+  await buildStyles(dist, { outline: icons, solid: solidIcons }, buildLitEntry);
+}
+
+// An outline icon paints its stroke and scales its width; a solid icon paints
+// its fill and has no stroke to scale.
+function paintSource(style) {
+  if (!style.stroked) {
+    return { props: "", resolve: "", attributes: 'fill=\${sanitizePaint(color)} fill-rule="evenodd"' };
+  }
+  return {
+    props: "strokeWidth = 2, absoluteStrokeWidth = false, ",
+    resolve: "  const numericSize = Number(size);\n  const numericStroke = Number(strokeWidth);\n  const stroke = absoluteStrokeWidth && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStroke) ? numericStroke * 24 / numericSize : strokeWidth;\n",
+    attributes: 'fill="none" stroke=\${sanitizePaint(color)} stroke-width=\${stroke} stroke-linecap="round" stroke-linejoin="round"',
+  };
+}
+
+async function buildLitEntry(dist, icons, style) {
+  const shared = style.shared;
+  const paint = paintSource(style);
+  await write(dist, "types.d.ts", `import type { TemplateResult } from "lit";\nexport type SVGElementType = ${svgElementTypeSource};\nexport type IconNode = readonly [tag: SVGElementType, attrs: Record<string, string | number | boolean>][];\nexport interface VadivamProps { size?: string | number; color?: string;${strokePropTypes(style)} class?: string; label?: string; }\nexport type VadivamIcon = (props?: VadivamProps) => TemplateResult;\nexport type IconName = ${iconNameType(icons)};\n`);
   await write(dist, "IconBase.js", `import { html, nothing } from "lit";
 import { unsafeSVG } from "lit/directives/unsafe-svg.js";
-import { sanitizePaint } from "./runtimePolicy.js";
+import { sanitizePaint } from "${shared}runtimePolicy.js";
 
 // <title> is a raw-text element to Lit's parser, so it can't hold a binding;
 // the label is escaped and rendered as static SVG markup instead.
@@ -50,17 +71,14 @@ function classes(...values) {
 
 // Renders built-in icon content as given: it is a static template generated
 // with the package. Icon passes caller nodes only after sanitizing them.
-export function renderIcon(name, content, { size = 24, color, strokeWidth = 2, absoluteStrokeWidth = false, class: className, label } = {}) {
-  const numericSize = Number(size);
-  const numericStroke = Number(strokeWidth);
-  const stroke = absoluteStrokeWidth && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStroke) ? numericStroke * 24 / numericSize : strokeWidth;
-  return html\`<svg xmlns="http://www.w3.org/2000/svg" width=\${size} height=\${size} viewBox="0 0 24 24" fill="none" stroke=\${sanitizePaint(color)} stroke-width=\${stroke} stroke-linecap="round" stroke-linejoin="round" class=\${classes("vadivam", name && "vadivam-" + name, className)} role=\${label ? "img" : nothing} aria-label=\${label || nothing} aria-hidden=\${label ? nothing : "true"}>\${label ? titleMarkup(label) : nothing}\${content}</svg>\`;
+export function renderIcon(name, content, { size = 24, color, ${paint.props}class: className, label } = {}) {
+${paint.resolve}  return html\`<svg xmlns="http://www.w3.org/2000/svg" width=\${size} height=\${size} viewBox="0 0 24 24" ${paint.attributes} class=\${classes("vadivam", name && "vadivam-" + name, className)} role=\${label ? "img" : nothing} aria-label=\${label || nothing} aria-hidden=\${label ? nothing : "true"}>\${label ? titleMarkup(label) : nothing}\${content}</svg>\`;
 }
 `);
   await write(dist, "Icon.js", `import { svg } from "lit";
 import { unsafeSVG } from "lit/directives/unsafe-svg.js";
 import { renderIcon } from "./IconBase.js";
-import { sanitizeIconNode } from "./runtimePolicy.js";
+import { sanitizeIconNode } from "${shared}runtimePolicy.js";
 
 function escapeAttribute(value) {
   return String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");

@@ -4,8 +4,8 @@ The public docs in `apps/docs/docs` (published at https://vadivam.praveenjuge.co
 
 ## Repository map
 
-- `icons/` is the canonical SVG source exported from Figma; `metadata/lucide.json` holds the pinned Lucide version, tags, and categories.
-- `scripts/icons.mjs` optimizes, checks, and builds; `validateSvgContent` is the source of truth for what an SVG may contain. `scripts/path-cleanup.mjs`, `scripts/corner-smoothing.mjs`, and `scripts/icon-geometry.mjs` hold the geometry, and `scripts/generators/` the per-framework output.
+- `icons/` is the canonical SVG source exported from Figma, and `icons-solid/` its solid twin under the same names; `metadata/lucide.json` holds the pinned Lucide version, tags, and categories.
+- `scripts/icons.mjs` optimizes, checks, and builds each style in `styles`; `validateSvgContent` is the source of truth for what an SVG may contain. `scripts/solid-draft.mjs` drafts solid icons from outlines, guided by `metadata/solid-hints.json`. `scripts/path-cleanup.mjs`, `scripts/corner-smoothing.mjs`, and `scripts/icon-geometry.mjs` hold the geometry, and `scripts/generators/` the per-framework output.
 - `packages/vadivam` (raw SVGs, metadata, `vadivam/elements`, and the `migrate-lucide` codemod in `src`), `packages/vadivam-{react,react-native,vue,svelte,solid,angular,astro,preact,qwik,lit}`, and `packages/vadivam-mcp` (hand-written `src`, generated data in `dist`, `server.json` for the MCP Registry).
 - `packages/vadivam-flutter` (pub.dev, hand-written widget in `lib/src/vadivam_icon.dart`, generated `lib/src/generated`) and `packages/vadivam-compose` (Maven Central, hand-written `VadivamIcons.kt`, generated icons and drawables). They aren't npm workspaces; `scripts/packages.mjs` lists them as `nativePackages`.
 - `apps/docs` is the Blume docs site; `apps/docs/public/r/` is the generated shadcn/ui registry; `apps/docs/worker/index.mjs` serves `/mcp` and delegates the rest to Blume's Worker.

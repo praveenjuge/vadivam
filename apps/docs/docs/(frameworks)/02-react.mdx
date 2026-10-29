@@ -92,6 +92,22 @@ export function Toolbar() {
 
 The provider accepts `size`, `color`, `strokeWidth`, `absoluteStrokeWidth`, and `className`. An icon's own props override provider values.
 
+## Solid icons
+
+Every icon has a [solid](/docs/design-guide#solid) twin with the same name in `vadivam-react/solid`. Use it for a selected or active state, or for a whole filled UI.
+
+```tsx
+import { House } from "vadivam-react";
+import { House as HouseSolid } from "vadivam-react/solid";
+
+export function HomeTab({ active }: { active: boolean }) {
+  const Icon = active ? HouseSolid : House;
+  return <Icon size={20} aria-label="Home" />;
+}
+```
+
+Solid icons take `size`, `color`, and `title`, and `color` sets the fill. They have no stroke, so `strokeWidth` and `absoluteStrokeWidth` are not props. `VadivamProvider` sets defaults for both styles. The solid entry has the same layout as the root, apart from the short per-icon path: `vadivam-react/solid/icons/house`, `vadivam-react/solid/dynamic`, and `vadivam-react/solid/dynamicIconImports`.
+
 ## Per-icon imports
 
 ```tsx

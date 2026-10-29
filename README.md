@@ -2,7 +2,7 @@
 
 <!-- vadivam-icon-count:start -->
 
-Vadivam is a free, open-source library of 1999 pixel-perfect 24px outline SVG icons, with packages for web frameworks, React Native, Flutter, Jetpack Compose, and plain HTML.
+Vadivam is a free, open-source library of 1999 pixel-perfect 24px SVG icons, each in an outline and a solid style, with packages for web frameworks, React Native, Flutter, Jetpack Compose, and plain HTML.
 
 <!-- vadivam-icon-count:end -->
 

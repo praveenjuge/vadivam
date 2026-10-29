@@ -2,20 +2,23 @@ import { build, context } from "esbuild";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { iconCategories, readIcons } from "../../../scripts/icons.mjs";
+import { iconCategories, readIcons, styles } from "../../../scripts/icons.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = resolve(root, "dist");
 const iconsRoot = resolve(root, "../../icons");
+const solidIconsRoot = resolve(root, "../../icons-solid");
 const watch = process.argv.includes("--watch");
 const categoryTitles = new Map(iconCategories.map(({ id, title }) => [id, title]));
 
-function createCatalogSource(icons) {
+function createCatalogSource(icons, solidIcons) {
+  const solid = new Map(solidIcons.map((icon) => [icon.name, icon.svg]));
   return `export default ${JSON.stringify(
     icons
       .map(({ name, svg, tags, categories }) => ({
         name,
         svg,
+        solidSvg: solid.get(name),
         tags,
         categories: categories.map((id) => categoryTitles.get(id)),
       }))
@@ -31,9 +34,9 @@ const catalogPlugin = {
       namespace: "vadivam",
     }));
     pluginBuild.onLoad({ filter: /.*/, namespace: "vadivam" }, async () => ({
-      contents: createCatalogSource(await readIcons()),
+      contents: createCatalogSource(await readIcons(), await readIcons(styles.solid)),
       loader: "js",
-      watchDirs: [iconsRoot],
+      watchDirs: [iconsRoot, solidIconsRoot],
     }));
   },
 };

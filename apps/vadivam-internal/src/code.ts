@@ -129,6 +129,19 @@ async function saveSettings(next: Partial<PluginSettings>): Promise<void> {
 }
 
 type IconContainer = FrameNode | ComponentNode | InstanceNode;
+type IconStyle = "outline" | "solid";
+
+// Solid icons live on their own page, one whose name contains "Solid", with
+// frames named like their outline twins. Names, missing icons, and the audit
+// are scoped to the pages of the current page's style.
+function pageStyle(page: PageNode): IconStyle {
+  return /\bsolid\b/i.test(page.name) ? "solid" : "outline";
+}
+
+function stylePages(): PageNode[] {
+  const style = pageStyle(figma.currentPage);
+  return figma.root.children.filter((page) => pageStyle(page) === style);
+}
 
 function isIconContainer(node: SceneNode): node is IconContainer {
   return node.type === "FRAME" || node.type === "COMPONENT" || node.type === "INSTANCE";
@@ -168,7 +181,7 @@ function publishPageStatus(): void {
 // rename without another message running in between.
 function iconNameOwners(): Map<string, SceneNode[]> {
   const owners = new Map<string, SceneNode[]>();
-  for (const page of figma.root.children) {
+  for (const page of stylePages()) {
     for (const node of page.children) {
       const iconName = resolveLucideIconName(node.name);
       if (isCanonicalIconNode(node) && iconName) {
@@ -192,7 +205,7 @@ function isOwnedByAnother(
 // figma.loadAllPagesAsync().
 function fileIconNames(): Set<string> {
   const names = new Set<string>();
-  for (const page of figma.root.children) {
+  for (const page of stylePages()) {
     for (const node of page.children) {
       if (!isIconContainer(node) || !isIconSized(node)) continue;
       const key = toKebabName(node.name);
@@ -231,8 +244,13 @@ function publishCatalog(): void {
   });
 }
 
+// The style the catalog was last scanned for; the names and missing icons
+// change when the current page moves to the other style.
+let scannedStyle: IconStyle | null = null;
+
 async function refreshCatalog(): Promise<void> {
   post({ type: "loading" });
+  scannedStyle = pageStyle(figma.currentPage);
   existingSlugs = await scanDocument();
   candidates = getMissingIcons(catalog.icons, existingSlugs);
   publishCatalog();
@@ -282,11 +300,18 @@ function taggedLibraryIconName(node: ComponentNode): string | null {
   return data?.kind === "icon" && typeof data.name === "string" ? data.name : null;
 }
 
+// Components tagged before solid icons existed are outline.
+function taggedLibraryIconStyle(node: ComponentNode): IconStyle {
+  return readPluginData(node)?.style === "solid" ? "solid" : "outline";
+}
+
+const styleLabel = (style: IconStyle) => (style === "solid" ? "Solid" : "Outline");
+
 // Public copy for the published library; category titles and tags stay plain words for search.
-function libraryIconDescription(name: string): string {
+function libraryIconDescription(name: string, style: IconStyle): string {
   const icon = libraryIcons.get(name);
   return [
-    "24 px outline icon from Vadivam.",
+    `24 px ${style} icon from Vadivam.`,
     icon?.categories.length ? `**Categories:** ${icon.categories.join(", ")}` : "",
     icon?.tags.length ? `**Tags:** ${icon.tags.join(", ")}` : "",
   ]
@@ -294,17 +319,17 @@ function libraryIconDescription(name: string): string {
     .join("\n\n");
 }
 
-function tagLibraryComponent(component: ComponentNode, name: string): void {
-  component.name = `Icon=${name}`;
+function tagLibraryComponent(component: ComponentNode, name: string, style: IconStyle): void {
+  component.name = `Icon=${name}, Style=${styleLabel(style)}`;
   component.resizeWithoutConstraints(ICON_SIZE, ICON_SIZE);
   component.setPluginData(
     LIBRARY_DATA_KEY,
-    pluginData({ kind: "icon", name }),
+    pluginData({ kind: "icon", name, style }),
   );
   component.setRelaunchData({
     "sync-library": `Update ${name}`,
   });
-  component.descriptionMarkdown = libraryIconDescription(name);
+  component.descriptionMarkdown = libraryIconDescription(name, style);
   component.documentationLinks = [{ uri: iconDocumentationUrl(name) }];
   component.exportSettings = [
     {
@@ -351,15 +376,24 @@ function configureLibrarySet(componentSet: ComponentSetNode): void {
   componentSet.setRelaunchData({
     "sync-library": "Update all icons",
   });
-  componentSet.descriptionMarkdown = `${iconCatalog.length} open-source outline icons on a 24 px grid. Pick an icon with the **Icon** property and change the stroke color as needed.`;
+  componentSet.descriptionMarkdown = `${iconCatalog.length} open-source icons on a 24 px grid, each in an outline and a solid style. Pick an icon with the **Icon** property and a style with **Style**, then change the color as needed.`;
   componentSet.documentationLinks = [{ uri: DOCUMENTATION_URL }];
 }
 
-function createLibraryComponent(icon: { name: string; svg: string }): ComponentNode {
-  const frame = figma.createNodeFromSvg(icon.svg);
+interface LibraryIcon {
+  name: string;
+  svg: string;
+  solidSvg: string;
+}
+
+const librarySvg = (icon: LibraryIcon, style: IconStyle) => (style === "solid" ? icon.solidSvg : icon.svg);
+const LIBRARY_STYLES: IconStyle[] = ["outline", "solid"];
+
+function createLibraryComponent(icon: LibraryIcon, style: IconStyle): ComponentNode {
+  const frame = figma.createNodeFromSvg(librarySvg(icon, style));
   try {
     const component = figma.createComponentFromNode(frame);
-    tagLibraryComponent(component, icon.name);
+    tagLibraryComponent(component, icon.name, style);
     return component;
   } catch (error) {
     if (!frame.removed) frame.remove();
@@ -387,12 +421,9 @@ function replaceArtwork(target: FrameNode | ComponentNode, svg: string): void {
   source.remove();
 }
 
-function replaceLibraryGlyph(
-  component: ComponentNode,
-  icon: { name: string; svg: string },
-): void {
-  replaceArtwork(component, icon.svg);
-  tagLibraryComponent(component, icon.name);
+function replaceLibraryGlyph(component: ComponentNode, icon: LibraryIcon, style: IconStyle): void {
+  replaceArtwork(component, librarySvg(icon, style));
+  tagLibraryComponent(component, icon.name, style);
 }
 
 function selectedLibrarySet(): ComponentSetNode | null {
@@ -418,11 +449,13 @@ function createIconLibrary(): ComponentSetNode {
   const components: ComponentNode[] = [];
   let componentSet: ComponentSetNode | null = null;
   try {
-    for (const icon of iconCatalog) components.push(createLibraryComponent(icon));
+    for (const icon of iconCatalog) {
+      for (const style of LIBRARY_STYLES) components.push(createLibraryComponent(icon, style));
+    }
     componentSet = figma.combineAsVariants(components, figma.currentPage);
     for (const component of components) {
       const name = taggedLibraryIconName(component);
-      if (name) tagLibraryComponent(component, name);
+      if (name) tagLibraryComponent(component, name, taggedLibraryIconStyle(component));
     }
     configureLibrarySet(componentSet);
     componentSet.x = Math.round(figma.viewport.center.x - componentSet.width / 2);
@@ -441,25 +474,30 @@ function updateIconLibrary(componentSet: ComponentSetNode): {
   added: number;
   retained: number;
 } {
+  // Keyed by icon and style; existing outline components keep their identity
+  // and gain the Style property, and each solid variant is added beside them.
   const existing = new Map<string, ComponentNode>();
   for (const child of componentSet.children) {
     if (child.type !== "COMPONENT") continue;
     const name = taggedLibraryIconName(child);
-    if (name && !existing.has(name)) existing.set(name, child);
+    const key = name && `${name}:${taggedLibraryIconStyle(child)}`;
+    if (key && !existing.has(key)) existing.set(key, child);
   }
 
   let added = 0;
   const canonicalComponents: ComponentNode[] = [];
   for (const icon of iconCatalog) {
-    let component = existing.get(icon.name);
-    if (component) {
-      replaceLibraryGlyph(component, icon);
-    } else {
-      component = createLibraryComponent(icon);
-      componentSet.appendChild(component);
-      added += 1;
+    for (const style of LIBRARY_STYLES) {
+      let component = existing.get(`${icon.name}:${style}`);
+      if (component) {
+        replaceLibraryGlyph(component, icon, style);
+      } else {
+        component = createLibraryComponent(icon, style);
+        componentSet.appendChild(component);
+        added += 1;
+      }
+      canonicalComponents.push(component);
     }
-    canonicalComponents.push(component);
   }
   canonicalComponents.forEach((component, index) => {
     componentSet.insertChild(index, component);
@@ -467,7 +505,7 @@ function updateIconLibrary(componentSet: ComponentSetNode): {
   configureLibrarySet(componentSet);
   return {
     added,
-    retained: Math.max(0, componentSet.children.length - iconCatalog.length),
+    retained: Math.max(0, componentSet.children.length - canonicalComponents.length),
   };
 }
 
@@ -476,7 +514,7 @@ function syncIconLibrary(): void {
   const componentSet = existing ?? createIconLibrary();
   const result = existing
     ? updateIconLibrary(existing)
-    : { added: iconCatalog.length, retained: 0 };
+    : { added: iconCatalog.length * LIBRARY_STYLES.length, retained: 0 };
   figma.currentPage.selection = [componentSet];
   figma.viewport.scrollAndZoomIntoView([componentSet]);
   figma.commitUndo();
@@ -496,8 +534,9 @@ function parseRemoteSource(value: unknown): RemoteSource {
 }
 
 async function readRemoteCatalog(source: RemoteSource, reuse: boolean): Promise<RemoteCatalog> {
-  if (reuse && remoteCatalog?.source === source) return remoteCatalog;
-  remoteCatalog = await loadRemoteCatalog(source, fetch);
+  const style = pageStyle(figma.currentPage);
+  if (reuse && remoteCatalog?.source === source && remoteCatalog.style === style) return remoteCatalog;
+  remoteCatalog = await loadRemoteCatalog(source, fetch, style);
   return remoteCatalog;
 }
 
@@ -525,8 +564,13 @@ async function checkRemote(sourceValue: unknown): Promise<void> {
 // keep their artwork, so edits made in Figma are never overwritten.
 async function addRemote(sourceValue: unknown): Promise<void> {
   const source = parseRemoteSource(sourceValue);
+  // The artwork downloaded is for this page's style, so it lands only here.
+  const page = figma.currentPage;
   const remote = await readRemoteCatalog(source, true);
   const { icons, failed } = await remote.loadSvgs(await missingRemoteIcons(remote));
+  if (figma.currentPage !== page) {
+    throw new Error(`The page changed while icons downloaded; go back to ${page.name} and add them again`);
+  }
 
   const added: string[] = [];
   const frames: FrameNode[] = [];
@@ -814,7 +858,9 @@ interface IconAuditResult {
   rounded: number;
 }
 
-function auditIcon(icon: FrameNode | ComponentNode | InstanceNode): IconAuditResult {
+// Outline artwork is 2 px round strokes with no fill; solid artwork is filled
+// shapes with no stroke, so a solid page is audited for fills instead.
+function auditIcon(icon: FrameNode | ComponentNode | InstanceNode, style: IconStyle = "outline"): IconAuditResult {
   const violations = new Set<string>();
   let renamed = 0;
   let rounded = 0;
@@ -854,7 +900,7 @@ function auditIcon(icon: FrameNode | ComponentNode | InstanceNode): IconAuditRes
     (node): node is SceneNode & GeometryMixin =>
       "fills" in node && "strokes" in node && "strokeCap" in node,
   );
-  addViolation(violations, artwork.length === 0, "No stroke artwork");
+  addViolation(violations, artwork.length === 0, style === "solid" ? "No fill artwork" : "No stroke artwork");
 
   for (const node of descendants) {
     if ("rotation" in node) {
@@ -874,6 +920,16 @@ function auditIcon(icon: FrameNode | ComponentNode | InstanceNode): IconAuditRes
   }
 
   for (const node of artwork) {
+    if (style === "solid") {
+      const hasFill = hasVisiblePaint(node.fills);
+      if (hasFill && node.name !== "Vector") {
+        node.name = "Vector";
+        renamed += 1;
+      }
+      addViolation(violations, hasVisiblePaint(node.strokes), "Solid artwork must have no stroke");
+      addViolation(violations, !hasFill, "Solid artwork must use fills");
+      continue;
+    }
     const hasStroke = hasVisiblePaint(node.strokes);
     if (hasStroke && node.name !== "Vector") {
       node.name = "Vector";
@@ -906,7 +962,8 @@ function auditIcon(icon: FrameNode | ComponentNode | InstanceNode): IconAuditRes
 function auditIcons(): void {
   const icons = figma.currentPage.children.filter(isIconContainer);
   if (icons.length === 0) throw new Error("No icon frames on this page");
-  const results = icons.map(auditIcon);
+  const style = pageStyle(figma.currentPage);
+  const results = icons.map((icon) => auditIcon(icon, style));
   const issues = results
     .map((result) => result.issue)
     .filter((issue): issue is IconAuditIssue => issue !== null)
@@ -974,7 +1031,12 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
   }
 };
 
-figma.on("currentpagechange", publishPageStatus);
+figma.on("currentpagechange", () => {
+  publishPageStatus();
+  if (scannedStyle !== null && pageStyle(figma.currentPage) !== scannedStyle) {
+    refreshCatalog().catch((error: unknown) => post({ type: "error", message: messageFromError(error) }));
+  }
+});
 
 async function start(): Promise<void> {
   settings = await loadSettings();

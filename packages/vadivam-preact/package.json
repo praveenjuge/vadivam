@@ -1,7 +1,7 @@
 {
   "name": "vadivam-preact",
   "version": "0.0.75",
-  "description": "Pixel-perfect 24px outline icon components for Preact with tree-shakeable imports.",
+  "description": "Pixel-perfect 24px outline and solid icon components for Preact with tree-shakeable imports.",
   "license": "MIT",
   "author": "Praveen Juge",
   "repository": {
@@ -63,6 +63,31 @@
       "types": "./dist/icons/*.d.ts",
       "import": "./dist/icons/*.js",
       "default": "./dist/icons/*.js"
+    },
+    "./solid": {
+      "types": "./dist/solid/index.d.ts",
+      "import": "./dist/solid/index.js",
+      "default": "./dist/solid/index.js"
+    },
+    "./solid/dynamic": {
+      "types": "./dist/solid/dynamic.d.ts",
+      "import": "./dist/solid/dynamic.js",
+      "default": "./dist/solid/dynamic.js"
+    },
+    "./solid/dynamicIconImports": {
+      "types": "./dist/solid/dynamicIconImports.d.ts",
+      "import": "./dist/solid/dynamicIconImports.js",
+      "default": "./dist/solid/dynamicIconImports.js"
+    },
+    "./solid/icons": {
+      "types": "./dist/solid/icons/index.d.ts",
+      "import": "./dist/solid/icons/index.js",
+      "default": "./dist/solid/icons/index.js"
+    },
+    "./solid/icons/*": {
+      "types": "./dist/solid/icons/*.d.ts",
+      "import": "./dist/solid/icons/*.js",
+      "default": "./dist/solid/icons/*.js"
     },
     "./package.json": "./package.json"
   },

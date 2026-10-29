@@ -1,6 +1,6 @@
 # vadivam-svelte
 
-Tree-shakeable 24px outline SVG icons for Svelte.
+Tree-shakeable 24px outline and solid SVG icons for Svelte.
 
 [Browse icons](https://vadivam.praveenjuge.com) · [Svelte docs](https://vadivam.praveenjuge.com/docs/svelte) · [Source](https://github.com/praveenjuge/vadivam/tree/main/packages/vadivam-svelte) · [GitHub](https://github.com/praveenjuge/vadivam)
 
@@ -25,6 +25,12 @@ npm install vadivam-svelte
 - Native SVG attributes plus size, color, stroke width, and accessible titles
 - Tree-shakeable named and per-icon imports
 - Provider and typed dynamic icon APIs
+
+Every icon also has a solid twin with the same name in `vadivam-svelte/solid`. Solid icons fill their shapes with `color` and take no stroke props:
+
+```js
+import { Activity } from "vadivam-svelte/solid";
+```
 
 Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [Qwik](https://www.npmjs.com/package/vadivam-qwik) · [Lit](https://www.npmjs.com/package/vadivam-lit) · [Flutter](https://pub.dev/packages/vadivam) · [Jetpack Compose](https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
 

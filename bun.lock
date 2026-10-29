@@ -39,6 +39,7 @@
         "lit": "3.3.3",
         "ng-packagr": "22.2.4",
         "oslllo-svg-fixer": "6.0.1",
+        "pathkit-wasm": "1.0.0",
         "playwright": "1.64.1",
         "preact": "10.29.8",
         "preact-render-to-string": "^6.8.1",
@@ -90,7 +91,7 @@
     },
     "apps/figma-plugin": {
       "name": "@vadivam/figma-plugin",
-      "version": "0.0.71",
+      "version": "0.0.74",
       "devDependencies": {
         "@figma/plugin-typings": "1.142.0",
         "@happy-dom/global-registrator": "^21.0.3",
@@ -111,14 +112,14 @@
     },
     "packages/vadivam": {
       "name": "vadivam",
-      "version": "0.0.71",
+      "version": "0.0.74",
       "bin": {
         "vadivam": "dist/cli.js",
       },
     },
     "packages/vadivam-angular": {
       "name": "vadivam-angular",
-      "version": "0.0.71",
+      "version": "0.0.74",
       "dependencies": {
         "tslib": "^2.8.1",
       },
@@ -129,21 +130,21 @@
     },
     "packages/vadivam-astro": {
       "name": "vadivam-astro",
-      "version": "0.0.71",
+      "version": "0.0.74",
       "peerDependencies": {
         "astro": ">=7 <8",
       },
     },
     "packages/vadivam-lit": {
       "name": "vadivam-lit",
-      "version": "0.0.71",
+      "version": "0.0.74",
       "peerDependencies": {
         "lit": ">=3 <4",
       },
     },
     "packages/vadivam-mcp": {
       "name": "vadivam-mcp",
-      "version": "0.0.71",
+      "version": "0.0.74",
       "bin": {
         "vadivam-mcp": "dist/cli.js",
       },
@@ -154,28 +155,28 @@
     },
     "packages/vadivam-preact": {
       "name": "vadivam-preact",
-      "version": "0.0.71",
+      "version": "0.0.74",
       "peerDependencies": {
         "preact": ">=10.29 <11",
       },
     },
     "packages/vadivam-qwik": {
       "name": "vadivam-qwik",
-      "version": "0.0.71",
+      "version": "0.0.74",
       "peerDependencies": {
         "@qwik.dev/core": ">=2.0.0-rc.4 <3",
       },
     },
     "packages/vadivam-react": {
       "name": "vadivam-react",
-      "version": "0.0.71",
+      "version": "0.0.74",
       "peerDependencies": {
         "react": ">=18",
       },
     },
     "packages/vadivam-react-native": {
       "name": "vadivam-react-native",
-      "version": "0.0.71",
+      "version": "0.0.74",
       "peerDependencies": {
         "react": ">=18 <20",
         "react-native": ">=0.71",
@@ -184,21 +185,21 @@
     },
     "packages/vadivam-solid": {
       "name": "vadivam-solid",
-      "version": "0.0.71",
+      "version": "0.0.74",
       "peerDependencies": {
         "solid-js": ">=1.9 <2",
       },
     },
     "packages/vadivam-svelte": {
       "name": "vadivam-svelte",
-      "version": "0.0.71",
+      "version": "0.0.74",
       "peerDependencies": {
         "svelte": ">=5.56 <6",
       },
     },
     "packages/vadivam-vue": {
       "name": "vadivam-vue",
-      "version": "0.0.71",
+      "version": "0.0.74",
       "peerDependencies": {
         "vue": ">=3.5 <4",
       },
@@ -2503,6 +2504,8 @@
     "path-to-regexp-updated": ["path-to-regexp@6.3.0", "", {}, "sha512-Yhpw4T9C6hPpgPeA28us07OJeqZ5EzQTkbfwuhsUg0c237RomFoETJgmp2sa3F/41gfLE6G5cqcYwznmeEeOlQ=="],
 
     "pathe": ["pathe@2.0.3", "", {}, "sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w=="],
+
+    "pathkit-wasm": ["pathkit-wasm@1.0.0", "", {}, "sha512-oREIcGpwnBBto6PfB3C20aIw9jBPLcSNVF1AlL5tGlXsoL2zqWVuD0mi8WMJQHHNemm6aR1hHH2lz+TO551Fgw=="],
 
     "peek-readable": ["peek-readable@4.1.0", "", {}, "sha512-ZI3LnwUv5nOGbQzD9c2iDG6toheuXSZP5esSHBjopsXH4dg19soufvpUGA3uohi5anFtGb2lhAVdHzH6R/Evvg=="],
 

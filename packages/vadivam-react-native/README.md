@@ -1,6 +1,6 @@
 # vadivam-react-native
 
-Tree-shakeable 24px outline icons for React Native and Expo, powered by react-native-svg.
+Tree-shakeable 24px outline and solid icons for React Native and Expo, powered by react-native-svg.
 
 [Browse icons](https://vadivam.praveenjuge.com) · [React Native docs](https://vadivam.praveenjuge.com/docs/react-native) · [Source](https://github.com/praveenjuge/vadivam/tree/main/packages/vadivam-react-native) · [GitHub](https://github.com/praveenjuge/vadivam)
 
@@ -43,6 +43,12 @@ import { DynamicIcon } from "vadivam-react-native/dynamic";
 - Native `react-native-svg` properties, refs, and children
 - Tree-shakeable named, aliased, and per-icon imports
 - Provider, custom-node, and typed dynamic APIs
+
+Every icon also has a solid twin with the same name in `vadivam-react-native/solid`. Solid icons fill their shapes with `color` and take no stroke props:
+
+```js
+import { Activity } from "vadivam-react-native/solid";
+```
 
 Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [Qwik](https://www.npmjs.com/package/vadivam-qwik) · [Lit](https://www.npmjs.com/package/vadivam-lit) · [Flutter](https://pub.dev/packages/vadivam) · [Jetpack Compose](https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
 

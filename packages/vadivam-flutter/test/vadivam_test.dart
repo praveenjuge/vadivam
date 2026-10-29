@@ -27,6 +27,34 @@ void main() {
     }
   });
 
+  test('every icon has a filled solid twin', () {
+    expect(VadivamSolidIcons.all.keys.toSet(), VadivamIcons.all.keys.toSet());
+    for (final MapEntry(key: name, value: icon)
+        in VadivamSolidIcons.all.entries) {
+      expect(icon.name, name);
+      expect(icon.filled, isTrue, reason: name);
+      expect(icon.path.fillType, PathFillType.evenOdd, reason: name);
+      // Sampled points, since the control points of an arc's curves can
+      // reach past the view box while the edge itself stays inside.
+      for (final metric in icon.path.computeMetrics()) {
+        for (var distance = 0.0; distance <= metric.length; distance += 0.25) {
+          final point = metric.getTangentForOffset(distance)!.position;
+          expect(point.dx, inInclusiveRange(0.5, 23.5), reason: name);
+          expect(point.dy, inInclusiveRange(0.5, 23.5), reason: name);
+        }
+      }
+    }
+    expect(VadivamIcons.activity.filled, isFalse);
+  });
+
+  testWidgets('paints a solid icon at the theme size', (tester) async {
+    await tester.pumpWidget(_app(const IconTheme(
+      data: IconThemeData(size: 32, color: Color(0xFF000080)),
+      child: VadivamIcon(VadivamSolidIcons.activity),
+    )));
+    expect(tester.getSize(find.byType(VadivamIcon)), const Size(32, 32));
+  });
+
   testWidgets('sizes from IconTheme and hides decorative icons',
       (tester) async {
     final semantics = tester.ensureSemantics();

@@ -13,6 +13,7 @@ import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { elementPathData, inkBounds, parsePath, shortStrokeEnds } from "./icon-geometry.mjs";
 import { findUnsmoothedCorners, reattachEnds, smoothCorners } from "./corner-smoothing.mjs";
 import { cleanPaths, gridTolerance } from "./path-cleanup.mjs";
+import { evenOddPathData, loadPathKit } from "./solid-draft.mjs";
 import { optimize } from "svgo";
 import { Resvg } from "@resvg/resvg-js";
 import { buildAngularPackage } from "./generators/angular.mjs";
@@ -24,6 +25,7 @@ import { buildLitPackage } from "./generators/lit.mjs";
 import { buildMcpPackage } from "./generators/mcp.mjs";
 import { buildPreactPackage } from "./generators/preact.mjs";
 import { buildQwikPackage } from "./generators/qwik.mjs";
+import { buildReactPackage } from "./generators/react.mjs";
 import { buildReactNativePackage } from "./generators/react-native.mjs";
 import { buildShadcnRegistry } from "./generators/shadcn.mjs";
 import { buildSolidPackage } from "./generators/solid.mjs";
@@ -32,16 +34,18 @@ import { buildVuePackage } from "./generators/vue.mjs";
 import {
   assertIconNodesPassRuntimePolicy,
   runtimePolicyRecursiveSource,
-  runtimePolicySource,
   svgElementTypeSource,
 } from "./generators/runtime-policy.mjs";
 import {
   allocateFontCodepoints,
   buildStaticAssets,
+  fonts,
 } from "./generators/static.mjs";
+import { buildStyles, defaultAttributesSource } from "./generators/shared.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const iconsDir = path.join(root, "icons");
+const solidIconsDir = path.join(root, "icons-solid");
 const rawDist = path.join(root, "packages/vadivam/dist");
 const rawSource = path.join(root, "packages/vadivam/src");
 const lucideAliasesPath = path.join(root, "apps/vadivam-internal/src/data/lucide-deprecated-aliases.json");
@@ -61,6 +65,7 @@ const mcpPackage = path.join(root, "packages/vadivam-mcp");
 const skillSource = path.join(root, "apps/docs/skills/vadivam-icons/SKILL.md");
 const rawSkills = path.join(root, "packages/vadivam/skills");
 const webIconsDir = path.join(root, "apps/docs/public/icons");
+const webSolidIconsDir = path.join(root, "apps/docs/public/icons-solid");
 const shadcnRegistryDir = path.join(root, "apps/docs/public/r");
 const previewPath = path.join(root, "apps/docs/public/preview.png");
 const ogPath = path.join(root, "apps/docs/public/og.png");
@@ -103,17 +108,48 @@ const geometryAttrs = {
   rect: new Set(["@_x", "@_y", "@_width", "@_height", "@_rx", "@_ry"]),
   ellipse: new Set(["@_cx", "@_cy", "@_rx", "@_ry"]),
 };
-const rootAttrs = {
+const canvasAttrs = {
   "@_xmlns": "http://www.w3.org/2000/svg",
   "@_width": "24",
   "@_height": "24",
   "@_viewBox": "0 0 24 24",
-  "@_fill": "none",
-  "@_stroke": "currentColor",
-  "@_stroke-width": "2",
-  "@_stroke-linecap": "round",
-  "@_stroke-linejoin": "round",
 };
+// Each style is one folder of SVGs with the same names. Outline icons are
+// centerline strokes; solid icons are filled shapes whose cut-outs rely on the
+// even-odd rule. Solid lines are 2.5px wide on the outline's centerlines, so
+// their ink reaches 0.25px further into the padding than a 2px stroke.
+export const styles = {
+  outline: {
+    id: "outline",
+    directory: iconsDir,
+    rootAttrs: {
+      ...canvasAttrs,
+      "@_fill": "none",
+      "@_stroke": "currentColor",
+      "@_stroke-width": "2",
+      "@_stroke-linecap": "round",
+      "@_stroke-linejoin": "round",
+    },
+    inkWidth: 2,
+    padding: 1,
+  },
+  solid: {
+    id: "solid",
+    directory: solidIconsDir,
+    rootAttrs: {
+      ...canvasAttrs,
+      "@_fill": "currentColor",
+      "@_fill-rule": "evenodd",
+    },
+    inkWidth: 0,
+    padding: 0.75,
+  },
+};
+
+function rootTag(style) {
+  const attrs = Object.entries(style.rootAttrs).map(([name, value]) => `${name.slice(2)}="${value}"`);
+  return `<svg ${attrs.join(" ")}>`;
+}
 const blockedTags = new Set([
   "a",
   "clipPath",
@@ -134,11 +170,9 @@ const blockedTags = new Set([
 ]);
 const maxClosedSubpathsPerPath = 8;
 const canvasSize = 24;
-const padding = 1;
-const strokeWidth = 2;
 
-async function svgFiles() {
-  return (await readdir(iconsDir))
+async function svgFiles(style = styles.outline) {
+  return (await readdir(style.directory))
     .filter((file) => file.endsWith(".svg"))
     .sort();
 }
@@ -271,9 +305,9 @@ function asArray(value) {
 // A closepath followed straight by a drawing command, with no move to start the next subpath.
 const subpathWithoutMove = /([zZ])\s*(?=[a-ln-yA-LN-Y])/g;
 
-export function validateSvgContent(svg, file = "inline.svg") {
+export function validateSvgContent(svg, file = "inline.svg", style = styles.outline) {
   const node = parseSvg(svg, file);
-  for (const [attr, value] of Object.entries(rootAttrs)) {
+  for (const [attr, value] of Object.entries(style.rootAttrs)) {
     assert(
       node[attr] === value,
       `${file}: expected ${attr.slice(2)}="${value}"`,
@@ -282,7 +316,7 @@ export function validateSvgContent(svg, file = "inline.svg") {
   for (const key of Object.keys(node)) {
     if (key.startsWith("@_"))
       assert(
-        key in rootAttrs,
+        key in style.rootAttrs,
         `${file}: unsupported root attribute ${key.slice(2)}`,
       );
   }
@@ -306,7 +340,7 @@ export function validateSvgContent(svg, file = "inline.svg") {
           const closedSubpaths =
             typeof pathData === "string" ? (pathData.match(/z/gi) ?? []).length : 0;
           assert(
-            closedSubpaths <= maxClosedSubpathsPerPath,
+            style !== styles.outline || closedSubpaths <= maxClosedSubpathsPerPath,
             `${file}: path has ${closedSubpaths} closed subpaths and looks like expanded stroke geometry; use open centerline strokes`,
           );
           assertSmoothCorners(pathData, file);
@@ -345,12 +379,21 @@ export function validateSvgContent(svg, file = "inline.svg") {
 
   visit(node, "svg");
   assert(count > 0, `${file}: no drawable elements found`);
-  assertInkInsidePadding(shapes, file);
+  assertInkInsidePadding(shapes, file, style);
   const paths = shapes.filter(([tag]) => tag === "path").map(([, attrs]) => attrs.d);
-  assertCleanPaths(paths, file);
   const unmoved = paths.filter((d) => d.search(subpathWithoutMove) >= 0).length;
   assert(unmoved === 0, `${file}: ${unmoved} path(s) start a subpath after "z" without a move; WebKit draws it from the wrong point, so add "m0 0" after the "z"`);
-  assertStrokesMeet(shapes.map(([tag, attrs]) => elementPathData(tag, attrs)), file);
+  // Flutter and Compose join every shape into one even-odd path, so two
+  // overlapping solid shapes would cancel out there; draw one path instead.
+  assert(
+    style === styles.outline || (count === 1 && shapes[0][0] === "path"),
+    `${file}: a solid icon must be a single <path>; unite overlapping shapes into one path`,
+  );
+  // Path cleanup joins and trims strokes, which only applies to outlines.
+  if (style === styles.outline) {
+    assertCleanPaths(paths, file);
+    assertStrokesMeet(shapes.map(([tag, attrs]) => elementPathData(tag, attrs)), file);
+  }
 }
 
 // Every rounded corner between two straight lines must use the smoothed
@@ -372,16 +415,19 @@ function assertSmoothCorners(pathData, file) {
 
 // With round caps and joins the 2px stroke reaches 1px past the centerline, so
 // keeping the ink inside the 1px padding keeps every point of the geometry at
-// least 2px inside the canvas edge.
-function assertInkInsidePadding(shapes, file) {
+// least 2px inside the canvas edge. Solid shapes are their own ink.
+function assertInkInsidePadding(shapes, file, style = styles.outline) {
+  const { padding } = style;
   let box;
   try {
-    box = inkBounds(shapes, strokeWidth);
+    box = inkBounds(shapes, style.inkWidth);
   } catch (error) {
     throw new Error(`${file}: ${error.message}`);
   }
-  // Path data keeps 3 decimals, so curves may overshoot the padding line by a hair.
-  const epsilon = 0.01;
+  // Path data keeps 3 decimals, so curves may overshoot the padding line by a
+  // hair. Solid outlines are offset curves that SVGO refits as arcs, which
+  // can overshoot a little more.
+  const epsilon = style === styles.outline ? 0.01 : 0.05;
   const inside =
     box.minX >= padding - epsilon &&
     box.minY >= padding - epsilon &&
@@ -390,7 +436,9 @@ function assertInkInsidePadding(shapes, file) {
   const format = (value) => Number(value.toFixed(3));
   assert(
     inside,
-    `${file}: stroke reaches into the 1px padding (ink spans x ${format(box.minX)} to ${format(box.maxX)}, y ${format(box.minY)} to ${format(box.maxY)}); keep geometry at least 2px from every edge`,
+    style === styles.outline
+      ? `${file}: stroke reaches into the 1px padding (ink spans x ${format(box.minX)} to ${format(box.maxX)}, y ${format(box.minY)} to ${format(box.maxY)}); keep geometry at least 2px from every edge`
+      : `${file}: shape reaches into the ${padding}px padding (ink spans x ${format(box.minX)} to ${format(box.maxX)}, y ${format(box.minY)} to ${format(box.maxY)}); keep the shape at least ${padding}px from every edge`,
   );
 }
 
@@ -422,23 +470,27 @@ function assertStrokesMeet(paths, file) {
   );
 }
 
-function assertNoFilledSourceArtwork(svg, file) {
-  const rootNode = parseSvg(svg, file);
+// Outline artwork may not be filled, and solid artwork may not be stroked:
+// either would be lost when the root attributes are rewritten.
+function assertSourcePaint(svg, file, style = styles.outline) {
+  const paint = style === styles.outline ? "@_fill" : "@_stroke";
+  // The root counts too: its paint is inherited by every shape.
   const visit = (current) => {
-    for (const [tag, value] of Object.entries(current)) {
+    const value = current[paint];
+    assert(
+      value === undefined || value === "none",
+      style === styles.outline
+        ? `${file}: filled artwork cannot be normalized; use open centerline strokes instead of outlined stroke geometry`
+        : `${file}: stroked artwork cannot be normalized; outline strokes into filled shapes for solid icons`,
+    );
+    for (const [tag, children] of Object.entries(current)) {
       if (tag.startsWith("@_")) continue;
-      for (const item of asArray(value)) {
-        if (!item || typeof item !== "object") continue;
-        const fill = item["@_fill"];
-        assert(
-          fill === undefined || fill === "none",
-          `${file}: filled artwork cannot be normalized; use open centerline strokes instead of outlined stroke geometry`,
-        );
-        visit(item);
+      for (const item of asArray(children)) {
+        if (item && typeof item === "object") visit(item);
       }
     }
   };
-  visit(rootNode);
+  visit(parseSvg(svg, file));
 }
 
 function iconNodeFromSvg(svg, file) {
@@ -472,14 +524,41 @@ const svgoConfig = {
   ],
 };
 
-function optimizeSvg(svg, file) {
-  const result = optimize(svg, { ...svgoConfig, path: file });
+// Solid icons take their paint from the root, so a shape the source leaves
+// unpainted is dropped before its fill="none" is stripped and it turns to ink.
+// Unused ids are cleaned up first, since SVGO skips a shape that has one.
+const filledSvgoConfig = {
+  ...svgoConfig,
+  plugins: [
+    {
+      name: "preset-default",
+      params: {
+        overrides: {
+          convertShapeToPath: false,
+          removeUselessStrokeAndFill: { removeNone: true },
+        },
+      },
+    },
+  ],
+};
+
+function optimizeSvg(svg, file, config = svgoConfig) {
+  const result = optimize(svg, { ...config, path: file });
   if (result.error) throw new Error(`${file}: ${result.error}`);
   return result.data;
 }
 
-export function normalizeSvg(svg, file) {
-  assertNoFilledSourceArtwork(svg, file);
+// SVGO drops the move after a closepath when the next subpath starts where
+// the last one began; WebKit draws some of those from the wrong point. A lineto
+// right after the move is written the way SVGO writes it, so optimizing again
+// changes nothing.
+function restoreSubpathMoves(d) {
+  return d.replace(subpathWithoutMove, "$1m0 0").replace(/([zZ]m0 0)l(?=\d|\.)/g, "$1 ").replace(/([zZ]m0 0)l(?=-)/g, "$1");
+}
+
+export function normalizeSvg(svg, file, style = styles.outline) {
+  assertSourcePaint(svg, file, style);
+  if (style !== styles.outline) return normalizeFilledSvg(svg, file, style);
   // SVGO turns Figma's circular curves into arcs, so rounded corners can be
   // found and smoothed; a last pass compacts the rewritten path data. Strokes
   // Figma split apart are joined first, and SVGO runs again on the joined
@@ -499,12 +578,7 @@ export function normalizeSvg(svg, file) {
   const cleaned = optimizeSvg(replacePaths(first, cleanPaths(pathData(first)).paths), file);
   const original = pathData(cleaned);
   const smoothed = replacePaths(cleaned, reattachEnds(original, original.map((d) => smoothCorners(d))));
-  // SVGO drops the move after a closepath when the next subpath starts where
-  // the last one began; WebKit draws some of those from the wrong point.
-  const optimized = optimizeSvg(smoothed, file).replace(pathPattern, (match, prefix, d, suffix) =>
-    // A lineto right after the move is written the way SVGO writes it, so optimizing again changes nothing.
-    `${prefix}${d.replace(subpathWithoutMove, "$1m0 0").replace(/([zZ]m0 0)l(?=\d|\.)/g, "$1 ").replace(/([zZ]m0 0)l(?=-)/g, "$1")}${suffix}`,
-  );
+  const optimized = optimizeSvg(smoothed, file).replace(pathPattern, (_match, prefix, d, suffix) => `${prefix}${restoreSubpathMoves(d)}${suffix}`);
   const open = optimized.match(/<svg\b[^>]*>/);
   const close = optimized.lastIndexOf("</svg>");
   assert(open && close > -1, `${file}: optimized SVG is missing root`);
@@ -515,26 +589,62 @@ export function normalizeSvg(svg, file) {
       "",
     )
     .trim();
-  const normalized = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n${inner}\n</svg>\n`;
+  const normalized = `${rootTag(style)}\n${inner}\n</svg>\n`;
   validateSvgContent(normalized, file);
   return normalized;
 }
 
-export async function readIcons() {
-  const files = await svgFiles();
+const pathKit = await loadPathKit();
+
+// Filled artwork has no strokes to join or trim, so it is only compacted and
+// its rounded corners smoothed, like an outline's.
+function normalizeFilledSvg(svg, file, style) {
+  const pathPattern = /(<path\b[^>]*\sd=")([^"]*)("[^>]*>)/g;
+  const smooth = (content) =>
+    content.replace(pathPattern, (_match, prefix, d, suffix) => `${prefix}${smoothCorners(d)}${suffix}`);
+  let optimized = optimizeSvg(svg, file, filledSvgoConfig);
+  // The root's fill-rule replaces each shape's own, so a path Figma fills by
+  // nonzero winding is redrawn first to fill the same area by evenodd.
+  const rootRule = optimized.match(/<svg\b[^>]*>/)?.[0].match(/\sfill-rule="([^"]*)"/)?.[1];
+  optimized = optimized.replace(pathPattern, (match, prefix, d, suffix) => {
+    const rule = match.match(/\sfill-rule="([^"]*)"/)?.[1] ?? rootRule ?? "nonzero";
+    const converted = rule === "evenodd" ? null : evenOddPathData(pathKit, d);
+    return converted ? `${prefix}${converted}${suffix}` : match;
+  });
+  // SVGO can turn a smoothed curve back into an arc, so repeat until stable.
+  for (let pass = 0; pass < 4; pass += 1) {
+    const next = optimizeSvg(smooth(optimized), file);
+    if (next === optimized) break;
+    optimized = next;
+  }
+  optimized = optimized.replace(pathPattern, (_match, prefix, d, suffix) => `${prefix}${restoreSubpathMoves(d)}${suffix}`);
+  const open = optimized.match(/<svg\b[^>]*>/);
+  const close = optimized.lastIndexOf("</svg>");
+  assert(open && close > -1, `${file}: optimized SVG is missing root`);
+  const inner = optimized
+    .slice(open.index + open[0].length, close)
+    .replace(/\s(?:fill|fill-rule|clip-rule|stroke|stroke-width|stroke-linecap|stroke-linejoin)="[^"]*"/g, "")
+    .trim();
+  const normalized = `${rootTag(style)}\n${inner}\n</svg>\n`;
+  validateSvgContent(normalized, file, style);
+  return normalized;
+}
+
+export async function readIcons(style = styles.outline) {
+  const files = await svgFiles(style);
   const icons = [];
   for (const fileName of files) {
     const name = fileName.replace(/\.svg$/, "");
     validateIconName(name, fileName);
-    const filePath = path.join(iconsDir, fileName);
+    const filePath = path.join(style.directory, fileName);
     const svg = await readFile(filePath, "utf8");
-    validateSvgContent(svg, fileName);
+    validateSvgContent(svg, fileName, style);
     const iconNode = iconNodeFromSvg(svg, fileName);
     icons.push({
       name,
       componentName: pascalCase(name),
       fileName,
-      svgPath: `icons/${fileName}`,
+      svgPath: `${path.relative(root, style.directory)}/${fileName}`,
       tags: lucideMetadata.icons[name]?.tags ?? [],
       categories: lucideMetadata.icons[name]?.categories ?? [],
       svg,
@@ -590,39 +700,131 @@ async function synchronizeDocCounts(names, { check = false } = {}) {
 export async function optimizeIcons() {
   const files = await svgFiles();
   const normalizedIcons = [];
-  for (const fileName of files) {
-    const filePath = path.join(iconsDir, fileName);
-    const svg = await readFile(filePath, "utf8");
-    normalizedIcons.push([filePath, normalizeSvg(svg, fileName)]);
+  for (const style of Object.values(styles)) {
+    for (const fileName of await svgFiles(style)) {
+      const filePath = path.join(style.directory, fileName);
+      const svg = await readFile(filePath, "utf8");
+      normalizedIcons.push([filePath, normalizeSvg(svg, fileName, style)]);
+    }
   }
   for (const [filePath, svg] of normalizedIcons) {
     await writeFile(filePath, svg);
   }
   await synchronizeDocCounts(files.map((fileName) => fileName.replace(/\.svg$/, "")));
-  console.log(`Optimized ${files.length} icons.`);
+  console.log(`Optimized ${files.length} icons in ${Object.keys(styles).length} styles.`);
+}
+
+// Every icon is drawn in every style, under the same name.
+export function validateStyleTwins(namesByStyle) {
+  const [[firstStyle, expected], ...others] = Object.entries(namesByStyle);
+  const expectedSet = new Set(expected);
+  for (const [style, names] of others) {
+    const set = new Set(names);
+    const missing = expected.filter((name) => !set.has(name));
+    const extra = names.filter((name) => !expectedSet.has(name));
+    assert(
+      missing.length === 0,
+      `${style} is missing ${missing.length} icon(s) drawn in ${firstStyle}: ${missing.slice(0, 10).join(", ")}${missing.length > 10 ? ", …" : ""}`,
+    );
+    assert(
+      extra.length === 0,
+      `${style} has ${extra.length} icon(s) with no ${firstStyle} twin: ${extra.slice(0, 10).join(", ")}${extra.length > 10 ? ", …" : ""}`,
+    );
+  }
 }
 
 export async function checkIcons() {
   const files = await svgFiles();
-  for (const fileName of files) {
-    validateIconName(fileName.replace(/\.svg$/, ""), fileName);
-    validateSvgContent(
-      await readFile(path.join(iconsDir, fileName), "utf8"),
-      fileName,
-    );
+  const namesByStyle = {};
+  for (const style of Object.values(styles)) {
+    const styleFiles = await svgFiles(style);
+    for (const fileName of styleFiles) {
+      validateIconName(fileName.replace(/\.svg$/, ""), fileName);
+      validateSvgContent(
+        await readFile(path.join(style.directory, fileName), "utf8"),
+        `${path.relative(root, style.directory)}/${fileName}`,
+        style,
+      );
+    }
+    namesByStyle[style.id] = styleFiles.map((fileName) => fileName.replace(/\.svg$/, ""));
   }
+  validateStyleTwins(namesByStyle);
   validateIconMetadata(files.map((fileName) => fileName.replace(/\.svg$/, "")));
   const lucideCatalog = await fetchPinnedLucideCatalog();
   validateLucideIconNames(files, lucideCatalog);
   await synchronizeDocCounts(files.map((fileName) => fileName.replace(/\.svg$/, "")), { check: true });
   console.log(
-    `Checked ${files.length} icons against Lucide ${lucideCatalog.version} canonical names.`,
+    `Checked ${files.length} icons in ${Object.keys(styles).length} styles against Lucide ${lucideCatalog.version} canonical names.`,
   );
 }
 
-async function buildRawPackage(icons) {
+// The package root holds what every style shares: types, the runtime policy,
+// the manifest, the fonts, and the CLI. Each style is an entry with its icons,
+// strings, sprite, and DOM helpers: outline at the root, solid under solid/.
+async function buildRawPackage(icons, solidIcons = []) {
   await rm(rawDist, { recursive: true, force: true });
   await mkdir(path.join(rawDist, "icons"), { recursive: true });
+  const iconNameType = icons
+    .map((icon) => JSON.stringify(icon.name))
+    .join(" | ");
+  await writeFile(
+    path.join(rawDist, "types.d.ts"),
+    `export type SVGElementType = ${svgElementTypeSource};\nexport type SVGProps = Record<string, string | number | boolean | undefined>;\nexport type IconNode = readonly [tag: SVGElementType, attrs: SVGProps, children?: IconNode][];\nexport type Icons = Record<string, IconNode>;\nexport type IconName = ${iconNameType};\n`,
+  );
+  await writeFile(
+    path.join(rawDist, "runtimePolicy.js"),
+    runtimePolicyRecursiveSource,
+  );
+  await buildStyles(rawDist, { outline: icons, solid: solidIcons }, (dist, styleIcons, style) =>
+    buildRawEntry(dist, styleIcons, style),
+  );
+  await buildElements(icons, rawDist, solidIcons);
+  const solidByName = new Map(solidIcons.map((icon) => [icon.name, icon]));
+  const manifestIcons = icons.map((icon) => {
+    const solid = solidByName.get(icon.name);
+    // The package ships solid SVGs under solid/icons, not the repository's
+    // icons-solid folder.
+    return solid
+      ? { ...icon, solid: { svgPath: `solid/icons/${solid.fileName}`, svg: solid.svg, iconNode: solid.iconNode } }
+      : icon;
+  });
+  const manifest = JSON.stringify(manifestIcons, null, 2);
+  const manifestStyles = solidIcons.length ? ["outline", "solid"] : ["outline"];
+  await writeFile(
+    path.join(rawDist, "manifest.js"),
+    `export const icons = ${manifest};\nexport const iconNames = icons.map((icon) => icon.name);\nexport const iconsByName = Object.fromEntries(icons.map((icon) => [icon.name, icon]));\nexport const categories = ${JSON.stringify(iconCategories, null, 2)};\nexport const styles = ${JSON.stringify(manifestStyles)};\nexport default icons;\n`,
+  );
+  await writeFile(
+    path.join(rawDist, "manifest.d.ts"),
+    `import type { IconName, IconNode } from "./types.js";\nexport interface VadivamIconStyle {\n  svgPath: \`solid/icons/${"${IconName}"}.svg\`;\n  svg: string;\n  iconNode: IconNode;\n}\nexport interface VadivamIconMetadata {\n  name: IconName;\n  componentName: string;\n  fileName: \`${"${IconName}"}.svg\`;\n  svgPath: \`icons/${"${IconName}"}.svg\`;\n  /** Search terms from Lucide's metadata for this icon. */\n  tags: readonly string[];\n  /** Ids from \`categories\`. */\n  categories: readonly IconCategoryId[];\n  svg: string;\n  iconNode: IconNode;\n  /** The solid twin, drawn under the same name. */\n  solid?: VadivamIconStyle;\n}\nexport type IconCategoryId = ${iconCategories.map((category) => JSON.stringify(category.id)).join(" | ")};\nexport interface VadivamIconCategory {\n  id: IconCategoryId;\n  title: string;\n  description?: string;\n}\nexport type VadivamIconStyleId = "outline" | "solid";\nexport declare const icons: readonly VadivamIconMetadata[];\nexport declare const iconNames: readonly IconName[];\nexport declare const iconsByName: Record<IconName, VadivamIconMetadata>;\nexport declare const categories: readonly VadivamIconCategory[];\n/** The styles every icon is drawn in. */\nexport declare const styles: readonly VadivamIconStyleId[];\nexport default icons;\n`,
+  );
+  // The Lucide migration CLI is hand-written in packages/vadivam/src and reads
+  // the generated manifest next to it, plus the deprecated Lucide aliases the
+  // maintenance plugin tracks, so it can move alias imports to canonical names.
+  for (const file of ["cli.js", "migrate-lucide.js"]) {
+    await copyFile(path.join(rawSource, file), path.join(rawDist, file));
+  }
+  await chmod(path.join(rawDist, "cli.js"), 0o755);
+  const names = new Set(icons.map((icon) => icon.name));
+  const aliases = Object.fromEntries(
+    Object.entries(JSON.parse(await readFile(lucideAliasesPath, "utf8"))).filter(
+      ([alias, name]) => !names.has(alias) && names.has(name),
+    ),
+  );
+  await writeFile(
+    path.join(rawDist, "lucide-aliases.js"),
+    `// Deprecated Lucide names and the canonical icon each one now points to.\nexport const lucideAliases = ${JSON.stringify(aliases)};\n`,
+  );
+  // The docs site serves the same skill at /skill.md; ship one copy with the package.
+  await rm(rawSkills, { recursive: true, force: true });
+  await mkdir(path.join(rawSkills, "vadivam-icons"), { recursive: true });
+  await copyFile(skillSource, path.join(rawSkills, "vadivam-icons/SKILL.md"));
+}
+
+async function buildRawEntry(dist, icons, style) {
+  const shared = style.shared;
+  const sourceDirectory = style.stroked ? iconsDir : solidIconsDir;
+  await mkdir(path.join(dist, "icons"), { recursive: true });
   for (const icon of icons) {
     const rawIconNode = icon.iconNode.map(([tag, attrs]) => [
       tag,
@@ -631,21 +833,18 @@ async function buildRawPackage(icons) {
       ),
     ]);
     await copyFile(
-      path.join(iconsDir, icon.fileName),
-      path.join(rawDist, "icons", icon.fileName),
+      path.join(sourceDirectory, icon.fileName),
+      path.join(dist, "icons", icon.fileName),
     );
     await writeFile(
-      path.join(rawDist, "icons", `${icon.name}.js`),
+      path.join(dist, "icons", `${icon.name}.js`),
       `const ${icon.componentName} = ${JSON.stringify(rawIconNode)};\nexport default ${icon.componentName};\n`,
     );
     await writeFile(
-      path.join(rawDist, "icons", `${icon.name}.d.ts`),
-      `import type { IconNode } from "../types.js";\n/** @name ${icon.name}\n * @description Vadivam SVG icon node.\n * @see https://vadivam.praveenjuge.com/icons/${icon.name}\n */\ndeclare const ${icon.componentName}: IconNode;\nexport default ${icon.componentName};\n`,
+      path.join(dist, "icons", `${icon.name}.d.ts`),
+      `import type { IconNode } from "../${shared === "./" ? "" : "../"}types.js";\n/** @name ${icon.name}\n * @description Vadivam ${style.stroked ? "" : "solid "}SVG icon node.\n * @see https://vadivam.praveenjuge.com/icons/${icon.name}\n */\ndeclare const ${icon.componentName}: IconNode;\nexport default ${icon.componentName};\n`,
     );
   }
-  const iconNameType = icons
-    .map((icon) => JSON.stringify(icon.name))
-    .join(" | ");
   const rawImports = icons
     .map(
       (icon) => `import ${icon.componentName} from "./icons/${icon.name}.js";`,
@@ -664,35 +863,27 @@ async function buildRawPackage(icons) {
     .map((icon) => `  readonly ${icon.componentName}: IconNode;`)
     .join("\n");
   await writeFile(
-    path.join(rawDist, "types.d.ts"),
-    `export type SVGElementType = ${svgElementTypeSource};\nexport type SVGProps = Record<string, string | number | boolean | undefined>;\nexport type IconNode = readonly [tag: SVGElementType, attrs: SVGProps, children?: IconNode][];\nexport type Icons = Record<string, IconNode>;\nexport type IconName = ${iconNameType};\n`,
+    path.join(dist, "defaultAttributes.js"),
+    `const defaultAttributes = ${defaultAttributesSource(style)};\nexport default defaultAttributes;\n`,
   );
   await writeFile(
-    path.join(rawDist, "defaultAttributes.js"),
-    `const defaultAttributes = { xmlns: "http://www.w3.org/2000/svg", width: 24, height: 24, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round" };\nexport default defaultAttributes;\n`,
+    path.join(dist, "createElement.js"),
+    `import defaultAttributes from "./defaultAttributes.js";\nimport { sanitizeIconNode, sanitizeRootAttributes } from "${shared}runtimePolicy.js";\n\nfunction createSvgElement(document, [tag, attrs, children]) {\n  const element = document.createElementNS("http://www.w3.org/2000/svg", tag);\n  for (const [name, value] of Object.entries(attrs)) element.setAttribute(name, String(value));\n  for (const child of children ?? []) element.appendChild(createSvgElement(document, child));\n  return element;\n}\n\nexport function createElement(iconNode, customAttrs = {}) {\n  if (typeof document === "undefined") throw new Error("createElement() only works in a browser environment.");\n  return createSvgElement(document, ["svg", { ...defaultAttributes, ...sanitizeRootAttributes(customAttrs) }, sanitizeIconNode(iconNode)]);\n}\nexport default createElement;\n`,
   );
   await writeFile(
-    path.join(rawDist, "runtimePolicy.js"),
-    runtimePolicyRecursiveSource,
+    path.join(dist, "createElement.d.ts"),
+    `import type { IconNode, SVGProps } from "${shared}types.js";\nexport declare function createElement(iconNode: IconNode, customAttrs?: SVGProps): SVGElement;\nexport default createElement;\n`,
   );
   await writeFile(
-    path.join(rawDist, "createElement.js"),
-    `import defaultAttributes from "./defaultAttributes.js";\nimport { sanitizeIconNode, sanitizeRootAttributes } from "./runtimePolicy.js";\n\nfunction createSvgElement(document, [tag, attrs, children]) {\n  const element = document.createElementNS("http://www.w3.org/2000/svg", tag);\n  for (const [name, value] of Object.entries(attrs)) element.setAttribute(name, String(value));\n  for (const child of children ?? []) element.appendChild(createSvgElement(document, child));\n  return element;\n}\n\nexport function createElement(iconNode, customAttrs = {}) {\n  if (typeof document === "undefined") throw new Error("createElement() only works in a browser environment.");\n  return createSvgElement(document, ["svg", { ...defaultAttributes, ...sanitizeRootAttributes(customAttrs) }, sanitizeIconNode(iconNode)]);\n}\nexport default createElement;\n`,
-  );
-  await writeFile(
-    path.join(rawDist, "createElement.d.ts"),
-    `import type { IconNode, SVGProps } from "./types.js";\nexport declare function createElement(iconNode: IconNode, customAttrs?: SVGProps): SVGElement;\nexport default createElement;\n`,
-  );
-  await writeFile(
-    path.join(rawDist, "iconNodes.js"),
+    path.join(dist, "iconNodes.js"),
     `${rawImports}\n\nexport const icons = {\n${rawIconEntries}\n};\nexport default icons;\n`,
   );
   await writeFile(
-    path.join(rawDist, "iconNodes.d.ts"),
-    `import type { IconNode } from "./types.js";\nexport declare const icons: {\n${rawIconTypes}\n};\nexport default icons;\n`,
+    path.join(dist, "iconNodes.d.ts"),
+    `import type { IconNode } from "${shared}types.js";\nexport declare const icons: {\n${rawIconTypes}\n};\nexport default icons;\n`,
   );
   await writeFile(
-    path.join(rawDist, "createIcons.js"),
+    path.join(dist, "createIcons.js"),
     `import createElement from "./createElement.js";
 import defaultAttributes from "./defaultAttributes.js";
 
@@ -734,190 +925,56 @@ export default createIcons;
 `,
   );
   await writeFile(
-    path.join(rawDist, "createIcons.d.ts"),
-    `import type { Icons, SVGProps } from "./types.js";\nexport interface CreateIconsOptions {\n  icons?: Icons;\n  nameAttr?: string;\n  attrs?: SVGProps;\n  root?: Element | Document | DocumentFragment;\n  inTemplates?: boolean;\n}\nexport declare function createIcons(options?: CreateIconsOptions): void;\nexport default createIcons;\n`,
+    path.join(dist, "createIcons.d.ts"),
+    `import type { Icons, SVGProps } from "${shared}types.js";\nexport interface CreateIconsOptions {\n  icons?: Icons;\n  nameAttr?: string;\n  attrs?: SVGProps;\n  root?: Element | Document | DocumentFragment;\n  inTemplates?: boolean;\n}\nexport declare function createIcons(options?: CreateIconsOptions): void;\nexport default createIcons;\n`,
   );
-  const manifest = JSON.stringify(icons, null, 2);
+  const manifestExports = style.stroked
+    ? `export { icons as manifest, iconNames, iconsByName, categories, styles } from "./manifest.js";\n`
+    : "";
+  const manifestTypes = style.stroked
+    ? `export type { IconCategoryId, VadivamIconCategory, VadivamIconMetadata, VadivamIconStyle, VadivamIconStyleId } from "./manifest.js";\n`
+    : "";
   await writeFile(
-    path.join(rawDist, "manifest.js"),
-    `export const icons = ${manifest};\nexport const iconNames = icons.map((icon) => icon.name);\nexport const iconsByName = Object.fromEntries(icons.map((icon) => [icon.name, icon]));\nexport const categories = ${JSON.stringify(iconCategories, null, 2)};\nexport default icons;\n`,
-  );
-  await writeFile(
-    path.join(rawDist, "manifest.d.ts"),
-    `import type { IconName, IconNode } from "./types.js";\nexport interface VadivamIconMetadata {\n  name: IconName;\n  componentName: string;\n  fileName: \`${"${IconName}"}.svg\`;\n  svgPath: \`icons/${"${IconName}"}.svg\`;\n  /** Search terms from Lucide's metadata for this icon. */\n  tags: readonly string[];\n  /** Ids from \`categories\`. */\n  categories: readonly IconCategoryId[];\n  svg: string;\n  iconNode: IconNode;\n}\nexport type IconCategoryId = ${iconCategories.map((category) => JSON.stringify(category.id)).join(" | ")};\nexport interface VadivamIconCategory {\n  id: IconCategoryId;\n  title: string;\n  description?: string;\n}\nexport declare const icons: readonly VadivamIconMetadata[];\nexport declare const iconNames: readonly IconName[];\nexport declare const iconsByName: Record<IconName, VadivamIconMetadata>;\nexport declare const categories: readonly VadivamIconCategory[];\nexport default icons;\n`,
-  );
-  await writeFile(
-    path.join(rawDist, "index.js"),
-    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\nexport { icons as manifest, iconNames, iconsByName, categories } from "./manifest.js";\n${rawNamedExports}\n`,
+    path.join(dist, "index.js"),
+    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\n${manifestExports}${rawNamedExports}\n`,
   );
   await writeFile(
-    path.join(rawDist, "index.d.ts"),
-    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\nexport { icons as manifest, iconNames, iconsByName, categories } from "./manifest.js";\n${rawNamedExports}\nexport type { CreateIconsOptions } from "./createIcons.js";\nexport type { IconCategoryId, VadivamIconCategory, VadivamIconMetadata } from "./manifest.js";\nexport type { IconName, IconNode, Icons, SVGElementType, SVGProps } from "./types.js";\n`,
+    path.join(dist, "index.d.ts"),
+    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\n${manifestExports}${rawNamedExports}\nexport type { CreateIconsOptions } from "./createIcons.js";\n${manifestTypes}export type { IconName, IconNode, Icons, SVGElementType, SVGProps } from "${shared}types.js";\n`,
   );
-  await buildElements(icons, rawDist);
   await buildStaticAssets(icons, {
-    iconsDirectory: iconsDir,
-    outputDirectory: rawDist,
+    iconsDirectory: sourceDirectory,
+    outputDirectory: dist,
+    fontDirectory: path.join(rawDist, "font"),
     registryPath: fontCodepointsPath,
     root,
+    font: fonts[style.id],
   });
-  // The Lucide migration CLI is hand-written in packages/vadivam/src and reads
-  // the generated manifest next to it, plus the deprecated Lucide aliases the
-  // maintenance plugin tracks, so it can move alias imports to canonical names.
-  for (const file of ["cli.js", "migrate-lucide.js"]) {
-    await copyFile(path.join(rawSource, file), path.join(rawDist, file));
-  }
-  await chmod(path.join(rawDist, "cli.js"), 0o755);
-  const names = new Set(icons.map((icon) => icon.name));
-  const aliases = Object.fromEntries(
-    Object.entries(JSON.parse(await readFile(lucideAliasesPath, "utf8"))).filter(
-      ([alias, name]) => !names.has(alias) && names.has(name),
-    ),
-  );
-  await writeFile(
-    path.join(rawDist, "lucide-aliases.js"),
-    `// Deprecated Lucide names and the canonical icon each one now points to.\nexport const lucideAliases = ${JSON.stringify(aliases)};\n`,
-  );
-  // The docs site serves the same skill at /skill.md; ship one copy with the package.
-  await rm(rawSkills, { recursive: true, force: true });
-  await mkdir(path.join(rawSkills, "vadivam-icons"), { recursive: true });
-  await copyFile(skillSource, path.join(rawSkills, "vadivam-icons/SKILL.md"));
 }
 
-async function buildReactPackage(icons) {
-  await rm(reactDist, { recursive: true, force: true });
-  await mkdir(path.join(reactDist, "icons"), { recursive: true });
-  const iconNameType = icons
-    .map((icon) => JSON.stringify(icon.name))
-    .join(" | ");
-  await writeFile(
-    path.join(reactDist, "types.d.ts"),
-    `import type * as React from "react";\nexport type SVGElementType = ${svgElementTypeSource};\nexport type IconNode = readonly [tag: SVGElementType, attrs: Record<string, string | number | boolean>][];\nexport type SVGAttributes = Partial<React.SVGProps<SVGSVGElement>>;\nexport interface VadivamProps extends Omit<React.SVGProps<SVGSVGElement>, "color"> {\n  size?: string | number;\n  color?: string;\n  strokeWidth?: string | number;\n  absoluteStrokeWidth?: boolean;\n  title?: string;\n}\nexport type VadivamIcon = React.ForwardRefExoticComponent<Omit<VadivamProps, "ref"> & React.RefAttributes<SVGSVGElement>>;\nexport type IconName = ${iconNameType};\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "defaultAttributes.js"),
-    `const defaultAttributes = { xmlns: "http://www.w3.org/2000/svg", width: 24, height: 24, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" };\nexport default defaultAttributes;\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "context.js"),
-    `"use client";\nimport React from "react";\n\nconst VadivamContext = React.createContext({});\nexport function VadivamProvider({ children, size, color, strokeWidth, absoluteStrokeWidth, className }) {\n  const value = React.useMemo(() => ({ size, color, strokeWidth, absoluteStrokeWidth, className }), [size, color, strokeWidth, absoluteStrokeWidth, className]);\n  return React.createElement(VadivamContext.Provider, { value }, children);\n}\nexport function useVadivamContext() {\n  return React.useContext(VadivamContext);\n}\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "context.d.ts"),
-    `import type * as React from "react";\nimport type { VadivamProps } from "./types.js";\nexport interface VadivamProviderProps extends Pick<VadivamProps, "size" | "color" | "strokeWidth" | "absoluteStrokeWidth" | "className"> { children: React.ReactNode; }\nexport declare function VadivamProvider(props: VadivamProviderProps): React.ReactElement;\nexport declare function useVadivamContext(): Partial<VadivamProps>;\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "runtimePolicy.js"),
-    runtimePolicySource,
-  );
-  await writeFile(
-    path.join(reactDist, "runtimePolicy.d.ts"),
-    `import type { IconNode } from "./types.js";\nexport declare function sanitizeIconNode(iconNode: unknown): IconNode;\nexport declare function sanitizePaint(value: unknown, fallback?: string): string | number;\nexport declare function sanitizeRootAttributes(attrs: unknown, allowEventFunctions?: boolean): Record<string, unknown>;\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "IconBase.js"),
-    `"use client";\nimport React, { forwardRef } from "react";\nimport defaultAttributes from "./defaultAttributes.js";\nimport { useVadivamContext } from "./context.js";\n\nfunction mergeClasses(...values) {\n  return values.flatMap((value) => typeof value === "string" ? value.split(/\\s+/) : []).filter((value, index, all) => value && all.indexOf(value) === index).join(" ");\n}\nfunction hasA11yProp(props) {\n  return Object.keys(props).some((name) => name.startsWith("aria-") || name === "role" || name === "title");\n}\nfunction toPaint(value) {\n  return typeof value === "string" || typeof value === "number" ? value : "currentColor";\n}\nfunction definedAttributes(props) {\n  const attrs = {};\n  for (const name of Object.keys(props)) if (props[name] != null) attrs[name] = props[name];\n  return attrs;\n}\nexport function renderNode([tag, attrs]) {\n  return React.createElement(tag, attrs);\n}\n\n// Shared by IconBase and the sanitizing Icon, so both render the same markup.\nexport function useIconSvg({ color, size, strokeWidth, absoluteStrokeWidth, className = "", title, children }, ref, rootAttributes, nodes, paint = toPaint) {\n  const context = useVadivamContext();\n  const resolvedSize = size ?? context.size ?? 24;\n  const resolvedStrokeWidth = strokeWidth ?? context.strokeWidth ?? 2;\n  const numericSize = Number(resolvedSize);\n  const numericStrokeWidth = Number(resolvedStrokeWidth);\n  const useAbsoluteStrokeWidth = absoluteStrokeWidth ?? context.absoluteStrokeWidth ?? false;\n  const calculatedStrokeWidth = useAbsoluteStrokeWidth && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStrokeWidth) ? numericStrokeWidth * 24 / numericSize : resolvedStrokeWidth;\n  const labelled = Boolean(title) || hasA11yProp(rootAttributes);\n  return React.createElement(\n    "svg",\n    {\n      ref,\n      ...defaultAttributes,\n      width: resolvedSize,\n      height: resolvedSize,\n      stroke: paint(color ?? context.color),\n      strokeWidth: calculatedStrokeWidth,\n      className: mergeClasses("vadivam", context.className, className),\n      ...(!labelled ? { "aria-hidden": "true" } : {}),\n      ...(title ? { role: "img" } : {}),\n      ...rootAttributes\n    },\n    title ? React.createElement("title", { key: "title" }, title) : null,\n    ...nodes,\n    children\n  );\n}\n\n// Built-in icons only. Their nodes are checked against the runtime policy when\n// the package is generated, so they skip the sanitizer and their elements are\n// created once per icon.\nconst renderedNodes = new WeakMap();\nexport const IconBase = forwardRef(({ color, size, strokeWidth, absoluteStrokeWidth, className, title, children, iconNode, ...rest }, ref) => {\n  let nodes = renderedNodes.get(iconNode);\n  if (!nodes) renderedNodes.set(iconNode, nodes = iconNode.map(renderNode));\n  return useIconSvg({ color, size, strokeWidth, absoluteStrokeWidth, className, title, children }, ref, definedAttributes(rest), nodes);\n});\nIconBase.displayName = "IconBase";\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "Icon.js"),
-    `"use client";\nimport { forwardRef } from "react";\nimport { renderNode, useIconSvg } from "./IconBase.js";\nimport { sanitizeIconNode, sanitizePaint, sanitizeRootAttributes } from "./runtimePolicy.js";\n\n// Renders caller-supplied icon nodes, so nodes, root props and paint are sanitized on every render.\nexport const Icon = forwardRef(({ color, size, strokeWidth, absoluteStrokeWidth, className, title, children, iconNode, ...rest }, ref) =>\n  useIconSvg({ color, size, strokeWidth, absoluteStrokeWidth, className, title, children }, ref, sanitizeRootAttributes(rest, true), sanitizeIconNode(iconNode).map(renderNode), sanitizePaint)\n);\nIcon.displayName = "Icon";\nexport default Icon;\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "Icon.d.ts"),
-    `import type * as React from "react";\nimport type { IconNode, VadivamProps } from "./types.js";\nexport interface IconProps extends VadivamProps { iconNode: IconNode; }\nexport declare const Icon: React.ForwardRefExoticComponent<Omit<IconProps, "ref"> & React.RefAttributes<SVGSVGElement>>;\nexport default Icon;\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "createIcon.js"),
-    `import Icon from "./Icon.js";\nimport { wrapIcon } from "./defineIcon.js";\n\nfunction toKebabCase(value) {\n  return value.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/[ _]+/g, "-").toLowerCase();\n}\nfunction toPascalCase(value) {\n  return value.split(/[-_ ]+/).filter(Boolean).map((part) => part[0].toUpperCase() + part.slice(1)).join("");\n}\nexport function createIcon(iconName, iconNode) {\n  return wrapIcon(Icon, \`vadivam-\${toKebabCase(iconName)}\`, toPascalCase(iconName), iconNode);\n}\nexport const createVadivamIcon = createIcon;\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "createIcon.d.ts"),
-    `import type { IconNode, VadivamIcon } from "./types.js";\nexport declare function createIcon(iconName: string, iconNode: IconNode): VadivamIcon;\nexport { createIcon as createVadivamIcon };\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "defineIcon.js"),
-    `import React, { forwardRef } from "react";\nimport { IconBase } from "./IconBase.js";\n\nexport function wrapIcon(Base, iconClass, displayName, iconNode) {\n  const Component = forwardRef(({ className, ...props }, ref) => React.createElement(Base, { ...props, ref, iconNode, className: [iconClass, className].filter(Boolean).join(" ") }));\n  Component.displayName = displayName;\n  return Component;\n}\nexport function defineIcon(name, displayName, iconNode) {\n  return wrapIcon(IconBase, \`vadivam-\${name}\`, displayName, iconNode);\n}\n`,
-  );
-
-  for (const icon of icons) {
-    await writeFile(
-      path.join(reactDist, "icons", `${icon.name}.js`),
-      `import { defineIcon } from "../defineIcon.js";\nexport const __iconNode = ${JSON.stringify(icon.iconNode)};\nconst ${icon.componentName} = /* @__PURE__ */ defineIcon("${icon.name}", "${icon.componentName}", __iconNode);\nexport default ${icon.componentName};\n`,
-    );
-    await writeFile(
-      path.join(reactDist, "icons", `${icon.name}.d.ts`),
-      `import type { IconNode, VadivamIcon } from "../types.js";\nexport declare const __iconNode: IconNode;\n/** @component\n * @name ${icon.componentName}\n * @description Vadivam SVG icon component.\n * @see https://vadivam.praveenjuge.com/icons/${icon.name}\n */\ndeclare const ${icon.componentName}: VadivamIcon;\nexport default ${icon.componentName};\n`,
-    );
-  }
-
-  const namedExports = icons
-    .map(
-      (icon) =>
-        `export { default as ${icon.componentName}, default as ${icon.componentName}Icon, default as Vadivam${icon.componentName} } from "./icons/${icon.name}.js";`,
-    )
-    .join("\n");
-  const dynamicEntries = icons
-    .map((icon) => `  "${icon.name}": () => import("./icons/${icon.name}.js")`)
-    .join(",\n");
-  const dynamicTypes = icons
-    .map(
-      (icon) => `  readonly "${icon.name}": () => Promise<DynamicIconModule>;`,
-    )
-    .join("\n");
-  const reactImports = icons
-    .map(
-      (icon) => `import ${icon.componentName} from "./icons/${icon.name}.js";`,
-    )
-    .join("\n");
-  const reactIconEntries = icons
-    .map((icon) => `  ${icon.componentName}`)
-    .join(",\n");
-  const reactIconTypes = icons
-    .map((icon) => `  readonly ${icon.componentName}: VadivamIcon;`)
-    .join("\n");
-  await writeFile(
-    path.join(reactDist, "icons.js"),
-    `${reactImports}\n\nexport const icons = {\n${reactIconEntries}\n};\nexport default icons;\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "icons.d.ts"),
-    `import type { VadivamIcon } from "./types.js";\nexport declare const icons: {\n${reactIconTypes}\n};\nexport default icons;\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "index.js"),
-    `${namedExports}\nexport { Icon } from "./Icon.js";\nexport { createIcon, createVadivamIcon } from "./createIcon.js";\nexport { icons } from "./icons.js";\nexport { VadivamProvider, useVadivamContext } from "./context.js";\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "index.d.ts"),
-    `${namedExports}\nexport { Icon } from "./Icon.js";\nexport { createIcon, createVadivamIcon } from "./createIcon.js";\nexport { icons } from "./icons.js";\nexport { VadivamProvider, useVadivamContext } from "./context.js";\nexport type { IconName, IconNode, SVGAttributes, SVGElementType, VadivamIcon, VadivamProps } from "./types.js";\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "dynamicIconImports.js"),
-    `const dynamicIconImports = {\n${dynamicEntries}\n};\nexport { dynamicIconImports };\nexport default dynamicIconImports;\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "dynamicIconImports.d.ts"),
-    `import type { IconNode, VadivamIcon } from "./types.js";\nexport interface DynamicIconModule { default: VadivamIcon; __iconNode: IconNode; }\ndeclare const dynamicIconImports: {\n${dynamicTypes}\n};\nexport { dynamicIconImports };\nexport default dynamicIconImports;\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "dynamic.js"),
-    `"use client";\nimport React, { forwardRef } from "react";\nimport dynamicIconImports from "./dynamicIconImports.js";\nimport { sanitizePaint, sanitizeRootAttributes } from "./runtimePolicy.js";\nimport { useVadivamContext } from "./context.js";\n\nexport const iconNames = Object.keys(dynamicIconImports);\n// Names and props here often come from runtime data, so this entry keeps the\n// root-prop and paint sanitizer that statically imported icons skip. Paint\n// includes a color inherited from VadivamProvider.\nexport const DynamicIcon = forwardRef(({ name, fallback = null, color: ownColor, size, strokeWidth, absoluteStrokeWidth, className, title, children, ...rest }, ref) => {\n  const importer = Object.prototype.hasOwnProperty.call(dynamicIconImports, name) ? dynamicIconImports[name] : undefined;\n  const Component = React.useMemo(() => importer ? React.lazy(importer) : null, [importer]);\n  const context = useVadivamContext();\n  const color = ownColor ?? context.color;\n  if (!Component) return fallback;\n  const props = { ...sanitizeRootAttributes(rest, true), color: color == null ? color : sanitizePaint(color), size, strokeWidth, absoluteStrokeWidth, className, title, ref };\n  return React.createElement(React.Suspense, { fallback }, React.createElement(Component, props, children));\n});\nDynamicIcon.displayName = "DynamicIcon";\nexport { dynamicIconImports };\nexport default DynamicIcon;\n`,
-  );
-  await writeFile(
-    path.join(reactDist, "dynamic.d.ts"),
-    `import type * as React from "react";\nimport type { IconName, VadivamProps } from "./types.js";\nimport dynamicIconImports from "./dynamicIconImports.js";\nexport interface DynamicIconProps extends Omit<VadivamProps, "ref"> {\n  name: IconName;\n  fallback?: React.ReactNode;\n}\nexport declare const iconNames: IconName[];\nexport declare const DynamicIcon: React.ForwardRefExoticComponent<DynamicIconProps & React.RefAttributes<SVGSVGElement>>;\nexport { dynamicIconImports };\nexport type { DynamicIconModule } from "./dynamicIconImports.js";\nexport type { IconName } from "./types.js";\nexport default DynamicIcon;\n`,
-  );
-}
-
-async function buildWebAssets(icons) {
+async function buildWebAssets(icons, solidIcons = []) {
   await rm(webIconsDir, { recursive: true, force: true });
+  await rm(webSolidIconsDir, { recursive: true, force: true });
   await mkdir(webIconsDir, { recursive: true });
+  await mkdir(webSolidIconsDir, { recursive: true });
   for (const icon of icons) {
     await copyFile(
       path.join(iconsDir, icon.fileName),
       path.join(webIconsDir, icon.fileName),
     );
   }
+  for (const icon of solidIcons) {
+    await copyFile(
+      path.join(solidIconsDir, icon.fileName),
+      path.join(webSolidIconsDir, icon.fileName),
+    );
+  }
+  // The homepage's Outline/Solid toggle fetches the solid path data on first
+  // use, so the solid set never weighs down the page.
+  await writeFile(
+    path.join(webSolidIconsDir, "index.json"),
+    JSON.stringify(Object.fromEntries(solidIcons.map((icon) => [icon.name, icon.iconNode.map(([, attrs]) => attrs.d)]))),
+  );
   // The homepage fetches this lazily so tags never weigh down its HTML.
   await writeFile(
     path.join(webIconsDir, "index.json"),
@@ -1079,24 +1136,26 @@ export async function buildOg() {
 
 export async function build() {
   const icons = await readIcons();
-  await assertIconNodesPassRuntimePolicy(icons);
+  const solidIcons = await readIcons(styles.solid);
+  validateStyleTwins({ outline: icons.map((icon) => icon.name), solid: solidIcons.map((icon) => icon.name) });
+  await assertIconNodesPassRuntimePolicy([...icons, ...solidIcons]);
   await synchronizeDocCounts(icons.map((icon) => icon.name));
-  await buildRawPackage(icons);
-  await buildReactPackage(icons);
-  await buildReactNativePackage(icons, reactNativeDist);
-  await buildVuePackage(icons, vueDist);
-  await buildSveltePackage(icons, svelteDist);
-  await buildSolidPackage(icons, solidDist);
-  await buildAngularPackage(icons, angularPackage, root);
-  await buildAstroPackage(icons, astroDist);
-  await buildPreactPackage(icons, preactDist);
-  await buildLitPackage(icons, litDist);
-  await buildQwikPackage(icons, qwikDist);
-  await buildFlutterPackage(icons, flutterPackage);
-  await buildComposePackage(icons, composePackage);
-  await buildMcpPackage(icons, iconCategories, { packageDirectory: mcpPackage, root });
-  await buildWebAssets(icons);
-  await buildShadcnRegistry(icons, shadcnRegistryDir);
+  await buildRawPackage(icons, solidIcons);
+  await buildReactPackage(icons, reactDist, solidIcons);
+  await buildReactNativePackage(icons, reactNativeDist, solidIcons);
+  await buildVuePackage(icons, vueDist, solidIcons);
+  await buildSveltePackage(icons, svelteDist, solidIcons);
+  await buildSolidPackage(icons, solidDist, solidIcons);
+  await buildAngularPackage(icons, angularPackage, root, solidIcons);
+  await buildAstroPackage(icons, astroDist, solidIcons);
+  await buildPreactPackage(icons, preactDist, solidIcons);
+  await buildLitPackage(icons, litDist, solidIcons);
+  await buildQwikPackage(icons, qwikDist, solidIcons);
+  await buildFlutterPackage(icons, flutterPackage, solidIcons);
+  await buildComposePackage(icons, composePackage, solidIcons);
+  await buildMcpPackage(icons, iconCategories, { packageDirectory: mcpPackage, root, solidIcons });
+  await buildWebAssets(icons, solidIcons);
+  await buildShadcnRegistry(icons, shadcnRegistryDir, { solidIcons });
   console.log(`Built packages and web assets for ${icons.length} icons.`);
 }
 

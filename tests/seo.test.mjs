@@ -311,10 +311,10 @@ describe("website SEO", () => {
       "utf8",
     );
     expect(readme).toContain(
-      `library of ${icons.length} pixel-perfect 24px outline SVG icons`,
+      `library of ${icons.length} pixel-perfect 24px SVG icons, each in an outline and a solid style`,
     );
     expect(docsIndex).toContain(
-      `set of ${icons.length} pixel-perfect 24px outline icons`,
+      `set of ${icons.length} pixel-perfect 24px icons, each in an outline and a [solid](/docs/design-guide#solid) style`,
     );
     expect(wrangler).toContain('"html_handling": "drop-trailing-slash"');
   });

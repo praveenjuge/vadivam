@@ -166,6 +166,25 @@ Compare a new icon with `circle` and `square` at 24px. Its ink should look about
 - Put modifiers, such as a plus or a slash, in the same place and at the same size across a family.
 - Keep icons simple. The median icon is 1 `<path>` with 3 subpaths and 13 segments. 1,348 icons use 1 path, 531 use 2, 23 use 3, and 1 uses 4. The most complex has 14 subpaths.
 
+## Solid
+
+Every icon also has a solid twin in `icons-solid/`, under the same name. Solid icons mark an active or selected state next to the outline icon, and also work as a set on their own, so a solid icon covers exactly the outline's footprint and follows these rules.
+
+- **Checked.** Every outline icon has a solid twin with the same file name, and every solid icon has an outline twin.
+- **Checked.** The root is `fill="currentColor"` and `fill-rule="evenodd"`, with no stroke attributes. Cut-outs are holes in the filled shape, so the even-odd rule draws them however their paths wind.
+- **Checked.** A solid icon is a single `<path>`. Flutter and Compose fill all of an icon's shapes as one even-odd path, so two overlapping shapes would leave a hole where they meet.
+- **Fill to the ink edge.** A closed shape fills out to where the outline's 2px stroke ends, 1px outside its centerline. The solid `circle` is r 11, and the solid `square` is 22×22 at (1, 1) with r 7. Swapping an outline icon for its solid twin never moves its edge.
+- **Keep radii concentric.** An outer corner's radius is the outline's radius plus 1, and a cut-out's is the outline's minus 1, smoothed at 60% like every other corner.
+- **Cut details out at 2px.** A line inside a filled shape, such as the check in `circle-check` or the text in `file-text`, becomes a 2px gap through the fill, the same width as the outline's stroke.
+- **Knock out small closed parts.** A closed shape inside a filled one, such as the pupil in `eye`, the hole in `settings`, or the head in `circle-user`, is cut out whole. A shape inside that hole is filled again.
+- **Leave 2px of fill.** Keep at least 2px of fill between a cut-out and the shape's edge, and never less than 1.5px, as with the gaps between outline strokes.
+- **Draw loose lines at 2.5px.** A line outside any filled shape, such as a modifier's plus or a whole icon like `x` or `chevron-right`, is a 2.5px line on the outline's centerline, so it holds its own next to a filled shape. Typographic icons, such as letters, digits, currency signs, and zodiac signs, are drawn this way throughout.
+- **Cut a 2px gap around what stands apart.** Where an outline keeps a modifier, a badge, or a second object apart from the main shape, the solid icon cuts a 2px gap into the fill around it. Where two objects overlap, the front one is whole and the one behind is cut back by 2px.
+- **Slash through the base icon.** An `-off` icon is its base icon's solid with a 2.5px slash and a 2px gap on both sides of it.
+- **Checked.** The shape stays inside 0.75–23.25. A filled shape stops at 1–23 like an outline's ink, and a 2.5px line on a 2px centerline reaches 0.25px further.
+
+Solid icons are drafted from their outline twins with `bun run icons:draft-solid`, which applies these rules with Skia's path operations, then refined by hand in the Solid page of the Figma source file. `metadata/solid-hints.json` tells the draft which icons are typographic and which frames hold letters. See [How icons are built](/docs/how-icons-are-built#solid-icons).
+
 ## Naming
 
 - **Checked.** Every file name is a current canonical Lucide name from the pinned release, recorded as `lucideVersion` in `metadata/lucide.json` (currently 1.64.0). Deprecated aliases are rejected: use `circle-alert`, not `alert-circle`.

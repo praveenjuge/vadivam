@@ -29,6 +29,22 @@ import { Activity } from "vadivam-astro";
 
 Components accept Astro SVG HTML attributes plus `size`, `color`, `strokeWidth`, `stroke-width`, `absoluteStrokeWidth`, and `title`.
 
+## Solid icons
+
+Every icon has a [solid](/docs/design-guide#solid) twin with the same name in `vadivam-astro/solid`:
+
+```astro
+---
+import { House } from "vadivam-astro";
+import { House as HouseSolid } from "vadivam-astro/solid";
+const active = Astro.url.pathname === "/";
+---
+
+{active ? <HouseSolid size={20} title="Home" /> : <House size={20} title="Home" />}
+```
+
+Solid icons fill their shapes with `color` and have no stroke props. `vadivam-astro/solid/icons/house` and `vadivam-astro/solid/dynamic` work like their outline counterparts.
+
 ## Per-icon imports
 
 ```astro

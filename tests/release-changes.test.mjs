@@ -6,6 +6,8 @@ describe("automatic release change detection", () => {
     "apps/docs/pages/index.astro",
     "apps/docs/public/frameworks/react-light.svg",
     "scripts/complete-sitemap.mjs",
+    "scripts/solid-draft.mjs",
+    "metadata/solid-hints.json",
     "tests/seo.test.mjs",
     ".github/workflows/icons-optimize.yml",
     "README.md",
@@ -17,6 +19,7 @@ describe("automatic release change detection", () => {
 
   test.each([
     "icons/activity.svg",
+    "icons-solid/activity.svg",
     "packages/vadivam/package.json",
     "packages/vadivam-react/README.md",
     "apps/figma-plugin/src/code.ts",

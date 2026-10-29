@@ -22,6 +22,9 @@ import {
   Icon as VueIcon,
   VadivamProvider as VueProvider,
 } from "../../packages/vadivam-vue/dist/index.js";
+import { Activity as SolidPreactActivity } from "../../packages/vadivam-preact/dist/solid/index.js";
+import { Activity as SolidSolidActivity } from "../../packages/vadivam-solid/dist/solid/index.js";
+import { Activity as SolidVueActivity } from "../../packages/vadivam-vue/dist/solid/index.js";
 
 const rootRequire = createRequire(import.meta.url);
 const preactRequire = createRequire(rootRequire.resolve("preact"));
@@ -187,6 +190,32 @@ describe("framework-native server rendering", () => {
       innerHTML: "<script>alert(1)</script>",
       href: "javascript:alert(1)",
     })));
+  });
+
+  test("solid icons paint a fill from the shared provider and drop stroke props", async () => {
+    const markups = [
+      await renderVue(createSSRApp({
+        render: () => vueH(VueProvider, { size: 48, color: "navy", strokeWidth: 2 }, () =>
+          vueH(SolidVueActivity, { absoluteStrokeWidth: true, title: "Activity chart" })),
+      })),
+      renderPreact(preactH(PreactProvider, { size: 48, color: "navy", strokeWidth: 2 },
+        preactH(SolidPreactActivity, { absoluteStrokeWidth: true, title: "Activity chart" }))),
+      renderSolid(() => createSolidComponent(SolidProvider, {
+        size: 48,
+        color: "navy",
+        strokeWidth: 2,
+        get children() {
+          return createSolidComponent(SolidSolidActivity, { absoluteStrokeWidth: true, title: "Activity chart" });
+        },
+      })),
+    ];
+    for (const markup of markups) {
+      expect(markup).toContain('width="48"');
+      expect(markup).toContain('fill="navy"');
+      expect(markup).toContain('fill-rule="evenodd"');
+      expect(markup).not.toContain("stroke");
+      expect(markup).toContain("Activity chart</title>");
+    }
   });
 });
 

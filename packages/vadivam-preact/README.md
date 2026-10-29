@@ -1,6 +1,6 @@
 # vadivam-preact
 
-Tree-shakeable 24px outline SVG icons for Preact.
+Tree-shakeable 24px outline and solid SVG icons for Preact.
 
 [Browse icons](https://vadivam.praveenjuge.com) · [Preact docs](https://vadivam.praveenjuge.com/docs/preact) · [Source](https://github.com/praveenjuge/vadivam/tree/main/packages/vadivam-preact) · [GitHub](https://github.com/praveenjuge/vadivam)
 
@@ -25,6 +25,12 @@ import { Activity, VadivamProvider } from "vadivam-preact";
 - Native SVG attributes plus size, color, stroke width, and accessible titles
 - Tree-shakeable named and per-icon imports
 - Provider and typed dynamic icon APIs
+
+Every icon also has a solid twin with the same name in `vadivam-preact/solid`. Solid icons fill their shapes with `color` and take no stroke props:
+
+```js
+import { Activity } from "vadivam-preact/solid";
+```
 
 Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Qwik](https://www.npmjs.com/package/vadivam-qwik) · [Lit](https://www.npmjs.com/package/vadivam-lit) · [Flutter](https://pub.dev/packages/vadivam) · [Jetpack Compose](https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
 

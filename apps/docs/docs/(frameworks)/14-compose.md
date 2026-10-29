@@ -58,15 +58,34 @@ val bold = remember { VadivamIcons.Activity.withStrokeWidth(2f, absoluteSize = 4
 Icon(bold, contentDescription = null, modifier = Modifier.size(48.dp))
 ```
 
+## Solid icons
+
+Every icon has a [solid](/docs/design-guide#solid) twin with the same name on `VadivamSolidIcons`, filled instead of stroked. Import solid icons from `com.praveenjuge.vadivam.icons.solid`:
+
+```kotlin
+import com.praveenjuge.vadivam.VadivamSolidIcons
+import com.praveenjuge.vadivam.icons.solid.House
+
+Icon(VadivamSolidIcons.House, contentDescription = null)
+```
+
+`Icon` tints the fill. Solid icons have no stroke, so `withStrokeWidth` leaves them unchanged. `byName` and `names` from `com.praveenjuge.vadivam.icons.solid` work on `VadivamSolidIcons` too. To import an outline and a solid icon with the same name in one file, alias one of them, such as `import com.praveenjuge.vadivam.icons.solid.House as SolidHouse`.
+
 ## Android Views
 
-Every icon is also a vector drawable named `vadivam_` plus the icon name with underscores, tinted with `colorControlNormal` like Material icons:
+Every icon is also a vector drawable named `vadivam_` plus the icon name with underscores, and its solid twin `vadivam_solid_` plus the name, tinted with `colorControlNormal` like Material icons:
 
 ```xml
 <ImageView
     android:layout_width="24dp"
     android:layout_height="24dp"
     android:src="@drawable/vadivam_arrow_right"
+    android:contentDescription="@null" />
+
+<ImageView
+    android:layout_width="24dp"
+    android:layout_height="24dp"
+    android:src="@drawable/vadivam_solid_house"
     android:contentDescription="@null" />
 ```
 

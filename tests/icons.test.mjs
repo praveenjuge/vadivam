@@ -4,10 +4,12 @@ import {
   normalizeSvg,
   readIcons,
   shuffleUnique,
+  styles,
   updateCategoryTableMarkers,
   updateIconCountMarkers,
   validateIconMetadata,
   validateLucideIconNames,
+  validateStyleTwins,
   validateSvgContent,
 } from "../scripts/icons.mjs";
 import {
@@ -26,6 +28,7 @@ import {
 } from "../scripts/corner-smoothing.mjs";
 import { cleanPaths } from "../scripts/path-cleanup.mjs";
 import { assertIconNodesPassRuntimePolicy } from "../scripts/generators/runtime-policy.mjs";
+import { area, loadPathKit, solidPath } from "../scripts/solid-draft.mjs";
 
 const validSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></svg>`;
 
@@ -265,6 +268,96 @@ describe("icon validation", () => {
     expect(() => updateCategoryTableMarkers("No markers.", ["activity"])).toThrow(
       "missing vadivam categories markers",
     );
+  });
+});
+
+const validSolidSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M1 12a11 11 0 1 0 22 0 11 11 0 1 0-22 0M8 12a4 4 0 1 0 8 0 4 4 0 1 0-8 0"/></svg>`;
+
+describe("solid icon validation", () => {
+  test("accepts a valid solid SVG", () => {
+    expect(() => validateSvgContent(validSolidSvg, "solid-fixture.svg", styles.solid)).not.toThrow();
+  });
+
+  test("requires the solid root and rejects the outline one", () => {
+    expect(() => validateSvgContent(validSvg, "outline-as-solid.svg", styles.solid)).toThrow(
+      'expected fill="currentColor"',
+    );
+    expect(() => validateSvgContent(validSolidSvg, "solid-as-outline.svg")).toThrow('expected fill="none"');
+  });
+
+  test("rejects stroked artwork before normalization", () => {
+    const stroked = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12h16" stroke="black" stroke-width="2"/></svg>`;
+    expect(() => normalizeSvg(stroked, "stroked.svg", styles.solid)).toThrow("stroked artwork cannot be normalized");
+    const rootStroke = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" xmlns="http://www.w3.org/2000/svg"><path d="M4 12h16"/></svg>`;
+    expect(() => normalizeSvg(rootStroke, "root-stroke.svg", styles.solid)).toThrow("stroked artwork cannot be normalized");
+  });
+
+  test("keeps a nonzero fill's area under the evenodd root", async () => {
+    const PK = await loadPathKit();
+    const nested = "M2 2h20v20H2z M8 8h8v8H8z";
+    const filledArea = (svg) => area(solidPath(PK, normalizeSvg(svg, "nested.svg", styles.solid)));
+    const nonzero = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="${nested}" fill="black"/></svg>`;
+    expect(filledArea(nonzero)).toBeCloseTo(400, 1);
+    const evenOdd = nonzero.replace("<path ", '<path fill-rule="evenodd" ');
+    expect(filledArea(evenOdd)).toBeCloseTo(400 - 64, 1);
+  });
+
+  test("drops unpainted shapes instead of filling them", async () => {
+    const PK = await loadPathKit();
+    const filledArea = (svg) => area(solidPath(PK, normalizeSvg(svg, "unpainted.svg", styles.solid)));
+    const square = '<path d="M8 8h8v8H8z" fill="black"/>';
+    const hidden = [
+      '<path d="M2 2h20v20H2z" fill="none"/>',
+      '<path d="M2 2h20v20H2z" fill="black" fill-opacity="0"/>',
+      '<path id="frame" d="M2 2h20v20H2z" fill="none"/>',
+      '<g fill="none"><path d="M2 2h20v20H2z"/></g>',
+    ];
+    for (const shape of hidden) {
+      const svg = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">${shape}${square}</svg>`;
+      expect(filledArea(svg)).toBeCloseTo(64, 1);
+    }
+    const unpainted = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">${hidden[0]}</svg>`;
+    expect(() => normalizeSvg(unpainted, "unpainted.svg", styles.solid)).toThrow("unpainted.svg:");
+  });
+
+  test("normalizes a Figma export to the solid root", () => {
+    const exported = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M2 12a10 10 0 1 0 20 0 10 10 0 1 0-20 0" fill="black"/></svg>`;
+    const normalized = normalizeSvg(exported, "export.svg", styles.solid);
+    expect(normalized.split("\n")[0]).toBe(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd">',
+    );
+    expect(normalized).not.toContain('fill="black"');
+    expect(normalizeSvg(normalized, "export.svg", styles.solid)).toBe(normalized);
+  });
+
+  test("keeps the shape inside the 0.75px padding", () => {
+    const edge = validSolidSvg.replace(/d="[^"]*"/, 'd="M0.75 0.75h22.5v22.5H0.75z"');
+    expect(() => validateSvgContent(edge, "edge.svg", styles.solid)).not.toThrow();
+    const past = validSolidSvg.replace(/d="[^"]*"/, 'd="M0.5 0.75h22.75v22.5H0.5z"');
+    expect(() => validateSvgContent(past, "past.svg", styles.solid)).toThrow("shape reaches into the 0.75px padding");
+  });
+
+  test("requires a single path, since native packages fill every shape as one even-odd path", () => {
+    const twoPaths = validSolidSvg.replace(/<path [^>]*\/>/, '<path d="M2 2h12v12H2z"/><path d="M10 10h12v12H10z"/>');
+    expect(() => validateSvgContent(twoPaths, "two-paths.svg", styles.solid)).toThrow("must be a single <path>");
+  });
+
+  test("allows the compound paths that cut-outs need", () => {
+    const cutOuts = Array.from({ length: 12 }, (_value, index) => `M${4 + index} 4h0.5v1h-0.5z`).join("");
+    const svg = validSolidSvg.replace(/d="[^"]*"/, `d="M2 2h20v20H2z${cutOuts}"`);
+    expect(() => validateSvgContent(svg, "cut-outs.svg", styles.solid)).not.toThrow();
+  });
+
+  test("requires every icon in every style", () => {
+    expect(() => validateStyleTwins({ outline: ["a", "b"], solid: ["a", "b"] })).not.toThrow();
+    expect(() => validateStyleTwins({ outline: ["a", "b"], solid: ["a"] })).toThrow("solid is missing 1 icon(s) drawn in outline: b");
+    expect(() => validateStyleTwins({ outline: ["a"], solid: ["a", "c"] })).toThrow("solid has 1 icon(s) with no outline twin: c");
+  });
+
+  test("validates every solid icon, one for each outline icon", async () => {
+    const [outline, solid] = await Promise.all([readIcons(), readIcons(styles.solid)]);
+    expect(solid.map((icon) => icon.name)).toEqual(outline.map((icon) => icon.name));
+    for (const icon of solid) expect(icon.svgPath).toBe(`icons-solid/${icon.fileName}`);
   });
 });
 

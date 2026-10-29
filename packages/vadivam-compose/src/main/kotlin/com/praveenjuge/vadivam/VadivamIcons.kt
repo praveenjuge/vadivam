@@ -1,6 +1,7 @@
 package com.praveenjuge.vadivam
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -21,6 +22,15 @@ import androidx.compose.ui.unit.dp
  */
 public object VadivamIcons
 
+/**
+ * The solid twin of every Vadivam icon, as an extension property such as
+ * `VadivamSolidIcons.Activity` from `com.praveenjuge.vadivam.icons.solid`.
+ *
+ * Solid icons are 24 by 24 [ImageVector]s filled black by the even-odd rule,
+ * with no stroke. `Icon` tints the fill like any other vector.
+ */
+public object VadivamSolidIcons
+
 /** Builds one icon. Used by the generated `VadivamIcons` properties. */
 public fun vadivamIcon(name: String, pathBuilder: PathBuilder.() -> Unit): ImageVector =
     ImageVector.Builder(
@@ -34,6 +44,20 @@ public fun vadivamIcon(name: String, pathBuilder: PathBuilder.() -> Unit): Image
         strokeLineWidth = 2f,
         strokeLineCap = StrokeCap.Round,
         strokeLineJoin = StrokeJoin.Round,
+        pathBuilder = pathBuilder,
+    ).build()
+
+/** Builds one solid icon. Used by the generated `VadivamSolidIcons` properties. */
+public fun vadivamSolidIcon(name: String, pathBuilder: PathBuilder.() -> Unit): ImageVector =
+    ImageVector.Builder(
+        name = "Vadivam.Solid.$name",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f,
+    ).path(
+        fill = SolidColor(Color.Black),
+        pathFillType = PathFillType.EvenOdd,
         pathBuilder = pathBuilder,
     ).build()
 
