@@ -4,7 +4,7 @@ Pixel-perfect 24px outline and solid icons for Flutter, drawn as vectors.
 
 [Browse icons](https://vadivam.praveenjuge.com) · [Flutter docs](https://vadivam.praveenjuge.com/docs/flutter) · [Source](https://github.com/praveenjuge/vadivam/tree/main/packages/vadivam-flutter) · [GitHub](https://github.com/praveenjuge/vadivam)
 
-![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/docs/public/preview.png?v=0.0.76)
+![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/docs/public/preview.png?v=0.0.77)
 
 ```sh
 flutter pub add vadivam
