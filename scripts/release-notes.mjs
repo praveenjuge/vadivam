@@ -81,9 +81,13 @@ export function renderReleaseNotes(summary, totalIcons, version) {
 
 // GitHub's generated notes repeat pull request titles verbatim. A title such as
 // "Add <vadivam-icon>" is raw HTML to the docs changelog, where an unclosed
-// element swallows the rest of the page, so tag-like text is escaped.
+// element swallows the rest of the page, so tag-like text is escaped. Code
+// spans already show tags literally, and an entity there would show as "&lt;".
 export function escapeHtmlTags(markdown) {
-  return markdown.replace(/<(?=\/?[A-Za-z])/g, "&lt;");
+  // A code span closes with as many backticks as it opened with.
+  return markdown.replace(/(`+)[^\n]*?\1(?!`)|<(?=\/?[A-Za-z])/g, (match) =>
+    match.startsWith("`") ? match : "&lt;",
+  );
 }
 
 function gitDiff(from, to) {

@@ -60,5 +60,7 @@ describe("release notes", () => {
     expect(escapeHtmlTags("* Add <vadivam-icon> and </b> by @x in https://example.com/1\n<!-- comment -->")).toBe(
       "* Add &lt;vadivam-icon> and &lt;/b> by @x in https://example.com/1\n<!-- comment -->",
     );
+    expect(escapeHtmlTags("* Add `<vadivam-icon>` and <b> by @x")).toBe("* Add `<vadivam-icon>` and &lt;b> by @x");
+    expect(escapeHtmlTags("* Use ``a `<b>` c`` and <i>")).toBe("* Use ``a `<b>` c`` and &lt;i>");
   });
 });
