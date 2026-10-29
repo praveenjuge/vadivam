@@ -383,6 +383,12 @@ export function validateSvgContent(svg, file = "inline.svg", style = styles.outl
   const paths = shapes.filter(([tag]) => tag === "path").map(([, attrs]) => attrs.d);
   const unmoved = paths.filter((d) => d.search(subpathWithoutMove) >= 0).length;
   assert(unmoved === 0, `${file}: ${unmoved} path(s) start a subpath after "z" without a move; WebKit draws it from the wrong point, so add "m0 0" after the "z"`);
+  // Flutter and Compose join every shape into one even-odd path, so two
+  // overlapping solid shapes would cancel out there; draw one path instead.
+  assert(
+    style === styles.outline || (count === 1 && shapes[0][0] === "path"),
+    `${file}: a solid icon must be a single <path>; unite overlapping shapes into one path`,
+  );
   // Path cleanup joins and trims strokes, which only applies to outlines.
   if (style === styles.outline) {
     assertCleanPaths(paths, file);

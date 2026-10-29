@@ -337,6 +337,11 @@ describe("solid icon validation", () => {
     expect(() => validateSvgContent(past, "past.svg", styles.solid)).toThrow("shape reaches into the 0.75px padding");
   });
 
+  test("requires a single path, since native packages fill every shape as one even-odd path", () => {
+    const twoPaths = validSolidSvg.replace(/<path [^>]*\/>/, '<path d="M2 2h12v12H2z"/><path d="M10 10h12v12H10z"/>');
+    expect(() => validateSvgContent(twoPaths, "two-paths.svg", styles.solid)).toThrow("must be a single <path>");
+  });
+
   test("allows the compound paths that cut-outs need", () => {
     const cutOuts = Array.from({ length: 12 }, (_value, index) => `M${4 + index} 4h0.5v1h-0.5z`).join("");
     const svg = validSolidSvg.replace(/d="[^"]*"/, `d="M2 2h20v20H2z${cutOuts}"`);

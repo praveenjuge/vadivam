@@ -172,6 +172,7 @@ Every icon also has a solid twin in `icons-solid/`, under the same name. Solid i
 
 - **Checked.** Every outline icon has a solid twin with the same file name, and every solid icon has an outline twin.
 - **Checked.** The root is `fill="currentColor"` and `fill-rule="evenodd"`, with no stroke attributes. Cut-outs are holes in the filled shape, so the even-odd rule draws them however their paths wind.
+- **Checked.** A solid icon is a single `<path>`. Flutter and Compose fill all of an icon's shapes as one even-odd path, so two overlapping shapes would leave a hole where they meet.
 - **Fill to the ink edge.** A closed shape fills out to where the outline's 2px stroke ends, 1px outside its centerline. The solid `circle` is r 11, and the solid `square` is 22×22 at (1, 1) with r 7. Swapping an outline icon for its solid twin never moves its edge.
 - **Keep radii concentric.** An outer corner's radius is the outline's radius plus 1, and a cut-out's is the outline's minus 1, smoothed at 60% like every other corner.
 - **Cut details out at 2px.** A line inside a filled shape, such as the check in `circle-check` or the text in `file-text`, becomes a 2px gap through the fill, the same width as the outline's stroke.
