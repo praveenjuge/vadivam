@@ -33,9 +33,6 @@ function cssLength(value) {
   if (!length || !lengthPattern.test(length)) return "24px";
   return /^[\\d.]+$/.test(length) ? length + "px" : length;
 }
-function pixels(length) {
-  return length.endsWith("px") ? Number(length.slice(0, -2)) : NaN;
-}
 
 const HTMLElementBase = globalThis.HTMLElement ?? class {};
 
@@ -69,16 +66,19 @@ export class VadivamIconElement extends HTMLElementBase {
     if (request !== this.#request) return;
     const strokeWidth = Number(this.getAttribute("stroke-width") ?? 2);
     const numericStroke = Number.isFinite(strokeWidth) && strokeWidth >= 0 ? strokeWidth : 2;
-    const sizePixels = pixels(size);
     const absolute = this.hasAttribute("absolute-stroke-width") && this.getAttribute("absolute-stroke-width") !== "false";
     const label = this.getAttribute("label");
     const svg = createElement(iconNode ?? [], {
       part: "svg",
       class: name ? \`vadivam vadivam-\${name}\` : "vadivam",
       stroke: sanitizePaint(this.getAttribute("color") ?? undefined),
-      "stroke-width": absolute && sizePixels > 0 ? numericStroke * 24 / sizePixels : numericStroke,
+      "stroke-width": numericStroke,
       ...(label ? { role: "img", "aria-label": label } : { "aria-hidden": "true" }),
     });
+    // The rendered size can come from em or % sizes and outside CSS, so an
+    // absolute stroke is kept in screen pixels by the browser instead of being
+    // computed from the size attribute.
+    if (absolute) for (const shape of svg.children) shape.setAttribute("vector-effect", "non-scaling-stroke");
     if (label) {
       const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
       title.textContent = label;

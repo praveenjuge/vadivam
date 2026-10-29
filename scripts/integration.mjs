@@ -172,6 +172,7 @@ async function verifyBrowser(browser, app, cwd, index) {
           elementWidth: element.getBoundingClientRect().width,
           elementStroke: elementSvg.getAttribute("stroke"),
           elementStrokeWidth: elementSvg.getAttribute("stroke-width"),
+          elementVectorEffect: elementSvg.querySelector("path").getAttribute("vector-effect"),
           elementLabel: elementSvg.getAttribute("aria-label"),
         };
       });
@@ -187,7 +188,8 @@ async function verifyBrowser(browser, app, cwd, index) {
         result.stringGeometry <= 0 ||
         result.elementWidth !== 48 ||
         result.elementStroke !== "navy" ||
-        result.elementStrokeWidth !== "1" ||
+        result.elementStrokeWidth !== "2" ||
+        result.elementVectorEffect !== "non-scaling-stroke" ||
         result.elementLabel !== "Activity chart"
       ) {
         throw new Error(`${app.name}: invalid static assets ${JSON.stringify(result)}`);

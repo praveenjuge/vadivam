@@ -160,14 +160,17 @@ describe("<vadivam-icon>", () => {
     const element = host.firstElementChild;
     const svg = await rendered(element);
     expect(svg.getAttribute("stroke")).toBe("navy");
-    expect(svg.getAttribute("stroke-width")).toBe("1");
+    expect(svg.getAttribute("stroke-width")).toBe("2");
+    expect(svg.querySelector("path").getAttribute("vector-effect")).toBe("non-scaling-stroke");
     expect(svg.getAttribute("role")).toBe("img");
     expect(svg.getAttribute("aria-label")).toBe("Search");
     expect(svg.querySelector("title").textContent).toBe("Search");
     expect(element.shadowRoot.querySelector("style").textContent).toContain("width:48px;height:48px");
 
     element.setAttribute("name", "activity");
+    element.setAttribute("absolute-stroke-width", "false");
     await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(element.shadowRoot.querySelector("svg path").getAttribute("vector-effect")).toBeNull();
     expect(element.shadowRoot.querySelectorAll("svg")).toHaveLength(1);
     expect(element.shadowRoot.querySelector("svg").getAttribute("class")).toBe("vadivam vadivam-activity");
     host.remove();

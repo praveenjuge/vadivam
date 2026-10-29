@@ -6,7 +6,8 @@ import LitDynamicIcon from "../../packages/vadivam-lit/dist/dynamic.js";
 import * as qwik from "../../packages/vadivam-qwik/dist/index.js";
 import { iconNames } from "../../packages/vadivam/dist/manifest.js";
 
-const litMarkup = async (template) => (await collectResult(render(template))).replace(/<!--[^>]*-->|<\?>/g, "");
+// Lit SSR output includes its hydration comments; assertions match around them.
+const litMarkup = async (template) => collectResult(render(template));
 
 const unsafeIconNode = [
   ["script", { href: "https://example.com/x.js" }],
