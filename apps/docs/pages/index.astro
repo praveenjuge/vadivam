@@ -582,11 +582,11 @@ const structuredData = site
       const paintChunk = (chunk: number) => {
         for (const entry of chunkEntries[chunk] ?? []) paint(entry.card, entry);
       };
-      const chunksInView = () =>
-        chunkElements.flatMap((chunkElement, chunk) => {
-          const { top, bottom } = chunkElement.getBoundingClientRect();
-          return bottom > 0 && top < innerHeight ? [chunk] : [];
-        });
+      const inView = (element: Element) => {
+        const { top, bottom } = element.getBoundingClientRect();
+        return bottom > 0 && top < innerHeight;
+      };
+      const chunksInView = () => chunkElements.flatMap((chunkElement, chunk) => (inView(chunkElement) ? [chunk] : []));
       // Chunks within half a screen of the viewport. Ones still in the last
       // style catch up as they scroll near.
       const nearChunks = new Set<number>();
@@ -854,12 +854,13 @@ const structuredData = site
       const setStyle = async (style: "outline" | "solid", { updateUrl = true } = {}) => {
         requestedStyle = style;
         if (style === iconStyle) return;
-        // The chunks in view, the rendered search results, and the drawer's
-        // icon switch together once their paths are in. Chunks just out of
+        // The tiles in view, grid chunks and search results alike, and the
+        // drawer's icon switch together once their paths are in. Tiles out of
         // view follow as theirs load.
-        const shown = matches ? matches.slice(0, renderedCount) : [];
+        const shown = () => (matches ? matches.slice(0, renderedCount) : []);
         if (style === "solid") {
-          const needed = new Set([...chunksInView(), ...shown.map((entry) => entry.chunk)]);
+          const resultsInView = shown().filter((entry) => entry.clone && inView(entry.clone));
+          const needed = new Set([...chunksInView(), ...resultsInView.map((entry) => entry.chunk)]);
           const drawerEntry = selectedEntry();
           if (drawerEntry) needed.add(drawerEntry.chunk);
           try {
@@ -873,7 +874,8 @@ const structuredData = site
         }
         iconStyle = style;
         for (const chunk of new Set([...chunksInView(), ...nearChunks])) paintChunk(chunk);
-        for (const entry of shown) cloneOf(entry);
+        // A search can change while the paths load, so paint what's shown now.
+        for (const entry of shown()) cloneOf(entry);
         styleSwitch.setAttribute("aria-checked", String(style === "solid"));
         afterStyle();
         if (updateUrl) {
@@ -952,7 +954,10 @@ const structuredData = site
         showStrokeSettings(drawer, iconStyle);
         const icon = currentIcon();
         if (!icon) {
-          // Stepping in solid can reach a chunk that hasn't loaded yet.
+          // Stepping in solid can reach a chunk that hasn't loaded yet. Clear
+          // the last icon's code and previews so they never show under this name.
+          drawerCode.replaceChildren();
+          for (const preview of drawer.querySelectorAll("[data-icon-preview]")) preview.replaceChildren();
           const entry = selectedEntry();
           if (entry && iconStyle === "solid") loadSolidChunk(entry.chunk).then(render, () => {});
           return;

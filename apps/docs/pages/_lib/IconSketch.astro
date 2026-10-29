@@ -69,7 +69,8 @@ const gridLines = Array.from({ length: 25 }, (_, index) => index);
   document.addEventListener("astro:page-load", () => {
     const sketch = document.querySelector(".icon-sketch");
     if (!sketch) return;
-    const observer = new IntersectionObserver(([entry]) => sketch.toggleAttribute("data-paused", !entry?.isIntersecting));
+    // Entries arrive oldest first, so the last one is the current state.
+    const observer = new IntersectionObserver((entries) => sketch.toggleAttribute("data-paused", !entries.at(-1)?.isIntersecting));
     observer.observe(sketch);
     document.addEventListener("astro:before-swap", () => observer.disconnect(), { once: true });
   });
