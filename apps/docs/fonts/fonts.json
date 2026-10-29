@@ -1,0 +1,357 @@
+{
+  "eligible": [
+    "U+0080-017F",
+    "U+02BB-02BC",
+    "U+02C6",
+    "U+02DA",
+    "U+02DC",
+    "U+0304",
+    "U+0308",
+    "U+0329",
+    "U+2000-206F",
+    "U+20AC",
+    "U+2122",
+    "U+2191",
+    "U+2193",
+    "U+2212",
+    "U+2215",
+    "U+FEFF",
+    "U+FFFD"
+  ],
+  "families": [
+    {
+      "cssVariable": "--blume-ff-sn-pro",
+      "name": "SN Pro",
+      "faces": [
+        {
+          "src": "sn-pro-italic-core.woff2",
+          "style": "italic",
+          "weights": [
+            400,
+            500,
+            600,
+            700
+          ],
+          "subset": "latin",
+          "unicodeRange": [
+            "U+0020-007E",
+            "U+00A0",
+            "U+00A9",
+            "U+00B0",
+            "U+00B7",
+            "U+00D7",
+            "U+0304",
+            "U+2013-2014",
+            "U+2018-2019",
+            "U+201C-201D",
+            "U+2026"
+          ]
+        },
+        {
+          "src": "sn-pro-italic-extended.woff2",
+          "style": "italic",
+          "weights": [
+            400,
+            500,
+            600,
+            700
+          ],
+          "subset": "extended",
+          "unicodeRange": [
+            "U+00A1-00A8",
+            "U+00AA-00AC",
+            "U+00AE-00AF",
+            "U+00B1-00B6",
+            "U+00B8-00D6",
+            "U+00D8-017E",
+            "U+20AC",
+            "U+2191",
+            "U+2193"
+          ]
+        },
+        {
+          "src": "sn-pro-core.woff2",
+          "style": "normal",
+          "weights": [
+            400,
+            500,
+            600,
+            700
+          ],
+          "subset": "latin",
+          "unicodeRange": [
+            "U+0020-007E",
+            "U+00A0",
+            "U+00A9",
+            "U+00B0",
+            "U+00B7",
+            "U+00D7",
+            "U+0304",
+            "U+2013-2014",
+            "U+2018-2019",
+            "U+201C-201D",
+            "U+2026"
+          ]
+        },
+        {
+          "src": "sn-pro-extended.woff2",
+          "style": "normal",
+          "weights": [
+            400,
+            500,
+            600,
+            700
+          ],
+          "subset": "extended",
+          "unicodeRange": [
+            "U+00A1-00A8",
+            "U+00AA-00AC",
+            "U+00AE-00AF",
+            "U+00B1-00B6",
+            "U+00B8-00D6",
+            "U+00D8-017E",
+            "U+20AC",
+            "U+2191",
+            "U+2193"
+          ]
+        }
+      ],
+      "missing": [
+        "U+00AD",
+        "U+017F",
+        "U+200D"
+      ]
+    },
+    {
+      "cssVariable": "--blume-ff-ibm-plex-mono",
+      "name": "Vadivam Mono",
+      "faces": [
+        {
+          "src": "vadivam-mono-italic-core.woff2",
+          "style": "italic",
+          "weights": [
+            400
+          ],
+          "subset": "latin",
+          "unicodeRange": [
+            "U+0020-007E",
+            "U+00A0",
+            "U+00B0",
+            "U+00B7",
+            "U+00D7",
+            "U+0304",
+            "U+2013-2014",
+            "U+2018-2019",
+            "U+201C-201D",
+            "U+2026",
+            "U+2191",
+            "U+2193"
+          ]
+        },
+        {
+          "src": "vadivam-mono-italic-extended.woff2",
+          "style": "italic",
+          "weights": [
+            400
+          ],
+          "subset": "extended",
+          "unicodeRange": [
+            "U+00A1-00AF",
+            "U+00B1-00B6",
+            "U+00B8-00D6",
+            "U+00D8-017F",
+            "U+20AC"
+          ]
+        },
+        {
+          "src": "vadivam-mono-medium-italic-core.woff2",
+          "style": "italic",
+          "weights": [
+            500
+          ],
+          "subset": "latin",
+          "unicodeRange": [
+            "U+0020-007E",
+            "U+00A0",
+            "U+00B0",
+            "U+00B7",
+            "U+00D7",
+            "U+0304",
+            "U+2013-2014",
+            "U+2018-2019",
+            "U+201C-201D",
+            "U+2026",
+            "U+2191",
+            "U+2193"
+          ]
+        },
+        {
+          "src": "vadivam-mono-medium-italic-extended.woff2",
+          "style": "italic",
+          "weights": [
+            500
+          ],
+          "subset": "extended",
+          "unicodeRange": [
+            "U+00A1-00AF",
+            "U+00B1-00B6",
+            "U+00B8-00D6",
+            "U+00D8-017F",
+            "U+20AC"
+          ]
+        },
+        {
+          "src": "vadivam-mono-semibold-italic-core.woff2",
+          "style": "italic",
+          "weights": [
+            600
+          ],
+          "subset": "latin",
+          "unicodeRange": [
+            "U+0020-007E",
+            "U+00A0",
+            "U+00B0",
+            "U+00B7",
+            "U+00D7",
+            "U+0304",
+            "U+2013-2014",
+            "U+2018-2019",
+            "U+201C-201D",
+            "U+2026",
+            "U+2191",
+            "U+2193"
+          ]
+        },
+        {
+          "src": "vadivam-mono-semibold-italic-extended.woff2",
+          "style": "italic",
+          "weights": [
+            600
+          ],
+          "subset": "extended",
+          "unicodeRange": [
+            "U+00A1-00AF",
+            "U+00B1-00B6",
+            "U+00B8-00D6",
+            "U+00D8-017F",
+            "U+20AC"
+          ]
+        },
+        {
+          "src": "vadivam-mono-core.woff2",
+          "style": "normal",
+          "weights": [
+            400
+          ],
+          "subset": "latin",
+          "unicodeRange": [
+            "U+0020-007E",
+            "U+00A0",
+            "U+00B0",
+            "U+00B7",
+            "U+00D7",
+            "U+0304",
+            "U+2013-2014",
+            "U+2018-2019",
+            "U+201C-201D",
+            "U+2026",
+            "U+2191",
+            "U+2193"
+          ]
+        },
+        {
+          "src": "vadivam-mono-extended.woff2",
+          "style": "normal",
+          "weights": [
+            400
+          ],
+          "subset": "extended",
+          "unicodeRange": [
+            "U+00A1-00AF",
+            "U+00B1-00B6",
+            "U+00B8-00D6",
+            "U+00D8-017F",
+            "U+20AC"
+          ]
+        },
+        {
+          "src": "vadivam-mono-medium-core.woff2",
+          "style": "normal",
+          "weights": [
+            500
+          ],
+          "subset": "latin",
+          "unicodeRange": [
+            "U+0020-007E",
+            "U+00A0",
+            "U+00B0",
+            "U+00B7",
+            "U+00D7",
+            "U+0304",
+            "U+2013-2014",
+            "U+2018-2019",
+            "U+201C-201D",
+            "U+2026",
+            "U+2191",
+            "U+2193"
+          ]
+        },
+        {
+          "src": "vadivam-mono-medium-extended.woff2",
+          "style": "normal",
+          "weights": [
+            500
+          ],
+          "subset": "extended",
+          "unicodeRange": [
+            "U+00A1-00AF",
+            "U+00B1-00B6",
+            "U+00B8-00D6",
+            "U+00D8-017F",
+            "U+20AC"
+          ]
+        },
+        {
+          "src": "vadivam-mono-semibold-core.woff2",
+          "style": "normal",
+          "weights": [
+            600
+          ],
+          "subset": "latin",
+          "unicodeRange": [
+            "U+0020-007E",
+            "U+00A0",
+            "U+00B0",
+            "U+00B7",
+            "U+00D7",
+            "U+0304",
+            "U+2013-2014",
+            "U+2018-2019",
+            "U+201C-201D",
+            "U+2026",
+            "U+2191",
+            "U+2193"
+          ]
+        },
+        {
+          "src": "vadivam-mono-semibold-extended.woff2",
+          "style": "normal",
+          "weights": [
+            600
+          ],
+          "subset": "extended",
+          "unicodeRange": [
+            "U+00A1-00AF",
+            "U+00B1-00B6",
+            "U+00B8-00D6",
+            "U+00D8-017F",
+            "U+20AC"
+          ]
+        }
+      ],
+      "missing": [
+        "U+200D"
+      ]
+    }
+  ]
+}

@@ -96,4 +96,15 @@ Documentation source lives in `apps/docs/docs`. Use Markdown where possible, and
 
 For package behavior, verify the package README, `package.json` export map, and generated public declarations before documenting it. Do not infer an API from another framework package: providers, dynamic exports, fallback types, and peer ranges differ.
 
+### Site fonts
+
+The site serves SN Pro and IBM Plex Mono (renamed Vadivam Mono, since "Plex" is a Reserved Font Name) as committed subsets in `apps/docs/fonts`. Each face has a preloaded core file and an extended file that only downloads on pages that use one of its characters. The build never touches font files. `scripts/subset-fonts.py` cuts them by hand from the pinned Google Fonts sources, keeping Latin-1, Latin Extended-A, and the characters, weights, and OpenType features the built pages use. It needs [uv](https://docs.astral.sh/uv/):
+
+```sh
+bun run docs:build      # with GITHUB_TOKEN set, so the changelog is included
+bun run fonts:subset
+```
+
+Rerun it and commit `apps/docs/fonts` when `tests/docs-fonts.test.mjs` fails (a page uses a character the files lack, or sets an extended character inside a word), when the site starts using another font weight, style, or OpenType feature (such as `diagonal-fractions`), or to upgrade a font by updating its pin.
+
 Report bugs or propose changes through [GitHub issues](https://github.com/praveenjuge/vadivam/issues).

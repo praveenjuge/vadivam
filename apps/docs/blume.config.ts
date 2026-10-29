@@ -2,6 +2,7 @@ import { defineConfig } from "blume";
 import { cloudflare } from "blume/analytics";
 import { cloudflare as cloudflareDeployment } from "blume/deploy";
 import { filesystem, githubReleases } from "blume/sources";
+import subsetFonts from "./fonts/integration.mjs";
 
 export default defineConfig({
   title: "Vadivam Icons",
@@ -96,9 +97,13 @@ export default defineConfig({
     externalLinks: true,
   },
   theme: {
+    // The site serves subsets of these from fonts/ (see fonts/integration.mjs);
+    // Open Graph cards still fetch SN Pro from Google Fonts.
     fonts: {
       display: { name: "SN Pro", weights: [400, 500, 600, 700] },
       body: { name: "SN Pro", weights: [400, 500, 600, 700] },
+      mono: "ibm-plex-mono",
     },
   },
+  integrations: [subsetFonts()],
 });
