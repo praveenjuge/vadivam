@@ -27,6 +27,7 @@ import {
   smoothCorners,
 } from "../scripts/corner-smoothing.mjs";
 import { cleanPaths } from "../scripts/path-cleanup.mjs";
+import { assertIconNodesPassRuntimePolicy } from "../scripts/generators/runtime-policy.mjs";
 import { area, loadPathKit, solidPath } from "../scripts/solid-draft.mjs";
 
 const validSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></svg>`;
@@ -105,12 +106,29 @@ describe("icon validation", () => {
     }
   });
 
+  test("every generated icon node passes the shipped runtime policy unchanged", async () => {
+    await expect(assertIconNodesPassRuntimePolicy(await readIcons())).resolves.toBeUndefined();
+  });
+
+  test("the build rejects icon nodes the runtime policy would change", async () => {
+    const icon = (iconNode) => ({ fileName: "bad.svg", iconNode });
+    await expect(assertIconNodesPassRuntimePolicy([icon([["script", { key: "s" }]])])).rejects.toThrow(
+      "bad.svg: <script> is not allowed at runtime",
+    );
+    await expect(
+      assertIconNodesPassRuntimePolicy([icon([["path", { d: "M4 12h16", onclick: "alert(1)", key: "p" }]])]),
+    ).rejects.toThrow("bad.svg: <path> attribute onclick is not allowed at runtime");
+    await expect(
+      assertIconNodesPassRuntimePolicy([icon([["path", { d: "M4 12h16", stroke: "url(https://example.com/x#a)" }]])]),
+    ).rejects.toThrow("bad.svg: <path> attribute stroke is not allowed at runtime");
+  });
+
   test("loads canonical names from the pinned Lucide release", async () => {
     const requests = [];
     const fetchImpl = async (url) => {
       requests.push(url);
-      if (url === "https://registry.npmjs.org/lucide/1.61.0") {
-        return Response.json({ version: "1.61.0" });
+      if (url === "https://registry.npmjs.org/lucide/1.64.0") {
+        return Response.json({ version: "1.64.0" });
       }
       return Response.json({
         truncated: false,
@@ -124,11 +142,11 @@ describe("icon validation", () => {
     };
 
     const catalog = await fetchPinnedLucideCatalog(fetchImpl);
-    expect(catalog.version).toBe("1.61.0");
+    expect(catalog.version).toBe("1.64.0");
     expect(catalog.names).toEqual(new Set(["check", "columns-2"]));
     expect(requests).toEqual([
-      "https://registry.npmjs.org/lucide/1.61.0",
-      "https://api.github.com/repos/lucide-icons/lucide/git/trees/1.61.0?recursive=1",
+      "https://registry.npmjs.org/lucide/1.64.0",
+      "https://api.github.com/repos/lucide-icons/lucide/git/trees/1.64.0?recursive=1",
     ]);
   });
 
@@ -136,7 +154,7 @@ describe("icon validation", () => {
     const authorization = {};
     const fetchImpl = async (url, { headers }) => {
       authorization[new URL(url).host] = headers.Authorization;
-      if (url.startsWith("https://registry.npmjs.org/")) return Response.json({ version: "1.61.0" });
+      if (url.startsWith("https://registry.npmjs.org/")) return Response.json({ version: "1.64.0" });
       return Response.json({ truncated: false, tree: [{ path: "icons/check.svg" }] });
     };
     const previous = process.env.GITHUB_TOKEN;
@@ -152,21 +170,21 @@ describe("icon validation", () => {
 
   test("rejects a registry response that does not match the pin", async () => {
     const fetchImpl = async (url) => {
-      if (url === "https://registry.npmjs.org/lucide/1.61.0") {
+      if (url === "https://registry.npmjs.org/lucide/1.64.0") {
         return Response.json({ version: "1.41.0" });
       }
       throw new Error(`Unexpected request: ${url}`);
     };
 
     await expect(fetchPinnedLucideCatalog(fetchImpl)).rejects.toThrow(
-      "The pinned Lucide release must resolve to 1.61.0",
+      "The pinned Lucide release must resolve to 1.64.0",
     );
   });
 
   test("accepts renamed icons and rejects their retired names through catalog parsing", async () => {
     const fetchImpl = async (url) => {
-      if (url === "https://registry.npmjs.org/lucide/1.61.0") {
-        return Response.json({ version: "1.61.0" });
+      if (url === "https://registry.npmjs.org/lucide/1.64.0") {
+        return Response.json({ version: "1.64.0" });
       }
       return Response.json({
         truncated: false,
@@ -189,17 +207,17 @@ describe("icon validation", () => {
     expect(() =>
       validateLucideIconNames(["album.svg", "building-2.svg", "music.svg", "trash-2.svg"], catalog),
     ).toThrow(
-      "Deprecated or non-canonical icon names for Lucide 1.61.0: album.svg, building-2.svg, music.svg, trash-2.svg",
+      "Deprecated or non-canonical icon names for Lucide 1.64.0: album.svg, building-2.svg, music.svg, trash-2.svg",
     );
   });
 
   test("rejects deprecated and unknown Lucide icon filenames", () => {
-    const catalog = { version: "1.61.0", names: new Set(["check", "columns-2"]) };
+    const catalog = { version: "1.64.0", names: new Set(["check", "columns-2"]) };
     expect(() =>
       validateLucideIconNames(["check.svg", "columns-2.svg"], catalog),
     ).not.toThrow();
     expect(() => validateLucideIconNames(["columns.svg", "custom.svg"], catalog)).toThrow(
-      "Deprecated or non-canonical icon names for Lucide 1.61.0: columns.svg, custom.svg",
+      "Deprecated or non-canonical icon names for Lucide 1.64.0: columns.svg, custom.svg",
     );
   });
 
@@ -523,7 +541,13 @@ describe("path cleanup", () => {
 
   test("keeps dots drawn as tiny lines", () => {
     const d = "M4 12h10M18 12h.01";
-    expect(cleanPaths([d])).toEqual({ paths: [d], debris: 0, joins: 0, merges: 0, snaps: 0 });
+    expect(cleanPaths([d])).toEqual({ paths: [d], debris: 0, joins: 0, merges: 0, nodes: 0, snaps: 0 });
+  });
+
+  test("removes stray nodes shorter than 0.05px inside a stroke", () => {
+    const { paths, nodes } = cleanPaths(["M4 12h8l.02.01L20 12"]);
+    expect(nodes).toBe(1);
+    expect(paths).toEqual(["M4 12L20 12"]);
   });
 
   test("snaps lines just off the whole-pixel grid and what meets them", () => {
@@ -549,6 +573,41 @@ describe("path cleanup", () => {
     expect(normalized).toContain('<path d="M4 12h16M8 6v12"/>');
     expect(() => validateSvgContent(normalized, "split.svg")).not.toThrow();
     expect(normalizeSvg(normalized, "split.svg")).toBe(normalized);
+  });
+});
+
+describe("subpath starts", () => {
+  test("rejects a subpath that starts after z without a move", () => {
+    expect(() => validateSvgContent(validSvg.replace("M4 12h16", "M4 4h6v6H4zh6"), "move.svg")).toThrow('start a subpath after "z" without a move');
+  });
+
+  test("optimization starts every subpath with a move", () => {
+    const svg = validSvg.replace("M4 12h16", "M4 4h6v6H4za3 3 0 0 0 3 3");
+    expect(normalizeSvg(svg, "move.svg")).not.toMatch(/[zZ]\s*[a-ln-yA-LN-Y]/);
+  });
+
+  test("optimizing a restored move again changes nothing", () => {
+    const once = normalizeSvg(validSvg.replace("M4 12h16", "M4 4h6v6H4zM4 4l2 2"), "move.svg");
+    expect(normalizeSvg(once, "move.svg")).toBe(once);
+  });
+});
+
+describe("stroke joins", () => {
+  test("rejects a stroke that stops 1px short of another", () => {
+    expect(() => validateSvgContent(validSvg.replace("M4 12h16", "M4 12h16M12 4v7"), "joins.svg")).toThrow("1 stroke end(s) stop short of another stroke");
+  });
+
+  test("rejects the same near miss drawn with <line> elements", () => {
+    const svg = validSvg.replace('<path d="M4 12h16"/>', '<line x1="4" y1="12" x2="20" y2="12"/><line x1="12" y1="4" x2="12" y2="11"/>');
+    expect(() => validateSvgContent(svg, "joins.svg")).toThrow("1 stroke end(s) stop short of another stroke");
+  });
+
+  test.each([
+    ["a stroke that meets another", "M4 12h16M12 4v8"],
+    ["a stroke that overhangs another", "M4 12h16M12 4v9"],
+    ["a 2px gap", "M4 12h16M12 4v5"],
+  ])("accepts %s", (_name, d) => {
+    expect(() => validateSvgContent(validSvg.replace("M4 12h16", d), "joins.svg")).not.toThrow();
   });
 });
 

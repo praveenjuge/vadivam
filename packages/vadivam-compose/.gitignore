@@ -1,0 +1,6 @@
+src/main/kotlin/com/praveenjuge/vadivam/icons/
+src/main/res/
+.gradle/
+.kotlin/
+build/
+local.properties

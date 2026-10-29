@@ -218,3 +218,69 @@ describe("framework-native server rendering", () => {
     }
   });
 });
+
+// Built-in icons render their build-checked nodes without the node sanitizer,
+// but keep sanitizing root props and color. createVadivamIcon still renders
+// through the fully sanitizing Icon, so it is the reference markup.
+const builtInSample = ["activity", "a-arrow-down", "house", "search", "settings"];
+const builtInPropSets = [
+  {},
+  { size: 32, color: "red", strokeWidth: 1.5 },
+  { absoluteStrokeWidth: true, size: 48 },
+  { title: "Open" },
+  { "aria-label": "Open", class: "local vadivam local" },
+  { width: undefined, fill: null, "data-x": "1" },
+  { color: "url(https://example.com/paint.svg#x)", onload: "alert(1)", innerHTML: "<script>alert(1)</script>", href: "javascript:alert(1)" },
+  { iconNode: unsafeIconNode },
+];
+const builtInRenderers = {
+  Vue: {
+    dist: "vue",
+    render: (Component, props) => renderVue(createSSRApp({
+      render: () => vueH(VueProvider, { size: 40, color: "url(https://example.com/x#y)" }, () => vueH(Component, props)),
+    })),
+  },
+  Preact: {
+    dist: "preact",
+    render: (Component, props) => renderPreact(preactH(PreactProvider, { size: 40, color: "url(https://example.com/x#y)" }, preactH(Component, props))),
+  },
+  Solid: {
+    dist: "solid",
+    render: (Component, props) => renderSolid(() => createSolidComponent(SolidProvider, {
+      size: 40,
+      color: "url(https://example.com/x#y)",
+      get children() {
+        return createSolidComponent(Component, { ...props });
+      },
+    })),
+  },
+};
+
+describe("built-in icon render path", () => {
+  for (const [framework, { dist, render }] of Object.entries(builtInRenderers)) {
+    test(`${framework} built-in icons render the same markup as the sanitizing path`, async () => {
+      const directory = path.resolve(import.meta.dir, `../../packages/vadivam-${dist}/dist`);
+      const { createVadivamIcon } = await import(pathToFileURL(path.join(directory, "index.js")));
+      for (const name of builtInSample) {
+        const { default: BuiltIn, __iconNode } = await import(pathToFileURL(path.join(directory, `icons/${name}.js`)));
+        const Reference = createVadivamIcon(name, __iconNode);
+        for (const props of builtInPropSets) {
+          const markup = await render(BuiltIn, props);
+          expect(markup).toBe(await render(Reference, props));
+          expect(markup).toContain(`vadivam-${name}`);
+        }
+      }
+    });
+
+    test(`${framework} built-in icons still sanitize root props and color`, async () => {
+      const directory = path.resolve(import.meta.dir, `../../packages/vadivam-${dist}/dist`);
+      const { Activity } = await import(pathToFileURL(path.join(directory, "index.js")));
+      const markup = await render(Activity, builtInPropSets.at(-2));
+      expect(markup).toContain('stroke="currentColor"');
+      expect(markup).not.toContain("onload");
+      expect(markup).not.toContain("href=");
+      expect(markup).not.toContain("<script");
+      expect(markup).not.toContain("alert(1)");
+    });
+  }
+});

@@ -72,12 +72,49 @@ export const publishablePackages = [
     readmeSearchPhrase: "Tree-shakeable 24px outline and solid SVG icons for Preact",
   },
   {
+    name: "vadivam-lit",
+    directory: "packages/vadivam-lit",
+    description: "Pixel-perfect 24px outline icon templates for Lit with tree-shakeable imports.",
+    documentation: "/docs/lit",
+    keywords: ["lit", "lit-html", "web-components"],
+    readmeSearchPhrase: "Tree-shakeable 24px outline SVG icons for Lit",
+  },
+  {
+    name: "vadivam-qwik",
+    directory: "packages/vadivam-qwik",
+    description: "Pixel-perfect 24px outline icon components for Qwik with tree-shakeable imports.",
+    documentation: "/docs/qwik",
+    keywords: ["qwik", "qwik-icons"],
+    readmeSearchPhrase: "Tree-shakeable 24px outline SVG icons for Qwik",
+  },
+  {
     name: "vadivam-mcp",
     directory: "packages/vadivam-mcp",
     description: "MCP server for AI agents to search Vadivam's 24px outline and solid icons and get SVG or framework code.",
     documentation: "/docs/mcp",
     keywords: ["mcp", "mcp-server", "model-context-protocol", "ai-agents"],
     readmeSearchPhrase: "An MCP server for searching 24px outline and solid icons",
+  },
+];
+
+// Packages published outside npm. Each file holds the release version on one
+// line, which bump-version.mjs rewrites and validate-versions.mjs checks.
+export const nativePackages = [
+  {
+    name: "vadivam (pub.dev)",
+    directory: "packages/vadivam-flutter",
+    releaseLink: "[vadivam for Flutter](https://pub.dev/packages/vadivam)",
+    versionFile: "packages/vadivam-flutter/pubspec.yaml",
+    versionPattern: /^version: (.+)$/m,
+    versionLine: (version) => `version: ${version}`,
+  },
+  {
+    name: "com.praveenjuge:vadivam-compose",
+    directory: "packages/vadivam-compose",
+    releaseLink: "[vadivam-compose](https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose)",
+    versionFile: "packages/vadivam-compose/gradle.properties",
+    versionPattern: /^VERSION_NAME=(.+)$/m,
+    versionLine: (version) => `VERSION_NAME=${version}`,
   },
 ];
 

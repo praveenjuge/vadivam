@@ -1,10 +1,12 @@
 import { highlightCode } from "blume/markdown";
-import { frameworks } from "../../../../scripts/snippets.mjs";
+import { componentSource, dartIconName, frameworks } from "../../../../scripts/snippets.mjs";
 
 // Shiki-highlighted snippet templates, rendered once at build time. The client
 // swaps the placeholders for an icon's component name, props, and path data so
 // every icon (and every customizer setting) shares one small set of templates.
-export const COMPONENT_PLACEHOLDER = "VadivamIcon";
+// Distinct from real API names such as Flutter's `VadivamIcon` widget.
+export const COMPONENT_PLACEHOLDER = "VadivamComponentName";
+export const DART_COMPONENT_PLACEHOLDER = dartIconName(COMPONENT_PLACEHOLDER);
 export const PROPS_PLACEHOLDER = "__PROPS__";
 export const SVG_OPEN_TAG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
@@ -18,24 +20,6 @@ const solidSvgTemplateOpenTag =
 
 export type IconStyle = "outline" | "solid";
 
-function frameworkSource(id: string, props: string, style: IconStyle = "outline"): string {
-  const name = COMPONENT_PLACEHOLDER;
-  const packageName = frameworks.find((framework) => framework.id === id)?.packageName;
-  const from = style === "solid" ? `${packageName}/solid` : packageName;
-  switch (id) {
-    case "vue":
-      return `<script setup>\nimport { ${name} } from "${from}";\n</script>\n\n<template>\n  <${name}${props} />\n</template>`;
-    case "svelte":
-      return `<script>\n  import { ${name} } from "${from}";\n</script>\n\n<${name}${props} />`;
-    case "astro":
-      return `---\nimport { ${name} } from "${from}";\n---\n\n<${name}${props} />`;
-    case "angular":
-      return `import { ${name} } from "${from}";\n\n<svg vadivam${style === "solid" ? "Solid" : ""}${name}${props}></svg>`;
-    default:
-      return `import { ${name} } from "${from}";\n\n<${name}${props} />`;
-  }
-}
-
 interface StyleTemplates {
   svgOpenTag: string;
   /** Per framework: `plain` has no props, `props` has a props placeholder. */
@@ -46,6 +30,7 @@ interface StyleTemplates {
 
 export interface SnippetTemplates extends StyleTemplates {
   component: string;
+  dartComponent: string;
   props: string;
   /** The same templates for the solid twin. */
   solid: StyleTemplates;
@@ -83,11 +68,12 @@ async function renderStyleTemplates(
     svg: {},
   };
   for (const framework of frameworks) {
-    const plain = await highlight(frameworkSource(framework.id, "", style), framework.lang);
-    const props = await highlight(frameworkSource(framework.id, ` ${PROPS_PLACEHOLDER}`, style), framework.lang);
+    const plain = await highlight(componentSource(framework.id, COMPONENT_PLACEHOLDER, "", style), framework.lang);
+    const props = await highlight(componentSource(framework.id, COMPONENT_PLACEHOLDER, ` ${PROPS_PLACEHOLDER}`, style), framework.lang);
     // The client swaps placeholders by plain string replacement, so each must
     // survive highlighting as one unbroken token.
-    if (!plain.includes(COMPONENT_PLACEHOLDER) || !props.includes(PROPS_PLACEHOLDER)) {
+    const name = framework.id === "flutter" ? DART_COMPONENT_PLACEHOLDER : COMPONENT_PLACEHOLDER;
+    if (!plain.includes(name) || !props.includes(PROPS_PLACEHOLDER)) {
       throw new Error(`${framework.id} snippet placeholders were split by the highlighter`);
     }
     result.frameworks[framework.id] = { plain, props };
@@ -108,6 +94,7 @@ async function renderSnippetTemplates(
   const highlight = (code: string, lang: string) => highlightCode(code, lang, { icons: false, themes });
   return {
     component: COMPONENT_PLACEHOLDER,
+    dartComponent: DART_COMPONENT_PLACEHOLDER,
     props: PROPS_PLACEHOLDER,
     ...(await renderStyleTemplates(highlight, pathCounts, "outline")),
     solid: await renderStyleTemplates(highlight, solidPathCounts, "solid"),

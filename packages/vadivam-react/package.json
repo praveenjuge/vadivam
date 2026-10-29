@@ -1,6 +1,6 @@
 {
   "name": "vadivam-react",
-  "version": "0.0.66",
+  "version": "0.0.74",
   "description": "Pixel-perfect 24px outline and solid icon components for React with tree-shakeable imports.",
   "license": "MIT",
   "author": "Praveen Juge",

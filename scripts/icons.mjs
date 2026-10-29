@@ -10,7 +10,7 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
-import { inkBounds } from "./icon-geometry.mjs";
+import { elementPathData, inkBounds, parsePath, shortStrokeEnds } from "./icon-geometry.mjs";
 import { findUnsmoothedCorners, reattachEnds, smoothCorners } from "./corner-smoothing.mjs";
 import { cleanPaths, gridTolerance } from "./path-cleanup.mjs";
 import { evenOddPathData, loadPathKit } from "./solid-draft.mjs";
@@ -18,8 +18,13 @@ import { optimize } from "svgo";
 import { Resvg } from "@resvg/resvg-js";
 import { buildAngularPackage } from "./generators/angular.mjs";
 import { buildAstroPackage } from "./generators/astro.mjs";
+import { buildComposePackage } from "./generators/compose.mjs";
+import { buildElements } from "./generators/elements.mjs";
+import { buildFlutterPackage } from "./generators/flutter.mjs";
+import { buildLitPackage } from "./generators/lit.mjs";
 import { buildMcpPackage } from "./generators/mcp.mjs";
 import { buildPreactPackage } from "./generators/preact.mjs";
+import { buildQwikPackage } from "./generators/qwik.mjs";
 import { buildReactPackage } from "./generators/react.mjs";
 import { buildReactNativePackage } from "./generators/react-native.mjs";
 import { buildShadcnRegistry } from "./generators/shadcn.mjs";
@@ -27,6 +32,7 @@ import { buildSolidPackage } from "./generators/solid.mjs";
 import { buildSveltePackage } from "./generators/svelte.mjs";
 import { buildVuePackage } from "./generators/vue.mjs";
 import {
+  assertIconNodesPassRuntimePolicy,
   runtimePolicyRecursiveSource,
   svgElementTypeSource,
 } from "./generators/runtime-policy.mjs";
@@ -51,6 +57,10 @@ const solidDist = path.join(root, "packages/vadivam-solid/dist");
 const angularPackage = path.join(root, "packages/vadivam-angular");
 const astroDist = path.join(root, "packages/vadivam-astro/dist");
 const preactDist = path.join(root, "packages/vadivam-preact/dist");
+const litDist = path.join(root, "packages/vadivam-lit/dist");
+const qwikDist = path.join(root, "packages/vadivam-qwik/dist");
+const flutterPackage = path.join(root, "packages/vadivam-flutter");
+const composePackage = path.join(root, "packages/vadivam-compose");
 const mcpPackage = path.join(root, "packages/vadivam-mcp");
 const skillSource = path.join(root, "apps/docs/skills/vadivam-icons/SKILL.md");
 const rawSkills = path.join(root, "packages/vadivam/skills");
@@ -292,6 +302,9 @@ function asArray(value) {
   return Array.isArray(value) ? value : [value];
 }
 
+// A closepath followed straight by a drawing command, with no move to start the next subpath.
+const subpathWithoutMove = /([zZ])\s*(?=[a-ln-yA-LN-Y])/g;
+
 export function validateSvgContent(svg, file = "inline.svg", style = styles.outline) {
   const node = parseSvg(svg, file);
   for (const [attr, value] of Object.entries(style.rootAttrs)) {
@@ -367,9 +380,13 @@ export function validateSvgContent(svg, file = "inline.svg", style = styles.outl
   visit(node, "svg");
   assert(count > 0, `${file}: no drawable elements found`);
   assertInkInsidePadding(shapes, file, style);
+  const paths = shapes.filter(([tag]) => tag === "path").map(([, attrs]) => attrs.d);
+  const unmoved = paths.filter((d) => d.search(subpathWithoutMove) >= 0).length;
+  assert(unmoved === 0, `${file}: ${unmoved} path(s) start a subpath after "z" without a move; WebKit draws it from the wrong point, so add "m0 0" after the "z"`);
   // Path cleanup joins and trims strokes, which only applies to outlines.
   if (style === styles.outline) {
-    assertCleanPaths(shapes.filter(([tag]) => tag === "path").map(([, attrs]) => attrs.d), file);
+    assertCleanPaths(paths, file);
+    assertStrokesMeet(shapes.map(([tag, attrs]) => elementPathData(tag, attrs)), file);
   }
 }
 
@@ -423,16 +440,27 @@ function assertInkInsidePadding(shapes, file, style = styles.outline) {
 // strokes split where they meet, and no lines just off the whole-pixel grid.
 function assertCleanPaths(paths, file) {
   if (paths.length === 0) return;
-  const { debris, joins, merges, snaps } = cleanPaths(paths);
+  const { debris, joins, merges, nodes, snaps } = cleanPaths(paths);
   const problems = [
     debris && `${debris} stray subpath(s)`,
     joins && `${joins} stroke(s) split where they meet`,
     merges && `${merges} straight line(s) split in pieces`,
+    nodes && `${nodes} line(s) shorter than 0.05px inside a stroke`,
     snaps && `${snaps} line(s) less than ${gridTolerance}px off the whole-pixel grid`,
   ].filter(Boolean);
   assert(
     problems.length === 0,
     `${file}: ${problems.join(", ")}; run bun run icons:optimize to clean the path data`,
+  );
+}
+
+// A stroke that stops just short of another overlaps it without meeting it.
+function assertStrokesMeet(paths, file) {
+  const ends = shortStrokeEnds(paths.flatMap((d) => parsePath(d)));
+  const format = (value) => Number(value.toFixed(2));
+  assert(
+    ends.length === 0,
+    `${file}: ${ends.length} stroke end(s) stop short of another stroke (first ${format(ends[0]?.distance ?? 0)}px short near ${format(ends[0]?.point[0] ?? 0)}, ${format(ends[0]?.point[1] ?? 0)}); join them, or leave a gap of at least 1.5px`,
   );
 }
 
@@ -514,6 +542,14 @@ function optimizeSvg(svg, file, config = svgoConfig) {
   return result.data;
 }
 
+// SVGO drops the move after a closepath when the next subpath starts where
+// the last one began; WebKit draws some of those from the wrong point. A lineto
+// right after the move is written the way SVGO writes it, so optimizing again
+// changes nothing.
+function restoreSubpathMoves(d) {
+  return d.replace(subpathWithoutMove, "$1m0 0").replace(/([zZ]m0 0)l(?=\d|\.)/g, "$1 ").replace(/([zZ]m0 0)l(?=-)/g, "$1");
+}
+
 export function normalizeSvg(svg, file, style = styles.outline) {
   assertSourcePaint(svg, file, style);
   if (style !== styles.outline) return normalizeFilledSvg(svg, file, style);
@@ -536,7 +572,7 @@ export function normalizeSvg(svg, file, style = styles.outline) {
   const cleaned = optimizeSvg(replacePaths(first, cleanPaths(pathData(first)).paths), file);
   const original = pathData(cleaned);
   const smoothed = replacePaths(cleaned, reattachEnds(original, original.map((d) => smoothCorners(d))));
-  const optimized = optimizeSvg(smoothed, file);
+  const optimized = optimizeSvg(smoothed, file).replace(pathPattern, (_match, prefix, d, suffix) => `${prefix}${restoreSubpathMoves(d)}${suffix}`);
   const open = optimized.match(/<svg\b[^>]*>/);
   const close = optimized.lastIndexOf("</svg>");
   assert(open && close > -1, `${file}: optimized SVG is missing root`);
@@ -575,6 +611,7 @@ function normalizeFilledSvg(svg, file, style) {
     if (next === optimized) break;
     optimized = next;
   }
+  optimized = optimized.replace(pathPattern, (_match, prefix, d, suffix) => `${prefix}${restoreSubpathMoves(d)}${suffix}`);
   const open = optimized.match(/<svg\b[^>]*>/);
   const close = optimized.lastIndexOf("</svg>");
   assert(open && close > -1, `${file}: optimized SVG is missing root`);
@@ -898,6 +935,7 @@ export default createIcons;
     path.join(dist, "index.d.ts"),
     `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\n${manifestExports}${rawNamedExports}\nexport type { CreateIconsOptions } from "./createIcons.js";\n${manifestTypes}export type { IconName, IconNode, Icons, SVGElementType, SVGProps } from "${shared}types.js";\n`,
   );
+  await buildElements(icons, rawDist);
   await buildStaticAssets(icons, {
     iconsDirectory: sourceDirectory,
     outputDirectory: dist,
@@ -1094,6 +1132,7 @@ export async function build() {
   const icons = await readIcons();
   const solidIcons = await readIcons(styles.solid);
   validateStyleTwins({ outline: icons.map((icon) => icon.name), solid: solidIcons.map((icon) => icon.name) });
+  await assertIconNodesPassRuntimePolicy([...icons, ...solidIcons]);
   await synchronizeDocCounts(icons.map((icon) => icon.name));
   await buildRawPackage(icons, solidIcons);
   await buildReactPackage(icons, reactDist, solidIcons);
@@ -1104,6 +1143,10 @@ export async function build() {
   await buildAngularPackage(icons, angularPackage, root, solidIcons);
   await buildAstroPackage(icons, astroDist, solidIcons);
   await buildPreactPackage(icons, preactDist, solidIcons);
+  await buildLitPackage(icons, litDist, solidIcons);
+  await buildQwikPackage(icons, qwikDist, solidIcons);
+  await buildFlutterPackage(icons, flutterPackage, solidIcons);
+  await buildComposePackage(icons, composePackage, solidIcons);
   await buildMcpPackage(icons, iconCategories, { packageDirectory: mcpPackage, root, solidIcons });
   await buildWebAssets(icons, solidIcons);
   await buildShadcnRegistry(icons, shadcnRegistryDir, { solidIcons });

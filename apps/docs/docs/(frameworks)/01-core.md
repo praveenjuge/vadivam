@@ -11,7 +11,7 @@ search:
   keywords: [svg, sprite, icon font, vanilla javascript, createIcons, html]
 ---
 
-The `vadivam` package contains optimized SVG files, serializable icon nodes, catalog metadata, and browser DOM helpers. It has no framework dependency.
+The `vadivam` package contains optimized SVG files, serializable icon nodes, catalog metadata, browser DOM helpers, and the [`<vadivam-icon>` element](/docs/html). It has no framework dependency.
 
 ```sh
 npm install vadivam

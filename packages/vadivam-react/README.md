@@ -8,7 +8,7 @@ Tree-shakeable 24px outline and solid SVG icons for React.
 [![downloads](https://img.shields.io/npm/dw/vadivam-react?style=flat-square&color=666)](https://www.npmjs.com/package/vadivam-react)
 [![license](https://img.shields.io/npm/l/vadivam-react?style=flat-square&color=111)](https://github.com/praveenjuge/vadivam/blob/main/LICENSE)
 
-![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/docs/public/preview.png?v=0.0.66)
+![All Vadivam icons](https://raw.githubusercontent.com/praveenjuge/vadivam/main/apps/docs/public/preview.png?v=0.0.74)
 
 ```sh
 npm install vadivam-react
@@ -50,6 +50,6 @@ Every icon also has a solid twin with the same name in `vadivam-react/solid`. So
 import { Activity } from "vadivam-react/solid";
 ```
 
-Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
+Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [Qwik](https://www.npmjs.com/package/vadivam-qwik) · [Lit](https://www.npmjs.com/package/vadivam-lit) · [Flutter](https://pub.dev/packages/vadivam) · [Jetpack Compose](https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
 
 [Issues](https://github.com/praveenjuge/vadivam/issues)

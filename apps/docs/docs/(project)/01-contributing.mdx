@@ -52,14 +52,18 @@ Keep pull requests focused and describe visible changes and package API changes.
 
 ## Add or update an icon
 
-Add or replace only the source SVGs: the outline in `icons/` and its [solid](/docs/design-guide#solid) twin in `icons-solid/`, both named after the icon's current Lucide name. Draw them to the [design guide](/docs/design-guide), then follow [How icons are built](/docs/how-icons-are-built) to normalize, validate, and build them:
+Add or replace only the source SVGs: the outline in `icons/` and its [solid](/docs/design-guide#solid) twin in `icons-solid/`, both named after the icon's current Lucide name. Draw them to the [design guide](/docs/design-guide), then follow [How icons are built](/docs/how-icons-are-built) to normalize, validate, and build them. A new icon first needs its Lucide tags and categories, since `metadata/lucide.json` lists only icons that have a drawing, and a font codepoint:
 
 ```sh
-bun run icons:draft-solid  # draft any missing solid icons from their outlines
-bun run icons:optimize  # clean paths and smooth corners in place
-bun run icons:check     # validate without writing
-bun run icons:build     # regenerate packages and site assets
+bun run icons:metadata -- /path/to/lucide-checkout  # new icons: tags and categories
+bun run icons:font-codepoints                       # new icons: font codepoints
+bun run icons:draft-solid                           # draft any missing solid icons from their outlines
+bun run icons:optimize                             # clean paths and smooth corners in place
+bun run icons:check                                # validate without writing
+bun run icons:build                                # regenerate packages and site assets
 ```
+
+The Lucide checkout must be on the release tag pinned as `lucideVersion` in `metadata/lucide.json`. Commit the updated `metadata/lucide.json` and `scripts/font-codepoints.json` with the SVG.
 
 Do not hand-edit generated output to fix an icon; correct the canonical SVG and regenerate.
 
@@ -71,7 +75,7 @@ Run the full project checks before submitting:
 bun run test
 ```
 
-It regenerates the packages, runs every unit test, builds and checks the docs site, and builds every framework integration app, checking the plain HTML, Vue, Svelte, Solid, Angular, Astro, and Preact apps in Chromium. Focused commands are available while iterating:
+It regenerates the packages, runs every unit test, builds and checks the docs site, and builds every framework integration app, checking the plain HTML, Vue, Svelte, Solid, Angular, Astro, Preact, Qwik, and Lit apps in Chromium. Focused commands are available while iterating:
 
 | Command | Checks |
 | --- | --- |
@@ -82,6 +86,9 @@ It regenerates the packages, runs every unit test, builds and checks the docs si
 | `bun run test:vadivam-mcp` | MCP server |
 | `bun run test:shadcn` | shadcn/ui registry, including a real `shadcn add` |
 | `bun run test:integration` | Framework integration app builds, their Chromium checks, and the Expo app |
+| `bun run test:native` | Flutter and Compose packages: analyze, widget and unit tests, a pub.dev dry run, and an Android library build |
+
+`bun run test` doesn't need native toolchains. `bun run test:native` needs the Flutter SDK, a JDK (17 or newer), Gradle 9, and the Android SDK; CI runs it on every pull request.
 
 ## Documentation changes
 

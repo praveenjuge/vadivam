@@ -110,6 +110,15 @@ describe("createIcon rendering (client)", () => {
     expect(svg.getAttribute("aria-hidden")).toBe("false");
   });
 
+  test("built-in icons render the same DOM as the sanitizing createIcon path", async () => {
+    const { __iconNode } = await import("vadivam-react/icons/activity");
+    const Reference = createIcon("activity", __iconNode);
+    for (const props of [{}, { size: 32, color: "red", strokeWidth: 1.5 }, { title: "Open" }, { "aria-label": undefined, className: "x" }]) {
+      const builtIn = render(createElement(Activity, props)).container.innerHTML;
+      expect(builtIn).toBe(render(createElement(Reference, props)).container.innerHTML);
+    }
+  });
+
   test("forwards ref to the svg element", () => {
     const ref = createRef();
     render(createElement(Activity, { ref }));

@@ -5,6 +5,7 @@ import {
   componentSnippet,
   cssMaskSnippet,
   customizeSvg,
+  dartIconName,
   effectiveStrokeWidth,
   fontSnippet,
   iconDefaults,
@@ -155,7 +156,9 @@ export function snippetHtml(templates: SnippetTemplates | null, tab: string, ico
   if (!framework) return fallback();
   const props = propsSource(tab, optionsFor(icon, settings)).trimStart();
   const html = props ? framework.props.split(templates.props).join(escapeHtml(props)) : framework.plain;
-  return html.split(templates.component).join(icon.component);
+  return html
+    .split(templates.component).join(icon.component)
+    .split(templates.dartComponent).join(dartIconName(icon.component));
 }
 
 export interface CopyFormat {
@@ -340,13 +343,13 @@ export function showStrokeSettings(root: ParentNode, style: IconStyle = "outline
 }
 
 /**
- * Paint every `[data-icon-preview]` inside `root` with the customized icon. A
- * preview marked `data-icon-style="solid"` shows `solid` instead, when given.
+ * Paint every `[data-<attribute>]` inside `root` with the customized icon; the
+ * attribute value is the preview's pixel size. Icon pages paint Lucide's
+ * drawing into `data-lucide-preview` slots the same way.
  */
-export function renderPreviews(root: ParentNode, outline: IconRef, settings: IconSettings, solid?: IconRef) {
-  for (const preview of root.querySelectorAll<HTMLElement>("[data-icon-preview]")) {
-    const icon = preview.dataset.iconStyle === "solid" && solid ? solid : outline;
-    const pixels = Number(preview.dataset.iconPreview) || settings.size;
+export function renderPreviews(root: ParentNode, icon: IconRef, settings: IconSettings, attribute = "icon-preview") {
+  for (const preview of root.querySelectorAll<HTMLElement>(`[data-${attribute}]`)) {
+    const pixels = Number(preview.getAttribute(`data-${attribute}`)) || settings.size;
     // A zoomed preview magnifies the icon at the chosen size; a sized preview
     // renders it at that size, so `absoluteStrokeWidth` adjusts its stroke.
     const options = optionsFor(icon, settings);

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { renderReleaseNotes, summarizeReleaseDiff } from "../scripts/release-notes.mjs";
+import { escapeHtmlTags, renderReleaseNotes, summarizeReleaseDiff } from "../scripts/release-notes.mjs";
 
 describe("release notes", () => {
   test("lists an icon once whichever of its styles changed", () => {
@@ -57,5 +57,21 @@ describe("release notes", () => {
   test("includes the release version in generated notes", () => {
     const notes = renderReleaseNotes(summarizeReleaseDiff(""), 240, "v0.0.35");
     expect(notes).toStartWith("Vadivam v0.0.35 ships 240 Vadivam icons");
+  });
+
+  test("lists the Flutter and Compose packages", () => {
+    const summary = summarizeReleaseDiff("M\tpackages/vadivam-flutter/lib/vadivam.dart\nM\tpackages/vadivam-compose/build.gradle.kts\n");
+    const notes = renderReleaseNotes(summary, 240);
+    expect(notes).toContain("[vadivam for Flutter](https://pub.dev/packages/vadivam)");
+    expect(notes).toContain("[vadivam-compose](https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose)");
+    expect(notes).toContain("for the web, React Native, Flutter, and Jetpack Compose.");
+  });
+
+  test("escapes HTML tags from pull request titles", () => {
+    expect(escapeHtmlTags("* Add <vadivam-icon> and </b> by @x in https://example.com/1\n<!-- comment -->")).toBe(
+      "* Add &lt;vadivam-icon> and &lt;/b> by @x in https://example.com/1\n<!-- comment -->",
+    );
+    expect(escapeHtmlTags("* Add `<vadivam-icon>` and <b> by @x")).toBe("* Add `<vadivam-icon>` and &lt;b> by @x");
+    expect(escapeHtmlTags("* Use ``a `<b>` c`` and <i>")).toBe("* Use ``a `<b>` c`` and &lt;i>");
   });
 });

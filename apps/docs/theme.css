@@ -132,3 +132,90 @@
 .guide-pixel-half {
   fill-opacity: 0.42;
 }
+
+/* The hero's drawing (pages/_lib/IconSketch.astro): sixteen icons, each
+   drawn in its own three-second slot of a 48-second loop. The grid and keylines
+   use a light blue so they read as guides, not as part of the icon. */
+.icon-sketch {
+  --sketch-guide: oklch(0.7 0.13 240);
+  display: block;
+  overflow: visible;
+}
+[data-theme="dark"] .icon-sketch {
+  --sketch-guide: oklch(0.62 0.14 240);
+}
+.icon-sketch-grid,
+.icon-sketch-keylines {
+  fill: none;
+  stroke: var(--sketch-guide);
+  vector-effect: non-scaling-stroke;
+}
+.icon-sketch-grid > path,
+.icon-sketch-keylines > * {
+  vector-effect: non-scaling-stroke;
+}
+.icon-sketch-grid {
+  stroke-width: 1px;
+  stroke-opacity: 0.16;
+}
+.icon-sketch-keylines {
+  stroke-width: 1px;
+  stroke-opacity: 0.5;
+}
+.icon-sketch-icon {
+  fill: none;
+  stroke: var(--color-foreground);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  animation: icon-sketch 48s linear calc(var(--sketch-index) * 3s) infinite both;
+}
+@keyframes icon-sketch {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  0.1% {
+    opacity: 1;
+  }
+  3% {
+    stroke-dashoffset: 0;
+    animation-timing-function: ease-out;
+  }
+  5.25% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  6.25%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+/* Without motion, the first icon stays drawn. */
+@media (prefers-reduced-motion: reduce) {
+  .icon-sketch-icon {
+    animation: none;
+    opacity: 0;
+  }
+  .icon-sketch-icon[data-still] {
+    opacity: 1;
+  }
+}
+
+/* Blume centers the header tabs; here they sit at the end, beside the search
+   and theme buttons. Below `lg` the header's spacer pushes both to the end;
+   from `lg` the header is a flex row and the tabs' auto margin does it. */
+[data-blume-header] > nav {
+  order: 1;
+  margin-inline-start: auto;
+}
+[data-blume-header] > :last-child {
+  order: 2;
+}
+@media (width >= 64rem) {
+  [data-blume-header] {
+    display: flex;
+  }
+}

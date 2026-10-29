@@ -30,17 +30,19 @@ function buildRuntimePolicy(typeScript = false, preserveChildren = false) {
     nodeCast: typeScript ? " as [SVGElementType, Record<string, unknown>, unknown?]" : "",
     regexMatch: typeScript ? ": RegExpExecArray | null" : "",
   };
-  return `const SAFE_ICON_TAGS = new Set(${JSON.stringify(svgElementTypes)});
+  return `// Pure annotations let bundlers drop the icon-node policy when only the
+// root-attribute and paint sanitizers are imported.
+const SAFE_ICON_TAGS = /* @__PURE__ */ new Set(${JSON.stringify(svgElementTypes)});
 const GEOMETRY_ATTRIBUTES = {
-  circle: new Set(["cx", "cy", "r"]),
-  ellipse: new Set(["cx", "cy", "rx", "ry"]),
-  line: new Set(["x1", "y1", "x2", "y2"]),
-  path: new Set(["d", "pathLength"]),
-  polygon: new Set(["points", "pathLength"]),
-  polyline: new Set(["points", "pathLength"]),
-  rect: new Set(["x", "y", "width", "height", "rx", "ry", "pathLength"]),
+  circle: /* @__PURE__ */ new Set(["cx", "cy", "r"]),
+  ellipse: /* @__PURE__ */ new Set(["cx", "cy", "rx", "ry"]),
+  line: /* @__PURE__ */ new Set(["x1", "y1", "x2", "y2"]),
+  path: /* @__PURE__ */ new Set(["d", "pathLength"]),
+  polygon: /* @__PURE__ */ new Set(["points", "pathLength"]),
+  polyline: /* @__PURE__ */ new Set(["points", "pathLength"]),
+  rect: /* @__PURE__ */ new Set(["x", "y", "width", "height", "rx", "ry", "pathLength"]),
 };
-const PRESENTATION_ATTRIBUTES = new Set([
+const PRESENTATION_ATTRIBUTES = /* @__PURE__ */ new Set([
   "class", "className", "id", "role", "key", "opacity", "transform",
   "clip-rule", "clipRule", "fill", "fill-opacity", "fillOpacity", "fill-rule", "fillRule",
   "shape-rendering", "shapeRendering", "stroke", "stroke-dasharray", "strokeDasharray",
@@ -178,3 +180,28 @@ export function sanitizeRootAttributes(attrs${types.unknown}, allowEventFunction
 export const runtimePolicySource = buildRuntimePolicy();
 export const runtimePolicyRecursiveSource = buildRuntimePolicy(false, true);
 export const runtimePolicyTypeScriptSource = buildRuntimePolicy(true);
+
+// Generated components render built-in icon nodes without the runtime
+// sanitizer, so every node must already be exactly what the shipped policy
+// would keep: no tag or attribute it drops, and no value it rejects.
+export async function assertIconNodesPassRuntimePolicy(icons) {
+  const { sanitizeIconNode } = await import(
+    `data:text/javascript;base64,${Buffer.from(runtimePolicySource).toString("base64")}`
+  );
+  const problems = [];
+  for (const icon of icons) {
+    for (const [tag, attrs] of icon.iconNode) {
+      const [safeNode] = sanitizeIconNode([[tag, attrs]]);
+      if (!safeNode) {
+        problems.push(`${icon.fileName}: <${tag}> is not allowed at runtime`);
+        continue;
+      }
+      for (const [name, value] of Object.entries(attrs)) {
+        if (safeNode[1][name] !== value) {
+          problems.push(`${icon.fileName}: <${tag}> attribute ${name} is not allowed at runtime`);
+        }
+      }
+    }
+  }
+  if (problems.length) throw new Error(problems.join("\n"));
+}

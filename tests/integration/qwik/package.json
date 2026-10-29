@@ -1,0 +1,8 @@
+{
+  "name": "vadivam-integration-qwik",
+  "private": true,
+  "type": "module",
+  "scripts": { "typecheck": "tsc --noEmit", "build": "vite build" },
+  "dependencies": { "@qwik.dev/core": "2.0.0-rc.4", "vadivam-qwik": "file:../../../packages/vadivam-qwik" },
+  "devDependencies": { "typescript": "6.0.3", "vite": "8.3.4" }
+}

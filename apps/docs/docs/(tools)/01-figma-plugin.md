@@ -29,7 +29,7 @@ To change an icon you placed earlier, select it and pick another icon, in either
 
 ## Swap Lucide icons
 
-Select a frame that holds Lucide icons, or select the icons themselves, and the plugin offers to swap them to Vadivam. Every Lucide name has a Vadivam drawing of the same name, so the swap is one to one.
+Select a frame that holds Lucide icons, or select the icons themselves, and the plugin offers to swap them to Vadivam. Each Lucide icon becomes the Vadivam drawing of the same name. Icons Lucide added after Vadivam's latest batch are left as they are.
 
 - It recognizes square, stroke-only layers named after a Lucide icon, such as `arrow-right`, `ArrowRight`, `lucide/arrow-right`, or a deprecated name such as `home`. Layers with filled shapes, such as buttons and tiles, are left alone.
 - Each swapped icon keeps its size, stroke color, stroke weight, and position in auto layout.

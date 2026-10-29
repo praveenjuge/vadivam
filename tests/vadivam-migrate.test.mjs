@@ -68,6 +68,12 @@ describe("migrate-lucide", () => {
     expect(warnings).toEqual([]);
   });
 
+  test("imports Lucide's live aliases under their canonical names", () => {
+    const { text, warnings } = migrateSource(`import { Bold, Heading } from "lucide-react";`);
+    expect(text).toBe(`import { LetterB as Bold, LetterH as Heading } from "vadivam-react";`);
+    expect(warnings).toEqual([]);
+  });
+
   test("leaves strings, JSX text, and other bindings untouched when renaming aliases", () => {
     const source = [
       `import { Home, House, Edit } from "lucide-react";`,

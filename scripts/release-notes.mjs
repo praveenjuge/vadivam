@@ -1,17 +1,18 @@
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { publishablePackages } from "./packages.mjs";
+import { nativePackages, publishablePackages } from "./packages.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const packageLinks = new Map(
-  publishablePackages.map(({ name, directory }) => [
+const packageLinks = new Map([
+  ...publishablePackages.map(({ name, directory }) => [
     directory,
     `[${name}](https://www.npmjs.com/package/${name})`,
   ]),
-);
+  ...nativePackages.map(({ directory, releaseLink }) => [directory, releaseLink]),
+]);
 
 const iconName = (file) => path.basename(file, ".svg");
 const uniqueSorted = (values) => [...new Set(values)].sort();
@@ -83,7 +84,18 @@ export function renderReleaseNotes(summary, totalIcons, version) {
     : "- Package metadata and release state only";
 
   const subject = version ? `Vadivam ${version} ships` : "Ships";
-  return `${subject} ${totalIcons} Vadivam icons across SVG, React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.\n\n## Icons\n\n${iconSection}\n\n## Updated surfaces\n\n${surfaces}\n`;
+  return `${subject} ${totalIcons} Vadivam icons for the web, React Native, Flutter, and Jetpack Compose.\n\n## Icons\n\n${iconSection}\n\n## Updated surfaces\n\n${surfaces}\n`;
+}
+
+// GitHub's generated notes repeat pull request titles verbatim. A title such as
+// "Add <vadivam-icon>" is raw HTML to the docs changelog, where an unclosed
+// element swallows the rest of the page, so tag-like text is escaped. Code
+// spans already show tags literally, and an entity there would show as "&lt;".
+export function escapeHtmlTags(markdown) {
+  // A code span closes with as many backticks as it opened with.
+  return markdown.replace(/(`+)[^\n]*?\1(?!`)|<(?=\/?[A-Za-z])/g, (match) =>
+    match.startsWith("`") ? match : "&lt;",
+  );
 }
 
 function gitDiff(from, to) {
@@ -96,9 +108,11 @@ function gitDiff(from, to) {
 }
 
 if (import.meta.main) {
-  const [from = "", to = "HEAD"] = process.argv.slice(2);
+  const [from = "", to = "HEAD", generatedNotesFile] = process.argv.slice(2);
   const totalIcons = readdirSync(path.join(root, "icons")).filter((file) => file.endsWith(".svg")).length;
+  const generated = generatedNotesFile ? escapeHtmlTags(readFileSync(generatedNotesFile, "utf8")) : "";
   process.stdout.write(
-    renderReleaseNotes(summarizeReleaseDiff(gitDiff(from, to)), totalIcons, to)
+    renderReleaseNotes(summarizeReleaseDiff(gitDiff(from, to)), totalIcons, to) +
+      (generated ? `\n${generated.trim()}\n` : "")
   );
 }

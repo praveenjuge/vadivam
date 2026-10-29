@@ -1,0 +1,26 @@
+name: vadivam
+description: Pixel-perfect 24px outline icons for Flutter, drawn as vector strokes with adjustable size, color, and stroke width.
+# Kept in step with the npm packages by scripts/bump-version.mjs.
+version: 0.0.74
+homepage: https://vadivam.praveenjuge.com
+repository: https://github.com/praveenjuge/vadivam/tree/main/packages/vadivam-flutter
+issue_tracker: https://github.com/praveenjuge/vadivam/issues
+documentation: https://vadivam.praveenjuge.com/docs/flutter
+topics:
+  - icons
+  - svg
+  - icon-pack
+  - widget
+  - vector
+
+environment:
+  sdk: ">=3.7.0 <4.0.0"
+  flutter: ">=3.29.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter

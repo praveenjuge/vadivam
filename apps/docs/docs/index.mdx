@@ -6,7 +6,7 @@ sidebar:
 ---
 
 {/* <!-- vadivam-icon-count:start --> */}
-Vadivam is an open-source set of 1903 pixel-perfect 24px icons, each in an outline and a [solid](/docs/design-guide#solid) style. Use optimized SVG assets, browser JavaScript helpers, or native components for React, React Native, Vue, Svelte, Solid, Angular, Astro, and Preact.
+Vadivam is an open-source set of 1999 pixel-perfect 24px icons, each in an outline and a [solid](/docs/design-guide#solid) style. Use optimized SVG assets, a `<vadivam-icon>` element, or native components for web frameworks, React Native, Flutter, and Jetpack Compose.
 {/* <!-- vadivam-icon-count:end --> */}
 
 Designers can use the bundled, offline [Figma plugin](/docs/figma-plugin) to search the same canonical catalog and place editable local components.
@@ -61,12 +61,27 @@ Static named imports are tree-shakeable and are the best default when the icon i
   <Card title="Preact" href="/docs/preact" icon="zap">
     Native components from `vadivam-preact`.
   </Card>
+  <Card title="Qwik" href="/docs/qwik" icon="rocket">
+    Server-rendered components from `vadivam-qwik`.
+  </Card>
+  <Card title="Lit" href="/docs/lit" icon="feather">
+    SVG templates from `vadivam-lit`.
+  </Card>
+  <Card title="HTML and htmx" href="/docs/html" icon="code-xml">
+    The `<vadivam-icon>` element from `vadivam/elements`.
+  </Card>
+  <Card title="Flutter" href="/docs/flutter" icon="bird">
+    Vector icon widgets from `vadivam` on pub.dev.
+  </Card>
+  <Card title="Jetpack Compose" href="/docs/compose" icon="smartphone">
+    ImageVectors and vector drawables from Maven Central.
+  </Card>
   <Card title="Figma" href="/docs/figma-plugin" icon="figma">
     The Vadivam Icons plugin for designers.
   </Card>
 </CardGroup>
 
-All packages are ESM-only. Icon components accept native SVG attributes in addition to Vadivam's sizing and stroke props. See [installation](/docs/installation) for peer requirements, [usage](/docs/usage) for styling, and [accessibility](/docs/accessibility) for labeling.
+All npm packages are ESM-only. Icon components accept native SVG attributes in addition to Vadivam's sizing and stroke props. See [installation](/docs/installation) for peer requirements, [usage](/docs/usage) for styling, and [accessibility](/docs/accessibility) for labeling.
 
 Browse the [icon catalog](/). Icon names use kebab case in data APIs, such as `activity` and `arrow-right`, and PascalCase for component imports, such as `Activity` and `ArrowRight`. See [Categories and naming](/docs/categories).
 

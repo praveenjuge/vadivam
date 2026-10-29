@@ -35,8 +35,9 @@ This optimizes each SVG in place with SVGO, cleans the path data, smooths every 
 Cleaning the path data undoes what Figma's export leaves behind, without changing how the icon looks:
 
 - Strokes that end at the same point are joined into one, preferring the stroke that continues straight on at a junction. With round caps and joins, two strokes meeting at a point render exactly like one stroke turning there, and a joined outline lets smoothing see both sides of each corner.
-- Lone `M` commands, and stubs shorter than 0.05px hidden under another stroke, are removed. Dots drawn as `h.01` are kept.
+- Lone `M` commands, stubs shorter than 0.05px hidden under another stroke, and stray nodes shorter than 0.05px inside a stroke are removed. Dots drawn as `h.01` are kept.
 - A straight line split into pieces becomes one line.
+- Every subpath starts with a move. SVGO drops the move after a `z` when the next subpath starts where the last one began, and Safari draws some of those from the wrong point, so optimize puts back an `m0 0`.
 - Horizontal and vertical lines just off the pixel grid are snapped onto it, as described under [Pixel grid alignment](/docs/design-guide#pixel-grid-alignment).
 
   </Step>
@@ -51,7 +52,7 @@ This runs every rule under [What every SVG must pass](#what-every-svg-must-pass)
   </Step>
   <Step title="Review by eye">
 
-Compare the icon with `circle`, `square`, and its family at 24px and at 1×, against the rules that are not checked automatically: grid alignment, keylines, corner radius, gaps, and weight. To see where the icon sits in the set's distributions, run:
+Compare the icon with `circle`, `square`, and its family at 24px and at 1×, against the rules that are not checked automatically: optical centering, grid alignment, keylines, corner radius, gaps, and weight. To see where the icon sits in the set's distributions, run:
 
 ```sh
 bun scripts/icon-geometry.mjs
@@ -90,18 +91,29 @@ Icon files are treated as untrusted input. `bun run icons:optimize` and `bun run
 - **Root.** The root `<svg>` has exactly `xmlns="http://www.w3.org/2000/svg"`, `width="24"`, `height="24"`, `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `stroke-width="2"`, `stroke-linecap="round"`, and `stroke-linejoin="round"`. A solid icon's root has the same first four, then `fill="currentColor"` and `fill-rule="evenodd"`. Any other root attribute, such as `class`, `id`, or `style`, is rejected.
 - **Elements.** Only `<path>`, `<circle>`, `<line>`, `<polyline>`, `<polygon>`, `<rect>`, and `<ellipse>` are allowed. That rules out `<a>`, `<clipPath>`, `<defs>`, `<filter>`, `<foreignObject>`, `<g>`, `<image>`, `<linearGradient>`, `<mask>`, `<pattern>`, `<radialGradient>`, `<script>`, `<style>`, `<symbol>`, `<text>`, `<use>`, and any other element. Every icon in the set uses only `<path>`.
 - **Attributes.** Each element carries geometry only: `d` on a path; `cx`, `cy`, and `r` on a circle; `x1`, `y1`, `x2`, and `y2` on a line; `points` on a polyline or polygon; `x`, `y`, `width`, and `height` on a rect, since `rx` and `ry` can't carry corner smoothing; and `cx`, `cy`, `rx`, and `ry` on an ellipse. No `fill`, `stroke`, `transform`, `opacity`, `style`, `class`, `id`, or event handlers.
-- **Geometry.** Every element needs geometry. An icon needs at least one drawable element. Path data must parse. A single outline path may hold at most 8 closed subpaths. The stroke must stay inside the 1px padding, and a solid shape inside 0.75px. Every rounded corner between two straight lines must be smoothed. Outline path data must already be clean: no strokes split where they meet, no stray subpaths, no straight lines in pieces, and no lines just off the pixel grid.
+- **Geometry.** Every element needs geometry. An icon needs at least one drawable element. Path data must parse. A single outline path may hold at most 8 closed subpaths. The stroke must stay inside the 1px padding, and a solid shape inside 0.75px. Every rounded corner between two straight lines must be smoothed. Outline path data must already be clean: no strokes split where they meet, no stray subpaths or nodes, no straight lines in pieces, and no lines just off the pixel grid. No outline stroke may stop 0.3–2px short of another, and no subpath may start after a `z` without a move.
 - **Fills.** Outline source artwork with a `fill` other than `none` is rejected before optimization, so outlined Figma exports never reach the outline set. Solid source artwork with a `stroke`, on any element or on the root, is rejected the same way.
-- **Files.** File names must be canonical Lucide names in lowercase kebab-case, with an entry in `metadata/lucide.json`. Every icon must exist in both `icons/` and `icons-solid/`.
+- **Files.** File names must be canonical Lucide names in lowercase kebab-case, with an entry in `metadata/lucide.json`. That file lists drawn icons only; `bun run icons:metadata -- /path/to/lucide-checkout` adds the entry for a new drawing, from a checkout on the pinned Lucide tag. Every icon must exist in both `icons/` and `icons-solid/`.
 
 Because every published icon has passed these checks, Vadivam SVGs carry no scripts, styles, links, external references, or event handlers, and are safe to inline in HTML, email, or user-facing documents.
+
+`bun run icons:build` also checks every generated icon node against the runtime policy the framework packages ship, and fails if that policy would drop any element, attribute, or value. Named icons rely on that check instead of sanitizing their own icon data on every render:
+
+- [React](/docs/react) named icons skip the runtime sanitizer entirely. React already blocks `javascript:` URLs and ignores string event handlers.
+- [Preact](/docs/preact), [Qwik](/docs/qwik), [Vue](/docs/vue), and [Solid](/docs/solid) named icons skip the icon-node sanitizer, so it drops out of app bundles, but still sanitize root props and `color`, because these frameworks render string event handlers and `innerHTML` as given.
+- [Svelte](/docs/svelte), [Astro](/docs/astro), and [Angular](/docs/angular) icons accept caller icon data on every icon, so they keep the sanitizer and skip it only for the icon's own generated data.
+- [Lit](/docs/lit) named icons are static `svg` templates written when the package is built, and sanitize only `color` at render time.
+- The [`<vadivam-icon>` element](/docs/html) loads icons by name from the package's own modules and sanitizes its `color` and `size` attributes.
+
+`Icon`, `createVadivamIcon`, and the dynamic APIs still sanitize everything that comes from outside the package.
 
 ## What gets built
 
 From each validated SVG, `bun run icons:build` generates:
 
 - Optimized SVG files, per-icon SVG strings, a full SVG sprite, an icon font, and icon-node data in [`vadivam`](/docs/core).
-- Components for [React](/docs/react), [React Native](/docs/react-native), [Vue](/docs/vue), [Svelte](/docs/svelte), [Solid](/docs/solid), [Angular](/docs/angular), [Astro](/docs/astro), and [Preact](/docs/preact), each with a PascalCase name made from the file name.
+- Components for [React](/docs/react), [React Native](/docs/react-native), [Vue](/docs/vue), [Svelte](/docs/svelte), [Solid](/docs/solid), [Angular](/docs/angular), [Astro](/docs/astro), [Preact](/docs/preact), [Qwik](/docs/qwik), and [Lit](/docs/lit), each with a PascalCase name made from the file name, plus the [`<vadivam-icon>` element](/docs/html).
+- [Flutter](/docs/flutter) icon data and [Jetpack Compose](/docs/compose) `ImageVector`s and Android vector drawables, drawn from the same paths normalized to absolute commands.
 - The [shadcn/ui registry](/docs/shadcn) item for every icon.
 - The icon data inside the [MCP server](/docs/mcp).
 - The website's search index and the `/icons/<name>.svg` file behind every [icon page](/).

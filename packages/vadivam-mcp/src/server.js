@@ -11,6 +11,7 @@ import {
   frameworksById,
   iconStyles,
   iconifySnippet,
+  installCommand,
   shadcnAddCommand,
   siteUrl,
   spriteSnippet,
@@ -68,10 +69,10 @@ const iconSummarySchema = z.object({
   url: z.string(),
 });
 
-function installCommand(frameworkId) {
+function installFor(frameworkId) {
   if (frameworkId === "core") return "npm install vadivam";
   if (frameworkId === "react-native") return "npm install vadivam-react-native react-native-svg";
-  return `npm install ${frameworksById[frameworkId].packageName}`;
+  return installCommand(frameworkId, { version });
 }
 
 function docsUrl(frameworkId) {
@@ -122,7 +123,7 @@ export function renderIcon(icon, format = "svg", options = {}) {
 }
 
 function formatInstall(format) {
-  if (frameworksById[format]) return installCommand(format);
+  if (frameworksById[format]) return installFor(format);
   if (format === "sprite" || format === "font") return "npm install vadivam";
   return undefined;
 }
@@ -138,14 +139,19 @@ export function usageFor(frameworkId) {
     frameworkId === "svelte" || frameworkId === "astro"
       ? `import DynamicIcon from "${packageName}/dynamic"`
       : `import { DynamicIcon } from "${packageName}/dynamic"`;
-  const dynamic = framework
+  const nativeDynamic = {
+    qwik: `No DynamicIcon in vadivam-qwik; look icons up in the \`icons\` registry from "vadivam-qwik" after validating the name. ${siteUrl}/docs/qwik`,
+    flutter: `VadivamIcons.all[name] returns the icon data or null. Referencing it keeps every icon in the build. ${siteUrl}/docs/flutter`,
+    compose: `VadivamIcons.byName(name) returns the ImageVector or null. Calling it keeps every icon in the app. ${siteUrl}/docs/compose`,
+  };
+  const dynamic = nativeDynamic[frameworkId] ?? (framework
     ? `${dynamicImport}${frameworkId === "angular" ? ' (directive: <svg vadivamDynamicIcon name="activity"></svg>)' : ""}. Validate runtime names against iconNames first. ${siteUrl}/docs/dynamic-icons`
-    : `No DynamicIcon in vadivam; validate names with iconNames from "vadivam/manifest". ${siteUrl}/docs/dynamic-icons`;
+    : `No DynamicIcon in vadivam; validate names with iconNames from "vadivam/manifest", or render <vadivam-icon name="…"> from "vadivam/elements". ${siteUrl}/docs/dynamic-icons`);
   return {
     framework: frameworkId,
     label: framework?.label ?? "SVG and JavaScript",
     packageName,
-    install: installCommand(frameworkId),
+    install: installFor(frameworkId),
     example,
     solid: framework
       ? componentSnippet(frameworkId, "Activity", { size: 20, style: "solid" })

@@ -9,7 +9,7 @@ search:
   keywords: [icon names, kebab-case, PascalCase, categories, tags, synonyms, lucide names, manifest]
 ---
 
-Every Vadivam icon has one name, a set of tags, and one or more categories. The names and metadata come from the pinned [Lucide](https://lucide.dev) release, so a name that works in Lucide works in Vadivam.
+Every Vadivam icon has one name, a set of tags, and one or more categories. The names and metadata come from the pinned [Lucide](https://lucide.dev) release, so each icon has the name it has in Lucide.
 
 ## Names
 
@@ -22,8 +22,11 @@ An icon's name is lowercase kebab-case, such as `arrow-right` or `circle-alert`.
 | Per-icon import | kebab-case path | `vadivam-react/circle-alert` |
 | Dynamic APIs and `iconNames` | kebab-case | `<DynamicIcon name="circle-alert" />` |
 | shadcn/ui registry | kebab-case | `/r/circle-alert.json` |
+| Flutter | lowerCamelCase | `VadivamIcons.circleAlert` |
+| Jetpack Compose | PascalCase | `VadivamIcons.CircleAlert` |
+| Android drawable | snake_case | `R.drawable.vadivam_circle_alert` |
 
-Each name is a current canonical Lucide name. Older Lucide names, such as `alert-circle` for `circle-alert` or `home` for `house`, are not separate icons. The [Lucide codemod](/docs/migrate-from-lucide) and the [Figma plugin](/docs/figma-plugin) map them to the current name.
+Each name is a current canonical Lucide name. Older Lucide names and aliases, such as `alert-circle` for `circle-alert`, `home` for `house`, or `bold` for `letter-b`, are not separate icons. The [Lucide codemod](/docs/migrate-from-lucide) and the [Figma plugin](/docs/figma-plugin) map them to the current name.
 
 ## Tags
 
@@ -44,46 +47,47 @@ Each icon belongs to one or more categories. Pick a category to browse it in the
 | Category | Icons | Description |
 | --- | --: | --- |
 | [Accessibility](/?category=accessibility) | 34 | Icons for accessibility, visibility, hearing, speech, and inclusive UI affordances. |
-| [Accounts & access](/?category=account) | 167 | Icons for user profiles, identity, settings, memberships, and personal account actions. |
+| [Accounts & access](/?category=account) | 168 | Icons for user profiles, identity, settings, memberships, and personal account actions. |
 | [Animals](/?category=animals) | 26 | Icons for animals, wildlife, pets, insects, and other living creatures. |
-| [Arrows](/?category=arrows) | 223 | Icons for directional arrows, movement, sorting, transfer, and navigation flows. |
+| [Arrows](/?category=arrows) | 229 | Icons for directional arrows, movement, sorting, transfer, and navigation flows. |
 | [Buildings](/?category=buildings) | 31 | Icons for buildings, landmarks, houses, infrastructure, and built environments. |
-| [Charts](/?category=charts) | 33 | Icons for charts, graphs, trends, analytics, and data visualization. |
+| [Charts](/?category=charts) | 36 | Icons for charts, graphs, trends, analytics, and data visualization. |
 | [Communication](/?category=communication) | 69 | Icons for speaking, listening, calling, messaging, broadcasting, and communication devices. |
 | [Connectivity](/?category=connectivity) | 101 | Icons for wireless signals, wired connections, networks, device pairing, and data transfer. |
 | [Cursors](/?category=cursors) | 34 | Icons for cursors, pointers, selection tools, and loading states. |
-| [Design](/?category=design) | 169 | Icons for design tools, layout controls, creative editing, and visual composition. |
-| [Coding & development](/?category=development) | 277 | Icons for code, logic, data structures, automation, and software development workflows. |
-| [Devices](/?category=devices) | 192 | Icons for hardware, electronics, computers, peripherals, and connected devices. |
+| [Design](/?category=design) | 170 | Icons for design tools, layout controls, creative editing, and visual composition. |
+| [Coding & development](/?category=development) | 280 | Icons for code, logic, data structures, automation, and software development workflows. |
+| [Devices](/?category=devices) | 194 | Icons for hardware, electronics, computers, peripherals, and connected devices. |
 | [Emoji](/?category=emoji) | 45 | Icons for expressive symbols, faces, gestures, hearts, stars, and zodiac signs. |
-| [File icons](/?category=files) | 172 | Icons for files, folders, storage, import and export, and document-related actions. |
-| [Finance](/?category=finance) | 68 | Icons for money, pricing, payments, currencies, banking, and financial trends. |
+| [File icons](/?category=files) | 173 | Icons for files, folders, storage, import and export, and document-related actions. |
+| [Finance](/?category=finance) | 70 | Icons for money, pricing, payments, currencies, banking, and financial trends. |
 | [Food & beverage](/?category=food-beverage) | 86 | Icons for food, drinks, cooking, ingredients, dining, and kitchen items. |
-| [Gaming](/?category=gaming) | 164 | Icons for games, fantasy items, strategy pieces, achievements, and play-related objects. |
+| [Gaming](/?category=gaming) | 165 | Icons for games, fantasy items, strategy pieces, achievements, and play-related objects. |
 | [Home](/?category=home) | 79 | Icons for household spaces, furniture, appliances, utilities, cleaning, and home safety. |
-| [Layout](/?category=layout) | 158 | Icons for alignment, spacing, resizing, grouping, and interface layout structure. |
-| [Mail](/?category=mail) | 30 | Icons for mailboxes, inboxes, sending, replies, attachments, and email management. |
-| [Mathematics](/?category=math) | 81 | Icons for math symbols, geometry, measurement, arithmetic, and calculation. |
-| [Medical](/?category=medical) | 54 | Icons for healthcare, anatomy, treatment, diagnostics, wellness, and medical facilities. |
-| [Multimedia](/?category=multimedia) | 163 | Icons for audio, video, playback, recording, broadcasting, and media libraries. |
+| [Layout](/?category=layout) | 160 | Icons for alignment, spacing, resizing, grouping, and interface layout structure. |
+| [Letters & digits](/?category=letters-digits) | 152 | Icons visibly featuring various alphanumerical characters, including Latin and Greek letters, and digits. |
+| [Mail](/?category=mail) | 31 | Icons for mailboxes, inboxes, sending, replies, attachments, and email management. |
+| [Mathematics](/?category=math) | 83 | Icons for math symbols, geometry, measurement, arithmetic, and calculation. |
+| [Medical](/?category=medical) | 55 | Icons for healthcare, anatomy, treatment, diagnostics, wellness, and medical facilities. |
+| [Multimedia](/?category=multimedia) | 167 | Icons for audio, video, playback, recording, broadcasting, and media libraries. |
 | [Nature](/?category=nature) | 27 | Icons for plants, trees, landscapes, camping, and the natural world. |
-| [Navigation & Places](/?category=navigation) | 108 | Icons for maps, locations, landmarks, routes, travel directions, and wayfinding. |
+| [Navigation & places](/?category=navigation) | 113 | Icons for maps, locations, landmarks, routes, travel directions, and wayfinding. |
 | [Notifications](/?category=notifications) | 48 | Icons for alerts, status updates, reminders, approvals, and attention states. |
 | [People](/?category=people) | 14 | Icons for people, groups, identities, roles, and person-centered actions. |
 | [Photography](/?category=photography) | 80 | Icons for cameras, images, framing, viewing, editing, and photo workflows. |
-| [Science](/?category=science) | 47 | Icons for science, research, experiments, instruments, formulas, and discovery. |
+| [Science](/?category=science) | 49 | Icons for science, research, experiments, instruments, formulas, and discovery. |
 | [Seasons](/?category=seasons) | 6 | Icons for seasonal weather, blooming plants, sunlight, and changing times of year. |
-| [Security](/?category=security) | 73 | Icons for locks, keys, identity checks, surveillance, protection, and secure access. |
-| [Shapes](/?category=shapes) | 67 | Icons for basic geometric shapes and symbols. |
-| [Shopping](/?category=shopping) | 42 | Icons for retail, carts, bags, checkout, barcodes, and purchasing. |
+| [Security](/?category=security) | 74 | Icons for locks, keys, identity checks, surveillance, protection, and secure access. |
+| [Shapes](/?category=shapes) | 68 | Icons for basic geometric shapes and symbols. |
+| [Shopping](/?category=shopping) | 41 | Icons for retail, carts, bags, checkout, barcodes, and purchasing. |
 | [Social](/?category=social) | 146 | Icons for social interaction, reactions, sharing, community, and relationship signals. |
-| [Sports](/?category=sports) | 19 | Icons for sports, fitness, competition, equipment, and athletic achievement. |
+| [Sports](/?category=sports) | 22 | Icons for sports, fitness, competition, equipment, and athletic achievement. |
 | [Sustainability](/?category=sustainability) | 26 | Icons for sustainability, clean energy, recycling, nature, and environmental stewardship. |
-| [Text formatting](/?category=text) | 273 | Icons for letters, typography, formatting, reading, writing, and text structure. |
-| [Time & calendar](/?category=time) | 69 | Icons for clocks, calendars, schedules, history, timers, and time tracking. |
-| [Tools](/?category=tools) | 85 | Icons for hand tools, equipment, maintenance, repair, and making things. |
-| [Transportation](/?category=transportation) | 71 | Icons for vehicles, transit, cargo, parking, fuel, and moving people or goods. |
-| [Travel](/?category=travel) | 86 | Icons for travel, lodging, luggage, destinations, trip planning, and tourism. |
+| [Text formatting](/?category=text) | 275 | Icons for typography, formatting, reading, writing, and text structure. |
+| [Time & calendar](/?category=time) | 71 | Icons for clocks, calendars, schedules, history, timers, and time tracking. |
+| [Tools](/?category=tools) | 86 | Icons for hand tools, equipment, maintenance, repair, and making things. |
+| [Transportation](/?category=transportation) | 70 | Icons for vehicles, transit, cargo, parking, fuel, and moving people or goods. |
+| [Travel](/?category=travel) | 77 | Icons for travel, lodging, luggage, destinations, trip planning, and tourism. |
 | [Weather](/?category=weather) | 52 | Icons for clouds, sun, rain, wind, temperature, and weather conditions. |
 
 {/* <!-- vadivam-categories:end --> */}

@@ -1,6 +1,6 @@
 {
   "name": "vadivam",
-  "version": "0.0.66",
+  "version": "0.0.74",
   "description": "Pixel-perfect 24px outline and solid SVG icons with tree-shakeable ESM imports and metadata.",
   "license": "MIT",
   "author": "Praveen Juge",
@@ -30,6 +30,7 @@
     "vadivam": "dist/cli.js"
   },
   "sideEffects": [
+    "./dist/elements.js",
     "./dist/font/vadivam.css",
     "./dist/font/vadivam-solid.css"
   ],
@@ -49,6 +50,11 @@
       "types": "./dist/manifest.d.ts",
       "import": "./dist/manifest.js",
       "default": "./dist/manifest.js"
+    },
+    "./elements": {
+      "types": "./dist/elements.d.ts",
+      "import": "./dist/elements.js",
+      "default": "./dist/elements.js"
     },
     "./icons/*.svg": "./dist/icons/*.svg",
     "./icons/*": {
