@@ -271,13 +271,12 @@ def main():
     pages, in_word = scan_site()
     used = {code for code in pages if code >= 0x80}
     wanted = LATIN_1 | LATIN_EXT_A | (used & GOOGLE_LATIN)
-    OUT.mkdir(parents=True, exist_ok=True)
-    for old in OUT.glob("*.woff2"):
-        old.unlink()
-    manifest, report, covered, core_codes = [], [], set(), set()
+    # Everything is built and checked before apps/docs/fonts changes, so a
+    # failed run leaves the committed files in place.
+    outputs, manifest, report, covered, core_codes = {}, [], [], set(), set()
     for family in FAMILIES:
         license_path, license_sha = family["license"]
-        (OUT / f"OFL-{family['name'].replace(' ', '-')}.txt").write_bytes(fetch(license_path, license_sha).read_bytes())
+        outputs[f"OFL-{family['name'].replace(' ', '-')}.txt"] = fetch(license_path, license_sha).read_bytes()
         faces, missing = [], set()
         for face in family["faces"]:
             source = fetch(face["source"], face["sha256"])
@@ -291,7 +290,7 @@ def main():
                 data = subset_file(source, codes, family, face)
                 drift = check(data, source, codes, family, face)
                 file = f"{face['file']}-{kind}.woff2"
-                (OUT / file).write_bytes(data)
+                outputs[file] = data
                 report.append(f"  {file:44} {len(data):>6} B  {len(codes):>3} characters  drift {drift:.2f}")
                 # Blume preloads the `latin` subset, so only the core is preloaded.
                 faces.append(dict(src=file, style=face["style"], weights=face["weights"],
@@ -300,7 +299,12 @@ def main():
                              missing=unicode_range(missing) if missing else []))
     # tests/docs-fonts.test.mjs checks the built pages against `eligible`.
     eligible = unicode_range((LATIN_1 | LATIN_EXT_A | GOOGLE_LATIN) - set(range(0x80)))
-    (OUT / "fonts.json").write_text(json.dumps(dict(eligible=eligible, families=manifest), indent=2) + "\n")
+    outputs["fonts.json"] = (json.dumps(dict(eligible=eligible, families=manifest), indent=2) + "\n").encode()
+    OUT.mkdir(parents=True, exist_ok=True)
+    for old in OUT.glob("*.woff2"):
+        old.unlink()
+    for name, data in outputs.items():
+        (OUT / name).write_bytes(data)
 
     print("Wrote apps/docs/fonts:\n" + "\n".join(report))
     describe = lambda codes: " ".join(f"{chr(c)} U+{c:04X} ({pages[c]})" for c in sorted(codes))
