@@ -34,11 +34,15 @@ void main() {
       expect(icon.name, name);
       expect(icon.filled, isTrue, reason: name);
       expect(icon.path.fillType, PathFillType.evenOdd, reason: name);
-      final bounds = icon.path.getBounds();
-      expect(bounds.left, greaterThanOrEqualTo(0), reason: name);
-      expect(bounds.top, greaterThanOrEqualTo(0), reason: name);
-      expect(bounds.right, lessThanOrEqualTo(24), reason: name);
-      expect(bounds.bottom, lessThanOrEqualTo(24), reason: name);
+      // Sampled points, since the control points of an arc's curves can
+      // reach past the view box while the edge itself stays inside.
+      for (final metric in icon.path.computeMetrics()) {
+        for (var distance = 0.0; distance <= metric.length; distance += 0.25) {
+          final point = metric.getTangentForOffset(distance)!.position;
+          expect(point.dx, inInclusiveRange(0.5, 23.5), reason: name);
+          expect(point.dy, inInclusiveRange(0.5, 23.5), reason: name);
+        }
+      }
     }
     expect(VadivamIcons.activity.filled, isFalse);
   });
