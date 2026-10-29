@@ -8,7 +8,8 @@ const SecurityIcon = createVadivamIcon("security", [
   ["animate", { onbegin: "alert(1)", attributeName: "href" }],
   ["path", { d: "M2 2h2", onclick: "alert(1)" }],
 ] as any);
-const unsafeRootProps = {
+// Deliberately unsafe input: the integration check proves the icon drops it.
+const unsafeRootProps = { // nosemgrep
   color: "url(https://example.com/paint.svg#x)",
   dangerouslySetInnerHTML: "<script>alert(1)</script>",
   onload: "alert(1)",
