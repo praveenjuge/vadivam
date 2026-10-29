@@ -1,6 +1,6 @@
 {
   "name": "vadivam-lit",
-  "version": "0.0.71",
+  "version": "0.0.73",
   "description": "Pixel-perfect 24px outline icon templates for Lit with tree-shakeable imports.",
   "license": "MIT",
   "author": "Praveen Juge",
