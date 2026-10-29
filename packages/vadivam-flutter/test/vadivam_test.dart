@@ -27,6 +27,30 @@ void main() {
     }
   });
 
+  test('every icon has a filled solid twin', () {
+    expect(VadivamSolidIcons.all.keys.toSet(), VadivamIcons.all.keys.toSet());
+    for (final MapEntry(key: name, value: icon)
+        in VadivamSolidIcons.all.entries) {
+      expect(icon.name, name);
+      expect(icon.filled, isTrue, reason: name);
+      expect(icon.path.fillType, PathFillType.evenOdd, reason: name);
+      final bounds = icon.path.getBounds();
+      expect(bounds.left, greaterThanOrEqualTo(0), reason: name);
+      expect(bounds.top, greaterThanOrEqualTo(0), reason: name);
+      expect(bounds.right, lessThanOrEqualTo(24), reason: name);
+      expect(bounds.bottom, lessThanOrEqualTo(24), reason: name);
+    }
+    expect(VadivamIcons.activity.filled, isFalse);
+  });
+
+  testWidgets('paints a solid icon at the theme size', (tester) async {
+    await tester.pumpWidget(_app(const IconTheme(
+      data: IconThemeData(size: 32, color: Color(0xFF000080)),
+      child: VadivamIcon(VadivamSolidIcons.activity),
+    )));
+    expect(tester.getSize(find.byType(VadivamIcon)), const Size(32, 32));
+  });
+
   testWidgets('sizes from IconTheme and hides decorative icons',
       (tester) async {
     final semantics = tester.ensureSemantics();

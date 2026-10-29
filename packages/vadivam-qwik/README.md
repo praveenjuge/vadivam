@@ -1,6 +1,6 @@
 # vadivam-qwik
 
-Tree-shakeable 24px outline SVG icons for Qwik.
+Tree-shakeable 24px outline and solid SVG icons for Qwik.
 
 [Browse icons](https://vadivam.praveenjuge.com) · [Qwik docs](https://vadivam.praveenjuge.com/docs/qwik) · [Source](https://github.com/praveenjuge/vadivam/tree/main/packages/vadivam-qwik) · [GitHub](https://github.com/praveenjuge/vadivam)
 
@@ -25,6 +25,12 @@ import { Activity } from "vadivam-qwik";
 - Tree-shakeable named and per-icon imports
 
 Requires Qwik 2 (`@qwik.dev/core`).
+
+Every icon also has a solid twin with the same name in `vadivam-qwik/solid`. Solid icons fill their shapes with `color` and take no stroke props:
+
+```js
+import { Activity } from "vadivam-qwik/solid";
+```
 
 Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [Lit](https://www.npmjs.com/package/vadivam-lit) · [Flutter](https://pub.dev/packages/vadivam) · [Jetpack Compose](https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
 

@@ -37,6 +37,19 @@ Lit templates can't spread arbitrary attributes, so put IDs, event listeners, an
 
 The root entry point also exports the `icons` registry, a generic `Icon`, and `createVadivamIcon` for custom geometry.
 
+## Solid icons
+
+Every icon has a [solid](/docs/design-guide#solid) twin with the same name in `vadivam-lit/solid`:
+
+```ts
+import { House } from "vadivam-lit";
+import { House as HouseSolid } from "vadivam-lit/solid";
+
+html`${(active ? HouseSolid : House)({ size: 20, label: "Home" })}`;
+```
+
+Solid icons take `size`, `color`, `class`, and `label`, and `color` sets the fill. They have no stroke, so `strokeWidth` and `absoluteStrokeWidth` don't apply. The solid entry has the same layout as the root: `vadivam-lit/solid/icons/house` and `vadivam-lit/solid/dynamic`.
+
 ## Per-icon imports
 
 ```ts

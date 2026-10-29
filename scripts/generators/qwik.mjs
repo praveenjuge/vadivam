@@ -1,4 +1,6 @@
 import {
+  buildStyles,
+  defaultAttributesSource,
   iconExports,
   iconImports,
   iconNameType,
@@ -6,6 +8,7 @@ import {
   iconRegistryEntries,
   iconRegistryTypes,
   prepareDist,
+  strokePropTypes,
   svgElementTypeSource,
   write,
   writeRuntimePolicy,
@@ -13,16 +16,35 @@ import {
 
 // Icons are Qwik inline components: plain functions that render during SSR and
 // ship no client JavaScript, so they need no component$ boundary or QRLs.
-export async function buildQwikPackage(icons, dist) {
+export async function buildQwikPackage(icons, dist, solidIcons = []) {
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
+  await buildStyles(dist, { outline: icons, solid: solidIcons }, buildQwikEntry);
+}
+
+// An outline icon paints its stroke and scales its width; a solid icon paints
+// its fill and has no stroke to scale.
+function paintSource(style) {
+  if (!style.stroked) {
+    return { props: "strokeWidth: _strokeWidth, absoluteStrokeWidth: _absoluteStrokeWidth, ", resolve: "", attributes: "    fill: sanitizePaint(color),\n" };
+  }
+  return {
+    props: "strokeWidth = 2, absoluteStrokeWidth = false, ",
+    resolve: "  const numericSize = Number(size);\n  const numericStroke = Number(strokeWidth);\n  const stroke = absoluteStrokeWidth && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStroke) ? numericStroke * 24 / numericSize : strokeWidth;\n",
+    attributes: '    stroke: sanitizePaint(color),\n    "stroke-width": stroke,\n',
+  };
+}
+
+async function buildQwikEntry(dist, icons, style) {
+  const shared = style.shared;
+  const paint = paintSource(style);
   // PublicProps lets callers pass plain functions to onClick$ and other $
   // props, which the Qwik optimizer turns into QRLs.
-  await write(dist, "types.d.ts", `import type { FunctionComponent, PropsOf, PublicProps } from "@qwik.dev/core";\nexport type SVGElementType = ${svgElementTypeSource};\nexport type IconNode = readonly [tag: SVGElementType, attrs: Record<string, string | number | boolean>][];\nexport interface VadivamProps extends Omit<PropsOf<"svg">, "color" | "size"> { size?: string | number; color?: string; strokeWidth?: string | number; absoluteStrokeWidth?: boolean; title?: string; }\nexport type VadivamIcon = FunctionComponent<PublicProps<VadivamProps>>;\nexport type IconName = ${iconNameType(icons)};\n`);
-  await write(dist, "defaultAttributes.js", `export default { xmlns: "http://www.w3.org/2000/svg", width: 24, height: 24, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round" };\n`);
+  await write(dist, "types.d.ts", `import type { FunctionComponent, PropsOf, PublicProps } from "@qwik.dev/core";\nexport type SVGElementType = ${svgElementTypeSource};\nexport type IconNode = readonly [tag: SVGElementType, attrs: Record<string, string | number | boolean>][];\nexport interface VadivamProps extends Omit<PropsOf<"svg">, "color" | "size"${style.stroked ? "" : ' | "stroke-width"'}> { size?: string | number; color?: string;${strokePropTypes(style)} title?: string; }\nexport type VadivamIcon = FunctionComponent<PublicProps<VadivamProps>>;\nexport type IconName = ${iconNameType(icons)};\n`);
+  await write(dist, "defaultAttributes.js", `export default ${defaultAttributesSource(style)};\n`);
   await write(dist, "IconBase.js", `import { jsx } from "@qwik.dev/core";
 import defaultAttributes from "./defaultAttributes.js";
-import { sanitizePaint, sanitizeRootAttributes } from "./runtimePolicy.js";
+import { sanitizePaint, sanitizeRootAttributes } from "${shared}runtimePolicy.js";
 
 // Qwik event handlers (onClick$, window:onScroll$) are QRLs the optimizer
 // creates, not inline strings, so they pass through; everything else goes
@@ -38,19 +60,14 @@ function hasA11y(props) { return Object.keys(props).some((name) => name.startsWi
 
 // Renders nodes as given: built-in icons pass nodes checked when the package is
 // built, and Icon passes caller nodes after sanitizing them.
-export function IconBase({ color, size = 24, strokeWidth = 2, absoluteStrokeWidth = false, children, iconNode = [], name, title, class: className, ref, ...rest }) {
-  const numericSize = Number(size);
-  const numericStroke = Number(strokeWidth);
-  const stroke = absoluteStrokeWidth && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStroke) ? numericStroke * 24 / numericSize : strokeWidth;
-  const safeRest = rootAttributes(rest);
+export function IconBase({ color, size = 24, ${paint.props}children, iconNode = [], name, title, class: className, ref, ...rest }) {
+${paint.resolve}  const safeRest = rootAttributes(rest);
   const labelled = Boolean(title) || hasA11y(safeRest);
   return jsx("svg", {
     ...defaultAttributes,
     width: size,
     height: size,
-    stroke: sanitizePaint(color),
-    "stroke-width": stroke,
-    // Qwik joins class lists itself, so callers keep string, array, and
+${paint.attributes}    // Qwik joins class lists itself, so callers keep string, array, and
     // object (conditional) forms.
     class: ["vadivam", name && "vadivam-" + name, className],
     // A signal or callback ref, passed straight to Qwik like on a plain <svg>.
@@ -62,7 +79,7 @@ export function IconBase({ color, size = 24, strokeWidth = 2, absoluteStrokeWidt
   });
 }
 `);
-  await write(dist, "Icon.js", `import { IconBase } from "./IconBase.js";\nimport { sanitizeIconNode } from "./runtimePolicy.js";\nexport function Icon({ iconNode, ...props }) { return IconBase({ ...props, iconNode: sanitizeIconNode(iconNode) }); }\nexport default Icon;\n`);
+  await write(dist, "Icon.js", `import { IconBase } from "./IconBase.js";\nimport { sanitizeIconNode } from "${shared}runtimePolicy.js";\nexport function Icon({ iconNode, ...props }) { return IconBase({ ...props, iconNode: sanitizeIconNode(iconNode) }); }\nexport default Icon;\n`);
   await write(dist, "Icon.d.ts", `import type { IconNode, VadivamProps } from "./types.js";\nexport interface IconProps extends VadivamProps { iconNode: IconNode; name?: string; }\nexport declare function Icon(props: IconProps): import("@qwik.dev/core").JSXOutput;\nexport default Icon;\n`);
   await write(dist, "createVadivamIcon.js", `import { Icon } from "./Icon.js";\nexport function createVadivamIcon(name, iconNode) { return (props) => Icon({ ...props, name, iconNode }); }\nexport default createVadivamIcon;\n`);
   await write(dist, "createVadivamIcon.d.ts", `import type { IconNode, VadivamIcon } from "./types.js";\nexport declare function createVadivamIcon(name: string, iconNode: IconNode): VadivamIcon;\nexport default createVadivamIcon;\n`);

@@ -3,7 +3,9 @@ import { render } from "@lit-labs/ssr";
 import { collectResult } from "@lit-labs/ssr/lib/render-result.js";
 import * as lit from "../../packages/vadivam-lit/dist/index.js";
 import LitDynamicIcon from "../../packages/vadivam-lit/dist/dynamic.js";
+import * as litSolid from "../../packages/vadivam-lit/dist/solid/index.js";
 import * as qwik from "../../packages/vadivam-qwik/dist/index.js";
+import * as qwikSolid from "../../packages/vadivam-qwik/dist/solid/index.js";
 import { iconNames } from "../../packages/vadivam/dist/manifest.js";
 
 // Lit SSR output includes its hydration comments; assertions match around them.
@@ -65,6 +67,22 @@ describe("vadivam-lit", () => {
   });
 });
 
+describe("vadivam-lit/solid", () => {
+  test("exposes a solid twin of every icon", () => {
+    expect(Object.keys(litSolid.icons)).toHaveLength(iconNames.length);
+    expect(litSolid.Activity).not.toBe(lit.Activity);
+    expect(litSolid.ActivityIcon).toBe(litSolid.Activity);
+  });
+
+  test("fills with color and takes no stroke", async () => {
+    const html = await litMarkup(litSolid.Activity({ size: 32, color: "navy", strokeWidth: 3, label: "Activity" }));
+    expect(html).toContain('width="32" height="32"');
+    expect(html).toContain('fill="navy" fill-rule="evenodd"');
+    expect(html).not.toContain("stroke");
+    expect(html).toContain("vadivam-activity");
+  });
+});
+
 describe("vadivam-qwik", () => {
   test("exposes every icon and aliases", () => {
     expect(Object.keys(qwik.icons)).toHaveLength(iconNames.length);
@@ -109,5 +127,24 @@ describe("vadivam-qwik", () => {
     expect(children.map((child) => child.type)).toEqual(["path"]);
     const pathProps = { ...children[0].constProps, ...children[0].varProps };
     expect(pathProps).toEqual({ d: "M2 2h20" });
+  });
+});
+
+describe("vadivam-qwik/solid", () => {
+  test("exposes a solid twin of every icon", () => {
+    expect(Object.keys(qwikSolid.icons)).toHaveLength(iconNames.length);
+    expect(qwikSolid.Activity).not.toBe(qwik.Activity);
+    expect(qwikSolid.ActivityIcon).toBe(qwikSolid.Activity);
+  });
+
+  test("fills with color and takes no stroke", () => {
+    const node = qwikSolid.Activity({ size: 32, color: "navy", strokeWidth: 3, absoluteStrokeWidth: true });
+    const props = { ...node.constProps, ...node.varProps };
+    expect(props.width).toBe(32);
+    expect(props.fill).toBe("navy");
+    expect(props["fill-rule"]).toBe("evenodd");
+    expect(props.stroke).toBeUndefined();
+    expect(props["stroke-width"]).toBeUndefined();
+    expect(props.class).toEqual(["vadivam", "vadivam-activity", undefined]);
   });
 });

@@ -74,18 +74,18 @@ export const publishablePackages = [
   {
     name: "vadivam-lit",
     directory: "packages/vadivam-lit",
-    description: "Pixel-perfect 24px outline icon templates for Lit with tree-shakeable imports.",
+    description: "Pixel-perfect 24px outline and solid icon templates for Lit with tree-shakeable imports.",
     documentation: "/docs/lit",
     keywords: ["lit", "lit-html", "web-components"],
-    readmeSearchPhrase: "Tree-shakeable 24px outline SVG icons for Lit",
+    readmeSearchPhrase: "Tree-shakeable 24px outline and solid SVG icons for Lit",
   },
   {
     name: "vadivam-qwik",
     directory: "packages/vadivam-qwik",
-    description: "Pixel-perfect 24px outline icon components for Qwik with tree-shakeable imports.",
+    description: "Pixel-perfect 24px outline and solid icon components for Qwik with tree-shakeable imports.",
     documentation: "/docs/qwik",
     keywords: ["qwik", "qwik-icons"],
-    readmeSearchPhrase: "Tree-shakeable 24px outline SVG icons for Qwik",
+    readmeSearchPhrase: "Tree-shakeable 24px outline and solid SVG icons for Qwik",
   },
   {
     name: "vadivam-mcp",

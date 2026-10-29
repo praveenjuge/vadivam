@@ -772,6 +772,7 @@ async function buildRawPackage(icons, solidIcons = []) {
   await buildStyles(rawDist, { outline: icons, solid: solidIcons }, (dist, styleIcons, style) =>
     buildRawEntry(dist, styleIcons, style),
   );
+  await buildElements(icons, rawDist, solidIcons);
   const solidByName = new Map(solidIcons.map((icon) => [icon.name, icon]));
   const manifestIcons = icons.map((icon) => {
     const solid = solidByName.get(icon.name);
@@ -935,7 +936,6 @@ export default createIcons;
     path.join(dist, "index.d.ts"),
     `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\n${manifestExports}${rawNamedExports}\nexport type { CreateIconsOptions } from "./createIcons.js";\n${manifestTypes}export type { IconName, IconNode, Icons, SVGElementType, SVGProps } from "${shared}types.js";\n`,
   );
-  await buildElements(icons, rawDist);
   await buildStaticAssets(icons, {
     iconsDirectory: sourceDirectory,
     outputDirectory: dist,
