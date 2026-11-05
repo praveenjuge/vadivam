@@ -42,7 +42,7 @@ const dependencyFields = ["dependencies", "devDependencies", "peerDependencies",
 
 const iconNames = new Set(icons.map((icon) => icon.name));
 const componentNames = new Map(icons.map((icon) => [icon.name, icon.componentName]));
-// Deprecated Lucide component names (AlertCircle) and the canonical ones (CircleAlert).
+// Deprecated Lucide component names (AlertCircle) and the canonical ones (CircleExclamationPoint).
 const pascalCase = (name) => name.split("-").map((part) => part[0].toUpperCase() + part.slice(1)).join("");
 const componentAliases = new Map(
   Object.entries(lucideAliases).map(([alias, name]) => [pascalCase(alias), componentNames.get(name)]),
@@ -95,7 +95,7 @@ export function mapSpecifier(specifier) {
   return { manual: `${specifier}: no Vadivam equivalent for this subpath` };
 }
 
-/** The canonical export for a deprecated Lucide one: AlertCircleIcon -> CircleAlertIcon. */
+/** The canonical export for a deprecated Lucide one: AlertCircleIcon -> CircleExclamationPointIcon. */
 function canonicalExport(name) {
   const [, prefix, base, suffix] = name.match(/^(Vadivam)?(\w+?)(Icon)?$/) ?? [];
   const canonical = base && componentAliases.get(base);

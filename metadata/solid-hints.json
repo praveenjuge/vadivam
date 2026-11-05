@@ -174,7 +174,6 @@
     "circle-percent",
     "clipboard-type",
     "copyleft",
-    "copyright",
     "creative-commons",
     "diamond-percent",
     "file-digit",
@@ -299,7 +298,7 @@
     "hand-helping",
     "lightbulb",
     "lightbulb-off",
-    "mail-warning",
+    "mail-exclamation-point",
     "pen-tool",
     "person-standing",
     "pipette",
@@ -368,7 +367,7 @@
         2
       ]
     },
-    "clock-alert": {
+    "clock-exclamation-point": {
       "front": [
         2,
         3

@@ -29,6 +29,45 @@ function validStrings(value, maxLength) {
   );
 }
 
+async function readLucideGroups(directory) {
+  let files;
+  try {
+    files = await readdir(directory);
+  } catch {
+    return {};
+  }
+  const groups = {};
+  for (const fileName of files) {
+    if (!fileName.endsWith(".json")) continue;
+    groups[fileName.slice(0, -5)] = (await readJson(path.join(directory, fileName))).tags ?? [];
+  }
+  return groups;
+}
+
+// Since 1.65, Lucide metadata can inherit tags and categories with
+// `$extends:<icon>`, and pull shared tags with `$group:<group>`. Expand them in
+// place the way Lucide's build does, keeping the first occurrence of each value.
+function resolveField(name, field, allMetadata, groups, stack = new Set()) {
+  if (stack.has(name)) throw new Error(`Lucide metadata extends itself in a cycle: ${name}`);
+  stack.add(name);
+  const expanded = [];
+  for (const value of allMetadata[name][field] ?? []) {
+    if (typeof value === "string" && value.startsWith("$extends:")) {
+      const parent = value.slice("$extends:".length);
+      if (!allMetadata[parent]) throw new Error(`Lucide metadata for ${name} extends unknown icon ${parent}`);
+      expanded.push(...resolveField(parent, field, allMetadata, groups, stack));
+    } else if (typeof value === "string" && value.startsWith("$group:")) {
+      const group = value.slice("$group:".length);
+      if (field !== "tags" || !groups[group]) throw new Error(`Lucide metadata for ${name} uses unknown group ${group}`);
+      expanded.push(...groups[group]);
+    } else {
+      expanded.push(value);
+    }
+  }
+  stack.delete(name);
+  return [...new Set(expanded)];
+}
+
 /**
  * Read canonical names, tags, categories, and deprecated aliases from a Lucide
  * release checkout. Only canonical names are published as icons; the deprecated
@@ -58,17 +97,21 @@ export async function readLucideCheckout(checkout) {
   }
 
   const icons = Object.fromEntries(names.map((name) => [name, { tags: [], categories: [] }]));
-  const deprecatedAliases = new Map();
+  const allMetadata = {};
   for (const entry of entries) {
     if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
     const name = entry.name.slice(0, -5);
     if (!nameSet.has(name)) throw new Error(`Lucide metadata has no matching SVG: ${entry.name}`);
-    const metadata = await readJson(path.join(iconsDirectory, entry.name));
-    const tags = metadata.tags ?? [];
-    const iconCategories = metadata.categories ?? [];
-    if (!validStrings(tags, 80)) throw new Error(`Lucide metadata has invalid tags: ${entry.name}`);
+    allMetadata[name] = await readJson(path.join(iconsDirectory, entry.name));
+  }
+  const groups = await readLucideGroups(path.join(directory, "groups"));
+  const deprecatedAliases = new Map();
+  for (const [name, metadata] of Object.entries(allMetadata)) {
+    const tags = resolveField(name, "tags", allMetadata, groups);
+    const iconCategories = resolveField(name, "categories", allMetadata, groups);
+    if (!validStrings(tags, 80)) throw new Error(`Lucide metadata has invalid tags: ${name}.json`);
     if (!validStrings(iconCategories, 80) || iconCategories.some((id) => !categories[id])) {
-      throw new Error(`Lucide metadata has unknown categories: ${entry.name}`);
+      throw new Error(`Lucide metadata has unknown categories: ${name}.json`);
     }
     icons[name] = {
       tags: [...new Set(tags.map((tag) => tag.trim().toLowerCase()))],

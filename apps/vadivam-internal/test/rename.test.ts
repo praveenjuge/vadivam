@@ -32,10 +32,10 @@ describe("suggestRenameIdeas", () => {
       { name: "search", reason: "format" },
     ]);
     expect(suggestRenameIdeas("alert-circle")).toEqual([
-      { name: "circle-alert", reason: "deprecated" },
+      { name: "circle-exclamation-point", reason: "deprecated" },
     ]);
     expect(suggestRenameIdeas("AlertCircle")).toEqual([
-      { name: "circle-alert", reason: "deprecated" },
+      { name: "circle-exclamation-point", reason: "deprecated" },
     ]);
   });
 
@@ -45,7 +45,7 @@ describe("suggestRenameIdeas", () => {
     expect(ideaNames("chevron-rigth")[0]).toBe("chevron-right");
     expect(ideaNames("calender")[0]).toBe("calendar");
     expect(ideaNames("mail-plus-thing")).toContain("mail-plus");
-    expect(ideaNames("warning")).toContain("triangle-alert");
+    expect(ideaNames("exclamation")).toContain("badge-exclamation-point");
     for (const value of ["close", "warning", "trash-can", "zzzz"]) {
       expect(suggestRenameIdeas(value).length).toBeLessThanOrEqual(3);
     }

@@ -82,9 +82,9 @@ async function exerciseTools(client) {
     arguments: { description: "settings sidebar with search, notifications and logout", perConcept: 2 },
   });
   expect(suggested.isError).toBeFalsy();
+  // Lucide 1.68 tags columns-3-cog as a settings sidebar, so the phrase stays whole.
   expect(suggested.structuredContent.concepts.map(({ concept }) => concept)).toEqual([
-    "settings",
-    "sidebar",
+    "settings sidebar",
     "search",
     "notifications",
     "logout",
