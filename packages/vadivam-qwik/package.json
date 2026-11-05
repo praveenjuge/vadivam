@@ -1,6 +1,6 @@
 {
   "name": "vadivam-qwik",
-  "version": "0.0.78",
+  "version": "0.0.79",
   "description": "Pixel-perfect 24px outline and solid icon components for Qwik with tree-shakeable imports.",
   "license": "MIT",
   "author": "Praveen Juge",
