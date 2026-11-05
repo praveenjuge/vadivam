@@ -5,7 +5,7 @@
     "build": "next build"
   },
   "dependencies": {
-    "next": "^16.4.2",
+    "next": "^16.4.5",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "vadivam-react": "file:../../../packages/vadivam-react"
@@ -14,6 +14,6 @@
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }

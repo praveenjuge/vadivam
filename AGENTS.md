@@ -39,7 +39,7 @@ The public docs in `apps/docs/docs` (published at https://vadivam.praveenjuge.co
 
 ## Cloud environments
 
-- Install Bun at the `packageManager` version if missing: `curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.3"`, with `~/.bun/bin` on `PATH`.
+- Install Bun at the `packageManager` version if missing: `curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.4"`, with `~/.bun/bin` on `PATH`.
 - Install Chromium once for integration tests: `bunx playwright install --with-deps chromium`.
 - Stop `bun run dev` before `bun run test`; the docs check fails if port 4321 is taken.
 - The Angular integration needs Node 22.22.3 or newer. If `/exec-daemon/node` shadows `nvm`, run `nvm install 24.15.0` and prepend `$HOME/.nvm/versions/node/v24.15.0/bin` to `PATH`.

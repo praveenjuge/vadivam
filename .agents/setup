@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-bun_version="1.4.3"
+bun_version="1.4.4"
 node_version="24.15.0"
 nvm_version="v0.40.3"
 

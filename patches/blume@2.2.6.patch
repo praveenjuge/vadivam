@@ -1,7 +1,7 @@
-diff --git a/dist/cli/chunk-3ps63r91.js b/dist/cli/chunk-3ps63r91.js
-index f42229800ae137999245364e1ebc88ba7789d235..73eb20151af64b1d469580754b0a7165e72715cf 100755
---- a/dist/cli/chunk-3ps63r91.js
-+++ b/dist/cli/chunk-3ps63r91.js
+diff --git a/dist/cli/chunk-5vqc92az.js b/dist/cli/chunk-5vqc92az.js
+index 3fb01b35772858e1a5243efc2f4a6c1644281c5a..1f2f7ddb6abe3ee93d9682ee866a1474e03c5f28 100755
+--- a/dist/cli/chunk-5vqc92az.js
++++ b/dist/cli/chunk-5vqc92az.js
 @@ -88,7 +88,13 @@ var parseLocale = (tag) => {
      return;
    }

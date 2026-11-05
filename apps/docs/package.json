@@ -11,8 +11,8 @@
     "doctor": "blume doctor"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "14.4.1",
-    "blume": "2.2.4",
+    "@astrojs/cloudflare": "14.4.4",
+    "blume": "2.2.6",
     "vadivam": "workspace:*",
     "vadivam-mcp": "workspace:*"
   },

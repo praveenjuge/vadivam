@@ -40,7 +40,7 @@ Cleaning the path data undoes what Figma's export leaves behind, without changin
 - Every subpath starts with a move. SVGO drops the move after a `z` when the next subpath starts where the last one began, and Safari draws some of those from the wrong point, so optimize puts back an `m0 0`.
 - Horizontal and vertical lines just off the pixel grid are snapped onto it, as described under [Pixel grid alignment](/docs/design-guide#pixel-grid-alignment).
 
-  </Step>
+</Step>
   <Step title="Validate">
 
 ```sh
