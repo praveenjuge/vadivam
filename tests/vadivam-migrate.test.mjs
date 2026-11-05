@@ -53,7 +53,7 @@ describe("migrate-lucide", () => {
   });
 
   test("imports deprecated Lucide aliases under their canonical names", () => {
-    expect(mapSpecifier("lucide-react/dist/esm/icons/alert-circle")).toEqual({ specifier: "vadivam-react/icons/circle-alert" });
+    expect(mapSpecifier("lucide-react/dist/esm/icons/alert-circle")).toEqual({ specifier: "vadivam-react/icons/circle-exclamation-point" });
     const source = [
       `import { AlertCircle, AlertTriangleIcon, LucideAlarmCheck, Home as House } from "lucide-react";`,
       `export const Status = () => <><AlertCircle /><AlertTriangleIcon /><LucideAlarmCheck /><House /></>;`,
@@ -61,7 +61,7 @@ describe("migrate-lucide", () => {
     const { text, warnings } = migrateSource(source);
     expect(text).toBe(
       [
-        `import { CircleAlert as AlertCircle, TriangleAlertIcon as AlertTriangleIcon, VadivamAlarmClockCheck as VadivamAlarmCheck, House } from "vadivam-react";`,
+        `import { CircleExclamationPoint as AlertCircle, TriangleExclamationPointIcon as AlertTriangleIcon, VadivamAlarmClockCheck as VadivamAlarmCheck, House } from "vadivam-react";`,
         `export const Status = () => <><AlertCircle /><AlertTriangleIcon /><VadivamAlarmCheck /><House /></>;`,
       ].join("\n"),
     );
@@ -115,7 +115,7 @@ describe("migrate-lucide", () => {
     expect(text).toBe(
       [
         `export { VadivamBell as LucideBell, House as Home, type VadivamProps as LucideProps } from "vadivam-react";`,
-        `const { VadivamStar, CircleAlert: Warning } = require("vadivam-react");`,
+        `const { VadivamStar, CircleExclamationPoint: Warning } = require("vadivam-react");`,
         `module.exports = [VadivamStar, Warning];`,
       ].join("\n"),
     );
@@ -185,7 +185,7 @@ describe("migrate-lucide", () => {
     const { text } = migrateSource(`import { createIcons, icons } from "lucide";\ncreateIcons({ icons });\n<i data-lucide="menu"></i>`);
     expect(text).toBe(`import { createIcons, icons } from "vadivam";\ncreateIcons({ icons });\n<i data-vadivam="menu"></i>`);
     expect(migrateSource(`<i data-lucide="home"></i><i data-lucide='alert-circle'></i>`).text).toBe(
-      `<i data-vadivam="house"></i><i data-vadivam='circle-alert'></i>`,
+      `<i data-vadivam="house"></i><i data-vadivam='circle-exclamation-point'></i>`,
     );
   });
 

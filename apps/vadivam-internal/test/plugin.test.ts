@@ -890,7 +890,7 @@ describe("compiled Figma plugin", () => {
     };
 
     // npm latest serves the real published symbols for a handful of icons.
-    const published = ["arrow-right", "bell", "check", "circle-alert", "circle-chevrons-down", "trash"];
+    const published = ["arrow-right", "bell", "check", "circle-chevrons-down", "circle-exclamation-point", "trash"];
     const symbols = (await publishedSprite()).match(/<symbol id="[^"]+" viewBox="0 0 24 24">[\s\S]*?<\/symbol>/g) ?? [];
     const sprite = `<svg xmlns="http://www.w3.org/2000/svg">${symbols
       .filter((symbol) => published.some((name) => symbol.includes(`id="vadivam-${name}"`)))
