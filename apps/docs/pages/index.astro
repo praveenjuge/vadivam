@@ -20,11 +20,13 @@ const { config } = data;
 
 
 const codeTabs = [...frameworks.map(({ id, label }) => ({ id, label })), { id: "svg", label: "SVG" }];
-// The hero's sentence names every package and tool, each with its mark.
-type HeroLink = { label: string; href: string; logo?: string; logoClass?: string; icon?: "file-code" | "code-xml" | "bot"; external?: boolean };
+// The hero's sentence names the main packages and tools, each with its mark.
+type HeroLink = { label: string; href: string; logo?: string; logoClass?: string; icon?: "file-code" | "bot"; external?: boolean };
+const heroOmittedFrameworks = new Set(["qwik", "lit", "flutter", "compose"]);
 const packageLinks: HeroLink[] = [
-  ...frameworks.map(({ id, label }) => ({ label, href: `/docs/${id}`, logo: id === "react-native" ? "react" : id })),
-  { label: "HTML", href: "/docs/html", icon: "code-xml" },
+  ...frameworks
+    .filter(({ id }) => !heroOmittedFrameworks.has(id))
+    .map(({ id, label }) => ({ label, href: `/docs/${id}`, logo: id === "react-native" ? "react" : id })),
   { label: "SVG", href: "/docs/core", icon: "file-code" },
 ];
 const toolLinks: HeroLink[] = [
