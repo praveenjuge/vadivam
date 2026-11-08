@@ -2,43 +2,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { performance } from "node:perf_hooks";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawn } from "node:child_process";
+import { forEachConcurrently, run } from "./lib/process.mjs";
 import { mcpServerManifest, npmPackages, packageMetadata, repositoryUrl } from "./packages.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rootVersion = JSON.parse(
   readFileSync(path.join(root, "package.json"), "utf8"),
 ).version;
-
-function run(command, args, cwd, capture = false) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd,
-      stdio: capture ? ["ignore", "pipe", "pipe"] : "inherit",
-    });
-    let stdout = "";
-    let stderr = "";
-    if (capture) {
-      child.stdout.setEncoding("utf8");
-      child.stderr.setEncoding("utf8");
-      child.stdout.on("data", (chunk) => {
-        stdout += chunk;
-      });
-      child.stderr.on("data", (chunk) => {
-        stderr += chunk;
-      });
-    }
-    child.on("error", reject);
-    child.on("exit", (code) => {
-      if (code === 0) {
-        resolve(stdout);
-        return;
-      }
-      if (capture) process.stderr.write(stderr || stdout);
-      reject(new Error(`${command} ${args.join(" ")} failed in ${cwd}`));
-    });
-  });
-}
 
 function getPackResult(packed, packageName) {
   const result = Array.isArray(packed)
@@ -106,9 +76,9 @@ async function validatePackage({
   // publint opens every file its export globs match at once. Under Node, a
   // package with more matches than the open-file limit reports the files it
   // could not open as missing; Bun's runtime does not, so run it there.
-  await run("bun", ["--bun", "x", "publint", "."], cwd);
+  await run("bun", ["--bun", "x", "publint", "."], { cwd });
   const packed = JSON.parse(
-    await run("npm", ["pack", "--dry-run", "--json"], cwd, true),
+    await run("npm", ["pack", "--dry-run", "--json"], { cwd, capture: true }),
   );
   const packResult = getPackResult(packed, name);
   if (packResult.version !== rootVersion) {
@@ -201,27 +171,4 @@ function validateMcpPackage(manifest, files) {
   }
 }
 
-async function validatePackages(concurrency) {
-  let nextIndex = 0;
-  let firstError;
-  const workers = Array.from(
-    { length: Math.min(concurrency, npmPackages.length) },
-    async () => {
-      while (!firstError) {
-        const index = nextIndex;
-        nextIndex += 1;
-        const packageDefinition = npmPackages[index];
-        if (!packageDefinition) return;
-        try {
-          await validatePackage(packageDefinition);
-        } catch (error) {
-          firstError ??= error;
-        }
-      }
-    },
-  );
-  await Promise.all(workers);
-  if (firstError) throw firstError;
-}
-
-await validatePackages(3);
+await forEachConcurrently(npmPackages, 3, validatePackage);

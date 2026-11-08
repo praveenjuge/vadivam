@@ -1,11 +1,14 @@
-import { spawn } from "node:child_process";
+// Runs the repository's test phases in order and reports how long each took.
+// Usage: bun scripts/test-suite.mjs <core|full>
 import { performance } from "node:perf_hooks";
+import { run } from "./lib/process.mjs";
 
 const mode = process.argv[2] ?? "full";
 if (mode !== "core" && mode !== "full") {
   throw new Error("Usage: bun scripts/test-suite.mjs <core|full>");
 }
 
+// Each phase is a label and the arguments to `bun run`.
 const corePhases = [
   ["Icon unit tests", "icons:test"],
   ["Internal Figma plugin", "test:vadivam-internal"],
@@ -13,40 +16,23 @@ const corePhases = [
   ["Package generation", "icons:build"],
   ["Package validation", "packages:check:built"],
   ["shadcn registry", "test:shadcn:built"],
-  ["Documentation types", null, ["run", "--cwd", "apps/docs", "check"]],
-  ["Documentation links", null, ["run", "--cwd", "apps/docs", "validate"]],
+  ["Documentation types", "--cwd", "apps/docs", "check"],
+  ["Documentation links", "--cwd", "apps/docs", "validate"],
   ["Documentation build and SEO", "test:seo:built"],
 ];
-const phases =
-  mode === "full"
-    ? [...corePhases, ["Framework integrations", "test:integration:built"]]
-    : corePhases;
+const phases = mode === "full" ? [...corePhases, ["Framework integrations", "test:integration:built"]] : corePhases;
 
-function formatDuration(milliseconds) {
-  return `${(milliseconds / 1000).toFixed(2)}s`;
-}
-
-function runPhase(label, script, explicitArgs) {
-  const args = explicitArgs ?? ["run", script];
-  const startedAt = performance.now();
-  console.log(`\n[tests] ${label}`);
-  return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, args, { stdio: "inherit" });
-    child.on("error", reject);
-    child.on("exit", (code, signal) => {
-      const duration = formatDuration(performance.now() - startedAt);
-      if (code === 0) {
-        console.log(`[tests] ${label} passed in ${duration}`);
-        resolve();
-        return;
-      }
-      reject(new Error(`${label} failed after ${duration} (${signal ?? code})`));
-    });
-  });
-}
+const seconds = (since) => `${((performance.now() - since) / 1000).toFixed(2)}s`;
 
 const suiteStartedAt = performance.now();
-for (const [label, script, args] of phases) await runPhase(label, script, args);
-console.log(
-  `\n[tests] ${mode} suite passed in ${formatDuration(performance.now() - suiteStartedAt)}`,
-);
+for (const [label, ...args] of phases) {
+  const startedAt = performance.now();
+  console.log(`\n[tests] ${label}`);
+  try {
+    await run(process.execPath, ["run", ...args]);
+  } catch (error) {
+    throw new Error(`${label} failed after ${seconds(startedAt)}: ${error.message}`);
+  }
+  console.log(`[tests] ${label} passed in ${seconds(startedAt)}`);
+}
+console.log(`\n[tests] ${mode} suite passed in ${seconds(suiteStartedAt)}`);
