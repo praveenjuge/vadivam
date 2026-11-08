@@ -52,7 +52,7 @@ async function createCatalogSource(icons) {
   }));
   // Deprecated Lucide names still found in older designs, mapped to the current
   // name, so "Swap Lucide icons" recognizes layers such as `home` or `alert-circle`.
-  const aliases = lucideAliasesFor(icons.map((icon) => icon.name));
+  const aliases = await lucideAliasesFor(icons.map((icon) => icon.name));
   return `export const svgRoot = ${JSON.stringify(SVG_ROOT)};\nexport const solidSvgRoot = ${JSON.stringify(SOLID_SVG_ROOT)};\nexport const lucideAliases = ${JSON.stringify(aliases)};\n${jsonModule(catalog)}`;
 }
 

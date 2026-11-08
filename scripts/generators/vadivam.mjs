@@ -46,7 +46,7 @@ export async function buildVadivamPackage({ icons, solidIcons, directory }) {
   await chmod(path.join(dist, "cli.js"), 0o755);
   await writeFile(
     path.join(dist, "lucide-aliases.js"),
-    `// Deprecated Lucide names and the canonical icon each one now points to.\nexport const lucideAliases = ${JSON.stringify(lucideAliasesFor(icons.map((icon) => icon.name)))};\n`,
+    `// Deprecated Lucide names and the canonical icon each one now points to.\nexport const lucideAliases = ${JSON.stringify(await lucideAliasesFor(icons.map((icon) => icon.name)))};\n`,
   );
   const skills = path.join(directory, "skills");
   await rm(skills, { recursive: true, force: true });

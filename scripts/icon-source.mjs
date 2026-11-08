@@ -18,7 +18,6 @@ const readJson = async (relativePath) => JSON.parse(await readFile(path.join(roo
 
 export const lucideMetadata = await readJson("metadata/lucide.json");
 export const lucideVersion = lucideMetadata.lucideVersion;
-const lucideAliases = await readJson("metadata/lucide-aliases.json");
 
 export const iconCategories = Object.entries(lucideMetadata.categories).map(
   ([id, { title, description }]) => ({ id, title, ...(description && { description }) }),
@@ -82,11 +81,14 @@ export async function validateLucidePins() {
   );
 }
 
-/** Deprecated Lucide names that point at a drawn icon and are not icons themselves. */
-export function lucideAliasesFor(names) {
+/**
+ * Deprecated Lucide names that point at a drawn icon and are not icons
+ * themselves. Read on each call, so watch-mode rebuilds see alias edits.
+ */
+export async function lucideAliasesFor(names) {
   const drawn = new Set(names);
   return Object.fromEntries(
-    Object.entries(lucideAliases).filter(([alias, name]) => !drawn.has(alias) && drawn.has(name)),
+    Object.entries(await readJson("metadata/lucide-aliases.json")).filter(([alias, name]) => !drawn.has(alias) && drawn.has(name)),
   );
 }
 
