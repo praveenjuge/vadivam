@@ -2,14 +2,14 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { nativePackages, publishablePackages } from "./packages.mjs";
+import { nativePackages, npmPackages } from "./packages.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const packageLinks = new Map([
-  ...publishablePackages.map(({ name, directory }) => [
+  ...npmPackages.map(({ packageName, directory }) => [
     directory,
-    `[${name}](https://www.npmjs.com/package/${name})`,
+    `[${packageName}](https://www.npmjs.com/package/${packageName})`,
   ]),
   ...nativePackages.map(({ directory, releaseLink }) => [directory, releaseLink]),
 ]);

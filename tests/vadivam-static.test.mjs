@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { XMLParser } from "fast-xml-parser";
 import { openSync } from "fontkit";
 import { icons as manifest } from "vadivam/manifest";
-import { validateIconName } from "../scripts/icons.mjs";
+import { validateIconName } from "../scripts/icon-source.mjs";
 import {
   allocateFontCodepoints,
   buildStaticAssets,

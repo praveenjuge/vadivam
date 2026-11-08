@@ -3,8 +3,19 @@ import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-export const lucideMetadataPath = path.join(root, "metadata/lucide.json");
+export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const lucideMetadataPath = path.join(root, "metadata/lucide.json");
+const lucideAliasesPath = path.join(root, "metadata/lucide-aliases.json");
+
+// Lucide 1.25 renamed this canonical SVG without retaining alias metadata.
+const missingDeprecatedAliases = { "circle-euro-sign": "circle-euro" };
+
+/** Every deprecated Lucide name and the canonical icon it now points to, sorted. */
+export function lucideAliases({ deprecatedAliases }) {
+  return new Map(
+    [...Object.entries(missingDeprecatedAliases), ...deprecatedAliases].sort(([left], [right]) => left.localeCompare(right)),
+  );
+}
 
 function checkoutVersion(directory) {
   try {
@@ -134,7 +145,9 @@ export async function readLucideCheckout(checkout) {
   return { version: checkoutVersion(directory), names, categories, icons, deprecatedAliases };
 }
 
-export async function writeLucideMetadata({ version, categories, icons }) {
+/** Writes the tags and categories of the drawn icons, and every deprecated alias. */
+export async function writeLucideMetadata(catalog) {
+  const { version, categories, icons } = catalog;
   await mkdir(path.dirname(lucideMetadataPath), { recursive: true });
   // Only drawn icons get an entry, so a Lucide release can be pinned before
   // every new name has a Vadivam drawing. Rerun after adding icons.
@@ -152,6 +165,7 @@ export async function writeLucideMetadata({ version, categories, icons }) {
     lucideMetadataPath,
     `{\n  "lucideVersion": ${JSON.stringify(version)},\n  "categories": ${JSON.stringify(categories, null, 2).replaceAll("\n", "\n  ")},\n  "icons": {\n${iconLines.join(",\n")}\n  }\n}\n`,
   );
+  await writeFile(lucideAliasesPath, `${JSON.stringify(Object.fromEntries(lucideAliases(catalog)), null, 2)}\n`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -160,6 +174,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const catalog = await readLucideCheckout(checkout);
   await writeLucideMetadata(catalog);
   console.log(
-    `Wrote ${path.relative(root, lucideMetadataPath)} for Lucide ${catalog.version}: ${catalog.names.length} icons, ${Object.keys(catalog.categories).length} categories`,
+    `Wrote ${path.relative(root, lucideMetadataPath)} and ${path.relative(root, lucideAliasesPath)} for Lucide ${catalog.version}: ${catalog.names.length} icons, ${Object.keys(catalog.categories).length} categories`,
   );
 }

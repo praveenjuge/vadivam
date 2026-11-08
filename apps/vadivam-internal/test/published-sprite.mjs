@@ -3,7 +3,7 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { readIcons } from "../../../scripts/icons.mjs";
+import { readIcons } from "../../../scripts/icon-source.mjs";
 import { buildSprite } from "../../../scripts/generators/static.mjs";
 
 export async function canonicalIcons() {

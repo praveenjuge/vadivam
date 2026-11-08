@@ -22,7 +22,7 @@ function commands(icon) {
   return values.map(round).join(", ");
 }
 
-export async function buildFlutterPackage(icons, packageDirectory, solidIcons = []) {
+export async function buildFlutterPackage({ icons, solidIcons, directory: packageDirectory }) {
   // pub.dev wants the changelog to name the version being published; the full
   // notes live on the docs site, shared by every package.
   const version = (await readFile(path.join(packageDirectory, "pubspec.yaml"), "utf8")).match(/^version: (.+)$/m)[1].trim();

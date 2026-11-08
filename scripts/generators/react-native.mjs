@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   buildStyles,
   defaultAttributesSource,
@@ -7,9 +8,11 @@ import {
   iconNameType,
   prepareDist,
   write,
+  keyedIconNode,
 } from "./shared.mjs";
 
-export async function buildReactNativePackage(icons, dist, solidIcons = []) {
+export async function buildReactNativePackage({ icons, solidIcons, directory }) {
+  const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await write(dist, "context.js", `import React from "react";\nconst VadivamContext = React.createContext({});\nexport function VadivamProvider({ children, size, color, strokeWidth, absoluteStrokeWidth }) {\n  const value = React.useMemo(() => ({ size, color, strokeWidth, absoluteStrokeWidth }), [size, color, strokeWidth, absoluteStrokeWidth]);\n  return React.createElement(VadivamContext.Provider, { value }, children);\n}\nexport function useVadivamContext() { return React.useContext(VadivamContext); }\n`);
   await write(dist, "context.d.ts", `import type * as React from "react";\nimport type { VadivamProps } from "./types.js";\nexport interface VadivamProviderProps extends Pick<VadivamProps, "size" | "color" | "strokeWidth" | "absoluteStrokeWidth"> { children: React.ReactNode; }\nexport declare function VadivamProvider(props: VadivamProviderProps): React.ReactElement;\nexport declare function useVadivamContext(): Partial<VadivamProps>;\n`);
@@ -44,7 +47,7 @@ async function buildReactNativeEntry(dist, icons, style) {
   await write(dist, "createVadivamIcon.js", `import React, { forwardRef } from "react";\nimport Icon from "./Icon.js";\nexport function createVadivamIcon(iconName, iconNode) { const Component = forwardRef((props, ref) => React.createElement(Icon, { ref, iconNode, ...props })); Component.displayName = iconName.split(/[-_ ]+/).filter(Boolean).map((part) => part[0].toUpperCase() + part.slice(1)).join(""); return Component; }\nexport default createVadivamIcon;\n`);
   await write(dist, "createVadivamIcon.d.ts", `import type { IconNode, VadivamIcon } from "./types.js";\nexport declare function createVadivamIcon(iconName: string, iconNode: IconNode): VadivamIcon;\nexport default createVadivamIcon;\n`);
   for (const icon of icons) {
-    await write(dist, `icons/${icon.name}.js`, `import { createVadivamIcon } from "../createVadivamIcon.js";\nexport const __iconNode = ${JSON.stringify(icon.iconNode)};\nconst ${icon.componentName} = createVadivamIcon("${icon.name}", __iconNode);\nexport default ${icon.componentName};\n`);
+    await write(dist, `icons/${icon.name}.js`, `import { createVadivamIcon } from "../createVadivamIcon.js";\nexport const __iconNode = ${keyedIconNode(icon)};\nconst ${icon.componentName} = createVadivamIcon("${icon.name}", __iconNode);\nexport default ${icon.componentName};\n`);
     await write(dist, `icons/${icon.name}.d.ts`, `import type { IconNode, VadivamIcon } from "../types.js";\nexport declare const __iconNode: IconNode;\ndeclare const ${icon.componentName}: VadivamIcon;\nexport default ${icon.componentName};\n`);
   }
   const exports = iconExports(icons);

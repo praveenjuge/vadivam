@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { area, draftSolid, loadPathKit, pathDataOf, solidPath, solidSvg, spliceCorner, toPathData } from "../scripts/solid-draft.mjs";
+import { draftSolid, solidPath, solidSvg, spliceCorner } from "../scripts/solid-draft.mjs";
+import { area, loadPathKit, toPathData } from "../scripts/skia-path.mjs";
+import { svgPathData } from "../scripts/icon-styles.mjs";
 
 const PK = await loadPathKit();
-const outline = (name) => pathDataOf(readFileSync(new URL(`../icons/${name}.svg`, import.meta.url), "utf8"));
+const outline = (name) => svgPathData(readFileSync(new URL(`../icons/${name}.svg`, import.meta.url), "utf8"));
 const inkCircle = Math.PI * 11 ** 2;
 // How much of a 1px square centered on a point the draft fills, from 0 to 1.
 const coverage = (drafted, [x, y]) => {

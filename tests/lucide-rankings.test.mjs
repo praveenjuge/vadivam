@@ -3,7 +3,7 @@ import {
   decodeStringLiteral,
   MAX_UNLISTED_ICONS,
   rankLucideIcons,
-} from "../scripts/lucide-data";
+} from "../scripts/lucide-rankings.mjs";
 
 describe("decodeStringLiteral", () => {
   test("decodes a template-literal JSON payload", () => {

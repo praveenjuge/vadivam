@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   buildStyles,
   dynamicEntries,
@@ -32,7 +33,8 @@ function iconMarkup(icon) {
     .join("");
 }
 
-export async function buildLitPackage(icons, dist, solidIcons = []) {
+export async function buildLitPackage({ icons, solidIcons, directory }) {
+  const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
   await buildStyles(dist, { outline: icons, solid: solidIcons }, buildLitEntry);

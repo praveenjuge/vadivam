@@ -43,7 +43,7 @@ const styles = {
   solid: { owner: "VadivamSolidIcons", builder: "vadivamSolidIcon", packageName: "com.praveenjuge.vadivam.icons.solid", directory: "solid", filled: true },
 };
 
-export async function buildComposePackage(icons, packageDirectory, solidIcons = []) {
+export async function buildComposePackage({ icons, solidIcons, directory: packageDirectory }) {
   const iconsDirectory = path.join(packageDirectory, "src/main/kotlin/com/praveenjuge/vadivam/icons");
   const drawables = path.join(packageDirectory, "src/main/res/drawable");
   await rm(iconsDirectory, { recursive: true, force: true });

@@ -18,7 +18,7 @@ const hashedFile = (name, data) => {
 /**
  * The homepage's lazily loaded data, from manifest-shaped icons in grid order:
  * one search index of tags and categories, and the solid path data for each
- * grid chunk as an array of path lists in tile order. `scripts/icons.mjs`
+ * grid chunk as an array of path lists in tile order. `generators/web.mjs`
  * writes these files and the homepage derives the same names, so the two
  * always agree.
  */

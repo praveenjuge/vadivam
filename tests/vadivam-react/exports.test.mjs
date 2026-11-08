@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readIcons } from "../../scripts/icons.mjs";
+import { readIcons } from "../../scripts/icon-source.mjs";
 import * as named from "vadivam-react";
 import dynamicIconImports from "vadivam-react/dynamicIconImports";
 
@@ -45,7 +45,8 @@ describe("vadivam-react exports", () => {
       expect(typeof importer).toBe("function");
       const mod = await importer();
       expect(mod.default.displayName).toBe(icon.componentName);
-      expect(mod.__iconNode).toEqual(icon.iconNode);
+      // React keys each element; the geometry is the icon's own.
+      expect(mod.__iconNode.map(([tag, { key, ...attrs }]) => [tag, attrs])).toEqual(icon.iconNode);
     }
   );
 });

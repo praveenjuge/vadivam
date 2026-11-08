@@ -4,8 +4,8 @@ import {
   parseBatchSize,
   parseLucideCatalog,
 } from "../src/catalog";
-import deprecatedAliases from "../src/data/lucide-deprecated-aliases.json";
-import rankings from "../src/data/lucide-icon-rankings.json";
+import deprecatedAliases from "../../../metadata/lucide-aliases.json";
+import rankings from "../../../metadata/lucide-rankings.json";
 import {
   getDeprecatedLucideReplacement,
   lucideIconNames,

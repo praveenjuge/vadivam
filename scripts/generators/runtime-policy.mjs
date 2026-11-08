@@ -1,12 +1,4 @@
-export const svgElementTypes = [
-  "circle",
-  "ellipse",
-  "line",
-  "path",
-  "polygon",
-  "polyline",
-  "rect",
-];
+import { svgElementTypes } from "../icon-styles.mjs";
 
 export const svgElementTypeSource = svgElementTypes
   .map((tag) => JSON.stringify(tag))

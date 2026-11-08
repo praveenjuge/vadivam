@@ -1,7 +1,7 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup, renderToString } from "react-dom/server";
-import { readIcons, styles } from "../../scripts/icons.mjs";
+import { readIcons, styles } from "../../scripts/icon-source.mjs";
 import { House as OutlineHouse } from "vadivam-react";
 import * as solid from "vadivam-react/solid";
 import SolidHouse from "vadivam-react/solid/icons/house";

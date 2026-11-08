@@ -19,7 +19,7 @@ import {
   svgDataUri,
   svgToJsx,
   tailwindMaskSnippet,
-} from "./snippets.js";
+} from "./snippets.mjs";
 import {
   closestIconNames,
   findIcon,

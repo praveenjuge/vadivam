@@ -1,7 +1,7 @@
 import "./mock.mjs";
 import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
-import { readIcons } from "../../scripts/icons.mjs";
+import { readIcons } from "../../scripts/icon-source.mjs";
 
 const named = await import("vadivam-react-native");
 const iconsBarrel = await import("vadivam-react-native/icons");
@@ -46,7 +46,8 @@ describe("vadivam-react-native exports", () => {
       const alias = await import(`vadivam-react-native/${icon.name}`);
       expect(subpath.default.displayName).toBe(icon.componentName);
       expect(alias.default).toBe(subpath.default);
-      expect(subpath.__iconNode).toEqual(icon.iconNode);
+      // React keys each element; the geometry is the icon's own.
+      expect(subpath.__iconNode.map(([tag, { key, ...attrs }]) => [tag, attrs])).toEqual(icon.iconNode);
     },
   );
 });

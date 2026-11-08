@@ -1,3 +1,4 @@
+import path from "node:path";
 import { compile } from "svelte/compiler";
 import {
   buildStyles,
@@ -23,7 +24,8 @@ async function writeSvelte(dist, relativePath, source) {
   await write(dist, relativePath, source);
 }
 
-export async function buildSveltePackage(icons, dist, solidIcons = []) {
+export async function buildSveltePackage({ icons, solidIcons, directory }) {
+  const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
   // Provider props come from the outline types, which include stroke props.

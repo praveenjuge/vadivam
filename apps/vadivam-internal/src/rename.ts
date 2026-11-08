@@ -1,5 +1,5 @@
 import lucideMetadata from "../../../metadata/lucide.json";
-import lucideRankings from "./data/lucide-icon-rankings.json";
+import lucideRankings from "../../../metadata/lucide-rankings.json";
 import {
   getDeprecatedLucideReplacement,
   lucideIconNames,

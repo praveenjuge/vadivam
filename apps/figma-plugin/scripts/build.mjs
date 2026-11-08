@@ -2,7 +2,7 @@ import { build, context } from "esbuild";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { iconCategories, readIcons, styles } from "../../../scripts/icons.mjs";
+import { iconCategories, lucideAliasesFor, readIcons, styles } from "../../../scripts/icon-source.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = resolve(root, "dist");
@@ -41,10 +41,6 @@ function svgBody({ name, svg }, root = SVG_ROOT, folder = "icons") {
   return source.slice(root.length, -"</svg>".length).trim();
 }
 
-// Deprecated Lucide names still found in older designs, mapped to the current
-// name, so "Swap Lucide icons" recognizes layers such as `home` or `alert-circle`.
-const lucideAliasesPath = resolve(root, "../vadivam-internal/src/data/lucide-deprecated-aliases.json");
-
 // The canvas side needs SVG markup to create nodes plus the words for each component description.
 async function createCatalogSource(icons) {
   const catalog = icons.map((icon) => ({
@@ -54,12 +50,9 @@ async function createCatalogSource(icons) {
     tags: icon.tags,
     categories: icon.categories.map((id) => categoryTitles.get(id)),
   }));
-  const names = new Set(icons.map((icon) => icon.name));
-  const aliases = Object.fromEntries(
-    Object.entries(JSON.parse(await readFile(lucideAliasesPath, "utf8"))).filter(
-      ([alias, name]) => !names.has(alias) && names.has(name),
-    ),
-  );
+  // Deprecated Lucide names still found in older designs, mapped to the current
+  // name, so "Swap Lucide icons" recognizes layers such as `home` or `alert-circle`.
+  const aliases = lucideAliasesFor(icons.map((icon) => icon.name));
   return `export const svgRoot = ${JSON.stringify(SVG_ROOT)};\nexport const solidSvgRoot = ${JSON.stringify(SOLID_SVG_ROOT)};\nexport const lucideAliases = ${JSON.stringify(aliases)};\n${jsonModule(catalog)}`;
 }
 
@@ -110,7 +103,7 @@ function virtualModulePlugin(specifier, filter, createSource) {
         contents: await createSource(await sortedIcons()),
         loader: "js",
         watchDirs: [iconsRoot, solidIconsRoot],
-        watchFiles: [lucideAliasesPath],
+        watchFiles: [resolve(root, "../../metadata/lucide-aliases.json")],
       }));
     },
   };

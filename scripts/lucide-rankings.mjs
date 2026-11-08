@@ -1,8 +1,21 @@
+// Ranks every canonical Lucide icon by its lucide.dev popularity, for the
+// maintenance plugin's catalog and the MCP server's tie-breaks. Writes
+// metadata/lucide-rankings.json for the Lucide release a checkout is on.
+// Usage: bun run icons:rankings -- /path/to/lucide-checkout
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { lucideAliases, readLucideCheckout, root } from "./lucide-metadata.mjs";
+
+const LUCIDE_ICONS_URL = "https://lucide.dev/icons/";
+const POPULARITY_RANKING = "Lucide icon-page visitors over the last 12 months";
+const rankingsPath = path.join(root, "metadata/lucide-rankings.json");
+
 // lucide.dev can trail the newest release by a few days. More unlisted icons
 // than this means the site data changed shape rather than just lagging.
 export const MAX_UNLISTED_ICONS = 25;
 
-const simpleEscapes: Record<string, string> = {
+const simpleEscapes = {
   "'": "'",
   '"': '"',
   "`": "`",
@@ -20,7 +33,7 @@ const simpleEscapes: Record<string, string> = {
 
 // Decodes a JavaScript string literal quoted with ', " or ` (a template
 // literal without substitutions), starting at its opening quote.
-export function decodeStringLiteral(source: string, quoteIndex: number): string {
+export function decodeStringLiteral(source, quoteIndex) {
   const quote = source[quoteIndex];
   if (quote !== "'" && quote !== '"' && quote !== "`") {
     throw new Error("Lucide data is not a string literal");
@@ -68,18 +81,8 @@ export function decodeStringLiteral(source: string, quoteIndex: number): string 
   throw new Error("Unterminated Lucide icon data string");
 }
 
-export interface RankedLucideIcon {
-  name: string;
-  popularity: number;
-  rank: number;
-}
-
 // Ranks every canonical icon by lucide.dev popularity, most popular first.
-export function rankLucideIcons(
-  canonicalNames: readonly string[],
-  deprecatedAliases: ReadonlyMap<string, string>,
-  sitePopularity: ReadonlyMap<string, number>,
-): { icons: RankedLucideIcon[]; unlisted: string[] } {
+export function rankLucideIcons(canonicalNames, deprecatedAliases, sitePopularity) {
   const popularity = new Map(sitePopularity);
   // A lagging site still lists a renamed icon under its deprecated alias.
   for (const [alias, canonicalName] of deprecatedAliases) {
@@ -101,4 +104,61 @@ export function rankLucideIcons(
     )
     .map((icon, index) => ({ ...icon, rank: index + 1 }));
   return { icons, unlisted };
+}
+
+async function fetchText(url) {
+  const response = await fetch(url, {
+    headers: { "User-Agent": "vadivam-lucide-catalog-updater" },
+  });
+  if (!response.ok) throw new Error(`Failed to fetch ${url}: HTTP ${response.status}`);
+  return response.text();
+}
+
+async function fetchLucidePopularity() {
+  const page = await fetchText(LUCIDE_ICONS_URL);
+  const chunkPath = page.match(
+    /\/assets\/chunks\/useIconsWithExternalLibs\.[A-Za-z0-9_-]+\.js/,
+  )?.[0];
+  if (!chunkPath) throw new Error("Could not locate Lucide icon data asset");
+
+  const source = await fetchText(new URL(chunkPath, LUCIDE_ICONS_URL));
+  const markerIndex = source.search(/=JSON\.parse\(['`]\{"icons":\[/);
+  if (markerIndex < 0) throw new Error("Could not locate Lucide icon catalog data");
+  const quoteIndex = markerIndex + "=JSON.parse(".length;
+  const catalog = JSON.parse(decodeStringLiteral(source, quoteIndex));
+  if (!Array.isArray(catalog.icons)) throw new Error("Lucide site icon data is invalid");
+
+  const popularity = new Map();
+  for (const icon of catalog.icons) {
+    if (
+      !icon ||
+      typeof icon.name !== "string" ||
+      !Number.isSafeInteger(icon.popularity) ||
+      icon.popularity < 0 ||
+      popularity.has(icon.name)
+    ) {
+      throw new Error("Lucide site contains invalid popularity data");
+    }
+    popularity.set(icon.name, icon.popularity);
+  }
+  return popularity;
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const checkout = process.argv[2];
+  if (!checkout) throw new Error("Usage: bun run icons:rankings -- /path/to/lucide-checkout");
+  const catalog = await readLucideCheckout(checkout);
+  const { icons, unlisted } = rankLucideIcons(catalog.names, lucideAliases(catalog), await fetchLucidePopularity());
+  const rankings = {
+    lucideVersion: catalog.version,
+    source: LUCIDE_ICONS_URL,
+    retrievedAt: new Date().toISOString(),
+    ranking: POPULARITY_RANKING,
+    icons,
+  };
+  await writeFile(rankingsPath, `${JSON.stringify(rankings)}\n`);
+  console.log(`Wrote ${path.relative(root, rankingsPath)} for Lucide ${catalog.version}: ${icons.length} icons ranked by popularity`);
+  if (unlisted.length > 0) {
+    console.log(`Not on lucide.dev yet, ranked with zero popularity: ${unlisted.join(", ")}`);
+  }
 }

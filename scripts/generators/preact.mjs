@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   buildStyles,
   defaultAttributesSource,
@@ -16,7 +17,8 @@ import {
   writeRuntimePolicy,
 } from "./shared.mjs";
 
-export async function buildPreactPackage(icons, dist, solidIcons = []) {
+export async function buildPreactPackage({ icons, solidIcons, directory }) {
+  const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
   await write(dist, "context.js", `import { createContext, h } from "preact";\nimport { useContext, useMemo } from "preact/hooks";\nexport const VadivamContext = createContext({});\nexport function VadivamProvider({ children, size, color, strokeWidth, absoluteStrokeWidth, class: className }) { const value = useMemo(() => ({ size, color, strokeWidth, absoluteStrokeWidth, class: className }), [size, color, strokeWidth, absoluteStrokeWidth, className]); return h(VadivamContext.Provider, { value }, children); }\nexport function useVadivamContext() { return useContext(VadivamContext); }\n`);

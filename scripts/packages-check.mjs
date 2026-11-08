@@ -3,7 +3,7 @@ import { performance } from "node:perf_hooks";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
-import { mcpServerManifest, packageMetadata, publishablePackages } from "./packages.mjs";
+import { mcpServerManifest, npmPackages, packageMetadata, repositoryUrl } from "./packages.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rootVersion = JSON.parse(
@@ -51,7 +51,7 @@ function getPackResult(packed, packageName) {
 }
 
 async function validatePackage({
-  name,
+  packageName: name,
   directory,
   description,
   documentation,
@@ -90,7 +90,7 @@ async function validatePackage({
     readmeSearchPhrase,
     packageMetadata.homepage,
     `${packageMetadata.homepage}${documentation}`,
-    `https://github.com/praveenjuge/vadivam/tree/main/${directory}`,
+    `${repositoryUrl}/tree/main/${directory}`,
     "Package family:",
   ];
   for (const expected of requiredReadmeContent) {
@@ -98,9 +98,9 @@ async function validatePackage({
       throw new Error(`${name}: README is missing ${expected}`);
     }
   }
-  for (const other of publishablePackages.filter((candidate) => candidate.name !== name)) {
-    if (!readme.includes(`https://www.npmjs.com/package/${other.name}`)) {
-      throw new Error(`${name}: README does not link package family member ${other.name}`);
+  for (const other of npmPackages.filter((candidate) => candidate.packageName !== name)) {
+    if (!readme.includes(`https://www.npmjs.com/package/${other.packageName}`)) {
+      throw new Error(`${name}: README does not link package family member ${other.packageName}`);
     }
   }
   // publint opens every file its export globs match at once. Under Node, a
@@ -172,7 +172,7 @@ function validateMcpPackage(manifest, files) {
   if (manifest.bin?.[name] !== "dist/cli.js") {
     throw new Error(`${name}: bin must map ${name} to dist/cli.js`);
   }
-  for (const file of ["dist/cli.js", "dist/data.js", "dist/index.js", "dist/index.d.ts", "dist/snippets.js"]) {
+  for (const file of ["dist/cli.js", "dist/data.js", "dist/index.js", "dist/index.d.ts", "dist/snippets.mjs", "dist/packages.mjs", "dist/icon-styles.mjs"]) {
     if (!files.includes(file)) throw new Error(`${name}: npm tarball is missing ${file}`);
   }
   for (const [dependency, version] of Object.entries(manifest.dependencies ?? {})) {
@@ -205,12 +205,12 @@ async function validatePackages(concurrency) {
   let nextIndex = 0;
   let firstError;
   const workers = Array.from(
-    { length: Math.min(concurrency, publishablePackages.length) },
+    { length: Math.min(concurrency, npmPackages.length) },
     async () => {
       while (!firstError) {
         const index = nextIndex;
         nextIndex += 1;
-        const packageDefinition = publishablePackages[index];
+        const packageDefinition = npmPackages[index];
         if (!packageDefinition) return;
         try {
           await validatePackage(packageDefinition);

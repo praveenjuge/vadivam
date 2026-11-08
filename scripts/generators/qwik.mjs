@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   buildStyles,
   defaultAttributesSource,
@@ -16,7 +17,8 @@ import {
 
 // Icons are Qwik inline components: plain functions that render during SSR and
 // ship no client JavaScript, so they need no component$ boundary or QRLs.
-export async function buildQwikPackage(icons, dist, solidIcons = []) {
+export async function buildQwikPackage({ icons, solidIcons, directory }) {
+  const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
   await buildStyles(dist, { outline: icons, solid: solidIcons }, buildQwikEntry);

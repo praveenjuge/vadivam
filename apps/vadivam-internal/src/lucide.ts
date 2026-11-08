@@ -1,7 +1,7 @@
-import iconNames from "./data/lucide-icon-names.json";
-import deprecatedAliases from "./data/lucide-deprecated-aliases.json";
+import deprecatedAliases from "../../../metadata/lucide-aliases.json";
+import lucideRankings from "../../../metadata/lucide-rankings.json";
 
-export const lucideIconNames: readonly string[] = iconNames;
+export const lucideIconNames: readonly string[] = lucideRankings.icons.map(({ name }) => name).sort();
 
 const iconNameSet = new Set(lucideIconNames);
 const componentNameToIconName = new Map<string, string>();

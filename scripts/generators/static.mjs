@@ -9,16 +9,18 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { iconNamePattern, styles, svgInner } from "../icon-styles.mjs";
+import { root } from "../icon-source.mjs";
+
+// Append-only: each icon keeps its font codepoint for good once published.
+export const fontCodepointsPath = path.join(root, "scripts/font-codepoints.json");
 
 export const privateUseStart = 0xe000;
 export const privateUseEnd = 0xf8ff;
 
-// One font per style. The solid font reuses the outline font's codepoints and
-// per-icon classes, so only its family and base class differ.
-export const fonts = {
-  outline: { fontName: "vadivam", fontFamily: "Vadivam Icons", baseClass: "vadivam-icon" },
-  solid: { fontName: "vadivam-solid", fontFamily: "Vadivam Icons Solid", baseClass: "vadivam-solid-icon" },
-};
+// One font per style (its `font` in icon-styles.mjs). The solid font reuses
+// the outline font's codepoints and per-icon classes, so only its family and
+// base class differ.
 const fontCacheVersion = "2";
 
 function codepointHex(codepoint) {
@@ -30,7 +32,7 @@ function assertValidRegistry(registry) {
   // published codepoints can never be reassigned to a different glyph.
   const allocated = new Map();
   for (const [name, codepoint] of Object.entries(registry)) {
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) {
+    if (!iconNamePattern.test(name)) {
       throw new Error(`Invalid font codepoint name: ${name}`);
     }
     if (
@@ -72,7 +74,7 @@ export function validateFontCodepoints(icons, registry) {
   }
 }
 
-export async function allocateFontCodepoints(icons, registryPath) {
+export async function allocateFontCodepoints(icons, registryPath = fontCodepointsPath) {
   let registry = {};
   try {
     registry = await readFontCodepoints(registryPath);
@@ -97,13 +99,6 @@ export async function allocateFontCodepoints(icons, registryPath) {
   console.log(`Allocated ${missing.length} font codepoint${missing.length === 1 ? "" : "s"}.`);
 }
 
-function svgBody(svg) {
-  const open = svg.match(/<svg\b[^>]*>/);
-  const close = svg.lastIndexOf("</svg>");
-  if (!open || close < 0) throw new Error("Validated SVG is missing its root.");
-  return svg.slice(open.index + open[0].length, close).trim();
-}
-
 async function buildStrings(icons, outputDirectory) {
   await mkdir(outputDirectory, { recursive: true });
   await Promise.all(
@@ -122,11 +117,11 @@ async function buildStrings(icons, outputDirectory) {
 
 // Solid symbols carry their style in the id, so both sprites can be inlined
 // into one page.
-export async function buildSprite(icons, outputPath, idPrefix = "vadivam-") {
+export async function buildSprite(icons, outputPath, style = styles.outline) {
   const symbols = icons
     .map(
       (icon) =>
-        `  <symbol id="${idPrefix}${icon.name}" viewBox="0 0 24 24">\n    ${svgBody(icon.svg).replaceAll("\n", "\n    ")}\n  </symbol>`,
+        `  <symbol id="${style.spriteIdPrefix}${icon.name}" viewBox="0 0 24 24">\n    ${svgInner(icon.svg).replaceAll("\n", "\n    ")}\n  </symbol>`,
     )
     .join("\n");
   await writeFile(
@@ -135,7 +130,7 @@ export async function buildSprite(icons, outputPath, idPrefix = "vadivam-") {
   );
 }
 
-function fontCss(icons, registry, { fontName, fontFamily, baseClass } = fonts.outline) {
+function fontCss(icons, registry, { fontName, fontFamily, baseClass }) {
   const classes = icons
     .map(
       ({ name }) =>
@@ -174,10 +169,10 @@ async function packageVersion(root, packageName) {
   return manifest.version;
 }
 
-export async function fontCacheKey(icons, registry, root, font = fonts.outline) {
+export async function fontCacheKey(icons, registry, root, style = styles.outline) {
   const hash = createHash("sha256");
   hash.update(`vadivam-font-cache:${fontCacheVersion}\n`);
-  if (font !== fonts.outline) hash.update(`${font.fontName}:${font.fontFamily}\n`);
+  if (style !== styles.outline) hash.update(`${style.font.fontName}:${style.font.fontFamily}\n`);
   hash.update(`svgtofont:${await packageVersion(root, "svgtofont")}\n`);
   hash.update(
     `oslllo-svg-fixer:${await packageVersion(root, "oslllo-svg-fixer")}\n`,
@@ -188,12 +183,12 @@ export async function fontCacheKey(icons, registry, root, font = fonts.outline) 
   return hash.digest("hex");
 }
 
-async function generateFont(icons, registry, { iconsDirectory, outputPath, root, font = fonts.outline }) {
-  const { fontName, fontFamily } = font;
+async function generateFont(icons, registry, { iconsDirectory, outputPath, root, style }) {
+  const { fontName, fontFamily } = style.font;
   const cacheDirectory = path.join(root, "node_modules", ".cache", "vadivam-font");
   const cachePath = path.join(
     cacheDirectory,
-    `${await fontCacheKey(icons, registry, root, font)}.woff2`,
+    `${await fontCacheKey(icons, registry, root, style)}.woff2`,
   );
   await mkdir(cacheDirectory, { recursive: true });
   try {
@@ -253,22 +248,22 @@ async function generateFont(icons, registry, { iconsDirectory, outputPath, root,
 // the package's one font/ folder.
 export async function buildStaticAssets(
   icons,
-  { iconsDirectory, outputDirectory, fontDirectory = path.join(outputDirectory, "font"), registryPath, root, font = fonts.outline },
+  { iconsDirectory, outputDirectory, fontDirectory = path.join(outputDirectory, "font"), registryPath = fontCodepointsPath, style = styles.outline },
 ) {
   const registry = await readFontCodepoints(registryPath);
   validateFontCodepoints(icons, registry);
 
-  const stringsDirectory = path.join(outputDirectory, "strings");
+  const { font } = style;
   await mkdir(fontDirectory, { recursive: true });
-  await buildStrings(icons, stringsDirectory);
-  await buildSprite(icons, path.join(outputDirectory, "sprite.svg"), font === fonts.outline ? "vadivam-" : "vadivam-solid-");
+  await buildStrings(icons, path.join(outputDirectory, "strings"));
+  await buildSprite(icons, path.join(outputDirectory, "sprite.svg"), style);
   await Promise.all([
     writeFile(path.join(fontDirectory, `${font.fontName}.css`), fontCss(icons, registry, font)),
     generateFont(icons, registry, {
       iconsDirectory,
       outputPath: path.join(fontDirectory, `${font.fontName}.woff2`),
       root,
-      font,
+      style,
     }),
   ]);
 }

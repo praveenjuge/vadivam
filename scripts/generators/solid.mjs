@@ -1,3 +1,4 @@
+import path from "node:path";
 import { transformAsync } from "@babel/core";
 import solidPreset from "babel-preset-solid";
 import {
@@ -38,7 +39,8 @@ async function writeJsx(dist, relativePath, source, style = { shared: "./" }) {
   await write(dist, relativePath, `${result.code}\n`);
 }
 
-export async function buildSolidPackage(icons, dist, solidIcons = []) {
+export async function buildSolidPackage({ icons, solidIcons, directory }) {
+  const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
   await write(dist, "source/runtimePolicy.js", `export * from "../runtimePolicy.js";\n`);

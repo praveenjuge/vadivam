@@ -1,27 +1,17 @@
 // Copy formats shared by the docs site, the shadcn registry, and the MCP
-// server. Browser-safe: no Node imports.
+// server, which ships this file with packages.mjs and icon-styles.mjs.
+// Browser-safe: imports only browser-safe modules.
+import { attributeString, canvasSize, styleIds, styleOf, styles } from "./icon-styles.mjs";
+import { frameworks, siteUrl, targetsById } from "./packages.mjs";
+
+export { frameworks, siteUrl };
 
 export const iconDefaults = Object.freeze({
-  size: 24,
-  strokeWidth: 2,
-  color: "currentColor",
+  size: canvasSize,
+  strokeWidth: styles.outline.paint["stroke-width"],
+  color: styles.outline.paint.stroke,
   absoluteStrokeWidth: false,
 });
-
-export const frameworks = Object.freeze([
-  { id: "react", label: "React", packageName: "vadivam-react", lang: "tsx" },
-  { id: "react-native", label: "React Native", packageName: "vadivam-react-native", lang: "tsx" },
-  { id: "vue", label: "Vue", packageName: "vadivam-vue", lang: "vue" },
-  { id: "svelte", label: "Svelte", packageName: "vadivam-svelte", lang: "svelte" },
-  { id: "solid", label: "Solid", packageName: "vadivam-solid", lang: "tsx" },
-  { id: "preact", label: "Preact", packageName: "vadivam-preact", lang: "tsx" },
-  { id: "astro", label: "Astro", packageName: "vadivam-astro", lang: "astro" },
-  { id: "angular", label: "Angular", packageName: "vadivam-angular", lang: "ts" },
-  { id: "qwik", label: "Qwik", packageName: "vadivam-qwik", lang: "tsx" },
-  { id: "lit", label: "Lit", packageName: "vadivam-lit", lang: "ts" },
-  { id: "flutter", label: "Flutter", packageName: "vadivam", registry: "pub", lang: "dart" },
-  { id: "compose", label: "Compose", packageName: "com.praveenjuge:vadivam-compose", registry: "maven", lang: "kotlin" },
-].map((framework) => ({ registry: "npm", ...framework })));
 
 export const frameworksById = Object.freeze(
   Object.fromEntries(frameworks.map((framework) => [framework.id, framework])),
@@ -29,7 +19,7 @@ export const frameworksById = Object.freeze(
 
 // Every icon is drawn in each of these styles. Solid icons are filled, so they
 // take no stroke options.
-export const iconStyles = Object.freeze(["outline", "solid"]);
+export const iconStyles = styleIds;
 
 const isSolid = (options) => options?.style === "solid";
 
@@ -51,21 +41,22 @@ export function resolveOptions(options = {}) {
 /** The stroke width written into the SVG, matching the components' `absoluteStrokeWidth` math. */
 export function effectiveStrokeWidth(options = {}) {
   const { size, strokeWidth, absoluteStrokeWidth } = resolveOptions(options);
-  const value = absoluteStrokeWidth ? (strokeWidth * 24) / size : strokeWidth;
+  const value = absoluteStrokeWidth ? (strokeWidth * canvasSize) / size : strokeWidth;
   return Number(value.toFixed(3));
 }
 
 /**
- * The command that adds a framework's package. npm packages honor `manager`.
- * @param {string} frameworkId
+ * The command that adds a package, with its peers, such as `core` or a
+ * framework id. npm packages honor `manager`.
+ * @param {string} targetId
  * @param {{ manager?: string, version?: string }} [options]
  */
-export function installCommand(frameworkId, { manager = "npm", version } = {}) {
-  const framework = frameworksById[frameworkId];
-  if (!framework) throw new Error(`Unknown framework: ${frameworkId}`);
-  if (framework.registry === "pub") return `flutter pub add ${framework.packageName}`;
-  if (framework.registry === "maven") return `implementation("${framework.packageName}:${version ?? "<version>"}")`;
-  return `${manager} ${manager === "npm" ? "install" : "add"} ${framework.packageName}`;
+export function installCommand(targetId, { manager = "npm", version } = {}) {
+  const target = targetsById[targetId];
+  if (!target) throw new Error(`Unknown package: ${targetId}`);
+  if (target.registry === "pub") return `flutter pub add ${target.packageName}`;
+  if (target.registry === "maven") return `implementation("${target.packageName}:${version ?? "<version>"}")`;
+  return `${manager} ${manager === "npm" ? "install" : "add"} ${[target.packageName, ...(target.peers ?? [])].join(" ")}`;
 }
 
 /** Flutter's generated icons use lowerCamelCase names, such as `arrowRight`. */
@@ -236,21 +227,20 @@ export function tailwindMaskSnippet(svg, options = {}) {
   return `<span class="inline-block size-[${size}px] bg-current [mask:url(${mask})_no-repeat_center/contain]" aria-hidden="true"></span>`;
 }
 
-export const siteUrl = "https://vadivam.praveenjuge.com";
-
 export function cdnUrl(name, version, style = "outline") {
-  return `https://cdn.jsdelivr.net/npm/vadivam@${version}/dist/${style === "solid" ? "solid/" : ""}icons/${name}.svg`;
+  const { entryDirectory } = styleOf(style);
+  return `https://cdn.jsdelivr.net/npm/vadivam@${version}/dist/${entryDirectory ? `${entryDirectory}/` : ""}icons/${name}.svg`;
 }
 
+// The docs site serves each style's sprite at /sprite.svg and /sprite-solid.svg.
 export function spriteSnippet(name, style = "outline") {
-  if (style === "solid") {
-    return `<svg width="24" height="24" fill="currentColor" fill-rule="evenodd" aria-hidden="true">\n  <use href="/sprite-solid.svg#vadivam-solid-${name}" />\n</svg>`;
-  }
-  return `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">\n  <use href="/sprite.svg#vadivam-${name}" />\n</svg>`;
+  const { paint, spriteIdPrefix } = styleOf(style);
+  const file = style === "outline" ? "sprite.svg" : `sprite-${style}.svg`;
+  return `<svg width="${canvasSize}" height="${canvasSize}" ${attributeString(paint)} aria-hidden="true">\n  <use href="/${file}#${spriteIdPrefix}${name}" />\n</svg>`;
 }
 
 export function fontSnippet(name, style = "outline") {
-  return `<i class="${style === "solid" ? "vadivam-solid-icon" : "vadivam-icon"} vadivam-icon-${name}" aria-hidden="true"></i>`;
+  return `<i class="${styleOf(style).font.baseClass} vadivam-icon-${name}" aria-hidden="true"></i>`;
 }
 
 export function iconifySnippet(name, style = "outline") {

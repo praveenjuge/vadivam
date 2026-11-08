@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   buildStyles,
   defaultAttributesSource,
@@ -16,7 +17,8 @@ import {
   writeRuntimePolicy,
 } from "./shared.mjs";
 
-export async function buildVuePackage(icons, dist, solidIcons = []) {
+export async function buildVuePackage({ icons, solidIcons, directory }) {
+  const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
   await write(dist, "context.js", `import { defineComponent, h, inject, provide } from "vue";\nexport const VADIVAM_CONTEXT = Symbol("vadivam-icons");\nexport function provideVadivam(props) { provide(VADIVAM_CONTEXT, props); return props; }\nexport function useVadivamContext() { return inject(VADIVAM_CONTEXT, {}); }\nexport const VadivamProvider = defineComponent({ name: "VadivamProvider", inheritAttrs: false, props: { size: [String, Number], color: String, strokeWidth: [String, Number], absoluteStrokeWidth: Boolean, class: String }, setup(props, { slots }) { provideVadivam(props); return () => slots.default?.() ?? null; } });\n`);

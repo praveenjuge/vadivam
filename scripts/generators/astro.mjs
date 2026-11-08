@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   buildStyles,
   defaultAttributesSource,
@@ -20,7 +21,8 @@ function exportsFor(icons, prefix = "./icons/") {
     .join("\n");
 }
 
-export async function buildAstroPackage(icons, dist, solidIcons = []) {
+export async function buildAstroPackage({ icons, solidIcons, directory }) {
+  const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
   await buildStyles(dist, { outline: icons, solid: solidIcons }, buildAstroEntry);

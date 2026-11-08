@@ -3,17 +3,18 @@ import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { iconNameType, iconNode, svgElementTypeSource, write } from "./shared.mjs";
 import { runtimePolicyTypeScriptSource } from "./runtime-policy.mjs";
+import { root } from "../icon-source.mjs";
 
-function runAngularPackager(root) {
+function runAngularPackager(packageDir) {
   const result = spawnSync(
     "bun",
-    ["x", "ng-packagr", "-p", "packages/vadivam-angular/.generated/ng-package.json"],
+    ["x", "ng-packagr", "-p", path.join(packageDir, ".generated", "ng-package.json")],
     { cwd: root, stdio: "inherit" },
   );
   if (result.status !== 0) throw new Error("ng-packagr failed for vadivam-angular");
 }
 
-export async function buildAngularPackage(icons, packageDir, root, solidIcons = []) {
+export async function buildAngularPackage({ icons, solidIcons, directory: packageDir }) {
   const generated = path.join(packageDir, ".generated", "src");
   const dist = path.join(packageDir, "dist");
   await rm(path.join(packageDir, ".generated"), { recursive: true, force: true });
@@ -83,7 +84,7 @@ export async function buildAngularPackage(icons, packageDir, root, solidIcons = 
   await write(generated, "dynamic.ts", `import { Directive, effect, input } from "@angular/core";\nimport { IconName, IconNode, VadivamIconBase } from "./core";\nexport interface DynamicIconModule { __iconNode: IconNode; }\nexport const dynamicIconImports: { readonly [K in IconName]: () => Promise<DynamicIconModule> } = {\n${dynamicImports}\n};\nexport const iconNames = Object.keys(dynamicIconImports) as IconName[];\n@Directive({ selector: "svg[vadivamDynamicIcon]", standalone: true })\nexport class DynamicIcon extends VadivamIconBase {\n  readonly fallback = input<IconNode>([]);\n  readonly dynamicName = input.required<IconName | string>({ alias: "vadivamDynamicIcon" });\n  private request = 0;\n  constructor() { super(); effect(() => { const name = this.dynamicName(); const fallback = this.fallback(); const id = ++this.request; this.setRuntimeIcon(name, fallback); const importer = Object.prototype.hasOwnProperty.call(dynamicIconImports, name) ? dynamicIconImports[name as IconName] : undefined; if (importer) importer().then((module) => { if (this.request === id) this.setRuntimeIcon(name, module.__iconNode); }, () => { if (this.request === id) this.setRuntimeIcon(name, fallback); }); }); }\n}\n`);
   await write(generated, "public-api.ts", `export * from "./core";\nexport * from "./registry";\nexport * from "./dynamic";\n${publicExports.join("\n")}\n`);
   if (solidIcons.length) await writeSolidEntry(solidIcons, path.join(packageDir, ".generated", "solid"));
-  runAngularPackager(root);
+  runAngularPackager(packageDir);
   // ng-packagr writes package.json files that the root exports map replaces.
   await rm(path.join(dist, "package.json"), { force: true });
   await rm(path.join(dist, "solid", "package.json"), { force: true });

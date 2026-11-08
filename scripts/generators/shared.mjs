@@ -1,5 +1,6 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { rootAttributes, styles } from "../icon-styles.mjs";
 import {
   runtimePolicySource,
   svgElementTypeSource,
@@ -33,14 +34,12 @@ export function iconNameType(icons) {
 }
 
 export function iconNode(icon) {
-  return JSON.stringify(
-    icon.iconNode.map(([tag, attrs]) => [
-      tag,
-      Object.fromEntries(
-        Object.entries(attrs).filter(([name]) => name !== "key"),
-      ),
-    ]),
-  );
+  return JSON.stringify(icon.iconNode);
+}
+
+// React renders a list of children, so its icon nodes carry a key per element.
+export function keyedIconNode(icon) {
+  return JSON.stringify(icon.iconNode.map(([tag, attrs], index) => [tag, { ...attrs, key: `${tag}-${index}` }]));
 }
 
 export function iconExports(icons, prefix = "./icons/") {
@@ -95,37 +94,12 @@ export async function write(dist, relativePath, contents) {
   await writeFile(output, contents);
 }
 
-export const defaultAttributes = {
-  xmlns: "http://www.w3.org/2000/svg",
-  width: 24,
-  height: 24,
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 2,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
-};
-
 // Each style is its own entry point with the same layout: outline at the
 // package root and solid under solid/. A style's entry imports the root's
 // context and runtime policy, so one provider sets every style.
-export const packageStyles = {
-  outline: {
-    id: "outline",
-    directory: "",
-    shared: "./",
-    stroked: true,
-    attributes: { fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round" },
-  },
-  solid: {
-    id: "solid",
-    directory: "solid",
-    shared: "../",
-    stroked: false,
-    attributes: { fill: "currentColor", "fill-rule": "evenodd" },
-  },
-};
+const packageStyles = Object.fromEntries(
+  Object.values(styles).map((style) => [style.id, { ...style, shared: style.entryDirectory ? "../" : "./" }]),
+);
 
 function camelCase(name) {
   return name.replace(/-([a-z])/g, (_match, letter) => letter.toUpperCase());
@@ -134,8 +108,7 @@ function camelCase(name) {
 // The root SVG attributes of a style as an object literal, with React-style
 // camelCase names when `camel` is set.
 export function defaultAttributesSource(style, { camel = false } = {}) {
-  const attributes = { xmlns: "http://www.w3.org/2000/svg", width: 24, height: 24, viewBox: "0 0 24 24", ...style.attributes };
-  const entries = Object.entries(attributes).map(([name, value]) => {
+  const entries = Object.entries(rootAttributes(style)).map(([name, value]) => {
     const key = camel ? camelCase(name) : name;
     return `${/^[A-Za-z]+$/.test(key) ? key : JSON.stringify(key)}: ${JSON.stringify(value)}`;
   });
@@ -152,6 +125,6 @@ export async function buildStyles(dist, iconsByStyle, buildEntry) {
   for (const [id, styleIcons] of Object.entries(iconsByStyle)) {
     if (!styleIcons?.length) continue;
     const style = packageStyles[id];
-    await buildEntry(style.directory ? `${dist}/${style.directory}` : dist, styleIcons, style);
+    await buildEntry(style.entryDirectory ? `${dist}/${style.entryDirectory}` : dist, styleIcons, style);
   }
 }

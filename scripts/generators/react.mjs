@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   buildStyles,
   defaultAttributesSource,
@@ -5,9 +6,11 @@ import {
   svgElementTypeSource,
   write,
   writeRuntimePolicy,
+  keyedIconNode,
 } from "./shared.mjs";
 
-export async function buildReactPackage(icons, dist, solidIcons = []) {
+export async function buildReactPackage({ icons, solidIcons, directory }) {
+  const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
   await write(dist, "context.js", `"use client";\nimport React from "react";\n\nconst VadivamContext = React.createContext({});\nexport function VadivamProvider({ children, size, color, strokeWidth, absoluteStrokeWidth, className }) {\n  const value = React.useMemo(() => ({ size, color, strokeWidth, absoluteStrokeWidth, className }), [size, color, strokeWidth, absoluteStrokeWidth, className]);\n  return React.createElement(VadivamContext.Provider, { value }, children);\n}\nexport function useVadivamContext() {\n  return React.useContext(VadivamContext);\n}\n`);
@@ -48,7 +51,7 @@ async function buildReactEntry(dist, icons, style) {
   await write(dist, "defineIcon.js", `import React, { forwardRef } from "react";\nimport { IconBase } from "./IconBase.js";\n\nexport function wrapIcon(Base, iconClass, displayName, iconNode) {\n  const Component = forwardRef(({ className, ...props }, ref) => React.createElement(Base, { ...props, ref, iconNode, className: [iconClass, className].filter(Boolean).join(" ") }));\n  Component.displayName = displayName;\n  return Component;\n}\nexport function defineIcon(name, displayName, iconNode) {\n  return wrapIcon(IconBase, \`vadivam-\${name}\`, displayName, iconNode);\n}\n`);
 
   for (const icon of icons) {
-    await write(dist, `icons/${icon.name}.js`, `import { defineIcon } from "../defineIcon.js";\nexport const __iconNode = ${JSON.stringify(icon.iconNode)};\nconst ${icon.componentName} = /* @__PURE__ */ defineIcon("${icon.name}", "${icon.componentName}", __iconNode);\nexport default ${icon.componentName};\n`);
+    await write(dist, `icons/${icon.name}.js`, `import { defineIcon } from "../defineIcon.js";\nexport const __iconNode = ${keyedIconNode(icon)};\nconst ${icon.componentName} = /* @__PURE__ */ defineIcon("${icon.name}", "${icon.componentName}", __iconNode);\nexport default ${icon.componentName};\n`);
     await write(dist, `icons/${icon.name}.d.ts`, `import type { IconNode, VadivamIcon } from "../types.js";\nexport declare const __iconNode: IconNode;\n/** @component\n * @name ${icon.componentName}\n * @description Vadivam ${style.stroked ? "" : "solid "}SVG icon component.\n * @see https://vadivam.praveenjuge.com/icons/${icon.name}\n */\ndeclare const ${icon.componentName}: VadivamIcon;\nexport default ${icon.componentName};\n`);
   }
 
