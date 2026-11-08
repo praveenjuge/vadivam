@@ -1,17 +1,23 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { targets } from "../scripts/packages.mjs";
 import {
   componentSnippet,
+  copyFormats,
+  copyFormatsById,
   cssMaskSnippet,
   customizeSvg,
   effectiveStrokeWidth,
   frameworks,
   installCommand,
   propsSource,
+  renderCopyFormat,
   resolveOptions,
   svgBase64,
   svgDataUri,
   svgToJsx,
   tailwindMaskSnippet,
+  unsupportedStyle,
 } from "../scripts/snippets.mjs";
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n<path d="M4 12h16"/><path d="m12 4 8 8-8 8"/>\n</svg>\n`;
@@ -44,6 +50,8 @@ describe("copy formats", () => {
   });
 
   test("install commands follow each package's registry", () => {
+    expect(installCommand("core")).toBe("npm install vadivam");
+    expect(installCommand("react-native", { manager: "pnpm" })).toBe("pnpm add vadivam-react-native react-native-svg");
     expect(installCommand("qwik", { manager: "bun" })).toBe("bun add vadivam-qwik");
     expect(installCommand("flutter", { manager: "bun" })).toBe("flutter pub add vadivam");
     expect(installCommand("compose", { version: "1.2.3" })).toBe('implementation("com.praveenjuge:vadivam-compose:1.2.3")');
@@ -94,5 +102,33 @@ describe("copy formats", () => {
     expect(uri).not.toMatch(/[<>"#]/);
     const base64 = svgBase64(svg);
     expect(atob(base64.split(",")[1])).toBe(svg.trim());
+  });
+
+  test("the copy format registry renders each format and refuses styles it lacks", () => {
+    const icon = { name: "arrow", componentName: "Arrow", svg };
+    expect(renderCopyFormat("svg", icon, custom)).toBe(customizeSvg(svg, custom));
+    expect(renderCopyFormat("vue", icon, { size: 20 })).toBe(componentSnippet("vue", "Arrow", { size: 20 }));
+    expect(renderCopyFormat("cdn", icon, { style: "solid" }, "1.2.3")).toBe(
+      "https://cdn.jsdelivr.net/npm/vadivam@1.2.3/dist/solid/icons/arrow.svg",
+    );
+    expect(renderCopyFormat("iconify", icon)).toBe("vadivam:arrow");
+    expect(unsupportedStyle(copyFormatsById.iconify, "solid")).toMatch(/outline icons only/);
+    expect(() => renderCopyFormat("iconify", icon, { style: "solid" })).toThrow(/outline icons only/);
+    expect(() => renderCopyFormat("png", icon)).toThrow(/Unknown format/);
+    expect(copyFormatsById.sprite.install).toBe("core");
+    expect(copyFormatsById["react-native"].install).toBe("react-native");
+    expect(copyFormats.filter((format) => !format.framework).map((format) => format.id)).toEqual([
+      "svg", "jsx", "data-uri", "base64", "css-mask", "tailwind", "cdn", "sprite", "font", "iconify", "shadcn",
+    ]);
+  });
+});
+
+describe("hand-written docs", () => {
+  // The agent skill is plain Markdown, so check its setup block against the registry.
+  test("the agent skill installs every package with its peers", () => {
+    const skill = readFileSync(new URL("../apps/docs/skills/vadivam-icons/SKILL.md", import.meta.url), "utf8");
+    for (const target of targets.filter(({ id }) => id !== "mcp")) {
+      expect(skill).toContain(installCommand(target.id));
+    }
   });
 });

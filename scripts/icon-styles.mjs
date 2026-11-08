@@ -114,3 +114,15 @@ export function pascalCase(name) {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join("");
 }
+
+// ---- Markup helpers for the docs site and the MCP server.
+
+/** The SVG with its root width and height set to `size`. */
+export function resizeSvg(svg, size) {
+  return svg.replace(/ width="[^"]*"/, ` width="${size}"`).replace(/ height="[^"]*"/, ` height="${size}"`);
+}
+
+/** An icon file of a style drawn only with paths, given their `d` values. */
+export function pathIconSvg(style, pathData) {
+  return iconSvg(style, pathData.map((d) => `<path d="${d}"/>`).join(""));
+}

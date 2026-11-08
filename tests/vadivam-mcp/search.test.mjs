@@ -5,6 +5,7 @@ import {
   closestIconNames,
   findIcon,
   icons,
+  instructions,
   renderIcon,
   searchIcons,
   suggestIcons,
@@ -281,5 +282,19 @@ describe("get_usage", () => {
     expect(usageFor("flutter").install).toBe("flutter pub add vadivam");
     expect(usageFor("compose").install).toBe(`implementation("com.praveenjuge:vadivam-compose:${version}")`);
     expect(usageFor("compose").docs).toBe("https://vadivam.praveenjuge.com/docs/compose");
+  });
+
+  test("describes each package's dynamic icon API", () => {
+    expect(usageFor("react").dynamic).toStartWith('import { DynamicIcon } from "vadivam-react/dynamic".');
+    expect(usageFor("svelte").dynamic).toStartWith('import DynamicIcon from "vadivam-svelte/dynamic".');
+    expect(usageFor("angular").dynamic).toContain("<svg vadivamDynamicIcon");
+    expect(usageFor("qwik").dynamic).toStartWith("No DynamicIcon in vadivam-qwik");
+    expect(usageFor("core").dynamic).toContain('"vadivam/elements"');
+  });
+
+  test("instructions name every framework", () => {
+    for (const label of ["React Native", "Qwik", "Lit", "Flutter", "Jetpack Compose"]) {
+      expect(instructions).toContain(label);
+    }
   });
 });

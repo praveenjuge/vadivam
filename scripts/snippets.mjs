@@ -1,7 +1,7 @@
 // Copy formats shared by the docs site, the shadcn registry, and the MCP
 // server, which ships this file with packages.mjs and icon-styles.mjs.
 // Browser-safe: imports only browser-safe modules.
-import { attributeString, canvasSize, styleIds, styleOf, styles } from "./icon-styles.mjs";
+import { attributeString, canvasSize, resizeSvg, styleIds, styleOf, styles } from "./icon-styles.mjs";
 import { frameworks, siteUrl, targetsById } from "./packages.mjs";
 
 export { frameworks, siteUrl };
@@ -12,14 +12,6 @@ export const iconDefaults = Object.freeze({
   color: styles.outline.paint.stroke,
   absoluteStrokeWidth: false,
 });
-
-export const frameworksById = Object.freeze(
-  Object.fromEntries(frameworks.map((framework) => [framework.id, framework])),
-);
-
-// Every icon is drawn in each of these styles. Solid icons are filled, so they
-// take no stroke options.
-export const iconStyles = styleIds;
 
 const isSolid = (options) => options?.style === "solid";
 
@@ -57,6 +49,16 @@ export function installCommand(targetId, { manager = "npm", version } = {}) {
   if (target.registry === "pub") return `flutter pub add ${target.packageName}`;
   if (target.registry === "maven") return `implementation("${target.packageName}:${version ?? "<version>"}")`;
   return `${manager} ${manager === "npm" ? "install" : "add"} ${[target.packageName, ...(target.peers ?? [])].join(" ")}`;
+}
+
+/** How to render an icon from a runtime name with a package, in one line for agents. */
+export function dynamicIconUsage(targetId) {
+  const { packageName, dynamicIcon } = targetsById[targetId];
+  const docs = `${siteUrl}/docs/dynamic-icons`;
+  if (dynamicIcon.lookup) return `${dynamicIcon.lookup} ${docs}`;
+  const binding = dynamicIcon.export === "default" ? "DynamicIcon" : "{ DynamicIcon }";
+  const directive = dynamicIcon.directive ? ` (directive: <svg ${dynamicIcon.directive} name="activity"></svg>)` : "";
+  return `import ${binding} from "${packageName}/dynamic"${directive}. Validate runtime names against iconNames first. ${docs}`;
 }
 
 /** Flutter's generated icons use lowerCamelCase names, such as `arrowRight`. */
@@ -129,8 +131,8 @@ export function propsSource(frameworkId, options) {
 
 /** Import-and-render source for one framework and style, given its props source. */
 export function componentSource(frameworkId, componentName, props, style = "outline") {
-  const framework = frameworksById[frameworkId];
-  if (!framework) throw new Error(`Unknown framework: ${frameworkId}`);
+  const framework = targetsById[frameworkId];
+  if (!framework?.framework) throw new Error(`Unknown framework: ${frameworkId}`);
   const solid = style === "solid";
   const from = solid ? `${framework.packageName}/solid` : framework.packageName;
   switch (frameworkId) {
@@ -161,16 +163,10 @@ export function componentSnippet(frameworkId, componentName, options = {}) {
 /** Apply size, color, and stroke settings to an icon's normalized SVG markup. */
 export function customizeSvg(svg, options = {}) {
   const { size, color } = resolveOptions(options);
-  if (isSolid(options)) {
-    return svg
-      .replace(/ width="[^"]*"/, ` width="${size}"`)
-      .replace(/ height="[^"]*"/, ` height="${size}"`)
-      .replace(/ fill="[^"]*"/, ` fill="${color}"`);
-  }
+  const sized = resizeSvg(svg, size);
+  if (isSolid(options)) return sized.replace(/ fill="[^"]*"/, ` fill="${color}"`);
   const strokeWidth = effectiveStrokeWidth(options);
-  return svg
-    .replace(/ width="[^"]*"/, ` width="${size}"`)
-    .replace(/ height="[^"]*"/, ` height="${size}"`)
+  return sized
     .replace(/ stroke="[^"]*"/, ` stroke="${color}"`)
     .replace(/ stroke-width="[^"]*"/, ` stroke-width="${strokeWidth}"`);
 }
@@ -227,12 +223,19 @@ export function tailwindMaskSnippet(svg, options = {}) {
   return `<span class="inline-block size-[${size}px] bg-current [mask:url(${mask})_no-repeat_center/contain]" aria-hidden="true"></span>`;
 }
 
-export function cdnUrl(name, version, style = "outline") {
+
+/** Where an icon's SVG file sits in the vadivam package, such as `solid/icons/house.svg`. */
+export function iconAssetPath(name, style = "outline") {
   const { entryDirectory } = styleOf(style);
-  return `https://cdn.jsdelivr.net/npm/vadivam@${version}/dist/${entryDirectory ? `${entryDirectory}/` : ""}icons/${name}.svg`;
+  return `${entryDirectory ? `${entryDirectory}/` : ""}icons/${name}.svg`;
 }
 
-// The docs site serves each style's sprite at /sprite.svg and /sprite-solid.svg.
+export function cdnUrl(name, version, style = "outline") {
+  return `https://cdn.jsdelivr.net/npm/vadivam@${version}/dist/${iconAssetPath(name, style)}`;
+}
+
+// Points at the package's sprite served from the app's root, with the solid
+// sprite saved as sprite-solid.svg, as the core docs show.
 export function spriteSnippet(name, style = "outline") {
   const { paint, spriteIdPrefix } = styleOf(style);
   const file = style === "outline" ? "sprite.svg" : `sprite-${style}.svg`;
@@ -243,8 +246,8 @@ export function fontSnippet(name, style = "outline") {
   return `<i class="${styleOf(style).font.baseClass} vadivam-icon-${name}" aria-hidden="true"></i>`;
 }
 
-export function iconifySnippet(name, style = "outline") {
-  if (style === "solid") throw new Error("Iconify has the outline icons only; use another format for solid icons.");
+// Iconify publishes the outline icons only; the copy formats below say so.
+export function iconifySnippet(name) {
   return `vadivam:${name}`;
 }
 
@@ -254,4 +257,54 @@ export function shadcnItemUrl(name, baseUrl = siteUrl, style = "outline") {
 
 export function shadcnAddCommand(name, style = "outline") {
   return `npx shadcn@latest add ${shadcnItemUrl(name, siteUrl, style)}`;
+}
+
+const styledSvg = (icon, options) => customizeSvg(icon.svg, options);
+
+/**
+ * Every format an icon can be copied as, in the order the MCP server lists
+ * them. The docs site's Copy as menu shows the ones that aren't framework
+ * snippets; its framework tabs show the rest. `render(icon, options, version)`
+ * takes `{ name, componentName, svg }`, where `svg` is the uncustomized markup
+ * of `options.style`. `install` is the package the output needs, if any.
+ */
+export const copyFormats = Object.freeze(
+  [
+    { id: "svg", label: "SVG", render: styledSvg },
+    { id: "jsx", label: "JSX", render: (icon, options) => svgToJsx(styledSvg(icon, options)) },
+    ...frameworks.map(({ id, label }) => ({
+      id,
+      label,
+      framework: true,
+      install: id,
+      render: (icon, options) => componentSnippet(id, icon.componentName, options),
+    })),
+    { id: "data-uri", label: "Data URI", render: (icon, options) => svgDataUri(styledSvg(icon, options)) },
+    { id: "base64", label: "Base64", render: (icon, options) => svgBase64(styledSvg(icon, options)) },
+    { id: "css-mask", label: "CSS mask", render: (icon, options) => cssMaskSnippet(icon.name, icon.svg, options) },
+    { id: "tailwind", label: "Tailwind class", render: (icon, options) => tailwindMaskSnippet(icon.svg, options) },
+    { id: "cdn", label: "CDN URL", render: (icon, options, version) => cdnUrl(icon.name, version, options.style) },
+    { id: "sprite", label: "Sprite <use>", install: "core", render: (icon, options) => spriteSnippet(icon.name, options.style) },
+    { id: "font", label: "Icon font", install: "core", render: (icon, options) => fontSnippet(icon.name, options.style) },
+    { id: "iconify", label: "Iconify name", styles: ["outline"], render: (icon) => iconifySnippet(icon.name) },
+    { id: "shadcn", label: "shadcn add", render: (icon, options) => shadcnAddCommand(icon.name, options.style) },
+  ].map((format) => Object.freeze({ styles: styleIds, ...format })),
+);
+
+export const copyFormatsById = Object.freeze(Object.fromEntries(copyFormats.map((format) => [format.id, format])));
+
+/** Why a format can't show an icon in a style, or null when it can. */
+export function unsupportedStyle(format, style = "outline") {
+  return format.styles.includes(style)
+    ? null
+    : `${format.label} has ${format.styles.join(" and ")} icons only; use another format for ${style} icons.`;
+}
+
+/** One icon in one copy format; throws for an unknown format or a style the format lacks. */
+export function renderCopyFormat(formatId, icon, options = {}, version) {
+  const format = copyFormatsById[formatId];
+  if (!format) throw new Error(`Unknown format "${formatId}". Use one of: ${copyFormats.map(({ id }) => id).join(", ")}.`);
+  const problem = unsupportedStyle(format, options.style);
+  if (problem) throw new Error(problem);
+  return format.render(icon, options, version);
 }

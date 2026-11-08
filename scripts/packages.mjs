@@ -2,6 +2,11 @@
 // build generates each one (scripts/icons.mjs maps ids to generators), the
 // release scripts version and publish it, and the docs site and MCP server use
 // it to show how to install and import it. Browser-safe: no imports.
+//
+// `title` is the product's full name where the short `label` drops a word.
+// `dynamicIcon` says how the package renders an icon from a runtime name: a
+// `DynamicIcon` component from its `/dynamic` entry, as a named or default
+// export (Angular's is a directive), or a `lookup` described in words.
 
 const npm = (target) => ({ registry: "npm", ...target });
 
@@ -12,6 +17,7 @@ export const targets = Object.freeze([
     packageName: "vadivam",
     directory: "packages/vadivam",
     documentation: "/docs/core",
+    dynamicIcon: { lookup: 'No DynamicIcon in vadivam; validate names with iconNames from "vadivam/manifest", or render <vadivam-icon name="…"> from "vadivam/elements".' },
     description: "Pixel-perfect 24px outline and solid SVG icons with tree-shakeable ESM imports and metadata.",
     keywords: ["javascript"],
     readmeSearchPhrase: "Tree-shakeable 24px outline and solid SVG icons for JavaScript",
@@ -24,6 +30,7 @@ export const targets = Object.freeze([
     packageName: "vadivam-react",
     directory: "packages/vadivam-react",
     documentation: "/docs/react",
+    dynamicIcon: { export: "named" },
     description: "Pixel-perfect 24px outline and solid icon components for React with tree-shakeable imports.",
     keywords: ["react", "react-icons"],
     readmeSearchPhrase: "Tree-shakeable 24px outline and solid SVG icons for React",
@@ -37,6 +44,7 @@ export const targets = Object.freeze([
     peers: ["react-native-svg"],
     directory: "packages/vadivam-react-native",
     documentation: "/docs/react-native",
+    dynamicIcon: { export: "named" },
     description: "Pixel-perfect 24px outline and solid icons for React Native and Expo, powered by react-native-svg.",
     keywords: ["react-native", "react-native-svg", "expo"],
     readmeSearchPhrase: "Tree-shakeable 24px outline and solid icons for React Native and Expo",
@@ -49,6 +57,7 @@ export const targets = Object.freeze([
     packageName: "vadivam-vue",
     directory: "packages/vadivam-vue",
     documentation: "/docs/vue",
+    dynamicIcon: { export: "named" },
     description: "Pixel-perfect 24px outline and solid icon components for Vue with tree-shakeable imports.",
     keywords: ["vue", "vue-icons"],
     readmeSearchPhrase: "Tree-shakeable 24px outline and solid SVG icons for Vue",
@@ -61,6 +70,7 @@ export const targets = Object.freeze([
     packageName: "vadivam-svelte",
     directory: "packages/vadivam-svelte",
     documentation: "/docs/svelte",
+    dynamicIcon: { export: "default" },
     description: "Pixel-perfect 24px outline and solid icon components for Svelte with tree-shakeable imports.",
     keywords: ["svelte", "svelte-icons"],
     readmeSearchPhrase: "Tree-shakeable 24px outline and solid SVG icons for Svelte",
@@ -73,6 +83,7 @@ export const targets = Object.freeze([
     packageName: "vadivam-solid",
     directory: "packages/vadivam-solid",
     documentation: "/docs/solid",
+    dynamicIcon: { export: "named" },
     description: "Pixel-perfect 24px outline and solid icon components for Solid with tree-shakeable imports.",
     keywords: ["solid", "solidjs", "solid-icons"],
     readmeSearchPhrase: "Tree-shakeable 24px outline and solid SVG icons for Solid",
@@ -85,6 +96,7 @@ export const targets = Object.freeze([
     packageName: "vadivam-preact",
     directory: "packages/vadivam-preact",
     documentation: "/docs/preact",
+    dynamicIcon: { export: "named" },
     description: "Pixel-perfect 24px outline and solid icon components for Preact with tree-shakeable imports.",
     keywords: ["preact", "preact-icons"],
     readmeSearchPhrase: "Tree-shakeable 24px outline and solid SVG icons for Preact",
@@ -97,6 +109,7 @@ export const targets = Object.freeze([
     packageName: "vadivam-astro",
     directory: "packages/vadivam-astro",
     documentation: "/docs/astro",
+    dynamicIcon: { export: "default" },
     description: "Pixel-perfect 24px outline and solid icon components for Astro with tree-shakeable imports.",
     keywords: ["astro", "astro-icons", "astro-components"],
     readmeSearchPhrase: "Tree-shakeable 24px outline and solid SVG icons for Astro",
@@ -109,6 +122,7 @@ export const targets = Object.freeze([
     packageName: "vadivam-angular",
     directory: "packages/vadivam-angular",
     documentation: "/docs/angular",
+    dynamicIcon: { export: "named", directive: "vadivamDynamicIcon" },
     description: "Pixel-perfect 24px outline and solid icon directives for Angular with tree-shakeable imports.",
     keywords: ["angular", "angular-icons"],
     readmeSearchPhrase: "Tree-shakeable 24px outline and solid SVG icon directives for Angular",
@@ -121,6 +135,7 @@ export const targets = Object.freeze([
     packageName: "vadivam-qwik",
     directory: "packages/vadivam-qwik",
     documentation: "/docs/qwik",
+    dynamicIcon: { lookup: 'No DynamicIcon in vadivam-qwik; look icons up in the `icons` registry from "vadivam-qwik" after validating the name.' },
     description: "Pixel-perfect 24px outline and solid icon components for Qwik with tree-shakeable imports.",
     keywords: ["qwik", "qwik-icons"],
     readmeSearchPhrase: "Tree-shakeable 24px outline and solid SVG icons for Qwik",
@@ -133,6 +148,7 @@ export const targets = Object.freeze([
     packageName: "vadivam-lit",
     directory: "packages/vadivam-lit",
     documentation: "/docs/lit",
+    dynamicIcon: { export: "named" },
     description: "Pixel-perfect 24px outline and solid icon templates for Lit with tree-shakeable imports.",
     keywords: ["lit", "lit-html", "web-components"],
     readmeSearchPhrase: "Tree-shakeable 24px outline and solid SVG icons for Lit",
@@ -146,6 +162,7 @@ export const targets = Object.freeze([
     registry: "pub",
     directory: "packages/vadivam-flutter",
     documentation: "/docs/flutter",
+    dynamicIcon: { lookup: "VadivamIcons.all[name] returns the icon data or null. Referencing it keeps every icon in the build." },
     releaseLink: "[vadivam for Flutter](https://pub.dev/packages/vadivam)",
     versionFile: "packages/vadivam-flutter/pubspec.yaml",
     versionPattern: /^version: (.+)$/m,
@@ -154,12 +171,14 @@ export const targets = Object.freeze([
   {
     id: "compose",
     label: "Compose",
+    title: "Jetpack Compose",
     lang: "kotlin",
     framework: true,
     packageName: "com.praveenjuge:vadivam-compose",
     registry: "maven",
     directory: "packages/vadivam-compose",
     documentation: "/docs/compose",
+    dynamicIcon: { lookup: "VadivamIcons.byName(name) returns the ImageVector or null. Calling it keeps every icon in the app." },
     releaseLink: "[vadivam-compose](https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose)",
     versionFile: "packages/vadivam-compose/gradle.properties",
     versionPattern: /^VERSION_NAME=(.+)$/m,
@@ -177,7 +196,9 @@ export const targets = Object.freeze([
   }),
 ]);
 
-export const targetsById = Object.freeze(Object.fromEntries(targets.map((target) => [target.id, target])));
+export const registryNames = Object.freeze({ npm: "npm", pub: "pub.dev", maven: "Maven Central" });
+
+export const targetsById =Object.freeze(Object.fromEntries(targets.map((target) => [target.id, target])));
 
 /** Packages published to npm through Trusted Publishing. */
 export const npmPackages = targets.filter((target) => target.registry === "npm");

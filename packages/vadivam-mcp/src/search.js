@@ -1,11 +1,11 @@
 import { categories, iconRanks, icons } from "./data.js";
 import { siteUrl } from "./snippets.mjs";
 
-export const iconsByName = new Map(icons.map((icon) => [icon.name, icon]));
+const iconsByName = new Map(icons.map((icon) => [icon.name, icon]));
 const iconsByComponentName = new Map(
   icons.map((icon) => [icon.componentName.toLowerCase(), icon]),
 );
-export const categoriesById = new Map(
+const categoriesById = new Map(
   categories.map((category) => [category.id, category]),
 );
 
@@ -38,7 +38,7 @@ export function findIcon(name) {
 }
 
 /** Resolve a category by id or title, case-insensitively. */
-export function findCategory(value) {
+function findCategory(value) {
   const key = normalize(value);
   return categories.find(
     (category) => category.id === key || category.title.toLowerCase() === key,
@@ -76,7 +76,7 @@ function tokenScore(icon, terms, token) {
  * name words, then tags, then category titles. Every query word must match
  * somewhere, otherwise the icon scores 0.
  */
-export function scoreIcon(icon, query) {
+function scoreIcon(icon, query) {
   const tokens = tokenize(query);
   // Symbol-only queries (`€`, `->|`, `@`) have no word tokens, but Lucide
   // ships them as tags, so match them exactly.
