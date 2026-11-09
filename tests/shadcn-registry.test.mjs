@@ -1,22 +1,33 @@
-import { describe, expect, test } from "bun:test";
-import { readFileSync, readdirSync } from "node:fs";
+import { afterAll, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { registryItemSchema, registrySchema } from "shadcn/schema";
 import { icons } from "vadivam/manifest";
-import {
-  baseItemName,
-  iconItem,
-  registryItems,
-} from "../scripts/generators/shadcn.mjs";
+import { svgPathData } from "../scripts/icon-styles.mjs";
+import { baseItemName, iconItem, registryItems } from "../scripts/generators/shadcn.mjs";
+import { packageMetadata } from "../scripts/packages.mjs";
 import { shadcnAddCommand, siteUrl } from "../scripts/snippets.mjs";
+import { repoRoot, svgAttributes, tagAttributes } from "./helpers.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const registryDir = path.join(root, "apps/docs/public/r");
-const readJson = (file) =>
-  JSON.parse(readFileSync(path.join(registryDir, file), "utf8"));
+const registryDir = path.join(repoRoot, "apps/docs/public/r");
+const readJson = (file) => JSON.parse(readFileSync(path.join(registryDir, file), "utf8"));
 const baseUrl = `${siteUrl}/r/${baseItemName}.json`;
-const pathData = (svg) => [...svg.matchAll(/ d="([^"]+)"/g)].map(([, d]) => d);
+
+// Writes registry items' files the way the shadcn CLI installs them, under
+// tests/ so "react" resolves, and imports each icon component.
+const installed = mkdtempSync(path.join(import.meta.dir, ".shadcn-"));
+afterAll(() => rmSync(installed, { recursive: true, force: true }));
+async function installItems(directory, names) {
+  const folder = path.join(installed, directory);
+  mkdirSync(folder, { recursive: true });
+  for (const name of [baseItemName, ...names]) {
+    const [{ content }] = JSON.parse(readFileSync(path.join(registryDir, directory, `${name}.json`), "utf8")).files;
+    writeFileSync(path.join(folder, `${name}.tsx`), content);
+  }
+  return (name) => import(path.join(folder, `${name}.tsx`));
+}
 
 describe("shadcn registry", () => {
   const index = readJson("registry.json");
@@ -69,7 +80,7 @@ describe("shadcn registry", () => {
       expect(item).toMatchObject({
         type: "registry:component",
         title: icon.componentName,
-        author: "Praveen Juge <https://vadivam.praveenjuge.com>",
+        author: `${packageMetadata.author} <${siteUrl}>`,
         registryDependencies: [baseUrl],
         categories: icon.categories,
         meta: { tags: icon.tags, lucide: icon.name },
@@ -80,14 +91,18 @@ describe("shadcn registry", () => {
         `${icon.componentName} icon from Vadivam, a 24px outline icon set.`,
       );
       for (const tag of icon.tags) expect(item.description).toContain(tag);
-      const [{ content }] = item.files;
-      expect(content).toStartWith(
-        `import { VadivamIcon, type VadivamIconProps } from "./${baseItemName}";`,
-      );
-      expect(content).toContain(`export function ${icon.componentName}(props: VadivamIconProps)`);
-      expect(content).toContain(`<VadivamIcon name="${icon.name}" {...props}>`);
-      expect(content).toContain(`export default ${icon.componentName};`);
-      for (const d of pathData(icon.svg)) expect(content).toContain(`<path d="${d}" />`);
+    }
+  });
+
+  test("every installed icon component renders the icon's geometry", async () => {
+    const load = await installItems("", icons.map(({ name }) => name));
+    for (const icon of icons) {
+      const module = await load(icon.name);
+      expect(module.default).toBe(module[icon.componentName]);
+      expect(module[`${icon.componentName}Icon`]).toBe(module.default);
+      const markup = renderToStaticMarkup(createElement(module.default));
+      expect(svgAttributes(markup).class).toBe(`vadivam vadivam-${icon.name}`);
+      expect(tagAttributes(markup, "path").map(({ d }) => d)).toEqual(svgPathData(icon.svg));
     }
   });
 
@@ -98,9 +113,6 @@ describe("shadcn registry", () => {
     const [{ content }] = item.files;
     const imports = [...content.matchAll(/from "([^"]+)"/g)].map(([, from]) => from);
     expect(imports).toEqual(["react"]);
-    for (const prop of ["size", "color", "strokeWidth", "absoluteStrokeWidth", "title"]) {
-      expect(content).toContain(`${prop}?:`);
-    }
   });
 
   test("the add command points at a generated item", () => {
@@ -153,19 +165,26 @@ describe("solid shadcn registry", () => {
     );
   });
 
-  test("installs under components/icons/solid with the solid geometry and base", () => {
+  test("installs under components/icons/solid on the solid base", () => {
     for (const icon of icons) {
       const item = readSolid(`${icon.name}.json`);
       const parsed = registryItemSchema.safeParse(item);
       if (parsed.error) throw new Error(`${icon.name}: ${parsed.error.message}`);
       expect(item.registryDependencies).toEqual([`${siteUrl}/r/solid/${baseItemName}.json`]);
       expect(item.files[0].target).toBe(`@components/icons/solid/${icon.name}.tsx`);
-      for (const d of pathData(icon.solid.svg)) expect(item.files[0].content).toContain(`d="${d}"`);
     }
-    const base = readSolid(`${baseItemName}.json`).files[0];
-    expect(base.target).toBe(`@components/icons/solid/${baseItemName}.tsx`);
-    expect(base.content).toContain('fillRule="evenodd"');
-    expect(base.content).not.toContain("strokeWidth=");
+    expect(readSolid(`${baseItemName}.json`).files[0].target).toBe(`@components/icons/solid/${baseItemName}.tsx`);
+  });
+
+  test("every installed solid component fills the solid geometry", async () => {
+    const load = await installItems("solid", icons.map(({ name }) => name));
+    for (const icon of icons) {
+      const markup = renderToStaticMarkup(createElement((await load(icon.name)).default));
+      const root = svgAttributes(markup);
+      expect(root).toMatchObject({ fill: "currentColor", "fill-rule": "evenodd" });
+      expect(Object.keys(root).filter((name) => name.startsWith("stroke"))).toEqual([]);
+      expect(tagAttributes(markup, "path")).toEqual(svgPathData(icon.solid.svg).map((d) => ({ d })));
+    }
   });
 
   test("the solid add command points at a generated item", () => {
