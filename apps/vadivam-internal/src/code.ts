@@ -182,10 +182,14 @@ function postCatalog(): void {
   });
 }
 
+function missingIcons(pages: LoadedPages): LucideIconRanking[] {
+  const drawn = iconFramesByName(pages);
+  return rankedLucideIcons.filter((icon) => !drawn.has(icon.name));
+}
+
 // Recounts the drawn icons after anything that adds or renames frames.
 function publishCatalog(pages: LoadedPages): void {
-  const drawn = iconFramesByName(pages);
-  candidates = rankedLucideIcons.filter((icon) => !drawn.has(icon.name));
+  candidates = missingIcons(pages);
   postCatalog();
   publishPageStatus();
 }
@@ -447,8 +451,8 @@ async function generateFrames(countValue: unknown): Promise<void> {
   if (figma.currentPage !== page) {
     throw new Error(`The page changed while pages loaded; go back to ${page.name} and generate again`);
   }
-  // Picked after the load, so the missing icons reflect this page as it is now.
-  const selected = candidates.slice(0, count);
+  // Recounted from the loaded pages, so icons drawn since the last catalog are skipped.
+  const selected = missingIcons(pages).slice(0, count);
   if (selected.length === 0) throw new Error("No missing ranked icons remain");
   const names = selected.map((icon) => icon.name);
   const positions = getBatchPositions(

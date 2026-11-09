@@ -81,6 +81,18 @@ describe("Create", () => {
     expect(harness.last("catalog")!.progress.drawn).toBe(5);
   });
 
+  test("skips icons drawn after the catalog was last counted", async () => {
+    const harness = createFigma({ pages: ["Icons"] });
+    const loaded = harness.next("catalog");
+    runPlugin(new URL("../dist/code.js", import.meta.url), harness);
+    await loaded;
+
+    const [first, second, third] = rankings.icons.map((icon) => icon.name);
+    iconFrame(harness, first!, { x: 0, y: 0 });
+    await harness.send({ type: "generate", count: 2 });
+    expect(harness.last("generated")).toEqual({ type: "generated", names: [second, third] });
+  });
+
   test("creates nothing when the page changes while pages load", async () => {
     const harness = createFigma({ pages: ["Icons", "Drafts"] });
     const loaded = harness.next("catalog");
