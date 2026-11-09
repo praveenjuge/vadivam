@@ -32,7 +32,8 @@ export function run(command, args, { cwd = process.cwd(), capture = false, timeo
       settle();
       reject(new Error(`${label} failed in ${cwd}: ${error.message}`));
     });
-    child.on("exit", (code, signal) => {
+    // "close" waits for the output streams to end, so captured stdout is complete.
+    child.on("close", (code, signal) => {
       settle();
       if (code === 0) return resolve(stdout);
       if (capture) process.stderr.write(stderr || stdout);
