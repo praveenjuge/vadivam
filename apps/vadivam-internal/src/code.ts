@@ -441,9 +441,15 @@ async function addRemote(sourceValue: unknown): Promise<void> {
 }
 
 async function generateFrames(countValue: unknown): Promise<void> {
-  const selected = candidates.slice(0, requireCount("batchSize", countValue));
-  if (selected.length === 0) throw new Error("No missing ranked icons remain");
+  const count = requireCount("batchSize", countValue);
+  const page = figma.currentPage;
   const pages = await loadStylePages();
+  if (figma.currentPage !== page) {
+    throw new Error(`The page changed while pages loaded; go back to ${page.name} and generate again`);
+  }
+  // Picked after the load, so the missing icons reflect this page as it is now.
+  const selected = candidates.slice(0, count);
+  if (selected.length === 0) throw new Error("No missing ranked icons remain");
   const names = selected.map((icon) => icon.name);
   const positions = getBatchPositions(
     names.length,

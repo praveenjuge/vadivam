@@ -80,6 +80,24 @@ describe("Create", () => {
     expect(harness.last("generated")).toEqual({ type: "generated", names: expected.slice(0, 2) });
     expect(harness.last("catalog")!.progress.drawn).toBe(5);
   });
+
+  test("creates nothing when the page changes while pages load", async () => {
+    const harness = createFigma({ pages: ["Icons", "Drafts"] });
+    const loaded = harness.next("catalog");
+    runPlugin(new URL("../dist/code.js", import.meta.url), harness);
+    await loaded;
+
+    harness.figma.loadAllPagesAsync = async () => {
+      harness.figma.currentPage = page(harness, "Drafts");
+    };
+    await harness.send({ type: "generate", count: 2 });
+    expect(lastMessage(harness)).toEqual({
+      type: "error",
+      message: "The page changed while pages loaded; go back to Icons and generate again",
+    });
+    expect(page(harness, "Icons").children).toHaveLength(0);
+    expect(page(harness, "Drafts").children).toHaveLength(0);
+  });
 });
 
 describe("Arrange", () => {
