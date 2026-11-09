@@ -58,6 +58,8 @@ export interface IconNames {
   current(layerName: string): string | null;
   /** The current icon for a deprecated name in any format: `AlertCircle` → `circle-exclamation-point`. */
   replacement(layerName: string): string | null;
+  /** The icon a layer name means: its current icon, else the replacement for a deprecated name. */
+  icon(layerName: string): string | null;
 }
 
 export function iconNames(names: Iterable<string>, deprecated: Readonly<Record<string, string>>): IconNames {
@@ -66,6 +68,7 @@ export function iconNames(names: Iterable<string>, deprecated: Readonly<Record<s
   return {
     current: (layerName) => lookUp(current, layerName),
     replacement: (layerName) => lookUp(aliases, layerName),
+    icon: (layerName) => lookUp(current, layerName) ?? lookUp(aliases, layerName),
   };
 }
 

@@ -1,5 +1,6 @@
 // What a Vadivam icon looks like on the Figma canvas, for both plugins.
 import { canvasSize, iconSvg, styleIds, styles } from "../../scripts/icon-styles.mjs";
+import { siteUrl } from "../../scripts/packages.mjs";
 
 export type IconStyle = keyof typeof styles;
 
@@ -23,10 +24,43 @@ export function catalogSvg(icon: CatalogIcon, style: IconStyle): string {
   return iconSvg(styles[style], icon.bodies[style]);
 }
 
-const SITE_URL = "https://vadivam.praveenjuge.com";
+/** A component drawn from an icon; `tag` names and describes it, and a failure leaves nothing behind. */
+export function createIconComponent(icon: CatalogIcon, style: IconStyle, tag: (component: ComponentNode) => void): ComponentNode {
+  const frame = figma.createNodeFromSvg(catalogSvg(icon, style));
+  try {
+    const component = figma.createComponentFromNode(frame);
+    tag(component);
+    return component;
+  } catch (error) {
+    if (!frame.removed) frame.remove();
+    throw error;
+  }
+}
+
+/**
+ * Moves the layers of `source`, a node made from an SVG, into `target` in
+ * place of its own, then removes `source`. The node itself and its settings
+ * stay; if a layer fails to move, `target` keeps its old layers.
+ */
+export function swapArtwork(target: ChildrenMixin, source: FrameNode): void {
+  const oldChildren = [...target.children];
+  const moved: SceneNode[] = [];
+  try {
+    for (const child of [...source.children]) {
+      target.appendChild(child);
+      moved.push(child);
+    }
+  } catch (error) {
+    for (const child of moved) source.appendChild(child);
+    source.remove();
+    throw error;
+  }
+  for (const child of oldChildren) child.remove();
+  source.remove();
+}
 
 export function documentationLink(iconName?: string): DocumentationLink {
-  return { uri: iconName ? `${SITE_URL}/icons/${encodeURIComponent(iconName)}` : SITE_URL };
+  return { uri: iconName ? `${siteUrl}/icons/${encodeURIComponent(iconName)}` : siteUrl };
 }
 
 export const svgExportSettings: ExportSettingsSVG = {

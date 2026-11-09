@@ -1,6 +1,3 @@
-import { canvasSize } from "../../../scripts/icon-styles.mjs";
-
-export const ICON_SIZE = canvasSize;
 // The source file's grid: one icon frame every 40 px across and 72 px down.
 export const COLUMN_STEP = 40;
 export const ROW_STEP = 72;

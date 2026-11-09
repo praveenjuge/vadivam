@@ -1,17 +1,19 @@
 import iconCatalog from "vadivam:catalog";
-import { pascalCase } from "../../../scripts/icon-styles.mjs";
+import { canvasSize, pascalCase } from "../../../scripts/icon-styles.mjs";
 import { messageFromError, postToUi } from "../../figma-shared/channel";
 import {
   catalogSvg,
+  createIconComponent,
   describeIconComponent,
   documentationLink,
   iconStyles,
   svgExportSettings,
+  swapArtwork,
   type CatalogIcon,
   type IconStyle,
 } from "../../figma-shared/icons";
 import { layerNameKey } from "../../figma-shared/names";
-import { getBatchPositions, getGridPositions, ICON_SIZE, LIBRARY_COLUMNS, type IconPosition } from "./layout";
+import { getBatchPositions, getGridPositions, LIBRARY_COLUMNS, type IconPosition } from "./layout";
 import { lucideIconNames, lucideNames, lucideVersion, rankedLucideIcons, type LucideIconRanking } from "./lucide";
 import {
   MAX_SVG_FILES,
@@ -122,7 +124,7 @@ function isIconContainer(node: SceneNode): node is IconContainer {
 }
 
 function isIconSized(node: SceneNode): boolean {
-  return Math.abs(node.width - ICON_SIZE) < 0.01 && Math.abs(node.height - ICON_SIZE) < 0.01;
+  return Math.abs(node.width - canvasSize) < 0.01 && Math.abs(node.height - canvasSize) < 0.01;
 }
 
 function isIconFrame(node: SceneNode): node is IconContainer {
@@ -134,14 +136,9 @@ function pageIconFrames(): IconContainer[] {
   return figma.currentPage.children.filter(isIconFrame);
 }
 
-/** The current Lucide icon a frame name means in any spelling, deprecated names included. */
-function lucideIconName(name: string): string | null {
-  return lucideNames.current(name) ?? lucideNames.replacement(name);
-}
-
 /** The icon a frame or file name means: its Lucide icon, or else its kebab-case name. */
 function iconKey(name: string): string {
-  return lucideIconName(name) ?? layerNameKey(name);
+  return lucideNames.icon(name) ?? layerNameKey(name);
 }
 
 function publishPageStatus(): void {
@@ -199,7 +196,7 @@ async function refreshCatalog(): Promise<void> {
 function createIconFrame(name: string, position: IconPosition): FrameNode {
   const frame = figma.createFrame();
   frame.name = name;
-  frame.resize(ICON_SIZE, ICON_SIZE);
+  frame.resize(canvasSize, canvasSize);
   frame.x = position.x;
   frame.y = position.y;
   frame.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 1, visible: true }];
@@ -225,7 +222,7 @@ function libraryTag(node: ComponentNode): LibraryTag | null {
 
 function tagLibraryComponent(component: ComponentNode, icon: CatalogIcon, style: IconStyle): void {
   component.name = `Icon=${icon.name}, Style=${pascalCase(style)}`;
-  component.resizeWithoutConstraints(ICON_SIZE, ICON_SIZE);
+  component.resizeWithoutConstraints(canvasSize, canvasSize);
   component.setPluginData(LIBRARY_DATA_KEY, pluginData({ kind: "icon", name: icon.name, style }));
   component.setRelaunchData({ [SYNC_COMMAND]: "Update all icons" });
   describeIconComponent(component, icon, style);
@@ -249,8 +246,8 @@ function configureLibrarySet(componentSet: ComponentSetNode): void {
   componentSet.strokes = [];
   componentSet.cornerRadius = 0;
   componentSet.clipsContent = false;
-  const width = LIBRARY_COLUMNS * ICON_SIZE + (LIBRARY_COLUMNS - 1) * LIBRARY_GAP + LIBRARY_PADDING * 2;
-  componentSet.resizeWithoutConstraints(width, Math.max(componentSet.height, ICON_SIZE));
+  const width = LIBRARY_COLUMNS * canvasSize + (LIBRARY_COLUMNS - 1) * LIBRARY_GAP + LIBRARY_PADDING * 2;
+  componentSet.resizeWithoutConstraints(width, Math.max(componentSet.height, canvasSize));
   componentSet.setPluginData(LIBRARY_DATA_KEY, pluginData({ kind: "library", columns: LIBRARY_COLUMNS }));
   componentSet.setRelaunchData({ [SYNC_COMMAND]: "Update all icons" });
   componentSet.descriptionMarkdown = `${iconCatalog.length} open-source icons on a 24 px grid, each in an outline and a solid style. Pick an icon with the **Icon** property and a style with **Style**, then change the color as needed.`;
@@ -258,35 +255,17 @@ function configureLibrarySet(componentSet: ComponentSetNode): void {
 }
 
 function createLibraryComponent(icon: CatalogIcon, style: IconStyle): ComponentNode {
-  const frame = figma.createNodeFromSvg(catalogSvg(icon, style));
-  try {
-    const component = figma.createComponentFromNode(frame);
-    tagLibraryComponent(component, icon, style);
-    return component;
-  } catch (error) {
-    if (!frame.removed) frame.remove();
-    throw error;
-  }
+  return createIconComponent(icon, style, (component) => tagLibraryComponent(component, icon, style));
 }
 
 // Swaps a node's layers for a 24×24 SVG's layers; the node itself and its settings stay.
 function replaceArtwork(target: FrameNode | ComponentNode, svg: string): void {
   const source = figma.createNodeFromSvg(svg);
-  const oldChildren = [...target.children];
-  const moved: SceneNode[] = [];
-  try {
-    if (!isIconSized(source)) throw new Error("SVG must be 24×24");
-    for (const child of [...source.children]) {
-      target.appendChild(child);
-      moved.push(child);
-    }
-  } catch (error) {
-    for (const child of moved) source.appendChild(child);
+  if (!isIconSized(source)) {
     source.remove();
-    throw error;
+    throw new Error("SVG must be 24×24");
   }
-  for (const child of oldChildren) child.remove();
-  source.remove();
+  swapArtwork(target, source);
 }
 
 function selectedLibrarySet(): ComponentSetNode | null {
@@ -454,7 +433,7 @@ async function generateFrames(countValue: unknown): Promise<void> {
   const positions = getBatchPositions(
     names.length,
     settings.columns,
-    pageIconFrames().filter((node) => lucideIconName(node.name) !== null),
+    pageIconFrames().filter((node) => lucideNames.icon(node.name) !== null),
     figma.viewport.center,
   );
   const frames = names.map((name, index) => createIconFrame(name, positions[index]!));

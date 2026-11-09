@@ -40,6 +40,12 @@ describe("iconNames", () => {
     expect(names.replacement("AlertCircle")).toBe("circle-alert");
     expect(names.replacement("search")).toBeNull();
   });
+
+  test("resolves a layer name to its current icon, then a deprecated name's replacement", () => {
+    expect(names.icon("ArrowRight")).toBe("arrow-right");
+    expect(names.icon("HomeIcon")).toBe("house");
+    expect(names.icon("made-up")).toBeNull();
+  });
 });
 
 describe("editDistance", () => {
