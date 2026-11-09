@@ -1,329 +1,52 @@
 import { describe, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { readFileSync, readdirSync, utimesSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import vm from "node:vm";
+import { createFigma, runPlugin, type Figma, type MockNode } from "../../figma-shared/test/figma";
 
-const pluginRoot = dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
+const pluginRoot = fileURLToPath(new URL("..", import.meta.url));
+const red = [{ type: "SOLID", color: { r: 1, g: 0, b: 0 } }];
+const metadata = JSON.parse(readFileSync(new URL("../../../metadata/lucide.json", import.meta.url), "utf8"));
 
-async function startWatchBuild() {
-  const child = spawn(process.execPath, ["scripts/build.mjs", "--watch"], {
-    cwd: pluginRoot,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  let output = "";
-
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error(`Figma plugin watch build did not start within 10 seconds:\n${output}`));
-      }, 10_000);
-      const capture = (chunk: Buffer) => {
-        output += chunk.toString();
-        if (output.includes("[figma-plugin] watching for changes")) {
-          clearTimeout(timeout);
-          resolve();
-        }
-      };
-      child.stdout.on("data", capture);
-      child.stderr.on("data", capture);
-      child.once("error", (error) => {
-        clearTimeout(timeout);
-        reject(error);
-      });
-      child.once("exit", (code) => {
-        if (!output.includes("[figma-plugin] watching for changes")) {
-          clearTimeout(timeout);
-          reject(new Error(`Figma plugin watch build exited with code ${code}:\n${output}`));
-        }
-      });
-    });
-  } finally {
-    child.kill("SIGTERM");
-  }
-
-  return output;
+function start(): Figma {
+  const harness = createFigma({ viewportCenter: { x: 200, y: 100 } });
+  runPlugin(new URL("../dist/code.js", import.meta.url), harness);
+  return harness;
 }
 
-type NodeRecord = ReturnType<typeof createHarness>["nodes"] extends Map<string, infer T>
-  ? T
-  : never;
+const page = (harness: Figma) => harness.figma.currentPage;
+const components = (harness: Figma) => page(harness).children.filter((node: MockNode) => node.type === "COMPONENT");
+const lastNotice = (harness: Figma) => harness.notifications[harness.notifications.length - 1];
+const pluginData = (node: MockNode) => JSON.parse(node.getPluginData("vadivam"));
 
-function createHarness() {
-  let nextId = 0;
-  const messages: Array<Record<string, unknown>> = [];
-  const nodes = new Map<string, any>();
-  const commits: number[] = [];
-  const notifications: Array<{ message: string; options?: { error?: boolean } }> = [];
-  const listeners = new Map<string, Array<() => void>>();
-  let selection: any[] = [];
-
-  const page: any = {
-    type: "PAGE",
-    name: "Page 1",
-    children: [],
-    get selection() {
-      return selection;
-    },
-    set selection(value: any[]) {
-      selection = value;
-      for (const listener of listeners.get("selectionchange") ?? []) listener();
-    },
-    insertChild(index: number, child: any) {
-      child.parent?.children.splice(child.parent.children.indexOf(child), 1);
-      child.parent = page;
-      page.children.splice(index, 0, child);
-    },
-  };
-
-  function register(node: any) {
-    node.id = `node-${++nextId}`;
-    node.parent = page;
-    node.x ??= 0;
-    node.y ??= 0;
-    node.width ??= 24;
-    node.height ??= 24;
-    node.rotation ??= 0;
-    node.opacity ??= 1;
-    node.blendMode ??= "PASS_THROUGH";
-    node.visible ??= true;
-    node.locked ??= false;
-    node.constraints ??= { horizontal: "MIN", vertical: "MIN" };
-    node.layoutAlign ??= "INHERIT";
-    node.layoutGrow ??= 0;
-    node.layoutPositioning ??= "AUTO";
-    node._data ??= new Map();
-    node.setPluginData ??= (key: string, value: string) => node._data.set(key, value);
-    node.getPluginData ??= (key: string) => node._data.get(key) ?? "";
-    node.setRelaunchData ??= (value: unknown) => {
-      node.relaunchData = value;
-    };
-    node.resize ??= (width: number, height: number) => {
-      node.width = width;
-      node.height = height;
-    };
-    node.resizeWithoutConstraints ??= node.resize;
-    node.remove ??= () => {
-      const index = node.parent?.children.indexOf(node) ?? -1;
-      if (index >= 0) node.parent.children.splice(index, 1);
-      nodes.delete(node.id);
-    };
-    nodes.set(node.id, node);
-    page.children.push(node);
-    return node;
-  }
-
-  function vector() {
-    const node: any = {
-      type: "VECTOR",
-      name: "Vector",
-      x: 2,
-      y: 2,
-      width: 20,
-      height: 20,
-      fills: [],
-      strokes: [{ type: "SOLID", color: { r: 0, g: 0, b: 0 } }],
-      strokeWeight: 2,
-      constraints: { horizontal: "MIN", vertical: "MIN" },
-      resize(width: number, height: number) {
-        this.width = width;
-        this.height = height;
-      },
-      remove() {
-        const index = this.parent.children.indexOf(this);
-        if (index >= 0) this.parent.children.splice(index, 1);
-      },
-    };
-    return node;
-  }
-
-  function frame() {
-    const child = vector();
-    const node: any = register({
-      type: "FRAME",
-      children: [child],
-      appendChild(nextChild: any) {
-        nextChild.parent?.children.splice(nextChild.parent.children.indexOf(nextChild), 1);
-        nextChild.parent = node;
-        node.children.push(nextChild);
-      },
-      findAll() {
-        return [...node.children];
-      },
-    });
-    child.parent = node;
-    return node;
-  }
-
-  function componentFromFrame(source: any) {
-    const sourceIndex = page.children.indexOf(source);
-    if (sourceIndex >= 0) page.children.splice(sourceIndex, 1);
-    nodes.delete(source.id);
-    const component: any = register({
-      type: "COMPONENT",
-      children: source.children,
-      instances: [],
-      exportSettings: [],
-      appendChild(child: any) {
-        child.parent?.children.splice(child.parent.children.indexOf(child), 1);
-        child.parent = component;
-        component.children.push(child);
-      },
-      findAll() {
-        return [...component.children];
-      },
-      async getInstancesAsync() {
-        return component.instances;
-      },
-      createInstance() {
-        return instanceOf(component);
-      },
-    });
-    for (const child of component.children) child.parent = component;
-    return component;
-  }
-
-  // A layer as Lucide's Figma plugin or library leaves it: a square of red,
-  // 1.5px strokes named after the icon.
-  function lucideLayer(type: string, name: string, size = 24) {
-    const child = vector();
-    child.strokes = [{ type: "SOLID", color: { r: 1, g: 0, b: 0 } }];
-    child.strokeWeight = 1.5;
-    const node: any = register({
-      type,
-      name,
-      width: size,
-      height: size,
-      children: [child],
-      instances: [],
-      appendChild(nextChild: any) {
-        nextChild.parent?.children.splice(nextChild.parent.children.indexOf(nextChild), 1);
-        nextChild.parent = node;
-        node.children.push(nextChild);
-      },
-      findAll() {
-        return [...node.children];
-      },
-      async getInstancesAsync() {
-        return node.instances;
-      },
-    });
-    child.parent = node;
-    return node;
-  }
-
-  function container(name: string, children: any[]) {
-    const node: any = register({
-      type: "FRAME",
-      name,
-      width: 320,
-      height: 200,
-      children: [],
-      insertChild(index: number, child: any) {
-        child.parent?.children.splice(child.parent.children.indexOf(child), 1);
-        child.parent = node;
-        node.children.splice(index, 0, child);
-      },
-      findAll() {
-        return [...node.children];
-      },
-    });
-    for (const child of children) node.insertChild(node.children.length, child);
-    return node;
-  }
-
-  const ui: any = {
-    onmessage: undefined,
-    postMessage(message: Record<string, unknown>) {
-      messages.push(message);
-    },
-  };
-  const figmaMock: any = {
-    mixed: Symbol("mixed"),
-    showUI() {},
-    ui,
-    currentPage: page,
-    viewport: { center: { x: 200, y: 100 } },
-    on(event: string, listener: () => void) {
-      const registered = listeners.get(event) ?? [];
-      registered.push(listener);
-      listeners.set(event, registered);
-    },
-    createNodeFromSvg: frame,
-    createComponentFromNode: componentFromFrame,
-    commitUndo() {
-      commits.push(commits.length + 1);
-    },
-    notify(message: string, options?: { error?: boolean }) {
-      notifications.push({ message, options });
-    },
-    async getNodeByIdAsync(id: string) {
-      return nodes.get(id) ?? null;
-    },
-  };
-
-  function instanceOf(main: any) {
-    const child = vector();
-    const instance: any = register({
-      type: "INSTANCE",
-      name: main.name,
-      children: [child],
-      async getMainComponentAsync() {
-        return main;
-      },
-      findAll() {
-        return [...instance.children];
-      },
-    });
-    child.parent = instance;
-    main.instances.push(instance);
-    return instance;
-  }
-
-  return { figmaMock, ui, page, nodes, messages, commits, notifications, instanceOf, lucideLayer, container, register };
+async function choose(harness: Figma, iconName: string, style = "outline"): Promise<MockNode> {
+  await harness.send({ type: "choose", iconName, style });
+  return page(harness).selection[0];
 }
 
-async function runPlugin(harness: ReturnType<typeof createHarness>) {
-  const bundle = readFileSync(new URL("../dist/code.js", import.meta.url), "utf8");
-  vm.runInNewContext(bundle, {
-    figma: harness.figmaMock,
-    __html__: "<html></html>",
-    Set,
-    Map,
-    Promise,
-    JSON,
-    Math,
-    Number,
-    Error,
-    Date,
-    encodeURIComponent,
-  });
-  await Promise.resolve();
+// A layer as Lucide's Figma plugin or library leaves it: a square of red,
+// 1.5px strokes named after the icon.
+function lucideLayer(harness: Figma, type: string, name: string, size = 24): MockNode {
+  const vector = harness.create("VECTOR", { strokes: red, strokeWeight: 1.5 });
+  return harness.create(type, { name, width: size, height: size, children: [vector] }, page(harness));
 }
 
-function latest(harness: ReturnType<typeof createHarness>, type: string) {
-  return [...harness.messages].reverse().find((message) => message.type === type);
+function container(harness: Figma, name: string, children: MockNode[]): MockNode {
+  return harness.create("FRAME", { name, width: 320, height: 200, children }, page(harness));
 }
 
-describe("compiled Figma plugin", () => {
-  test("watch mode keeps the generated icon catalog plugin", async () => {
-    const output = await startWatchBuild();
-    expect(output).toContain("[figma-plugin] watching for changes");
-    expect(output).not.toContain("Could not resolve \"vadivam:catalog\"");
-    expect(output).not.toContain("Could not resolve \"vadivam:ui-catalog\"");
-  });
+async function select(harness: Figma, nodes: MockNode[]) {
+  const scanned = harness.next("lucide-selection");
+  page(harness).selection = nodes;
+  return (await scanned).count;
+}
 
-  test("inserts, replaces, confirms propagation, and isolates selected instances", async () => {
-    const harness = createHarness();
-    await runPlugin(harness);
-    const catalog = latest(harness, "catalog") as { count: number };
-    const sourceIconCount = readdirSync(new URL("../../../icons/", import.meta.url))
-      .filter((name) => name.endsWith(".svg")).length;
-    expect(catalog.count).toBe(sourceIconCount);
+describe("inserting and replacing icons", () => {
+  test("inserts a described, tagged component at the viewport center", async () => {
+    const harness = start();
+    expect(harness.last("ready")).toBeDefined();
 
-    await harness.ui.onmessage({ type: "choose", iconName: "search" });
-    const component = harness.page.selection[0];
+    const component = await choose(harness, "search");
     expect(component).toMatchObject({
       type: "COMPONENT",
       name: "search",
@@ -332,224 +55,240 @@ describe("compiled Figma plugin", () => {
       x: 188,
       y: 88,
       relaunchData: { replace: "Replace search" },
+      documentationLinks: [{ uri: "https://vadivam.praveenjuge.com/icons/search" }],
+      exportSettings: [{ format: "SVG", contentsOnly: true }],
     });
-    expect(JSON.parse(component.getPluginData("vadivam"))).toEqual({
-      schema: 1,
-      iconName: "search",
-    });
-    const metadata = JSON.parse(
-      readFileSync(new URL("../../../metadata/lucide.json", import.meta.url), "utf8"),
-    );
+    expect(pluginData(component)).toEqual({ schema: 1, iconName: "search" });
     const { tags, categories } = metadata.icons.search;
-    const categoryTitles = categories.map((id: string) => metadata.categories[id].title);
-    expect(component.descriptionMarkdown).toContain(`**Categories:** ${categoryTitles.join(", ")}`);
-    expect(component.descriptionMarkdown).toContain(`**Tags:** ${tags.join(", ")}`);
-    expect(component.documentationLinks).toEqual([
-      { uri: "https://vadivam.praveenjuge.com/icons/search" },
-    ]);
-    expect(harness.commits).toHaveLength(1);
-    expect(harness.notifications[harness.notifications.length - 1]?.message).toBe("Inserted search");
+    const titles = categories.map((id: string) => metadata.categories[id].title);
+    expect(component.descriptionMarkdown).toBe(
+      `24 px outline icon from Vadivam.\n\n**Categories:** ${titles.join(", ")}\n\n**Tags:** ${tags.join(", ")}`,
+    );
+    expect(harness.commits).toBe(1);
+    expect(lastNotice(harness)).toEqual({ message: "Inserted search", error: false });
+    expect(harness.last("complete")).toBeDefined();
+  });
 
-    await harness.ui.onmessage({ type: "choose", iconName: "heart" });
-    const secondComponent = harness.page.selection[0];
-    expect(secondComponent).not.toBe(component);
-    expect(secondComponent).toMatchObject({
-      type: "COMPONENT",
-      name: "heart",
-      x: 228,
-      y: 88,
-    });
-    expect(harness.figmaMock.viewport.center).toEqual({ x: 240, y: 100 });
-    expect(component.name).toBe("search");
-    expect(harness.page.children.filter((node: NodeRecord) => node.type === "COMPONENT")).toHaveLength(2);
-    expect(harness.commits).toHaveLength(2);
+  test("lines up icons inserted one after another", async () => {
+    const harness = start();
+    const first = await choose(harness, "search");
+    const second = await choose(harness, "heart");
+    expect(second).not.toBe(first);
+    expect(second).toMatchObject({ name: "heart", x: 228, y: 88 });
+    expect(harness.figma.viewport.center).toEqual({ x: 240, y: 100 });
+    expect(first.name).toBe("search");
+    expect(components(harness)).toHaveLength(2);
+  });
 
-    component.x = 30;
-    component.y = 40;
+  test("redraws a selected component in place, keeping its size and position", async () => {
+    const harness = start();
+    const component = await choose(harness, "search");
+    await choose(harness, "star");
+    Object.assign(component, { x: 30, y: 40 });
     component.resizeWithoutConstraints(32, 32);
-    harness.page.selection = [component];
-    await harness.ui.onmessage({ type: "choose", iconName: "heart" });
-    expect(harness.page.selection[0]).toBe(component);
+    page(harness).selection = [component];
+
+    expect(await choose(harness, "heart")).toBe(component);
     expect(component).toMatchObject({ name: "heart", x: 30, y: 40, width: 32, height: 32 });
-    expect(harness.commits).toHaveLength(3);
+    expect(pluginData(component).iconName).toBe("heart");
+    expect(lastNotice(harness)?.message).toBe("Replaced with heart");
+  });
 
-    const instance = harness.instanceOf(component);
-    instance.x = 80;
-    instance.y = 90;
-    harness.page.selection = [component];
-    await harness.ui.onmessage({ type: "choose", iconName: "star" });
-    const confirmation = latest(harness, "confirm-replace") as {
-      requestId: string;
-      instanceCount: number;
-    };
-    expect(confirmation.instanceCount).toBe(1);
-    expect(component.name).toBe("heart");
-    await harness.ui.onmessage({
-      type: "confirm-replace",
-      requestId: confirmation.requestId,
-      accepted: true,
-    });
+  test("asks before redrawing a component that has instances", async () => {
+    const harness = start();
+    const component = await choose(harness, "search");
+    harness.instanceOf(component);
+    // Choosing while the icon just inserted is selected places the next one beside it, so reselect it.
+    page(harness).selection = [];
+    page(harness).selection = [component];
+    await choose(harness, "star");
+    const confirmation = harness.last("confirm-replace")!;
+    expect(confirmation).toMatchObject({ iconName: "star", instanceCount: 1 });
+    expect(component.name).toBe("search");
+
+    await harness.send({ type: "confirm-replace", requestId: confirmation.requestId, accepted: false });
+    expect(component.name).toBe("search");
+    await harness.send({ type: "confirm-replace", requestId: confirmation.requestId, accepted: true });
+    expect(lastNotice(harness)).toEqual({ message: "This replacement request has expired", error: true });
+
+    await choose(harness, "star");
+    const commits = harness.commits;
+    await harness.send({ type: "confirm-replace", requestId: harness.last("confirm-replace")!.requestId, accepted: true });
     expect(component.name).toBe("star");
-    expect(harness.commits).toHaveLength(4);
+    expect(harness.commits).toBe(commits + 1);
+  });
 
-    harness.page.selection = [instance];
-    await harness.ui.onmessage({ type: "choose", iconName: "moon" });
-    const replacement = harness.page.selection[0];
+  test("replaces only a selected instance, where it sits", async () => {
+    const harness = start();
+    const component = await choose(harness, "search");
+    const instance = harness.instanceOf(component);
+    Object.assign(instance, { x: 80, y: 90 });
+    page(harness).selection = [instance];
+
+    const replacement = await choose(harness, "moon");
     expect(replacement).not.toBe(component);
     expect(replacement).toMatchObject({ type: "COMPONENT", name: "moon", x: 80, y: 90 });
-    expect(component.name).toBe("star");
-    expect(harness.nodes.has(instance.id)).toBe(false);
-    expect(harness.commits).toHaveLength(5);
+    expect(component.name).toBe("search");
+    expect(instance.removed).toBe(true);
+    expect(lastNotice(harness)?.message).toBe("Replaced this use with moon");
   });
 
   test("inserts solid icons and moves an icon's color between stroke and fill", async () => {
-    const harness = createHarness();
-    await runPlugin(harness);
-
-    await harness.ui.onmessage({ type: "choose", iconName: "search", style: "solid" });
-    const solid = harness.page.selection[0];
-    expect(solid).toMatchObject({ type: "COMPONENT", name: "search-solid", relaunchData: { replace: "Replace search-solid" } });
-    expect(JSON.parse(solid.getPluginData("vadivam"))).toEqual({ schema: 1, iconName: "search", style: "solid" });
+    const harness = start();
+    const solid = await choose(harness, "search", "solid");
+    expect(solid).toMatchObject({ name: "search-solid", relaunchData: { replace: "Replace search-solid" } });
+    expect(pluginData(solid)).toEqual({ schema: 1, iconName: "search", style: "solid" });
     expect(solid.descriptionMarkdown).toStartWith("24 px solid icon from Vadivam.");
-    expect(harness.notifications[harness.notifications.length - 1]?.message).toBe("Inserted search-solid");
 
-    // An outline component colored red becomes a red solid one.
-    harness.page.selection = [];
-    await harness.ui.onmessage({ type: "choose", iconName: "heart" });
-    const outline = harness.page.selection[0];
-    const red = [{ type: "SOLID", color: { r: 1, g: 0, b: 0 } }];
+    const outline = await choose(harness, "heart");
     for (const child of outline.children) child.strokes = red;
-    // Inserting another icon makes heart a plain selection, not the last insertion.
-    await harness.ui.onmessage({ type: "choose", iconName: "star" });
-    harness.page.selection = [outline];
-    await harness.ui.onmessage({ type: "choose", iconName: "heart", style: "solid" });
+    await choose(harness, "star");
+    page(harness).selection = [outline];
+    await choose(harness, "heart", "solid");
     expect(outline.name).toBe("heart-solid");
     for (const child of outline.children) expect(child.fills).toEqual(red);
   });
 
-  test("finds Lucide icons in the selection and swaps them for Vadivam components", async () => {
-    const harness = createHarness();
-    await runPlugin(harness);
-    expect(latest(harness, "lucide-selection")).toEqual({ type: "lucide-selection", count: 0 });
+  test("rejects unknown icons and styles without touching the document", async () => {
+    const harness = start();
+    await harness.send({ type: "choose", iconName: "not-an-icon", style: "outline" });
+    expect(lastNotice(harness)).toEqual({ message: "Unknown Vadivam icon", error: true });
+    await harness.send({ type: "choose", iconName: "search", style: "bold" });
+    expect(lastNotice(harness)).toEqual({ message: "Unsupported plugin action", error: true });
+    expect(harness.last("error")).toBeDefined();
+    expect(page(harness).children).toHaveLength(0);
+    expect(harness.commits).toBe(0);
+  });
+});
 
-    await harness.ui.onmessage({ type: "choose", iconName: "search" });
-    const vadivam = harness.page.selection[0];
-    const arrow = harness.lucideLayer("FRAME", "lucide/ArrowRight", 16);
-    const secondArrow = harness.lucideLayer("FRAME", "arrow-right", 20);
-    const home = harness.lucideLayer("GROUP", "home");
-    const digits = harness.lucideLayer("FRAME", "ArrowDown01Icon");
-    const star = harness.lucideLayer("COMPONENT", "star");
+describe("swapping Lucide icons", () => {
+  test("finds Lucide icons in the selection and swaps them for Vadivam components", async () => {
+    const harness = start();
+    const vadivam = await choose(harness, "search");
+    const arrow = lucideLayer(harness, "FRAME", "lucide/ArrowRight", 16);
+    const secondArrow = lucideLayer(harness, "FRAME", "arrow-right", 20);
+    const home = lucideLayer(harness, "GROUP", "home");
+    const digits = lucideLayer(harness, "FRAME", "ArrowDown01Icon");
+    const star = lucideLayer(harness, "COMPONENT", "star");
     const starUse = harness.instanceOf(star);
     const bell = harness.instanceOf({ id: "remote-bell", name: "Bell", instances: [], getPluginData: () => "" });
-    const label = harness.register({ type: "FRAME", name: "search", children: [{ type: "TEXT", name: "Search" }] });
-    const notSquare = harness.lucideLayer("FRAME", "heart");
+    const label = harness.create("FRAME", { name: "search", children: [harness.create("TEXT")] }, page(harness));
+    const notSquare = lucideLayer(harness, "FRAME", "heart");
     notSquare.width = 40;
     // A square button with a filled background and an icon inside is UI, not an icon.
-    const button = harness.lucideLayer("FRAME", "search");
-    const background = { type: "RECTANGLE", name: "bg", parent: button, fills: [{ type: "SOLID", color: { r: 0, g: 0, b: 1 } }], strokes: [] };
-    button.children.unshift(background);
-    arrow.x = 12;
-    arrow.layoutGrow = 1;
-    const card = harness.container("Card", [arrow, secondArrow, home, digits, star, starUse, bell, label, notSquare, button, vadivam]);
+    const button = lucideLayer(harness, "FRAME", "search");
+    button.insertChild(0, harness.create("RECTANGLE", { fills: [{ type: "SOLID", color: { r: 0, g: 0, b: 1 } }] }));
+    Object.assign(arrow, { x: 12, layoutGrow: 1 });
+    const card = container(harness, "Card", [arrow, secondArrow, home, digits, star, starUse, bell, label, notSquare, button, vadivam]);
 
-    harness.page.selection = [card];
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(latest(harness, "lucide-selection")).toEqual({ type: "lucide-selection", count: 6 });
-
-    const commitsBefore = harness.commits.length;
-    await harness.ui.onmessage({ type: "swap-lucide" });
-    expect(harness.commits).toHaveLength(commitsBefore + 1);
-    expect(latest(harness, "complete")?.message).toBe("Swapped 6 Lucide icons for Vadivam");
+    expect(await select(harness, [card])).toBe(6);
+    const commits = harness.commits;
+    await harness.send({ type: "swap-lucide" });
+    expect(harness.commits).toBe(commits + 1);
+    expect(lastNotice(harness)?.message).toBe("Swapped 6 Lucide icons for Vadivam");
 
     const [arrowComponent, arrowInstance, house, arrowDown, starComponent, starInstance, bellComponent, ...rest] = card.children;
     expect(arrowComponent).toMatchObject({ type: "COMPONENT", name: "arrow-right", width: 16, height: 16, x: 12, layoutGrow: 1 });
-    expect(JSON.parse(arrowComponent.getPluginData("vadivam")).iconName).toBe("arrow-right");
     for (const child of arrowComponent.children) {
-      expect(child.strokes).toEqual([{ type: "SOLID", color: { r: 1, g: 0, b: 0 } }]);
-      expect(child.strokeWeight).toBe(1.5);
-      expect(child.constraints).toEqual({ horizontal: "SCALE", vertical: "SCALE" });
+      expect(child).toMatchObject({ strokes: red, strokeWeight: 1.5, constraints: { horizontal: "SCALE", vertical: "SCALE" } });
     }
-    expect(arrowInstance.type).toBe("INSTANCE");
     expect(await arrowInstance.getMainComponentAsync()).toBe(arrowComponent);
-    expect(arrowInstance).toMatchObject({ width: 20, height: 20 });
+    expect(arrowInstance).toMatchObject({ type: "INSTANCE", width: 20, height: 20 });
     expect(house).toMatchObject({ type: "COMPONENT", name: "house" });
     expect(arrowDown).toMatchObject({ type: "COMPONENT", name: "arrow-down-0-1" });
     expect(starComponent).toBe(star);
-    expect(star.name).toBe("star");
-    expect(JSON.parse(star.getPluginData("vadivam")).iconName).toBe("star");
-    expect(star.children.every((child: any) => child.strokeWeight === 1.5)).toBe(true);
+    expect(pluginData(star).iconName).toBe("star");
+    expect(star.children.every((child: MockNode) => child.strokeWeight === 1.5)).toBe(true);
     expect(starInstance).toBe(starUse);
     expect(bellComponent).toMatchObject({ type: "COMPONENT", name: "bell" });
     expect(rest).toEqual([label, notSquare, button, vadivam]);
-    expect(harness.nodes.has(arrow.id)).toBe(false);
-    expect(harness.page.selection).toHaveLength(6);
+    expect(arrow.removed).toBe(true);
+    expect(page(harness).selection).toHaveLength(6);
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    harness.page.selection = [card];
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(latest(harness, "lucide-selection")).toEqual({ type: "lucide-selection", count: 0 });
-
-    await harness.ui.onmessage({ type: "swap-lucide" });
-    expect(latest(harness, "error")?.message).toBe("No Lucide icons in the selection");
+    expect(await select(harness, [card])).toBe(0);
+    await harness.send({ type: "swap-lucide" });
+    expect(lastNotice(harness)).toEqual({ message: "No Lucide icons in the selection", error: true });
   });
 
   test("removes the new component when a swap cannot be placed", async () => {
-    const harness = createHarness();
-    await runPlugin(harness);
-    const arrow = harness.lucideLayer("FRAME", "arrow-right");
-    const locked = harness.container("Locked", [arrow]);
+    const harness = start();
+    const arrow = lucideLayer(harness, "FRAME", "arrow-right");
+    const locked = container(harness, "Locked", [arrow]);
     locked.insertChild = () => {
       throw new Error("This layer is locked");
     };
-    harness.page.selection = [locked];
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const componentsBefore = harness.page.children.filter((node: NodeRecord) => node.type === "COMPONENT").length;
+    expect(await select(harness, [locked])).toBe(1);
 
-    await harness.ui.onmessage({ type: "swap-lucide" });
-    expect(latest(harness, "error")?.message).toBe("This layer is locked");
-    expect(harness.page.children.filter((node: NodeRecord) => node.type === "COMPONENT")).toHaveLength(componentsBefore);
+    await harness.send({ type: "swap-lucide" });
+    expect(lastNotice(harness)).toEqual({ message: "This layer is locked", error: true });
+    expect(components(harness)).toHaveLength(0);
     expect(locked.children).toEqual([arrow]);
   });
 
   test("swaps the layers it can and reports the ones it can't", async () => {
-    const harness = createHarness();
-    await runPlugin(harness);
-    const blocked = harness.lucideLayer("FRAME", "arrow-right");
-    const locked = harness.container("Locked", [blocked]);
+    const harness = start();
+    const blocked = lucideLayer(harness, "FRAME", "arrow-right");
+    const locked = container(harness, "Locked", [blocked]);
     locked.insertChild = () => {
       throw new Error("This layer is locked");
     };
-    const bell = harness.lucideLayer("FRAME", "bell");
-    const open = harness.container("Open", [bell]);
-    harness.page.selection = [locked, open];
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const commitsBefore = harness.commits.length;
+    const open = container(harness, "Open", [lucideLayer(harness, "FRAME", "bell")]);
+    expect(await select(harness, [locked, open])).toBe(2);
 
-    await harness.ui.onmessage({ type: "swap-lucide" });
-    expect(latest(harness, "complete")?.message).toBe(
+    await harness.send({ type: "swap-lucide" });
+    expect(lastNotice(harness)?.message).toBe(
       "Swapped 1 Lucide icon for Vadivam; couldn't swap arrow-right: This layer is locked",
     );
-    expect(harness.commits).toHaveLength(commitsBefore + 1);
+    expect(harness.commits).toBe(1);
     expect(locked.children).toEqual([blocked]);
     expect(open.children[0]).toMatchObject({ type: "COMPONENT", name: "bell" });
   });
+});
 
-  test("uses the single registered Figma plugin ID", () => {
-    const source = readFileSync(new URL("../manifest.json", import.meta.url), "utf8");
-    expect(source.match(/"id"\s*:/g)).toHaveLength(1);
-    expect(JSON.parse(source).id).toBe("1661323620355050204");
+describe("package", () => {
+  test("inserts every icon in the repository in both styles", async () => {
+    const harness = start();
+    const names = readdirSync(new URL("../../../icons/", import.meta.url))
+      .filter((file) => file.endsWith(".svg"))
+      .map((file) => file.slice(0, -".svg".length));
+    for (const name of names) {
+      for (const style of ["outline", "solid"]) await choose(harness, name, style);
+    }
+    expect(harness.notifications.filter((notice) => notice.error)).toEqual([]);
+    expect(components(harness)).toHaveLength(names.length * 2);
   });
 
-  test("rejects unknown icon names without modifying the document", async () => {
-    const harness = createHarness();
-    await runPlugin(harness);
-    await harness.ui.onmessage({ type: "choose", iconName: "not-an-icon" });
-    expect(latest(harness, "error")?.message).toBe("Unknown Vadivam icon");
-    expect(harness.notifications[harness.notifications.length - 1]).toEqual({
-      message: "Unknown Vadivam icon",
-      options: { error: true },
-    });
-    expect(harness.page.children).toHaveLength(0);
-    expect(harness.commits).toHaveLength(0);
+  test("keeps the registered plugin ID the README documents", () => {
+    const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
+    const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+    expect(readme).toContain(`registered plugin ID \`${manifest.id}\``);
   });
+
+  test("watch mode rebuilds ui.html when the stylesheet changes", async () => {
+    const child = spawn(process.execPath, ["scripts/build.mjs", "--watch"], { cwd: pluginRoot, stdio: ["ignore", "pipe", "pipe"] });
+    let output = "";
+    // Resolves once `pattern` has appeared `times` times in the build's output.
+    const seen = (pattern: string, times: number) =>
+      new Promise<void>((resolve, reject) => {
+        const check = () => {
+          if (output.split(pattern).length - 1 >= times) resolve();
+        };
+        child.stdout.on("data", check);
+        child.stderr.on("data", check);
+        child.once("exit", (code) => reject(new Error(`Watch build exited with code ${code}:\n${output}`)));
+        check();
+      });
+    child.stdout.on("data", (chunk: Buffer) => (output += chunk));
+    child.stderr.on("data", (chunk: Buffer) => (output += chunk));
+    try {
+      await seen("watching for changes", 1);
+      await seen("wrote dist/ui.html", 1);
+      const now = new Date();
+      utimesSync(new URL("../src/ui.css", import.meta.url), now, now);
+      await seen("wrote dist/ui.html", 2);
+    } finally {
+      child.kill("SIGTERM");
+    }
+    expect(output).not.toContain("Could not resolve");
+  }, 30_000);
 });

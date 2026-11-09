@@ -45,6 +45,7 @@ export function isReleasablePath(file) {
     file.startsWith("icons-solid/") ||
     file.startsWith("packages/") ||
     file.startsWith("apps/figma-plugin/") ||
+    file.startsWith("apps/figma-shared/") ||
     packageInputs.has(file)
   );
 }

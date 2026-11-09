@@ -491,15 +491,14 @@ h1 {
 
 .preview:empty { display: none; }
 
-/* A cell is one 40×72 grid step; the dot is the 24×24 frame inside it. */
+/* ui.ts sizes each cell as one canvas grid step and --frame as the icon frame inside it. */
 .preview i {
   display: grid;
-  aspect-ratio: 40 / 72;
   place-items: start;
 }
 
 .preview i::before {
-  width: 60%;
+  width: var(--frame);
   aspect-ratio: 1;
   content: "";
   background: var(--strong-rule);

@@ -114,8 +114,6 @@ export function pascalCase(name) {
     .join("");
 }
 
-// ---- Markup helpers for the docs site and the MCP server.
-
 /** The SVG with its root width and height set to `size`. */
 export function resizeSvg(svg, size) {
   return svg.replace(/ width="[^"]*"/, ` width="${size}"`).replace(/ height="[^"]*"/, ` height="${size}"`);
@@ -124,4 +122,9 @@ export function resizeSvg(svg, size) {
 /** An icon file of a style drawn only with paths, given their `d` values. */
 export function pathIconSvg(style, pathData) {
   return iconSvg(style, pathData.map((d) => `<path d="${d}"/>`).join(""));
+}
+
+/** A file's path in the published `vadivam` package for a style, such as `dist/solid/sprite.svg`. */
+export function packagePath(style, file) {
+  return ["dist", style.entryDirectory, file].filter(Boolean).join("/");
 }

@@ -53,7 +53,7 @@ export function summarizeReleaseDiff(diff) {
   if (changedFiles.some((file) => file === "README.md" || file === "CONTRIBUTING.md" || file.startsWith("apps/docs/"))) {
     surfaces.push("Documentation");
   }
-  if (changedFiles.some((file) => file.startsWith("apps/figma-plugin/"))) {
+  if (changedFiles.some((file) => file.startsWith("apps/figma-plugin/") || file.startsWith("apps/figma-shared/"))) {
     surfaces.push("Figma plugin");
   }
   if (changedFiles.some((file) => file.startsWith("scripts/") || file.startsWith(".github/workflows/"))) {
@@ -100,8 +100,8 @@ export function escapeHtmlTags(markdown) {
 
 function gitDiff(from, to) {
   const args = from
-    ? ["diff", "--name-status", "--find-renames", `${from}..${to}`, "--", "icons", "icons-solid", "packages", "apps/docs", "apps/figma-plugin", "README.md", "CONTRIBUTING.md", "scripts", ".github/workflows"]
-    : ["show", "--pretty=", "--name-status", to, "--", "icons", "icons-solid", "packages", "apps/docs", "apps/figma-plugin", "README.md", "CONTRIBUTING.md", "scripts", ".github/workflows"];
+    ? ["diff", "--name-status", "--find-renames", `${from}..${to}`, "--", "icons", "icons-solid", "packages", "apps/docs", "apps/figma-plugin", "apps/figma-shared", "README.md", "CONTRIBUTING.md", "scripts", ".github/workflows"]
+    : ["show", "--pretty=", "--name-status", to, "--", "icons", "icons-solid", "packages", "apps/docs", "apps/figma-plugin", "apps/figma-shared", "README.md", "CONTRIBUTING.md", "scripts", ".github/workflows"];
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
   if (result.status !== 0) throw new Error(result.stderr || "Unable to read release diff");
   return result.stdout;

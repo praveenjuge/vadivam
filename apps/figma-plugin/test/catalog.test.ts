@@ -40,6 +40,8 @@ describe("searchIcons", () => {
     expect(names("set")[0]).toBe("settings");
     expect(names("arch")[0]).toBe("search");
     expect(names("serch")[0]).toBe("search");
+    expect(names("saerch")[0]).toBe("search");
+    expect(names("sreach")).toEqual([]);
   });
 
   test("finds icons by Lucide tags and category titles after name matches", () => {

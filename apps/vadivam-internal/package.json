@@ -7,7 +7,7 @@
   "scripts": {
     "build": "bun scripts/build.mjs",
     "dev": "bun scripts/build.mjs --watch",
-    "test": "bun run build && bun test && bun run typecheck",
+    "test": "bun run build && bun test ./test ../figma-shared/test && bun run typecheck",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

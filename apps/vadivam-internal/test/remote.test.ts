@@ -1,125 +1,147 @@
 import { describe, expect, test } from "bun:test";
-import {
-  loadRemoteCatalog,
-  parseSprite,
-  validateRemoteSvg,
-  type FetchLike,
-} from "../src/remote";
+import type { IconStyle } from "../../figma-shared/icons";
+import { loadRemoteCatalog, parseSprite, validateRemoteSvg, type FetchLike } from "../src/remote";
 import { canonicalIcons, publishedSprite } from "./published-sprite.mjs";
 
-const icons = await canonicalIcons();
-const realSprite = publishedSprite;
+const fixtures = Object.fromEntries(
+  await Promise.all(
+    (["outline", "solid"] as const).map(async (style) => [
+      style,
+      { icons: await canonicalIcons(style), sprite: await publishedSprite(style) },
+    ]),
+  ),
+) as Record<IconStyle, { icons: Array<{ name: string; svg: string }>; sprite: string }>;
+
+const sha = "0123456789abcdef0123456789abcdef01234567";
+const api = "https://api.github.com/repos/praveenjuge/vadivam";
 
 function fakeFetch(routes: Record<string, string | number>, calls: string[] = []): FetchLike {
   return async (url) => {
     calls.push(url);
-    const body = routes[url];
-    if (body === undefined) return { ok: false, status: 404, text: async () => "" };
+    const body = routes[url] ?? 404;
     if (typeof body === "number") return { ok: false, status: body, text: async () => "" };
     return { ok: true, status: 200, text: async () => body };
   };
 }
 
-describe("remote icon sources", () => {
-  test("the published sprite splits back into every canonical SVG", async () => {
-    const parsed = parseSprite(await realSprite());
-    expect(parsed.size).toBe(icons.length);
+describe.each(["outline", "solid"] as const)("%s icons from GitHub or npm", (style) => {
+  const { icons, sprite } = fixtures[style];
+  const svgOf = (name: string) => icons.find((icon) => icon.name === name)!.svg;
+  const other: IconStyle = style === "outline" ? "solid" : "outline";
+
+  test("every canonical file passes, and only for its own style", () => {
+    for (const icon of icons) expect(validateRemoteSvg(icon.svg, style)).toBeNull();
+    expect(validateRemoteSvg(svgOf("bell"), other)).not.toBeNull();
+  });
+
+  test("the published sprite splits back into every canonical file", () => {
+    const parsed = parseSprite(sprite, style);
+    expect([...parsed.keys()]).toEqual(icons.map((icon) => icon.name));
     for (const icon of icons) expect(parsed.get(icon.name)).toBe(icon.svg.trim());
   });
 
-  test("accepts canonical icons and rejects anything that could load or run", () => {
-    for (const icon of icons) expect(validateRemoteSvg(icon.svg)).toBeNull();
-    const open = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">';
-    expect(validateRemoteSvg(`${open}<script>alert(1)</script></svg>`)).not.toBeNull();
-    expect(validateRemoteSvg(`${open}<path d="M0 0" onload="x()"/></svg>`)).not.toBeNull();
-    expect(validateRemoteSvg(`${open}<image href="https://example.com/a.png"/></svg>`)).not.toBeNull();
-    expect(validateRemoteSvg(`${open}<path style="fill:red" d="M0 0"/></svg>`)).not.toBeNull();
-    expect(validateRemoteSvg(`${open}<foreignObject></foreignObject></svg>`)).not.toBeNull();
-    expect(validateRemoteSvg('<svg viewBox="0 0 48 48"><path d="M0 0"/></svg>')).not.toBeNull();
-    expect(validateRemoteSvg("not svg")).not.toBeNull();
-    // Harmless-looking but off-spec artwork: a filled root, a stray attribute,
-    // or an extra element never reaches the library either.
-    const canonical = icons.find((icon) => icon.name === "bell")!.svg;
-    expect(validateRemoteSvg('<svg viewBox="0 0 24 24" fill="red"><path d="M0 0h24v24z"/></svg>')).not.toBeNull();
-    expect(validateRemoteSvg(canonical.replace('fill="none"', 'fill="red"'))).not.toBeNull();
-    expect(validateRemoteSvg(canonical.replace("<path ", '<path fill="red" '))).not.toBeNull();
-    expect(validateRemoteSvg(canonical.replace("</svg>", '<circle cx="12" cy="12" r="10"/></svg>'))).not.toBeNull();
-  });
-
-  test("npm resolves latest to one version and reads its sprite", async () => {
+  test("npm resolves latest to one version and reads that version's sprite", async () => {
     const calls: string[] = [];
-    const fetchImpl = fakeFetch(
-      {
-        "https://registry.npmjs.org/vadivam/latest": JSON.stringify({ version: "9.9.9" }),
-        "https://cdn.jsdelivr.net/npm/vadivam@9.9.9/dist/sprite.svg": await realSprite(),
-      },
-      calls,
+    const spritePath = style === "solid" ? "dist/solid/sprite.svg" : "dist/sprite.svg";
+    const remote = await loadRemoteCatalog(
+      "npm",
+      fakeFetch(
+        {
+          "https://registry.npmjs.org/vadivam/latest": JSON.stringify({ version: "9.9.9" }),
+          [`https://cdn.jsdelivr.net/npm/vadivam@9.9.9/${spritePath}`]: sprite,
+        },
+        calls,
+      ),
+      style,
     );
-    const remote = await loadRemoteCatalog("npm", fetchImpl);
     expect(remote.version).toBe("vadivam@9.9.9");
-    expect(remote.names).toEqual(icons.map((icon) => icon.name).sort((a, b) => a.localeCompare(b)));
-    const { icons: loaded, failed } = await remote.loadSvgs(["circle-chevrons-down", "no-such-icon"]);
-    expect(loaded).toEqual([
-      { name: "circle-chevrons-down", svg: icons.find((icon) => icon.name === "circle-chevrons-down")!.svg.trim() },
-    ]);
+    expect(remote.names).toEqual(icons.map((icon) => icon.name).sort());
+    const { icons: loaded, failed } = await remote.loadSvgs(["bell", "no-such-icon"]);
+    expect(loaded).toEqual([{ name: "bell", svg: svgOf("bell").trim() }]);
     expect(failed).toEqual([{ name: "no-such-icon", reason: "Not in this version" }]);
     expect(calls).toHaveLength(2);
   });
 
   test("GitHub pins main to one commit and downloads only what is asked for", async () => {
-    const sha = "0123456789abcdef0123456789abcdef01234567";
-    const api = "https://api.github.com/repos/praveenjuge/vadivam";
-    const raw = `https://raw.githubusercontent.com/praveenjuge/vadivam/${sha}/icons`;
-    const good = icons.find((icon) => icon.name === "bell")!.svg;
+    const folder = style === "solid" ? "icons-solid" : "icons";
+    const raw = `https://raw.githubusercontent.com/praveenjuge/vadivam/${sha}/${folder}`;
     const calls: string[] = [];
-    const fetchImpl = fakeFetch(
-      {
-        [`${api}/commits/main`]: JSON.stringify({ sha }),
-        [`${api}/git/trees/${sha}`]: JSON.stringify({
-          truncated: false,
-          tree: [
-            { path: "README.md", type: "blob", sha: "a" },
-            { path: "icons", type: "tree", sha: "icons-tree" },
-          ],
-        }),
-        [`${api}/git/trees/icons-tree`]: JSON.stringify({
-          truncated: false,
-          tree: [
-            { path: "bell.svg", type: "blob", sha: "b" },
-            { path: "bad.svg", type: "blob", sha: "c" },
-            { path: "Not Valid.svg", type: "blob", sha: "d" },
-            { path: "gone.svg", type: "blob", sha: "e" },
-            { path: "notes.txt", type: "blob", sha: "f" },
-          ],
-        }),
-        [`${raw}/bell.svg`]: good,
-        [`${raw}/bad.svg`]: '<svg viewBox="0 0 24 24"><script>alert(1)</script></svg>',
-        [`${raw}/gone.svg`]: 503,
-      },
-      calls,
+    const remote = await loadRemoteCatalog(
+      "github",
+      fakeFetch(
+        {
+          [`${api}/commits/main`]: JSON.stringify({ sha }),
+          [`${api}/git/trees/${sha}`]: JSON.stringify({
+            truncated: false,
+            tree: [
+              { path: "README.md", type: "blob", sha: "a" },
+              { path: folder, type: "tree", sha: "icons-tree" },
+            ],
+          }),
+          [`${api}/git/trees/icons-tree`]: JSON.stringify({
+            truncated: false,
+            tree: ["bell.svg", "bad.svg", "Not Valid.svg", "gone.svg", "notes.txt"].map((path) => ({ path, type: "blob", sha: path })),
+          }),
+          [`${raw}/bell.svg`]: svgOf("bell"),
+          [`${raw}/bad.svg`]: svgOf("bell").replace("<path ", "<script>alert(1)</script><path "),
+          [`${raw}/gone.svg`]: 503,
+        },
+        calls,
+      ),
+      style,
     );
-    const remote = await loadRemoteCatalog("github", fetchImpl);
     expect(remote.version).toBe("main@0123456");
     expect(remote.names).toEqual(["bad", "bell", "gone"]);
     const { icons: loaded, failed } = await remote.loadSvgs(["bad", "bell", "gone"]);
-    expect(loaded).toEqual([{ name: "bell", svg: good.trim() }]);
+    expect(loaded).toEqual([{ name: "bell", svg: svgOf("bell").trim() }]);
     expect(failed.map((failure) => failure.name).sort()).toEqual(["bad", "gone"]);
     expect(calls.filter((url) => url.startsWith(raw))).toHaveLength(3);
   });
+});
 
+describe("validateRemoteSvg", () => {
+  const bell = fixtures.outline.icons.find((icon) => icon.name === "bell")!.svg;
+
+  test("rejects anything that could load or run, or that isn't a canonical drawing", () => {
+    const open = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">';
+    for (const svg of [
+      "",
+      "not svg",
+      `${open}<script>alert(1)</script></svg>`,
+      `${open}<path d="M0 0" onload="x()"/></svg>`,
+      `${open}<image href="https://example.com/a.png"/></svg>`,
+      `${open}<foreignObject></foreignObject></svg>`,
+      bell.replace('fill="none"', 'fill="red"'),
+      bell.replace("<path ", '<path fill="red" '),
+      bell.replace("<path ", '<path style="fill:red" '),
+      bell.replace('d="', 'd="url(#x) '),
+      bell.replace("</svg>", "<use href=\"#a\"/></svg>"),
+      "x".repeat(100_001),
+    ]) {
+      expect(validateRemoteSvg(svg, "outline")).not.toBeNull();
+    }
+  });
+
+  test("accepts every drawing element the icon contract allows", () => {
+    expect(validateRemoteSvg(bell.replace("</svg>", '<circle cx="12" cy="12" r="10"/></svg>'), "outline")).toBeNull();
+  });
+});
+
+describe("loadRemoteCatalog", () => {
   test("GitHub refuses a truncated listing instead of adding a partial set", async () => {
-    const sha = "0123456789abcdef0123456789abcdef01234567";
-    const api = "https://api.github.com/repos/praveenjuge/vadivam";
     const fetchImpl = fakeFetch({
       [`${api}/commits/main`]: JSON.stringify({ sha }),
       [`${api}/git/trees/${sha}`]: JSON.stringify({ truncated: true, tree: [] }),
     });
-    await expect(loadRemoteCatalog("github", fetchImpl)).rejects.toThrow("incomplete");
+    await expect(loadRemoteCatalog("github", fetchImpl, "outline")).rejects.toThrow("incomplete");
   });
 
   test("reports an unreachable source by host", async () => {
-    await expect(loadRemoteCatalog("npm", fakeFetch({ "https://registry.npmjs.org/vadivam/latest": 500 }))).rejects.toThrow(
-      "registry.npmjs.org answered HTTP 500",
-    );
+    const fetchImpl = fakeFetch({ "https://registry.npmjs.org/vadivam/latest": 500 });
+    await expect(loadRemoteCatalog("npm", fetchImpl, "outline")).rejects.toThrow("registry.npmjs.org answered HTTP 500");
+    const offline: FetchLike = async () => {
+      throw new TypeError("Failed to fetch");
+    };
+    await expect(loadRemoteCatalog("npm", offline, "solid")).rejects.toThrow("Couldn't reach registry.npmjs.org");
   });
 });

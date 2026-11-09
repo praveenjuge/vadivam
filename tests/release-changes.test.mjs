@@ -24,6 +24,7 @@ describe("automatic release change detection", () => {
     "packages/vadivam/package.json",
     "packages/vadivam-react/README.md",
     "apps/figma-plugin/src/code.ts",
+    "apps/figma-shared/names.ts",
     "scripts/generators/react-native.mjs",
     "scripts/font-codepoints.json",
     "scripts/icons.mjs",
