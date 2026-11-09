@@ -4,20 +4,16 @@
 // view and the rest follow as they scroll near. A tile marks its painted style
 // in `data-style`, which the CSS reads, so a tile still waiting on its paths
 // keeps its look.
+import { nameFields, type SearchEntry } from "../../../../figma-shared/search";
 import { iconPagePath, type IconStyle } from "../site";
 
-export type Entry = {
+/** A tile and its search fields; tags and categories fill in when the search index loads. */
+export type Entry = SearchEntry & {
   card: HTMLAnchorElement;
   /** The tile's copy in the search results, made on first match. */
   clone?: HTMLAnchorElement;
-  name: string;
   /** The index of the grid chunk holding the card. */
   chunk: number;
-  words: string;
-  /** The name without hyphens, so component names like `ArrowUp` match. */
-  compact: string;
-  tags: string[];
-  categories: string[];
   outline?: string[];
   solid?: string[];
 };
@@ -47,10 +43,14 @@ const svgPath = (d: string) => {
 export function createGrid(gridElement: HTMLElement, signal: AbortSignal) {
   const chunkElements = Array.from(gridElement.querySelectorAll<HTMLElement>(":scope > .icon-chunk"));
   const chunkEntries: Entry[][] = chunkElements.map((chunkElement, chunk) =>
-    Array.from(chunkElement.querySelectorAll<HTMLAnchorElement>(":scope > a"), (card) => {
-      const name = nameOf(card);
-      return { card, name, chunk, words: name.replaceAll("-", " "), compact: name.replaceAll("-", ""), tags: [], categories: [] };
-    }),
+    Array.from(chunkElement.querySelectorAll<HTMLAnchorElement>(":scope > a"), (card) => ({
+      card,
+      chunk,
+      ...nameFields(nameOf(card)),
+      tags: [],
+      categories: [],
+      categoryTitles: [],
+    })),
   );
   const entries = chunkEntries.flat();
   const entryByName = new Map(entries.map((entry) => [entry.name, entry]));
