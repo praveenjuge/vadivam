@@ -2,7 +2,7 @@ import { highlightCode } from "blume/markdown";
 import { icons } from "vadivam/manifest";
 import { attributeString, iconSvg, rootAttributes, rootTag, styleIds, styles, svgPathData } from "../../../../scripts/icon-styles.mjs";
 import { componentSource, dartIconName, frameworks } from "../../../../scripts/snippets.mjs";
-import type { IconStyle } from "./site";
+import { defaultStyle, type IconStyle } from "./site";
 
 // Shiki-highlighted snippet templates, rendered once at build time. The client
 // swaps the placeholders for an icon's component name, props, and path data so
@@ -25,26 +25,35 @@ export interface SnippetTemplates {
   styles: Record<IconStyle, StyleTemplates>;
 }
 
+const iconStyles = styleIds as readonly IconStyle[];
+
 type HighlightThemes = NonNullable<Parameters<typeof highlightCode>[2]>["themes"];
 
 const pathCount = (svg: string) => svgPathData(svg).length;
 
+type ManifestIcon = (typeof icons)[number];
+
+/** A manifest icon's SVG in a style: the default style's at the top level, every other style's under its id. */
+function styleSvg(icon: ManifestIcon, style: IconStyle): string {
+  if (style === defaultStyle) return icon.svg;
+  return (icon as unknown as Partial<Record<IconStyle, { svg: string }>>)[style]?.svg ?? "";
+}
+
 /** Every distinct path count among a style's icons. */
 function pathCounts(style: IconStyle) {
-  const svgs = icons.map((icon) => (style === "solid" ? icon.solid?.svg : icon.svg) ?? "");
+  const svgs = icons.map((icon) => styleSvg(icon, style));
   return [...new Set(svgs.map(pathCount))].filter((count) => count > 0).sort((left, right) => left - right);
 }
 
-// A root tag whose size and paint are placeholders for the client to fill in.
+// A root tag whose size and paint are placeholders for the client to fill in:
+// whatever the style paints with `currentColor` takes the color, and its
+// stroke width, if it has one, the stroke setting.
 function templateRootTag(style: IconStyle) {
-  const { stroked } = styles[style];
-  const attributes: Record<string, string | number> = {
-    ...rootAttributes(styles[style]),
-    width: "__SIZE__",
-    height: "__SIZE__",
-    [stroked ? "stroke" : "fill"]: "__COLOR__",
-  };
-  if (stroked) attributes["stroke-width"] = "__STROKE__";
+  const attributes: Record<string, string | number> = { ...rootAttributes(styles[style]), width: "__SIZE__", height: "__SIZE__" };
+  for (const [name, value] of Object.entries(styles[style].paint)) {
+    if (value === "currentColor") attributes[name] = "__COLOR__";
+    if (name === "stroke-width") attributes[name] = "__STROKE__";
+  }
   return `<svg ${attributeString(attributes)}>`;
 }
 
@@ -68,7 +77,7 @@ export function iconTemplates(templates: SnippetTemplates, svgs: Record<IconStyl
     const count = String(pathCount(svgs[style]));
     return { ...templates.styles[style], svg: { [count]: templates.styles[style].svg[count] ?? "" } };
   };
-  return { ...templates, styles: { outline: trimmed("outline"), solid: trimmed("solid") } };
+  return { ...templates, styles: Object.fromEntries(iconStyles.map((style) => [style, trimmed(style)])) as SnippetTemplates["styles"] };
 }
 
 async function renderStyleTemplates(
@@ -98,7 +107,7 @@ async function renderStyleTemplates(
 
 async function renderSnippetTemplates(themes: HighlightThemes): Promise<SnippetTemplates> {
   const highlight = (code: string, lang: string) => highlightCode(code, lang, { icons: false, themes });
-  const entries = await Promise.all((styleIds as IconStyle[]).map(async (style) => [style, await renderStyleTemplates(highlight, style)] as const));
+  const entries = await Promise.all(iconStyles.map(async (style) => [style, await renderStyleTemplates(highlight, style)] as const));
   return {
     component: componentPlaceholder,
     dartComponent: dartIconName(componentPlaceholder),

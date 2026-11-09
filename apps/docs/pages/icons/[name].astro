@@ -432,6 +432,7 @@ const structuredData = site
     } from "../_lib/icon-tools";
     import {
       defaultTab,
+      isIconStyle,
       packageManagers,
       recall,
       remember,
@@ -572,7 +573,7 @@ const structuredData = site
       };
       detail.querySelector('[aria-label="Icon style"]')?.addEventListener("click", (event) => {
         const style = (event.target as HTMLElement).closest<HTMLElement>("[data-style-choice]")?.dataset.styleChoice;
-        if (style === "outline" || style === "solid") setStyle(style);
+        if (isIconStyle(style)) setStyle(style);
       });
       setStyle(styleFromUrl(), { updateUrl: false });
 
