@@ -56,8 +56,9 @@ export const styleParam = (style: IconStyle) => (style === "solid" ? "solid" : n
 export const styleFromUrl = (): IconStyle =>
   new URLSearchParams(location.search).get("style") === "solid" ? "solid" : "outline";
 
+// Icon names are URL-safe already; encoding keeps text read from the DOM out of the markup.
 export const iconPagePath = (name: string, style: IconStyle = "outline") =>
-  `/icons/${name}${style === "solid" ? "?style=solid" : ""}`;
+  `/icons/${encodeURIComponent(name)}${style === "solid" ? "?style=solid" : ""}`;
 
 /** A live region that shows each message for two seconds. */
 export function statusLine(element: HTMLElement) {

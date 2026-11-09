@@ -19,9 +19,10 @@ const buildData = [
 
 /** Every script the build runs: the build command, the generators, and what they import. */
 function buildScripts() {
-  const pending = ["scripts/icons.mjs", ...readdirSync(path.join(root, "scripts/generators"))
-      .filter((file) => file.endsWith(".mjs"))
-      .map((file) => `scripts/generators/${file}`)];
+  const generators = readdirSync(path.join(root, "scripts/generators"), { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".mjs"))
+    .map((entry) => `scripts/generators/${entry.name}`);
+  const pending = ["scripts/icons.mjs", ...generators];
   const seen = new Set();
   while (pending.length) {
     const file = pending.pop();
