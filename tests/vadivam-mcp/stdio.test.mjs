@@ -4,6 +4,7 @@ import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
+import { mcpToolNames } from "../helpers.mjs";
 
 const packageDirectory = fileURLToPath(new URL("../../packages/vadivam-mcp/", import.meta.url));
 const manifest = JSON.parse(readFileSync(`${packageDirectory}package.json`, "utf8"));
@@ -29,13 +30,7 @@ describe("vadivam-mcp CLI", () => {
       try {
         expect(client.getServerVersion()).toMatchObject({ name: "vadivam", version: manifest.version });
         const { tools } = await client.listTools();
-        expect(tools.map((tool) => tool.name).sort()).toEqual([
-          "get_icon",
-          "get_usage",
-          "list_categories",
-          "search_icons",
-          "suggest_icons",
-        ]);
+        expect(tools.map((tool) => tool.name).sort()).toEqual(mcpToolNames);
         const found = await client.callTool({ name: "search_icons", arguments: { query: "trash", limit: 1 } });
         expect(found.structuredContent.results[0].name).toBe("trash");
         const icon = await client.callTool({ name: "get_icon", arguments: { name: "trash", format: "vue" } });
