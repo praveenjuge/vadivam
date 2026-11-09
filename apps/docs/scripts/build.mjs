@@ -44,9 +44,8 @@ async function writeNotFoundTwins() {
 }
 
 async function blumeBuild() {
-  const docs = fromRoot(docsPaths.docs);
-  const child = Bun.spawn([path.join(docs, "node_modules/.bin/blume"), "build"], {
-    cwd: docs,
+  const child = Bun.spawn([fromRoot(docsPaths.blume), "build"], {
+    cwd: fromRoot(docsPaths.docs),
     stdio: ["inherit", "inherit", "inherit"],
   });
   const exitCode = await child.exited;
