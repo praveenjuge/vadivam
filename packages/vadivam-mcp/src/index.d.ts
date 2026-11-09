@@ -11,6 +11,10 @@ export type IconFormat =
   | "preact"
   | "astro"
   | "angular"
+  | "qwik"
+  | "lit"
+  | "flutter"
+  | "compose"
   | "data-uri"
   | "base64"
   | "css-mask"
@@ -32,7 +36,11 @@ export type UsageFramework =
   | "solid"
   | "preact"
   | "astro"
-  | "angular";
+  | "angular"
+  | "qwik"
+  | "lit"
+  | "flutter"
+  | "compose";
 
 export interface VadivamMcpIcon {
   name: string;

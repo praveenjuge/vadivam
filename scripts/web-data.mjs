@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
 
-// The homepage grid groups its tiles in chunks of this many icons. 120 divides
-// every column count the grid uses (5, 8, 10, 24), so chunks stack without
-// ragged rows, and the solid paths load one chunk at a time to match.
+// The homepage grid groups its tiles in chunks of this many icons, and its
+// search results render in chunks of the same size. Every column count the
+// grid uses (5, 8, 10, 24) divides it, so chunks stack without ragged rows,
+// and the solid paths load one chunk at a time to match. The page hands it to
+// theme.css as `--chunk-size`.
 export const gridChunkSize = 120;
 
 // Data the homepage fetches on demand, served from `/icon-data/` under

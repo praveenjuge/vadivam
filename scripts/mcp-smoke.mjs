@@ -2,8 +2,10 @@
 //   bun scripts/mcp-smoke.mjs http://127.0.0.1:8787/mcp
 //   bun scripts/mcp-smoke.mjs https://vadivam.praveenjuge.com/mcp
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import { mcpRoute } from "../apps/docs/worker/routes.mjs";
+import { siteUrl } from "./packages.mjs";
 
-const url = new URL(process.argv[2] ?? "https://vadivam.praveenjuge.com/mcp");
+const url = new URL(process.argv[2] ?? `${siteUrl}${mcpRoute}`);
 
 for (const mode of ["legacy", "auto"]) {
   const client = new Client({ name: "vadivam-smoke", version: "1.0.0" }, { versionNegotiation: { mode } });

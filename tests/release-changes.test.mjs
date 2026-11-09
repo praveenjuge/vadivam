@@ -4,8 +4,8 @@ import { isReleasablePath } from "../scripts/release-changes.mjs";
 describe("automatic release change detection", () => {
   test.each([
     "apps/docs/pages/index.astro",
-    "apps/docs/public/frameworks/react-light.svg",
-    "scripts/complete-sitemap.mjs",
+    "apps/docs/public/frameworks/react.svg",
+    "apps/docs/scripts/complete-sitemap.mjs",
     "scripts/solid-draft.mjs",
     "scripts/icon-report.mjs",
     "metadata/solid-hints.json",

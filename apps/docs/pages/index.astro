@@ -5,29 +5,39 @@ import data from "blume:data";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { categories, icons, iconsByName } from "vadivam/manifest";
-import { iconLastmods } from "../../../scripts/icon-lastmods.mjs";
+import { pathIconSvg, styles, svgInner, svgPathData } from "../../../scripts/icon-styles.mjs";
+import { targetsById } from "../../../scripts/packages.mjs";
 import { frameworks } from "../../../scripts/snippets.mjs";
 import { gridChunkSize, iconDataFiles } from "../../../scripts/web-data.mjs";
 import pkg from "../../../package.json";
+import { iconLastmods } from "../scripts/icon-lastmods.mjs";
 import ActionMenus from "./_lib/ActionMenus.astro";
 import Customizer from "./_lib/Customizer.astro";
 import VIcon from "./_lib/VIcon.astro";
 import { agentPrompt } from "./_lib/agent-prompt";
 import IconSketch from "./_lib/IconSketch.astro";
-import { SOLID_SVG_OPEN_TAG, SVG_OPEN_TAG, buildSnippetTemplates, serializeForScript } from "./_lib/snippet-templates";
+import { sizePresets } from "./_lib/site";
+import { buildSnippetTemplates, serializeForScript } from "./_lib/snippet-templates";
 
 const { config } = data;
 
-
 const codeTabs = [...frameworks.map(({ id, label }) => ({ id, label })), { id: "svg", label: "SVG" }];
-// The hero's sentence names the main packages and tools, each with its mark.
+// The hero's sentence names the main packages, each with its logo from
+// public/frameworks, then the tools.
 type HeroLink = { label: string; href: string; logo?: string; logoClass?: string; icon?: "file-code" | "bot"; external?: boolean };
-const heroOmittedFrameworks = new Set(["qwik", "lit", "flutter", "compose"]);
+const heroPackages = [
+  ["react", "react"],
+  ["react-native", "react"],
+  ["vue", "vue"],
+  ["svelte", "svelte"],
+  ["solid", "solid"],
+  ["preact", "preact"],
+  ["astro", "astro"],
+  ["angular", "angular"],
+] as const;
 const packageLinks: HeroLink[] = [
-  ...frameworks
-    .filter(({ id }) => !heroOmittedFrameworks.has(id))
-    .map(({ id, label }) => ({ label, href: `/docs/${id}`, logo: id === "react-native" ? "react" : id })),
-  { label: "SVG", href: "/docs/core", icon: "file-code" },
+  ...heroPackages.map(([id, logo]) => ({ label: targetsById[id].label, href: targetsById[id].documentation, logo })),
+  { label: "SVG", href: targetsById.core.documentation, icon: "file-code" },
 ];
 const toolLinks: HeroLink[] = [
   { label: "shadcn/ui", href: "/docs/shadcn", logo: "shadcn", logoClass: "dark:invert" },
@@ -48,7 +58,7 @@ const smallCopyClass =
 const searchIconSvg = iconsByName.search?.svg ?? "";
 const clearIconSvg = iconsByName.x?.svg ?? "";
 
-// Category filter options, largest first after "All".
+// Category filter options after "All": alphabetical, each with its icon count.
 const categoryCounts = new Map<string, number>();
 for (const icon of icons) {
   for (const id of icon.categories) categoryCounts.set(id, (categoryCounts.get(id) ?? 0) + 1);
@@ -56,25 +66,18 @@ for (const icon of icons) {
 const categoryOptions = [...categories].sort((left, right) => left.title.localeCompare(right.title));
 
 // Tiles carry only their path data; size, stroke, and caps come from CSS, and
-// the client rebuilds each icon's SVG from these paths. Fail the build if that
-// would not reproduce the manifest exactly.
+// the client rebuilds each icon's SVG from these paths, as does the Solid
+// toggle from the solid paths it fetches. Fail the build if that would not
+// reproduce the manifest exactly.
 const tilePaths = new Map<string, string>();
 for (const icon of icons) {
-  const paths = Array.from(icon.svg.matchAll(/ d="([^"]*)"/g), (match) => `<path d="${match[1]}"/>`).join("");
-  if (`${SVG_OPEN_TAG}\n${paths}\n</svg>\n` !== icon.svg) {
-    throw new Error(`${icon.name}.svg can't be rebuilt from its paths`);
-  }
-  tilePaths.set(icon.name, paths);
-}
-
-// The Solid toggle fetches solid path data and rebuilds tiles and the drawer's
-// SVG from it the same way, so check those rebuild exactly too.
-for (const icon of icons) {
   if (!icon.solid) throw new Error(`${icon.name} has no solid twin`);
-  const paths = Array.from(icon.solid.svg.matchAll(/ d="([^"]*)"/g), (match) => `<path d="${match[1]}"/>`).join("");
-  if (`${SOLID_SVG_OPEN_TAG}\n${paths}\n</svg>\n` !== icon.solid.svg) {
-    throw new Error(`icons-solid/${icon.name}.svg can't be rebuilt from its paths`);
+  for (const [style, svg] of [[styles.outline, icon.svg], [styles.solid, icon.solid.svg]] as const) {
+    if (pathIconSvg(style, svgPathData(svg)) !== svg) {
+      throw new Error(`${style.sourceDirectory}/${icon.name}.svg can't be rebuilt from its paths`);
+    }
   }
+  tilePaths.set(icon.name, svgInner(icon.svg));
 }
 
 // Search placeholder examples, cycled until the visitor types. Fail the build
@@ -100,10 +103,7 @@ for (const file of [searchIndex, ...solidChunks]) {
   }
 }
 
-const countPaths = (svg: string) => (svg.match(/ d="/g) ?? []).length;
-const pathCounts = [...new Set(icons.map((icon) => countPaths(icon.svg)))].filter((count) => count > 0);
-const solidPathCounts = [...new Set(icons.map((icon) => countPaths(icon.solid?.svg ?? "")))].filter((count) => count > 0);
-const snippetTemplates = serializeForScript(await buildSnippetTemplates(config.codeThemes, pathCounts, solidPathCounts));
+const snippetTemplates = serializeForScript(await buildSnippetTemplates(config.codeThemes));
 // One switch: a click anywhere flips the style, and the active half is shaded.
 const styleSegmentClass =
   "inline-flex items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors group-hover:text-foreground [&>svg]:size-3.5 [&>svg]:flex-none";
@@ -305,7 +305,7 @@ const structuredData = site
         <p class="sr-only" id="resultCount" aria-live="polite">{icons.length} icons</p>
       </div>
 
-      <div class="icon-browser pt-3" id="iconBrowser">
+      <div class="icon-browser pt-3" id="iconBrowser" style={`--chunk-size: ${gridChunkSize}`}>
         <div class="icon-grid" id="iconGrid">
           {
             chunks.map((chunk, index) => (
@@ -420,7 +420,7 @@ const structuredData = site
             <span class="text-xs text-muted-foreground" id="drawerStatus" aria-live="polite"></span>
           </div>
           <div class="flex items-end justify-between gap-2 rounded-md border border-border px-3 py-2.5 text-foreground" aria-label="Size previews">
-            {[16, 20, 24, 32, 48].map((size) => (
+            {sizePresets.map((size) => (
               <div class="grid justify-items-center gap-1">
                 <div class="grid place-items-center" data-icon-preview={size}></div>
                 <span class="font-mono text-[0.65rem] text-muted-foreground">{size}</span>
@@ -448,20 +448,15 @@ const structuredData = site
   <script is:inline type="application/json" id="siteVersion" set:html={JSON.stringify(pkg.version)}></script>
 
   <script>
-    import {
-      bindCustomizer,
-      createSettingsStore,
-      readTemplates,
-      renderPreviews,
-      runAction,
-      showStrokeSettings,
-      snippetHtml,
-      snippetText,
-      copyText,
-      wireMenus,
-      type IconRef,
-    } from "./_lib/icon-tools";
     import { iconDefaults } from "../../../scripts/snippets.mjs";
+    import { createDrawer } from "./_lib/home/drawer";
+    import { createGrid } from "./_lib/home/grid";
+    import { animatePlaceholder } from "./_lib/home/placeholder";
+    import { createSearch } from "./_lib/home/search";
+    import { createStyleSwitch } from "./_lib/home/style-switch";
+    import { createTooltip } from "./_lib/home/tooltip";
+    import { copyText, createSettingsStore, readTemplates } from "./_lib/icon-tools";
+    import { styleFromUrl } from "./_lib/site";
 
     // Astro's client router swaps pages without reloading, and a bundled
     // script runs only once, so set the page up on every page load and tear
@@ -472,656 +467,35 @@ const structuredData = site
       const { signal } = lifecycle;
       document.addEventListener("astro:before-swap", () => lifecycle.abort(), { once: true });
 
-      const explorer = document.querySelector<HTMLElement>("#iconExplorer")!;
-      const search = document.querySelector<HTMLInputElement>("#iconSearch")!;
-      const searchClear = document.querySelector<HTMLButtonElement>("#iconSearchClear")!;
-      const categorySelect = document.querySelector<HTMLSelectElement>("#iconCategory")!;
-      const resultCount = document.querySelector<HTMLElement>("#resultCount")!;
       const browser = document.querySelector<HTMLElement>("#iconBrowser")!;
-      const grid = document.querySelector<HTMLElement>("#iconGrid")!;
-      const results = document.querySelector<HTMLElement>("#iconResults")!;
-      const emptyState = document.querySelector<HTMLElement>("#emptyState")!;
-      const emptyQuery = document.querySelector<HTMLElement>("#emptyQuery")!;
-      const tooltip = document.querySelector<HTMLElement>("#iconTooltip")!;
-      const drawer = document.querySelector<HTMLElement>("#iconDrawer")!;
-      const drawerName = document.querySelector<HTMLElement>("#drawerName")!;
-      const drawerComponent = document.querySelector<HTMLElement>("#drawerComponent")!;
-      const drawerStatus = document.querySelector<HTMLElement>("#drawerStatus")!;
-      const drawerCode = document.querySelector<HTMLElement>("#drawerCode")!;
-      const drawerOpenPage = document.querySelector<HTMLAnchorElement>("#drawerOpenPage")!;
-      const drawerCategories = document.querySelector<HTMLElement>("#drawerCategories")!;
-      const drawerTags = document.querySelector<HTMLElement>("#drawerTags")!;
-      const drawerCustomize = document.querySelector<HTMLDetailsElement>("#drawerCustomize")!;
-      const tabButtons = Array.from(drawer.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
-      const chunkElements = Array.from(grid.querySelectorAll<HTMLElement>(":scope > .icon-chunk"));
-      const styleSwitch = document.querySelector<HTMLButtonElement>("#iconStyle")!;
-
-      const templates = readTemplates("snippetTemplates");
-      const version = JSON.parse(document.getElementById("siteVersion")?.textContent ?? '""');
       const store = createSettingsStore();
-      const tabKey = "vadivam:tab";
+      // Search results render in chunks the size of the grid's.
+      const chunkSize = Number(browser.style.getPropertyValue("--chunk-size"));
 
-      // A tile's aria-label is its icon name.
-      const nameOf = (card: HTMLElement | null) => card?.getAttribute("aria-label") ?? "";
-      const pascalCase = (name: string) =>
-        name.split("-").filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("");
-
-      // ---- Icons --------------------------------------------------------------
-      // Names and outline paths are in the HTML; tags, categories, and solid
-      // paths load on demand.
-      type Entry = {
-        card: HTMLAnchorElement;
-        clone?: HTMLAnchorElement;
-        name: string;
-        /** The index of the grid chunk holding the card. */
-        chunk: number;
-        words: string;
-        /** The name without hyphens, so component names like `ArrowUp` match. */
-        compact: string;
-        tags: string[];
-        categories: string[];
-        outline?: string[];
-        solid?: string[];
-      };
-      const chunkEntries: Entry[][] = chunkElements.map((chunkElement, chunk) =>
-        Array.from(chunkElement.querySelectorAll<HTMLAnchorElement>(":scope > a"), (card) => {
-          const name = nameOf(card);
-          return { card, name, chunk, words: name.replaceAll("-", " "), compact: name.replaceAll("-", ""), tags: [], categories: [] };
-        }),
-      );
-      const entries = chunkEntries.flat();
-      const entryByName = new Map(entries.map((entry) => [entry.name, entry]));
-
-      // ---- Style --------------------------------------------------------------
-      // Tiles start as outline. Solid paths load one grid chunk at a time, so
-      // the Solid toggle fetches only the chunks in view and the rest follow as
-      // they scroll near. A tile marks its painted style in `data-style`, which
-      // the CSS reads, so a tile still waiting on its paths keeps its look.
-      let iconStyle: "outline" | "solid" = "outline";
-      const solidLoads = new Map<number, Promise<void>>();
-      const loadSolidChunk = (chunk: number) => {
-        let promise = solidLoads.get(chunk);
-        if (!promise) {
-          promise = fetch(chunkElements[chunk]?.dataset.solid ?? "")
-            .then((response) => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
-            .then((paths: string[][]) => {
-              chunkEntries[chunk]?.forEach((entry, index) => (entry.solid = paths[index]));
-            })
-            .catch((error) => {
-              // Forget the failure so the next request retries.
-              solidLoads.delete(chunk);
-              throw error;
-            });
-          solidLoads.set(chunk, promise);
-        }
-        return promise;
-      };
-      const pathData = (tile: Element) => Array.from(tile.querySelectorAll("path"), (path) => path.getAttribute("d") ?? "");
-      const svgPath = (d: string) => {
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("d", d);
-        return path;
-      };
-
-      // Shows a tile, the grid's or a search result's copy, in the current
-      // style, loading its chunk's solid paths first when they're missing.
-      const paint = (tile: HTMLAnchorElement, entry: Entry) => {
-        const style = iconStyle;
-        if ((tile.dataset.style ?? "outline") === style) return;
-        // A card that was never painted still holds its outline paths.
-        entry.outline ??= pathData(entry.card);
-        const paths = style === "solid" ? entry.solid : entry.outline;
-        if (!paths) {
-          loadSolidChunk(entry.chunk).then(() => paint(tile, entry), () => {});
-          return;
-        }
-        tile.firstElementChild?.replaceChildren(...paths.map(svgPath));
-        if (style === "solid") tile.dataset.style = "solid";
-        else delete tile.dataset.style;
-        // New-tab and copied links open the icon page in the same style.
-        tile.setAttribute("href", style === "solid" ? `/icons/${entry.name}?style=solid` : `/icons/${entry.name}`);
-      };
-      const paintChunk = (chunk: number) => {
-        for (const entry of chunkEntries[chunk] ?? []) paint(entry.card, entry);
-      };
-      const inView = (element: Element) => {
-        const { top, bottom } = element.getBoundingClientRect();
-        return bottom > 0 && top < innerHeight;
-      };
-      const chunksInView = () => chunkElements.flatMap((chunkElement, chunk) => (inView(chunkElement) ? [chunk] : []));
-      // Chunks within half a screen of the viewport. Ones still in the last
-      // style catch up as they scroll near.
-      const nearChunks = new Set<number>();
-      const chunkObserver = new IntersectionObserver(
-        (observed) => {
-          for (const item of observed) {
-            const chunk = chunkElements.indexOf(item.target as HTMLElement);
-            if (!item.isIntersecting) nearChunks.delete(chunk);
-            else {
-              nearChunks.add(chunk);
-              paintChunk(chunk);
-            }
-          }
-        },
-        { rootMargin: "50% 0px" },
-      );
-      for (const chunkElement of chunkElements) chunkObserver.observe(chunkElement);
-
-      // ---- Search index -------------------------------------------------------
-      // Tags and categories load on first search intent.
-      let categoryTitles: Record<string, string> = {};
-      let indexPromise: Promise<void> | null = null;
-
-      const loadIndex = () =>
-        (indexPromise ??= fetch(search.dataset.index ?? "")
-          .then((response) => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
-          .then((index: { categories: Record<string, string>; icons: [string, string[], string][] }) => {
-            categoryTitles = index.categories;
-            for (const [name, tags, categories] of index.icons) {
-              const entry = entryByName.get(name);
-              if (!entry) continue;
-              entry.tags = tags;
-              entry.categories = categories ? categories.split(" ") : [];
-            }
-          })
-          .catch(() => {
-            // Name search keeps working without the index; retry on next intent.
-            indexPromise = null;
-          }));
-
-      // Lower rank sorts first: exact name, name prefix, name word, tag, category.
-      const termRank = (entry: Entry, term: string) => {
-        if (entry.name === term || entry.compact === term) return 0;
-        if (entry.name.startsWith(term) || entry.compact.startsWith(term)) return 1;
-        if (entry.words.includes(term) || entry.compact.includes(term)) return 2;
-        if (entry.tags.some((tag) => tag.startsWith(term))) return 3;
-        if (entry.tags.some((tag) => tag.includes(term))) return 4;
-        if (entry.categories.some((id) => (categoryTitles[id] ?? id).toLowerCase().includes(term))) return 5;
-        return -1;
-      };
-
-      const rankEntry = (entry: Entry, terms: string[], category: string) => {
-        if (category && !entry.categories.includes(category)) return -1;
-        if (terms.length === 0) return 0;
-        const joined = terms.join("-");
-        if (terms.length > 1 && entry.name.includes(joined)) return entry.name === joined ? 0 : 1;
-        let rank = 0;
-        for (const term of terms) {
-          const termRanked = termRank(entry, term);
-          if (termRanked < 0) return -1;
-          rank = Math.max(rank, termRanked);
-        }
-        return rank;
-      };
-
-      // Filtering never touches the full grid: it goes dormant (keeping its
-      // rendering state) and only the matches render into a results grid. More
-      // matches render as the reader scrolls near the end, so a keystroke lays
-      // out tens of tiles instead of all of them.
-      let matches: Entry[] | null = null;
-      let renderedCount = 0;
-      const batchSize = 120;
-      const sentinel = document.createElement("div");
-      sentinel.setAttribute("aria-hidden", "true");
-
-      const cloneOf = (entry: Entry) => {
-        if (!entry.clone) {
-          entry.clone = entry.card.cloneNode(true) as HTMLAnchorElement;
-          entry.clone.setAttribute("aria-current", "false");
-        }
-        paint(entry.clone, entry);
-        return entry.clone;
-      };
-
-      const renderBatch = (size: number) => {
-        if (!matches) return;
-        // Matches render in chunks of `batchSize`, styled and contained like the
-        // full grid's; `.icon-chunk` reserves the height of exactly one batch.
-        const end = Math.min(matches.length, renderedCount + size);
-        while (renderedCount < end) {
-          const chunk = document.createElement("div");
-          chunk.className = "icon-chunk";
-          const chunkEnd = Math.min(end, renderedCount + batchSize);
-          for (; renderedCount < chunkEnd; renderedCount += 1) chunk.append(cloneOf(matches[renderedCount]!));
-          results.append(chunk);
-        }
-        if (renderedCount < matches.length) {
-          results.after(sentinel);
-          // Re-observing reports the sentinel's current state, so a sentinel
-          // that is still in view after this batch asks for the next one.
-          sentinelObserver.unobserve(sentinel);
-          sentinelObserver.observe(sentinel);
-        } else sentinel.remove();
-      };
-
-      const sentinelObserver = new IntersectionObserver(
-        (observed) => {
-          if (observed.some((item) => item.isIntersecting)) renderBatch(batchSize);
-        },
-        { rootMargin: "800px 0px" },
-      );
-
-      // Set by the drawer: keeps its selection on the tile that's on screen.
-      let afterFilter = () => {};
-
-      let filterFrame = 0;
-      const applyFilter = () => {
-        cancelAnimationFrame(filterFrame);
-        filterFrame = requestAnimationFrame(() => {
-          const terms = search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
-          const category = categorySelect.value;
-          if (terms.length === 0 && !category) {
-            matches = null;
-            results.hidden = true;
-            results.replaceChildren();
-            sentinel.remove();
-            grid.classList.remove("is-dormant");
-            emptyState.hidden = true;
-            resultCount.textContent = `${entries.length} icons`;
-            afterFilter();
-            return;
-          }
-          matches = entries
-            .map((entry, index) => ({ entry, index, rank: rankEntry(entry, terms, category) }))
-            .filter(({ rank }) => rank >= 0)
-            .sort((left, right) => left.rank - right.rank || left.index - right.index)
-            .map(({ entry }) => entry);
-          grid.classList.add("is-dormant");
-          results.replaceChildren();
-          renderedCount = 0;
-          results.hidden = matches.length === 0;
-          renderBatch(batchSize);
-          emptyState.hidden = matches.length > 0;
-          emptyQuery.textContent = [search.value.trim() && `“${search.value.trim()}”`, category && `in ${categorySelect.selectedOptions[0]?.textContent?.replace(/ \(\d+\)$/, "")}`]
-            .filter(Boolean)
-            .join(" ");
-          resultCount.textContent = `${matches.length} of ${entries.length} icons`;
-          afterFilter();
-        });
-      };
-
-      const syncUrl = () => {
-        const url = new URL(location.href);
-        const query = search.value.trim();
-        if (query) url.searchParams.set("q", query);
-        else url.searchParams.delete("q");
-        if (categorySelect.value) url.searchParams.set("category", categorySelect.value);
-        else url.searchParams.delete("category");
-        history.replaceState(history.state, "", url);
-      };
-
-      const filterNow = () => {
-        searchClear.hidden = search.value.length === 0;
-        applyFilter();
-        syncUrl();
-      };
-
-      for (const eventName of ["focus", "pointerenter"]) {
-        search.addEventListener(eventName, loadIndex, { once: true });
-        categorySelect.addEventListener(eventName, loadIndex, { once: true });
-      }
-      search.addEventListener("input", () => {
-        filterNow();
-        if (search.value) loadIndex()?.then(applyFilter);
+      const grid = createGrid(document.querySelector<HTMLElement>("#iconGrid")!, signal);
+      const search = createSearch(grid, chunkSize, signal);
+      animatePlaceholder(search.input, signal);
+      const tooltip = createTooltip(browser, signal);
+      const drawer = createDrawer({
+        grid,
+        search,
+        store,
+        templates: readTemplates("snippetTemplates"),
+        version: JSON.parse(document.getElementById("siteVersion")?.textContent ?? '""'),
+        hideTooltip: tooltip.hide,
+        signal,
       });
-      categorySelect.addEventListener("change", () => {
-        filterNow();
-        loadIndex()?.then(applyFilter);
+      const styleSwitch = createStyleSwitch(grid, search, drawer.selectedEntry);
+      search.onFilter(drawer.followSelection);
+      styleSwitch.onChange(drawer.restyle);
+
+      // The grid previews the customizer's stroke width and color live.
+      store.subscribe((settings) => {
+        browser.style.setProperty("--icon-stroke", String(settings.strokeWidth));
+        if (settings.color === iconDefaults.color) browser.style.removeProperty("--icon-color");
+        else browser.style.setProperty("--icon-color", settings.color);
+        drawer.render();
       });
-      searchClear.addEventListener("click", () => {
-        search.value = "";
-        filterNow();
-        search.focus();
-      });
-      document.querySelector("#emptyReset")?.addEventListener("click", () => {
-        search.value = "";
-        categorySelect.value = "";
-        filterNow();
-        search.focus();
-      });
-
-      // "/" jumps to icon search from anywhere on this page. Captured on the
-      // window so it wins over Blume's "/" docs search; ⌘K still opens that.
-      addEventListener(
-        "keydown",
-        (event) => {
-          if (event.key !== "/" || event.altKey || event.metaKey || event.ctrlKey) return;
-          if ((event.target as HTMLElement).closest?.("input, select, textarea, [contenteditable], dialog")) return;
-          event.preventDefault();
-          event.stopPropagation();
-          search.focus();
-          search.select();
-        },
-        { capture: true, signal },
-      );
-
-      // Deep links: `/?q=term&category=id` pre-fill and filter.
-      const initial = new URLSearchParams(location.search);
-      search.value = initial.get("q") ?? "";
-      if (initial.get("category") && categorySelect.querySelector(`option[value="${CSS.escape(initial.get("category") ?? "")}"]`)) {
-        categorySelect.value = initial.get("category") ?? "";
-      }
-      if (search.value || categorySelect.value) {
-        searchClear.hidden = search.value.length === 0;
-        applyFilter();
-        loadIndex()?.then(applyFilter);
-      }
-
-      // ---- Tooltip ------------------------------------------------------------
-      // One shared tooltip instead of one per tile keeps the homepage under the
-      // 2 MB crawl limit. It stays inside the viewport and Escape hides it (WCAG 1.4.13).
-      let tooltipCard: HTMLAnchorElement | null = null;
-      const hideTooltip = () => {
-        tooltipCard?.removeAttribute("aria-describedby");
-        tooltipCard = null;
-        tooltip.hidden = true;
-      };
-      const showTooltip = (card: HTMLAnchorElement) => {
-        if (card === tooltipCard) return;
-        hideTooltip();
-        tooltip.textContent = nameOf(card);
-        tooltip.hidden = false;
-        const margin = 8;
-        const target = card.getBoundingClientRect();
-        const { width, height } = tooltip.getBoundingClientRect();
-        const maxLeft = document.documentElement.clientWidth - margin - width;
-        const above = target.top - height - margin;
-        tooltip.style.left = `${Math.max(margin, Math.min(target.left + target.width / 2 - width / 2, maxLeft))}px`;
-        tooltip.style.top = `${above >= 0 ? above : target.bottom + margin}px`;
-        card.setAttribute("aria-describedby", tooltip.id);
-        tooltipCard = card;
-      };
-      const cardFrom = (event: Event) => (event.target as HTMLElement).closest<HTMLAnchorElement>(".icon-chunk > a");
-      browser.addEventListener("pointerover", (event) => {
-        // Touch has no hover.
-        if ((event as PointerEvent).pointerType === "touch") return;
-        const card = cardFrom(event);
-        if (card) showTooltip(card);
-        else hideTooltip();
-      });
-      browser.addEventListener("pointerleave", hideTooltip);
-      browser.addEventListener("focusin", (event) => {
-        const card = cardFrom(event);
-        if (card?.matches(":focus-visible")) showTooltip(card);
-      });
-      browser.addEventListener("focusout", hideTooltip);
-      addEventListener("scroll", hideTooltip, { passive: true, signal });
-
-      // ---- Style switch -------------------------------------------------------
-      // Set by the drawer: repaints it in the new style.
-      let afterStyle = () => {};
-
-      // The latest click wins, even over solid paths still loading.
-      let requestedStyle: "outline" | "solid" = "outline";
-      const setStyle = async (style: "outline" | "solid", { updateUrl = true } = {}) => {
-        requestedStyle = style;
-        if (style === iconStyle) return;
-        // The tiles in view, grid chunks and search results alike, and the
-        // drawer's icon switch together once their paths are in. Tiles out of
-        // view follow as theirs load.
-        const shown = () => (matches ? matches.slice(0, renderedCount) : []);
-        if (style === "solid") {
-          const resultsInView = shown().filter((entry) => entry.clone && inView(entry.clone));
-          const needed = new Set([...chunksInView(), ...resultsInView.map((entry) => entry.chunk)]);
-          const drawerEntry = selectedEntry();
-          if (drawerEntry) needed.add(drawerEntry.chunk);
-          try {
-            await Promise.all(Array.from(needed, loadSolidChunk));
-          } catch {
-            // Fall back to the shown style so the next click retries solid.
-            if (requestedStyle === style) requestedStyle = iconStyle;
-            return;
-          }
-          if (requestedStyle !== style) return;
-        }
-        iconStyle = style;
-        for (const chunk of new Set([...chunksInView(), ...nearChunks])) paintChunk(chunk);
-        // A search can change while the paths load, so paint what's shown now.
-        for (const entry of shown()) cloneOf(entry);
-        styleSwitch.setAttribute("aria-checked", String(style === "solid"));
-        afterStyle();
-        if (updateUrl) {
-          const url = new URL(location.href);
-          if (style === "solid") url.searchParams.set("style", "solid");
-          else url.searchParams.delete("style");
-          history.replaceState(history.state, "", url);
-        }
-      };
-      // Each click flips the last requested style, so quick repeat clicks
-      // still alternate while the solid paths are loading.
-      styleSwitch.addEventListener("click", () => setStyle(requestedStyle === "solid" ? "outline" : "solid"));
-      // Fetch the chunks in view as soon as the visitor reaches for the toggle.
-      styleSwitch.addEventListener(
-        "pointerenter",
-        () => {
-          for (const chunk of chunksInView()) loadSolidChunk(chunk).catch(() => {});
-        },
-        { once: true },
-      );
-
-      // ---- Drawer -------------------------------------------------------------
-      let selected: HTMLAnchorElement | null = null;
-      let activeTab = (() => {
-        try {
-          return localStorage.getItem(tabKey) ?? "react";
-        } catch {
-          return "react";
-        }
-      })();
-      if (!tabButtons.some((button) => button.dataset.tab === activeTab)) activeTab = "react";
-      let statusTimer: ReturnType<typeof setTimeout> | undefined;
-
-      const selectedEntry = () => (selected ? entryByName.get(nameOf(selected)) : undefined);
-
-      // Rebuilt from the icon's path data; the build checks this matches the
-      // manifest. Null while the icon's solid paths are still loading.
-      const currentIcon = (): IconRef | null => {
-        const entry = selectedEntry();
-        if (!entry || !templates) return null;
-        entry.outline ??= pathData(entry.card);
-        const paths = iconStyle === "solid" ? entry.solid : entry.outline;
-        if (!paths) return null;
-        const openTag = iconStyle === "solid" ? templates.solid.svgOpenTag : templates.svgOpenTag;
-        const svg = `${openTag}\n${paths.map((d) => `<path d="${d}"/>`).join("")}\n</svg>\n`;
-        return { name: entry.name, component: pascalCase(entry.name), svg, style: iconStyle };
-      };
-
-      const setStatus = (message: string) => {
-        drawerStatus.textContent = message;
-        clearTimeout(statusTimer);
-        statusTimer = setTimeout(() => (drawerStatus.textContent = ""), 2000);
-      };
-
-      const chip = (label: string, attributes: Record<string, string>) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className =
-          "rounded-full border border-border bg-transparent px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
-        button.textContent = label;
-        for (const [key, value] of Object.entries(attributes)) button.setAttribute(key, value);
-        return button;
-      };
-
-      const renderMeta = () => {
-        const entry = selectedEntry();
-        if (!entry) return;
-        drawerCategories.replaceChildren(
-          ...entry.categories.map((id) => chip(categoryTitles[id] ?? id, { "data-filter-category": id })),
-        );
-        drawerTags.replaceChildren(...entry.tags.slice(0, 12).map((tag) => chip(tag, { "data-filter-tag": tag })));
-        document.querySelector<HTMLElement>("#drawerMeta")!.hidden = entry.categories.length + entry.tags.length === 0;
-      };
-
-      const render = () => {
-        showStrokeSettings(drawer, iconStyle);
-        const icon = currentIcon();
-        if (!icon) {
-          // Stepping in solid can reach a chunk that hasn't loaded yet. Clear
-          // the last icon's code and previews so they never show under this name.
-          drawerCode.replaceChildren();
-          for (const preview of drawer.querySelectorAll("[data-icon-preview]")) preview.replaceChildren();
-          const entry = selectedEntry();
-          if (entry && iconStyle === "solid") loadSolidChunk(entry.chunk).then(render, () => {});
-          return;
-        }
-        const settings = store.get();
-        drawerCode.innerHTML = snippetHtml(templates, activeTab, icon, settings);
-        renderPreviews(drawer, icon, settings);
-        for (const button of tabButtons) button.setAttribute("aria-selected", String(button.dataset.tab === activeTab));
-      };
-
-      // Prev/next follow what's on screen (the ranked matches, or the full
-      // grid) by entry, so they never force unrendered matches into the DOM.
-      const visibleEntries = () => matches ?? entries;
-      const selectedIndex = () => {
-        const entry = selectedEntry();
-        return entry ? visibleEntries().indexOf(entry) : -1;
-      };
-
-      const syncNavigation = () => {
-        const index = selectedIndex();
-        document.querySelector<HTMLButtonElement>("#drawerPrev")!.disabled = index <= 0;
-        document.querySelector<HTMLButtonElement>("#drawerNext")!.disabled = index < 0 || index >= visibleEntries().length - 1;
-      };
-
-      const select = (card: HTMLAnchorElement) => {
-        selected?.setAttribute("aria-current", "false");
-        selected = card;
-        card.setAttribute("aria-current", "true");
-        const name = nameOf(card);
-        drawerName.textContent = name;
-        drawerComponent.textContent = pascalCase(name);
-        drawerOpenPage.href = `/icons/${name}${iconStyle === "solid" ? "?style=solid" : ""}`;
-        render();
-        renderMeta();
-        loadIndex()?.then(renderMeta);
-        syncNavigation();
-      };
-
-      // A filter swaps which grid is on screen, so move the selection to the
-      // matching tile there (or leave it alone when the icon is filtered out).
-      afterFilter = () => {
-        if (!selected) return;
-        const entry = entryByName.get(nameOf(selected));
-        if (!entry) return;
-        const tile = !matches ? entry.card : matches.includes(entry) ? cloneOf(entry) : null;
-        if (tile && tile !== selected) {
-          selected.setAttribute("aria-current", "false");
-          tile.setAttribute("aria-current", "true");
-          selected = tile;
-        }
-        syncNavigation();
-      };
-
-      const iconParam = () => new URLSearchParams(location.search).get("icon");
-      // Replace, never push: Astro's client router owns history entries.
-      const setIconParam = (name: string | null) => {
-        const url = new URL(location.href);
-        if (name) url.searchParams.set("icon", name);
-        else url.searchParams.delete("icon");
-        history.replaceState(history.state, "", url);
-      };
-
-      const openDrawer = (card: HTMLAnchorElement, { updateUrl = true } = {}) => {
-        hideTooltip();
-        select(card);
-        drawer.inert = false;
-        drawer.setAttribute("data-open", "");
-        if (updateUrl) setIconParam(nameOf(card) || null);
-      };
-
-      const closeDrawer = ({ updateUrl = true } = {}) => {
-        if (!drawer.hasAttribute("data-open")) return;
-        drawer.removeAttribute("data-open");
-        drawer.inert = true;
-        const card = selected;
-        selected?.setAttribute("aria-current", "false");
-        selected = null;
-        if (updateUrl) setIconParam(null);
-        if (drawer.contains(document.activeElement) || document.activeElement === document.body) card?.focus({ preventScroll: true });
-      };
-
-      const step = (direction: 1 | -1) => {
-        const index = selectedIndex() + direction;
-        const entry = visibleEntries()[index];
-        if (!entry) return;
-        // Render up to the match being stepped to, in whole batches: each batch
-        // is its own chunk, and a partial one would knock the rows after it
-        // out of line.
-        if (matches && index >= renderedCount) {
-          renderBatch(Math.ceil((index - renderedCount + 1) / batchSize) * batchSize);
-        }
-        const next = matches ? cloneOf(entry) : entry.card;
-        openDrawer(next);
-        next.scrollIntoView({ block: "nearest" });
-        if (browser.contains(document.activeElement)) next.focus({ preventScroll: true });
-      };
-
-      browser.addEventListener("click", (event) => {
-        const mouse = event as MouseEvent;
-        // Modified clicks (new tab/window) follow the real /icons/<name> link.
-        if (mouse.metaKey || mouse.ctrlKey || mouse.shiftKey || mouse.altKey || mouse.button !== 0) return;
-        const card = cardFrom(event);
-        if (!card) return;
-        event.preventDefault();
-        openDrawer(card);
-      });
-
-      // Type example queries into the search placeholder until the visitor
-      // first focuses or types (or a filter fills the field), then rest for
-      // good. Reduced motion, at load or switched on later, keeps it plain.
-      const examples = search.dataset.examples?.split(" ") ?? [];
-      const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-      if (examples.length && !reducedMotion.matches) {
-        const resting = search.placeholder;
-        let timer = 0;
-        let stopped = false;
-        const stop = () => {
-          stopped = true;
-          clearTimeout(timer);
-          search.placeholder = resting;
-        };
-        const wait = (ms: number, next: () => void) => {
-          if (!stopped) timer = window.setTimeout(next, ms);
-        };
-        // Shows the first `length` letters of an example, or the resting text at 0.
-        const show = (exampleIndex: number, length: number) => {
-          if (search.value) return stop();
-          const word = examples[exampleIndex % examples.length];
-          search.placeholder = length ? `Try “${word.slice(0, length)}”` : resting;
-          return word;
-        };
-        const type = (exampleIndex: number, length: number) => {
-          const word = show(exampleIndex, length);
-          if (!word) return;
-          if (length < word.length) wait(90, () => type(exampleIndex, length + 1));
-          else wait(1800, () => erase(exampleIndex, length - 1));
-        };
-        const erase = (exampleIndex: number, length: number) => {
-          if (!show(exampleIndex, length)) return;
-          if (length > 0) wait(40, () => erase(exampleIndex, length - 1));
-          else wait(1600, () => type(exampleIndex + 1, 1));
-        };
-        if (document.activeElement === search || search.value) stop();
-        else wait(2400, () => type(0, 1));
-        search.addEventListener("focus", stop, { signal });
-        search.addEventListener("input", stop, { signal });
-        reducedMotion.addEventListener("change", (event) => event.matches && stop(), { signal });
-        signal.addEventListener("abort", () => clearTimeout(timer));
-      }
-
-      const chooseTab = (tab: string) => {
-        activeTab = tab;
-        try {
-          localStorage.setItem(tabKey, activeTab);
-        } catch {
-          // Storage can be unavailable; the tab still switches.
-        }
-        render();
-      };
-      for (const tab of tabButtons) {
-        tab.addEventListener("click", () => chooseTab(tab.dataset.tab ?? "react"));
-      }
 
       const agentPromptText = document.querySelector<HTMLTextAreaElement>("#agentPromptText")!;
       const agentPromptStatus = document.querySelector<HTMLElement>("#agentPromptStatus")!;
@@ -1150,132 +524,10 @@ const structuredData = site
       });
       signal.addEventListener("abort", () => clearTimeout(agentPromptTimer));
 
-      document.querySelector("#drawerClose")?.addEventListener("click", () => closeDrawer());
-      document.querySelector("#drawerPrev")?.addEventListener("click", () => step(-1));
-      document.querySelector("#drawerNext")?.addEventListener("click", () => step(1));
-
-      document.addEventListener(
-        "keydown",
-        (event) => {
-          if (event.key === "Escape") {
-            hideTooltip();
-            if (!document.querySelector(":popover-open")) closeDrawer();
-            return;
-          }
-          if (!drawer.hasAttribute("data-open") || event.altKey || event.metaKey || event.ctrlKey) return;
-          const target = event.target as HTMLElement;
-          if (target.closest("input, select, textarea, [contenteditable], [role=tablist], [popover]")) return;
-          if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-            event.preventDefault();
-            step(event.key === "ArrowRight" ? 1 : -1);
-          }
-        },
-        { signal },
-      );
-
-      drawer.addEventListener("click", async (event) => {
-        const target = event.target as HTMLElement;
-        const filterCategory = target.closest<HTMLElement>("[data-filter-category]")?.dataset.filterCategory;
-        const filterTag = target.closest<HTMLElement>("[data-filter-tag]")?.dataset.filterTag;
-        if (filterCategory || filterTag) {
-          if (filterCategory) categorySelect.value = filterCategory;
-          if (filterTag) search.value = filterTag;
-          filterNow();
-          return;
-        }
-        const action = target.closest<HTMLElement>("[data-action]")?.dataset.action;
-        const icon = currentIcon();
-        if (!action || !icon) return;
-        try {
-          if (action === "copy-code") {
-            await copyText(snippetText(activeTab, icon, store.get()));
-            setStatus("Snippet copied.");
-          } else {
-            setStatus(await runAction(action, icon, store.get(), version, drawer));
-          }
-        } catch {
-          setStatus("Couldn't complete that action in this browser.");
-        }
-      });
-
-      wireMenus(drawer);
-
-      // Keep the grid's last rows reachable above the open drawer.
-      const syncClearance = () => {
-        explorer.style.paddingBottom = drawer.hasAttribute("data-open") ? `${drawer.offsetHeight + 24}px` : "";
-      };
-      const resizeObserver = new ResizeObserver(syncClearance);
-      resizeObserver.observe(drawer);
-      const openObserver = new MutationObserver(syncClearance);
-      openObserver.observe(drawer, { attributes: true, attributeFilter: ["data-open"] });
-
-      // Swipe the drawer down to close it on touch screens.
-      let dragStart: number | null = null;
-      const dragZones = [document.querySelector<HTMLElement>("#drawerHandle"), document.querySelector<HTMLElement>("#drawerHeader")];
-      for (const zone of dragZones) {
-        zone?.addEventListener("pointerdown", (event) => {
-          if (event.pointerType !== "touch" || (event.target as HTMLElement).closest("button, a")) return;
-          dragStart = event.clientY;
-          drawer.style.transition = "none";
-        });
-      }
-      addEventListener("pointermove", (event) => {
-        if (dragStart === null) return;
-        drawer.style.transform = `translateY(${Math.max(0, event.clientY - dragStart)}px)`;
-      }, { signal });
-      const endDrag = () => {
-        dragStart = null;
-        drawer.style.transition = "";
-        drawer.style.transform = "";
-      };
-      addEventListener("pointerup", (event) => {
-        if (dragStart === null) return;
-        const distance = event.clientY - dragStart;
-        endDrag();
-        if (distance > 80) closeDrawer();
-      }, { signal });
-      // The browser cancels the pointer when it takes the touch over as a
-      // scroll; reset without closing so no stale drag follows later touches.
-      addEventListener("pointercancel", () => {
-        if (dragStart !== null) endDrag();
-      }, { signal });
-
-      // Customizer: shared with icon pages through localStorage. The grid
-      // previews stroke width and color live.
-      const customizer = drawer.querySelector<HTMLElement>("[data-customizer]");
-      if (customizer) bindCustomizer(customizer, store);
-      store.subscribe((settings) => {
-        browser.style.setProperty("--icon-stroke", String(settings.strokeWidth));
-        if (settings.color === iconDefaults.color) browser.style.removeProperty("--icon-color");
-        else browser.style.setProperty("--icon-color", settings.color);
-        render();
-      });
-      const wideScreen = matchMedia("(min-width: 768px)");
-      drawerCustomize.open = wideScreen.matches;
-
-      // The drawer follows the tile it shows, which a style change rebuilds.
-      afterStyle = () => {
-        afterFilter();
-        if (selected) drawerOpenPage.href = `/icons/${nameOf(selected)}${iconStyle === "solid" ? "?style=solid" : ""}`;
-        render();
-      };
-
-      // Deep link: `/?icon=name` opens the drawer on that icon, and
+      // Deep links: `/?icon=name` opens the drawer on that icon, and
       // `/?style=solid` shows the solid icons.
-      const linked = iconParam();
-      const linkedCard = linked ? entryByName.get(linked)?.card : null;
-      if (linkedCard) {
-        openDrawer(linkedCard, { updateUrl: false });
-        linkedCard.scrollIntoView({ block: "center" });
-      }
-      if (new URLSearchParams(location.search).get("style") === "solid") setStyle("solid", { updateUrl: false });
-
-      signal.addEventListener("abort", () => {
-        sentinelObserver.disconnect();
-        chunkObserver.disconnect();
-        resizeObserver.disconnect();
-        openObserver.disconnect();
-      });
+      drawer.openLinked();
+      if (styleFromUrl() === "solid") styleSwitch.setStyle("solid", { updateUrl: false });
     });
   </script>
 </PageLayout>
@@ -1306,10 +558,5 @@ const structuredData = site
   /* The end padding leaves room for the copy button over the first line. */
   #drawerCode.prose pre.astro-code > code {
     padding: 0 4.5rem 0 0.75rem;
-  }
-
-  [popover][data-menu] {
-    position: fixed;
-    inset: auto;
   }
 </style>

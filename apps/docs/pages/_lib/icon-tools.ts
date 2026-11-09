@@ -1,25 +1,19 @@
 // Client helpers shared by the homepage drawer and the icon pages: customizer
 // settings, highlighted snippets, copy formats, downloads, and menus.
+import { resizeSvg, svgPathData } from "../../../../scripts/icon-styles.mjs";
 import {
-  cdnUrl,
   componentSnippet,
-  cssMaskSnippet,
+  copyFormats,
   customizeSvg,
   dartIconName,
   effectiveStrokeWidth,
-  fontSnippet,
   iconDefaults,
-  iconifySnippet,
   propsSource,
   resolveOptions,
-  shadcnAddCommand,
-  spriteSnippet,
-  svgBase64,
-  svgDataUri,
-  svgToJsx,
-  tailwindMaskSnippet,
+  unsupportedStyle,
 } from "../../../../scripts/snippets.mjs";
-import type { IconStyle, SnippetTemplates } from "./snippet-templates";
+import { recall, remember, storageKeys, type IconStyle } from "./site";
+import type { SnippetTemplates } from "./snippet-templates";
 
 export interface IconSettings {
   size: number;
@@ -30,7 +24,7 @@ export interface IconSettings {
 
 export interface IconRef {
   name: string;
-  component: string;
+  componentName: string;
   /** The canonical, uncustomized SVG markup. */
   svg: string;
   /** Default "outline". A solid icon is filled, so stroke settings don't apply. */
@@ -40,18 +34,14 @@ export interface IconRef {
 /** The settings as snippet options for this icon's style. */
 const optionsFor = (icon: IconRef, settings: IconSettings) => ({ ...settings, style: icon.style ?? "outline" });
 
-const storageKey = "vadivam:settings";
 const urlKeys = { size: "size", strokeWidth: "stroke", color: "color", absoluteStrokeWidth: "absolute" } as const;
 
 export const isDefaultSettings = (settings: IconSettings) =>
-  settings.size === iconDefaults.size &&
-  settings.strokeWidth === iconDefaults.strokeWidth &&
-  settings.color === iconDefaults.color &&
-  !settings.absoluteStrokeWidth;
+  (Object.keys(iconDefaults) as (keyof IconSettings)[]).every((key) => settings[key] === iconDefaults[key]);
 
 function readStoredSettings(): Partial<IconSettings> {
   try {
-    return JSON.parse(localStorage.getItem(storageKey) ?? "{}");
+    return JSON.parse(recall(storageKeys.settings) ?? "{}");
   } catch {
     return {};
   }
@@ -95,11 +85,7 @@ export function createSettingsStore({ url = false } = {}) {
     get: () => settings,
     set(patch: Partial<IconSettings>) {
       settings = resolveOptions({ ...settings, ...patch });
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(settings));
-      } catch {
-        // Private windows can refuse storage; the settings still apply to this page.
-      }
+      remember(storageKeys.settings, JSON.stringify(settings));
       if (url) syncUrl();
       for (const listener of listeners) listener(settings);
     },
@@ -124,25 +110,22 @@ export function readTemplates(id: string): SnippetTemplates | null {
   }
 }
 
-export const escapeHtml = (value: string) =>
-  value.replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char] ?? char);
-
-const pathData = (svg: string) => Array.from(svg.matchAll(/ d="([^"]*)"/g), (match) => match[1] ?? "");
+export const escapeHtml = (value: unknown) =>
+  String(value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char] ?? char);
 
 /** Text snippet for copying: an SVG for the `svg` tab, else a component snippet. */
 export function snippetText(tab: string, icon: IconRef, settings: IconSettings) {
   const options = optionsFor(icon, settings);
-  return tab === "svg" ? customizeSvg(icon.svg, options) : componentSnippet(tab, icon.component, options);
+  return tab === "svg" ? customizeSvg(icon.svg, options) : componentSnippet(tab, icon.componentName, options);
 }
 
 /** Highlighted snippet HTML from the build-time templates, with a plain fallback. */
 export function snippetHtml(templates: SnippetTemplates | null, tab: string, icon: IconRef, settings: IconSettings) {
   const fallback = () => `<pre class="astro-code"><code>${escapeHtml(snippetText(tab, icon, settings))}</code></pre>`;
   if (!templates) return fallback();
-  const styleTemplates = icon.style === "solid" ? templates.solid : templates;
-  if (!styleTemplates) return fallback();
+  const styleTemplates = templates.styles[icon.style ?? "outline"];
   if (tab === "svg") {
-    const paths = pathData(icon.svg);
+    const paths = svgPathData(icon.svg);
     const template = styleTemplates.svg[String(paths.length)];
     if (!template) return fallback();
     const { size, color } = resolveOptions(settings);
@@ -157,45 +140,27 @@ export function snippetHtml(templates: SnippetTemplates | null, tab: string, ico
   const props = propsSource(tab, optionsFor(icon, settings)).trimStart();
   const html = props ? framework.props.split(templates.props).join(escapeHtml(props)) : framework.plain;
   return html
-    .split(templates.component).join(icon.component)
-    .split(templates.dartComponent).join(dartIconName(icon.component));
+    .split(templates.component).join(icon.componentName)
+    .split(templates.dartComponent).join(dartIconName(icon.componentName));
 }
 
-export interface CopyFormat {
-  id: string;
-  label: string;
-  value: (icon: IconRef, settings: IconSettings, version: string) => string;
-}
+/** The Copy as menu: the shared copy formats the framework tabs don't cover, then the names. */
+export const menuFormats = [
+  ...copyFormats.filter((format) => !format.framework),
+  { id: "name", label: "Icon name", styles: ["outline", "solid"], render: (icon: { name: string }) => icon.name },
+  { id: "component", label: "Component name", styles: ["outline", "solid"], render: (icon: { componentName: string }) => icon.componentName },
+];
 
 const styled = (icon: IconRef, settings: IconSettings) => customizeSvg(icon.svg, optionsFor(icon, settings));
-const styleOf = (icon: IconRef) => icon.style ?? "outline";
-
-export const copyFormats: CopyFormat[] = [
-  { id: "svg", label: "SVG", value: (icon, settings) => styled(icon, settings) },
-  { id: "jsx", label: "JSX", value: (icon, settings) => svgToJsx(styled(icon, settings)) },
-  { id: "data-uri", label: "Data URI", value: (icon, settings) => svgDataUri(styled(icon, settings)) },
-  { id: "base64", label: "Base64", value: (icon, settings) => svgBase64(styled(icon, settings)) },
-  { id: "css-mask", label: "CSS mask", value: (icon, settings) => cssMaskSnippet(icon.name, icon.svg, optionsFor(icon, settings)) },
-  { id: "tailwind", label: "Tailwind class", value: (icon, settings) => tailwindMaskSnippet(icon.svg, optionsFor(icon, settings)) },
-  { id: "cdn", label: "CDN URL", value: (icon, _settings, version) => cdnUrl(icon.name, version, styleOf(icon)) },
-  { id: "sprite", label: "Sprite <use>", value: (icon) => spriteSnippet(icon.name, styleOf(icon)) },
-  { id: "font", label: "Icon font", value: (icon) => fontSnippet(icon.name, styleOf(icon)) },
-  { id: "iconify", label: "Iconify name", value: (icon) => iconifySnippet(icon.name, styleOf(icon)) },
-  { id: "shadcn", label: "shadcn add", value: (icon) => shadcnAddCommand(icon.name, styleOf(icon)) },
-  { id: "name", label: "Icon name", value: (icon) => icon.name },
-  { id: "component", label: "Component name", value: (icon) => icon.component },
-];
 
 /** The color an exported image uses: the page's text color stands in for `currentColor`. */
 function resolvedColor(settings: IconSettings, element: Element) {
-  return settings.color === "currentColor" ? getComputedStyle(element).color : settings.color;
+  return settings.color === iconDefaults.color ? getComputedStyle(element).color : settings.color;
 }
 
-export async function pngBlob(icon: IconRef, settings: IconSettings, scale: number, element: Element) {
+async function pngBlob(icon: IconRef, settings: IconSettings, scale: number, element: Element) {
   const pixels = Math.round(settings.size * scale);
-  const svg = customizeSvg(icon.svg, { ...optionsFor(icon, settings), color: resolvedColor(settings, element) })
-    .replace(/ width="[^"]*"/, ` width="${pixels}"`)
-    .replace(/ height="[^"]*"/, ` height="${pixels}"`);
+  const svg = resizeSvg(customizeSvg(icon.svg, { ...optionsFor(icon, settings), color: resolvedColor(settings, element) }), pixels);
   const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
   try {
     const image = new Image(pixels, pixels);
@@ -213,7 +178,7 @@ export async function pngBlob(icon: IconRef, settings: IconSettings, scale: numb
   }
 }
 
-export function downloadBlob(blob: Blob, fileName: string) {
+function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -224,38 +189,29 @@ export function downloadBlob(blob: Blob, fileName: string) {
 
 export const copyText = (value: string) => navigator.clipboard.writeText(value);
 
-export function copyPng(icon: IconRef, settings: IconSettings, element: Element) {
-  return navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob(icon, settings, 2, element) })]);
-}
-
 /** Run a Copy as / Download menu action. Returns a status message. */
 export async function runAction(action: string, icon: IconRef, settings: IconSettings, version: string, element: Element) {
+  const baseName = `${icon.name}${icon.style === "solid" ? "-solid" : ""}`;
   if (action === "download-svg") {
-    const fileName = `${icon.name}${icon.style === "solid" ? "-solid" : ""}.svg`;
-    downloadBlob(new Blob([styled(icon, settings)], { type: "image/svg+xml" }), fileName);
-    return `Downloaded ${fileName}`;
+    downloadBlob(new Blob([styled(icon, settings)], { type: "image/svg+xml" }), `${baseName}.svg`);
+    return `Downloaded ${baseName}.svg`;
   }
   const png = action.match(/^download-png-(\d)$/);
   if (png) {
     const scale = Number(png[1]);
-    const baseName = `${icon.name}${icon.style === "solid" ? "-solid" : ""}`;
     downloadBlob(await pngBlob(icon, settings, scale, element), `${baseName}${scale > 1 ? `@${scale}x` : ""}.png`);
     return `Downloaded ${baseName}.png`;
   }
   if (action === "copy-png") {
-    await copyPng(icon, settings, element);
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob(icon, settings, 2, element) })]);
     return "PNG copied.";
   }
-  const format = copyFormats.find((item) => `copy-${item.id}` === action);
+  const format = menuFormats.find((item) => `copy-${item.id}` === action);
   if (!format) return "";
-  let value;
-  try {
-    value = format.value(icon, settings, version);
-  } catch (error) {
-    // A format with no solid version, such as Iconify, says so instead.
-    return (error as Error).message;
-  }
-  await copyText(value);
+  const style = icon.style ?? "outline";
+  const unsupported = unsupportedStyle(format, style);
+  if (unsupported) return unsupported;
+  await copyText(format.render(icon, optionsFor(icon, settings), version));
   return `${format.label} copied.`;
 }
 
@@ -312,7 +268,7 @@ export function bindCustomizer(element: HTMLElement, store: SettingsStore) {
     const target = event.target as HTMLElement;
     const preset = target.closest<HTMLElement>("[data-size-preset]");
     if (preset) store.set({ size: Number(preset.dataset.sizePreset) });
-    if (target.closest("[data-reset-color]")) store.set({ color: "currentColor" });
+    if (target.closest("[data-reset-color]")) store.set({ color: iconDefaults.color });
     if (target.closest("[data-reset-all]")) store.reset();
   });
 
@@ -332,7 +288,7 @@ export function bindCustomizer(element: HTMLElement, store: SettingsStore) {
     for (const preset of element.querySelectorAll<HTMLElement>("[data-size-preset]")) {
       preset.setAttribute("aria-pressed", String(Number(preset.dataset.sizePreset) === settings.size));
     }
-    element.querySelector<HTMLElement>("[data-reset-color]")?.toggleAttribute("hidden", settings.color === "currentColor");
+    element.querySelector<HTMLElement>("[data-reset-color]")?.toggleAttribute("hidden", settings.color === iconDefaults.color);
     element.querySelector<HTMLElement>("[data-reset-all]")?.toggleAttribute("disabled", isDefaultSettings(settings));
   });
 }
@@ -354,9 +310,7 @@ export function renderPreviews(root: ParentNode, icon: IconRef, settings: IconSe
     // renders it at that size, so `absoluteStrokeWidth` adjusts its stroke.
     const options = optionsFor(icon, settings);
     const markup = "zoom" in preview.dataset
-      ? customizeSvg(icon.svg, options)
-          .replace(/ width="[^"]*"/, ` width="${pixels}"`)
-          .replace(/ height="[^"]*"/, ` height="${pixels}"`)
+      ? resizeSvg(customizeSvg(icon.svg, options), pixels)
       : customizeSvg(icon.svg, { ...options, size: pixels });
     // Parse as SVG rather than assigning HTML, so URL-provided settings can
     // only ever become attribute values of this one element.

@@ -2,15 +2,17 @@
 import PageLayout from "blume/components/layout/PageLayout.astro";
 import CodeBlock from "blume/components/content/CodeBlock.astro";
 import data from "blume:data";
-import { categories, icons, iconsByName } from "vadivam/manifest";
-import { iconLastmods } from "../../../../scripts/icon-lastmods.mjs";
-import { frameworks, iconDefaults, installCommand } from "../../../../scripts/snippets.mjs";
+import { categories, icons } from "vadivam/manifest";
+import { canvasSize, resizeSvg } from "../../../../scripts/icon-styles.mjs";
+import { cdnUrl, frameworks, iconAssetPath, iconDefaults, installCommand } from "../../../../scripts/snippets.mjs";
 import pkg from "../../../../package.json";
+import { iconLastmods } from "../../scripts/icon-lastmods.mjs";
 import ActionMenus from "../_lib/ActionMenus.astro";
 import Customizer from "../_lib/Customizer.astro";
 import VIcon from "../_lib/VIcon.astro";
-import { buildSnippetTemplates, serializeForScript } from "../_lib/snippet-templates";
-import { snippetHtml } from "../_lib/icon-tools";
+import { buildSnippetTemplates, iconTemplates, serializeForScript } from "../_lib/snippet-templates";
+import { snippetHtml, type IconRef } from "../_lib/icon-tools";
+import { packageManagers, sizePresets } from "../_lib/site";
 import { relatedIcons } from "../_lib/related-icons";
 import { lucideSvg, lucideVersion } from "../_lib/lucide";
 
@@ -24,50 +26,31 @@ export function getStaticPaths() {
 
 const { config } = data;
 const { icon, lastModified } = Astro.props;
-const svg = iconsByName[icon.name].svg;
-const solidSvg = iconsByName[icon.name].solid?.svg ?? "";
+const svg = icon.svg;
+const solidSvg = icon.solid?.svg ?? "";
 const c = icon.componentName;
 
-// The client swaps the manager into each tab's install line; npm is the default.
-const packageManagers = ["npm", "pnpm", "bun", "yarn"];
-
-// Every icon page shares one template set; each page ships only the SVG shell
-// for its own path count.
-const countPaths = (markup: string) => (markup.match(/ d="/g) ?? []).length;
-const pathCounts = [...new Set(icons.map((item) => countPaths(item.svg)))].filter((count) => count > 0);
-const solidPathCounts = [...new Set(icons.map((item) => countPaths(item.solid?.svg ?? "")))].filter((count) => count > 0);
-const allTemplates = await buildSnippetTemplates(config.codeThemes, pathCounts, solidPathCounts);
-const pathCount = String(countPaths(svg));
-const solidPathCount = String(countPaths(solidSvg));
-const templates = {
-  ...allTemplates,
-  svg: { [pathCount]: allTemplates.svg[pathCount] ?? "" },
-  solid: { ...allTemplates.solid, svg: { [solidPathCount]: allTemplates.solid.svg[solidPathCount] ?? "" } },
-};
-const iconRef = { name: icon.name, component: c, svg };
-const solidRef = { name: icon.name, component: c, svg: solidSvg, style: "solid" as const };
+// Every icon page shares one template set; each page ships only the SVG
+// shells for its own path counts.
+const templates = iconTemplates(await buildSnippetTemplates(config.codeThemes), { outline: svg, solid: solidSvg });
+const iconRef: IconRef = { name: icon.name, componentName: c, svg };
+const solidRef: IconRef = { name: icon.name, componentName: c, svg: solidSvg, style: "solid" };
 const iconStyles = [
-  { id: "outline", label: "Outline", svg },
-  { id: "solid", label: "Solid", svg: solidSvg },
-];
+  { id: "outline", label: "Outline" },
+  { id: "solid", label: "Solid" },
+] as const;
+// Each tab installs its framework's package; the SVG tab, the core package.
+// The client rewrites the lines for the chosen package manager.
 const snippetTabs = [
-  ...frameworks.map(({ id, label, packageName, registry }) => ({
-    id,
-    label,
-    packageName,
-    // Only npm installs follow the package manager switch.
-    npm: registry === "npm",
-    install: installCommand(id, { version: pkg.version }),
-  })),
-  { id: "svg", label: "SVG", packageName: "vadivam", npm: true, install: "npm install vadivam" },
+  ...frameworks.map(({ id, label, packageName }) => ({ id, label, packageName, target: id })),
+  { id: "svg", label: "SVG", packageName: "vadivam", target: "core" },
 ];
+const install = (target: string) => installCommand(target, { version: pkg.version });
 const index = icons.findIndex((item) => item.name === icon.name);
 const previous = icons[index - 1];
 const next = icons[index + 1];
 const related = relatedIcons(icon.name);
 const lucide = lucideSvg(c);
-const sized = (markup: string, size: number) =>
-  markup.replace(/ width="24"/, ` width="${size}"`).replace(/ height="24"/, ` height="${size}"`);
 // How the zoomed preview draws the icon; the last three need Lucide's drawing.
 const compareModes = [
   { id: "vadivam", label: "Vadivam", title: "Vadivam's drawing" },
@@ -75,7 +58,6 @@ const compareModes = [
   { id: "overlay", label: "Overlay", title: "Vadivam drawn over Lucide" },
   { id: "split", label: "Split", title: "Drag to compare Vadivam and Lucide" },
 ];
-const realSizes = [16, 20, 24, 32, 48];
 const primaryCategory = icon.categories[0];
 const updated = lastModified
   ? new Date(`${lastModified}T00:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })
@@ -232,8 +214,8 @@ const structuredData = site
         </div>
 
         <div class="compare-zoom relative mx-auto mt-4 mb-10 aspect-square w-[min(15rem,70%)]">
-          {lucide && <div class="compare-layer" data-layer="lucide" data-lucide-preview="240" data-zoom aria-hidden="true" set:html={sized(lucide, 240)} />}
-          <div class="compare-layer" data-layer="vadivam" data-icon-preview="240" data-zoom aria-hidden="true" set:html={sized(svg, 240)} />
+          {lucide && <div class="compare-layer" data-layer="lucide" data-lucide-preview="240" data-zoom aria-hidden="true" set:html={resizeSvg(lucide, 240)} />}
+          <div class="compare-layer" data-layer="vadivam" data-icon-preview="240" data-zoom aria-hidden="true" set:html={resizeSvg(svg, 240)} />
           <div class="pixel-grid pointer-events-none absolute inset-0" id="pixelGridOverlay" aria-hidden="true"></div>
           {lucide && (
             <>
@@ -245,21 +227,21 @@ const structuredData = site
           )}
         </div>
 
-        <div class="size-strip" aria-label="Real-size previews">
+        <div class="size-strip" style={`--sizes: ${sizePresets.length}`} aria-label="Real-size previews">
           <span class="size-strip-label" data-size-layer="lucide" aria-hidden="true">Vadivam</span>
-          {realSizes.map((size) => (
-            <span class="grid place-items-center" data-icon-preview={size} aria-hidden="true" set:html={sized(svg, size)} />
+          {sizePresets.map((size) => (
+            <span class="grid place-items-center" data-icon-preview={size} aria-hidden="true" set:html={resizeSvg(svg, size)} />
           ))}
           {lucide && (
             <>
               <span class="size-strip-label" data-size-layer="lucide" aria-hidden="true">Lucide</span>
-              {realSizes.map((size) => (
-                <span class="grid place-items-center" data-size-layer="lucide" data-lucide-preview={size} aria-hidden="true" set:html={sized(lucide, size)} />
+              {sizePresets.map((size) => (
+                <span class="grid place-items-center" data-size-layer="lucide" data-lucide-preview={size} aria-hidden="true" set:html={resizeSvg(lucide, size)} />
               ))}
             </>
           )}
           <span class="size-strip-label" data-size-layer="lucide" aria-hidden="true"></span>
-          {realSizes.map((size) => (
+          {sizePresets.map((size) => (
             <span class="size-strip-size">{size}</span>
           ))}
         </div>
@@ -315,7 +297,7 @@ const structuredData = site
               <span class="size-1.5 rounded-full bg-accent" id="customizedDot" hidden></span>
             </span>
             <span class="inline-flex items-center gap-2 font-mono text-xs text-muted-foreground">
-              <span id="customizeSummary">24px · 2</span>
+              <span id="customizeSummary">{iconDefaults.size}px · {iconDefaults.strokeWidth}</span>
               <VIcon name="chevron-down" size={14} class="transition-transform group-open:rotate-180" />
             </span>
           </summary>
@@ -340,7 +322,7 @@ const structuredData = site
           <VIcon name="chevron-down" size={12} class="pointer-events-none absolute end-1.5" />
         </label>
       </div>
-      <div class="mt-3 rounded-xl border border-border" data-tabgroup="framework">
+      <div class="mt-3 rounded-xl border border-border" id="frameworkTabs">
         <div class="flex gap-4 overflow-x-auto border-b border-border px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Framework snippet">
           {
             snippetTabs.map((tab, index) => (
@@ -364,8 +346,8 @@ const structuredData = site
             <div class="grid min-w-0" id={`panel-${tab.id}`} role="tabpanel" aria-labelledby={`tab-${tab.id}`} hidden={index !== 0}>
               <div class="flex min-w-0 items-center gap-2 border-b border-border ps-4 pe-2">
                 <span class="flex-none font-mono text-xs text-muted-foreground select-none" aria-hidden="true">$</span>
-                <code class="min-w-0 flex-1 truncate bg-transparent py-2.5 font-mono text-[0.78rem]" data-install={tab.npm ? tab.packageName : undefined}>{tab.install}</code>
-                <button class={iconButtonClass} type="button" data-action="copy-install" data-package={tab.packageName} data-command={tab.npm ? undefined : tab.install} aria-label={`Copy install command for ${tab.packageName}`}><VIcon name="copy" size={14} /></button>
+                <code class="min-w-0 flex-1 truncate bg-transparent py-2.5 font-mono text-[0.78rem]" data-install={tab.target}>{install(tab.target)}</code>
+                <button class={iconButtonClass} type="button" data-action="copy-install" data-install-target={tab.target} aria-label={`Copy install command for ${tab.packageName}`}><VIcon name="copy" size={14} /></button>
               </div>
               <div class="snippet-panel relative min-w-0">
                 <div class="prose max-w-none" data-snippet={tab.id} set:html={snippetHtml(templates, tab.id, iconRef, iconDefaults)} />
@@ -377,19 +359,16 @@ const structuredData = site
                   aria-label="Copy snippet"
                 ><VIcon name="copy" size={14} /></button>
               </div>
-              {tab.id === "svg" && iconStyles.map((style) => {
-                const folder = style.id === "solid" ? "solid/icons" : "icons";
-                return (
-                  <div class="grid min-w-0" data-style-block={style.id} hidden={style.id !== "outline"}>
-                    <div class="snippet-panel relative min-w-0 border-t border-border">
-                      <CodeBlock lang="ts" code={`import iconUrl from "vadivam/${folder}/${icon.fileName}";`} icons={false} />
-                    </div>
-                    <div class="snippet-panel relative min-w-0 border-t border-border">
-                      <CodeBlock lang="html" code={`<img src="https://cdn.jsdelivr.net/npm/vadivam@${pkg.version}/dist/${folder}/${icon.fileName}" width="24" height="24" alt="" />`} icons={false} />
-                    </div>
+              {tab.id === "svg" && iconStyles.map((style) => (
+                <div class="grid min-w-0" data-style-block={style.id} hidden={style.id !== "outline"}>
+                  <div class="snippet-panel relative min-w-0 border-t border-border">
+                    <CodeBlock lang="ts" code={`import iconUrl from "vadivam/${iconAssetPath(icon.name, style.id)}";`} icons={false} />
                   </div>
-                );
-              })}
+                  <div class="snippet-panel relative min-w-0 border-t border-border">
+                    <CodeBlock lang="html" code={`<img src="${cdnUrl(icon.name, pkg.version, style.id)}" width="${canvasSize}" height="${canvasSize}" alt="" />`} icons={false} />
+                  </div>
+                </div>
+              ))}
             </div>
           ))
         }
@@ -436,6 +415,7 @@ const structuredData = site
   <script is:inline type="application/json" id="iconData" set:html={serializeForScript({ icon: iconRef, solid: solidRef, lucide, version: pkg.version })}></script>
 
   <script>
+    import { iconDefaults, installCommand } from "../../../../scripts/snippets.mjs";
     import {
       bindCustomizer,
       copyText,
@@ -450,6 +430,18 @@ const structuredData = site
       wireMenus,
       type IconRef,
     } from "../_lib/icon-tools";
+    import {
+      defaultTab,
+      packageManagers,
+      recall,
+      remember,
+      setUrlParams,
+      statusLine,
+      storageKeys,
+      styleFromUrl,
+      styleParam,
+      type IconStyle,
+    } from "../_lib/site";
 
     // Astro's client router swaps pages without reloading and runs a bundled
     // script once, so set each icon page up on every page load.
@@ -457,12 +449,13 @@ const structuredData = site
       if (!document.querySelector("#iconDetail")) return;
 
       const detail = document.querySelector<HTMLElement>("#iconDetail")!;
-      const status = document.querySelector<HTMLElement>("#pageStatus")!;
       const stage = document.querySelector<HTMLElement>("#previewStage")!;
       const gridToggle = document.querySelector<HTMLInputElement>("#pixelGrid")!;
       const overlay = document.querySelector<HTMLElement>("#pixelGridOverlay")!;
       const summary = document.querySelector<HTMLElement>("#customizeSummary")!;
       const customizedDot = document.querySelector<HTMLElement>("#customizedDot")!;
+      const frameworkTabs = document.querySelector<HTMLElement>("#frameworkTabs")!;
+      const setStatus = statusLine(document.querySelector<HTMLElement>("#pageStatus")!);
       const templates = readTemplates("snippetTemplates");
       const { icon: outline, solid, lucide, version } = JSON.parse(document.getElementById("iconData")?.textContent ?? "{}") as {
         icon: IconRef;
@@ -474,34 +467,10 @@ const structuredData = site
       // and the code snippets use.
       let icon = outline;
       const store = createSettingsStore({ url: true });
-      const tabKey = "vadivam:tab";
-      const backgroundKey = "vadivam:preview-background";
-      let statusTimer: ReturnType<typeof setTimeout> | undefined;
 
-      const setStatus = (message: string) => {
-        status.textContent = message;
-        clearTimeout(statusTimer);
-        statusTimer = setTimeout(() => (status.textContent = ""), 2000);
-      };
-
-      const remember = (key: string, value: string) => {
-        try {
-          localStorage.setItem(key, value);
-        } catch {
-          // Storage can be unavailable; the choice still applies to this page.
-        }
-      };
-      const recall = (key: string) => {
-        try {
-          return localStorage.getItem(key);
-        } catch {
-          return null;
-        }
-      };
-
-      // Each tab group switches its own panels; the framework choice is remembered.
-      const selectTab = (group: HTMLElement, id: string) => {
-        const buttons = Array.from(group.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+      // The framework choice is remembered across pages.
+      const selectTab = (id: string) => {
+        const buttons = Array.from(frameworkTabs.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
         if (!buttons.some((button) => button.dataset.tab === id)) return;
         for (const button of buttons) {
           const active = button.dataset.tab === id;
@@ -510,36 +479,30 @@ const structuredData = site
           if (panel) panel.hidden = !active;
         }
       };
-      for (const group of detail.querySelectorAll<HTMLElement>("[data-tabgroup]")) {
-        group.addEventListener("click", (event) => {
-          const tab = (event.target as HTMLElement).closest<HTMLElement>('[role="tab"]')?.dataset.tab;
-          if (!tab) return;
-          selectTab(group, tab);
-          if (group.dataset.tabgroup === "framework") remember(tabKey, tab);
-        });
-      }
-      const frameworkGroup = detail.querySelector<HTMLElement>('[data-tabgroup="framework"]');
-      if (frameworkGroup) selectTab(frameworkGroup, recall(tabKey) ?? "react");
+      frameworkTabs.addEventListener("click", (event) => {
+        const tab = (event.target as HTMLElement).closest<HTMLElement>('[role="tab"]')?.dataset.tab;
+        if (!tab) return;
+        selectTab(tab);
+        remember(storageKeys.tab, tab);
+      });
+      selectTab(recall(storageKeys.tab) ?? defaultTab);
 
-      // One package manager choice rewrites every tab's install line.
-      const managerKey = "vadivam:package-manager";
-      const packageManagers = ["npm", "pnpm", "bun", "yarn"];
-      const installCommand = (manager: string, packageName: string) =>
-        `${manager} ${manager === "npm" ? "install" : "add"} ${packageName}`;
+      // One package manager choice rewrites every tab's install line; only npm
+      // packages follow it.
       const managerSelect = detail.querySelector<HTMLSelectElement>("#packageManager")!;
+      const install = (target: string) => installCommand(target, { manager: managerSelect.value, version });
       const setManager = (manager: string) => {
         if (!packageManagers.includes(manager)) return;
         managerSelect.value = manager;
         for (const line of detail.querySelectorAll<HTMLElement>("[data-install]")) {
-          line.textContent = installCommand(manager, line.dataset.install ?? "");
+          line.textContent = install(line.dataset.install ?? "core");
         }
       };
-      const currentManager = () => managerSelect.value;
       managerSelect.addEventListener("change", () => {
         setManager(managerSelect.value);
-        remember(managerKey, managerSelect.value);
+        remember(storageKeys.packageManager, managerSelect.value);
       });
-      setManager(recall(managerKey) ?? "npm");
+      setManager(recall(storageKeys.packageManager) ?? packageManagers[0]!);
 
       const setBackground = (value: string) => {
         stage.dataset.background = value;
@@ -551,13 +514,12 @@ const structuredData = site
         const value = (event.target as HTMLElement).closest<HTMLElement>("[data-background]")?.dataset.background;
         if (!value) return;
         setBackground(value);
-        remember(backgroundKey, value);
+        remember(storageKeys.previewBackground, value);
       });
-      setBackground(recall(backgroundKey) ?? "auto");
+      setBackground(recall(storageKeys.previewBackground) ?? "auto");
 
       // The zoomed preview shows Vadivam, Lucide, both overlaid, or a split
-      // with a draggable divider; the choice is remembered like the others.
-      const compareKey = "vadivam:compare";
+      // with a draggable divider.
       const setCompare = (mode: string) => {
         const buttons = Array.from(detail.querySelectorAll<HTMLElement>("[data-compare-mode]"));
         if (!buttons.some((button) => button.dataset.compareMode === mode)) return;
@@ -568,9 +530,9 @@ const structuredData = site
         const mode = (event.target as HTMLElement).closest<HTMLElement>("[data-compare-mode]")?.dataset.compareMode;
         if (!mode) return;
         setCompare(mode);
-        remember(compareKey, mode);
+        remember(storageKeys.compare, mode);
       });
-      setCompare(recall(compareKey) ?? "vadivam");
+      setCompare(recall(storageKeys.compare) ?? "vadivam");
       document.querySelector<HTMLInputElement>("#compareRange")?.addEventListener("input", (event) => {
         stage.style.setProperty("--split", `${(event.target as HTMLInputElement).value}%`);
       });
@@ -580,9 +542,9 @@ const structuredData = site
       };
       gridToggle.addEventListener("change", () => {
         showGrid();
-        remember("vadivam:pixel-grid", String(gridToggle.checked));
+        remember(storageKeys.pixelGrid, String(gridToggle.checked));
       });
-      gridToggle.checked = recall("vadivam:pixel-grid") !== "false";
+      gridToggle.checked = recall(storageKeys.pixelGrid) !== "false";
       showGrid();
 
       // Paint the previews, the customize summary, and the snippets for the
@@ -592,14 +554,13 @@ const structuredData = site
         renderPreviews(detail, icon, settings);
         if (lucide) renderPreviews(detail, { ...outline, svg: lucide }, settings, "lucide-preview");
         const stroke = icon.style === "solid" ? "" : ` · ${settings.strokeWidth}`;
-        summary.textContent = `${settings.size}px${stroke}${settings.color === "currentColor" ? "" : ` · ${settings.color}`}`;
+        summary.textContent = `${settings.size}px${stroke}${settings.color === iconDefaults.color ? "" : ` · ${settings.color}`}`;
         customizedDot.hidden = isDefaultSettings(settings);
         for (const panel of detail.querySelectorAll<HTMLElement>("[data-snippet]")) {
-          panel.innerHTML = snippetHtml(templates, panel.dataset.snippet ?? "react", icon, settings);
+          panel.innerHTML = snippetHtml(templates, panel.dataset.snippet ?? defaultTab, icon, settings);
         }
       };
-      const setStyle = (style: string, { updateUrl = true } = {}) => {
-        if (style !== "outline" && style !== "solid") return;
+      const setStyle = (style: IconStyle, { updateUrl = true } = {}) => {
         icon = style === "solid" ? solid : outline;
         for (const button of detail.querySelectorAll<HTMLElement>("[data-style-choice]")) {
           button.setAttribute("aria-pressed", String(button.dataset.styleChoice === style));
@@ -607,18 +568,13 @@ const structuredData = site
         for (const block of detail.querySelectorAll<HTMLElement>("[data-style-block]")) block.hidden = block.dataset.styleBlock !== style;
         showStrokeSettings(detail, style);
         render();
-        if (updateUrl) {
-          const url = new URL(location.href);
-          if (style === "solid") url.searchParams.set("style", "solid");
-          else url.searchParams.delete("style");
-          history.replaceState(history.state, "", url);
-        }
+        if (updateUrl) setUrlParams({ style: styleParam(style) });
       };
       detail.querySelector('[aria-label="Icon style"]')?.addEventListener("click", (event) => {
         const style = (event.target as HTMLElement).closest<HTMLElement>("[data-style-choice]")?.dataset.styleChoice;
-        if (style) setStyle(style);
+        if (style === "outline" || style === "solid") setStyle(style);
       });
-      setStyle(new URLSearchParams(location.search).get("style") ?? "outline", { updateUrl: false });
+      setStyle(styleFromUrl(), { updateUrl: false });
 
       const customizer = detail.querySelector<HTMLElement>("[data-customizer]");
       if (customizer) bindCustomizer(customizer, store);
@@ -629,10 +585,10 @@ const structuredData = site
         if (!target) return;
         try {
           if (target.dataset.action === "copy-install") {
-            await copyText(target.dataset.command ?? installCommand(currentManager(), target.dataset.package ?? ""));
+            await copyText(install(target.dataset.installTarget ?? "core"));
             setStatus("Install command copied.");
           } else if (target.dataset.action === "copy-snippet") {
-            await copyText(snippetText(target.dataset.snippetTab ?? "react", icon, store.get()));
+            await copyText(snippetText(target.dataset.snippetTab ?? defaultTab, icon, store.get()));
             setStatus("Snippet copied.");
           } else if (target.dataset.action === "copy-code") {
             await copyText(target.dataset.copy ?? "");
@@ -837,14 +793,14 @@ const structuredData = site
      labelled Lucide row in the compare modes. */
   #iconDetail .size-strip {
     display: grid;
-    grid-template-columns: 3.5rem repeat(5, minmax(0, 1fr));
+    grid-template-columns: 3.5rem repeat(var(--sizes), minmax(0, 1fr));
     align-items: center;
     row-gap: 0.75rem;
     padding: 0 1rem 1.25rem;
   }
 
   #previewStage[data-compare="vadivam"] .size-strip {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--sizes), minmax(0, 1fr));
     max-width: 24rem;
     width: 100%;
     margin-inline: auto;

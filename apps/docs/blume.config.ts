@@ -2,6 +2,7 @@ import { defineConfig } from "blume";
 import { cloudflare } from "blume/analytics";
 import { cloudflare as cloudflareDeployment } from "blume/deploy";
 import { filesystem, githubReleases } from "blume/sources";
+import { siteUrl } from "../../scripts/packages.mjs";
 
 export default defineConfig({
   title: "Vadivam Icons",
@@ -89,7 +90,7 @@ export default defineConfig({
     x: { creator: "@praveenjuge", handle: "@praveenjuge" },
   },
   deployment: cloudflareDeployment({
-    site: "https://vadivam.praveenjuge.com",
+    site: siteUrl,
   }),
   poweredBy: false,
   markdown: {

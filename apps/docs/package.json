@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "blume dev",
-    "build": "blume build && bun ../../scripts/docs-worker.mjs && bun ../../scripts/sync-wrangler-config.mjs && bun ../../scripts/complete-sitemap.mjs",
-    "audit": "bun ../../scripts/audit-docs.mjs",
+    "build": "bun scripts/build.mjs",
+    "audit": "bun scripts/audit.mjs",
     "check": "blume check",
     "validate": "blume validate",
     "doctor": "blume doctor"

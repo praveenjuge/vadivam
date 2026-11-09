@@ -1,6 +1,7 @@
 ---
 // Inline a Vadivam icon for page chrome, so the site uses its own set.
 import { iconsByName } from "vadivam/manifest";
+import { resizeSvg } from "../../../../scripts/icon-styles.mjs";
 
 interface Props {
   name: keyof typeof iconsByName;
@@ -9,10 +10,7 @@ interface Props {
 }
 
 const { name, size = 16, class: className } = Astro.props;
-const svg = iconsByName[name].svg
-  .replace(/ width="24"/, ` width="${size}"`)
-  .replace(/ height="24"/, ` height="${size}"`)
-  .replace("<svg ", '<svg aria-hidden="true" focusable="false" ');
+const svg = resizeSvg(iconsByName[name].svg, size).replace("<svg ", '<svg aria-hidden="true" focusable="false" ');
 ---
 
 <span class:list={["inline-flex flex-none", className]} set:html={svg} />

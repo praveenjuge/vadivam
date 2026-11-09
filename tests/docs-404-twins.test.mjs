@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { docsPaths, fromRoot, repoRoot as root } from "../apps/docs/scripts/paths.mjs";
+import { blumeWorkerEntry } from "../apps/docs/worker/routes.mjs";
+import { notFound } from "../apps/docs/pages/_lib/site.ts";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const dist = path.join(root, "apps", "docs", "dist");
-const clientDir = path.join(dist, "client");
-const serverDir = path.join(dist, "server");
+const clientDir = fromRoot(docsPaths.client);
+const serverDir = fromRoot(docsPaths.server);
 
 // Regression: a custom pages/404.astro makes Blume skip generating the
 // Markdown and JSON 404 twins, so agents that asked a missing URL for
@@ -24,8 +24,8 @@ describe("docs 404 twins", () => {
     const body = readFileSync(file, "utf8");
     expect(body.length).toBeGreaterThanOrEqual(20);
     expect(body).toContain("not found");
-    for (const recovery of ["/sitemap.xml", "/llms.txt", "/openapi.json"]) {
-      expect(body).toContain(`https://vadivam.praveenjuge.com${recovery}`);
+    for (const { path: recovery } of notFound.links) {
+      expect(body).toContain(`(https://vadivam.praveenjuge.com${recovery})`);
     }
   });
 
@@ -36,7 +36,7 @@ describe("docs 404 twins", () => {
     expect(body.status).toBe(404);
     expect(body.title).toBeTruthy();
     expect(body.code).toBe("PAGE_NOT_FOUND");
-    expect(body.links.length).toBeGreaterThan(0);
+    expect(body.links.map(({ href }) => new URL(href).pathname)).toEqual(notFound.links.map(({ path: route }) => route));
     for (const link of body.links) {
       expect(link.href).toStartWith("https://vadivam.praveenjuge.com");
     }
@@ -52,7 +52,8 @@ describe("docs 404 twins", () => {
     const url = `http://127.0.0.1:${port}/this-page-does-not-exist`;
     const worker = spawn(
       process.execPath,
-      ["--cwd", "apps/docs", "wrangler", "dev", "--config", "dist/server/wrangler.json", "--ip", "127.0.0.1", "--port", String(port)],
+      // The root config, which `bun run deploy` and Cloudflare Workers Builds deploy.
+      ["x", "wrangler", "dev", "--ip", "127.0.0.1", "--port", String(port)],
       { cwd: root, stdio: "ignore" },
     );
     try {
@@ -93,7 +94,7 @@ describe("docs 404 twins", () => {
   }, 30000);
 
   test("Cloudflare wrapper and asset routing enable negotiated 404s", () => {
-    const wrapper = readFileSync(path.join(serverDir, "blume-worker.mjs"), "utf8");
+    const wrapper = readFileSync(path.join(serverDir, blumeWorkerEntry), "utf8");
     expect(wrapper).toMatch(/const NOT_FOUND = \{[^}]*"json":true[^}]*"markdown":true[^}]*\}/);
     const config = JSON.parse(readFileSync(path.join(serverDir, "wrangler.json"), "utf8"));
     expect(config.assets.directory).toBe("../client");
