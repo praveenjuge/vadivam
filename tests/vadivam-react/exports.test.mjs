@@ -46,6 +46,9 @@ describe("vadivam-react exports", () => {
       const mod = await importer();
       expect(mod.default.displayName).toBe(icon.componentName);
       // React keys each element; the geometry is the icon's own.
+      const keys = mod.__iconNode.map(([, attrs]) => attrs.key);
+      expect(new Set(keys).size).toBe(keys.length);
+      expect(keys.every((key) => typeof key === "string" && key.length > 0)).toBe(true);
       expect(mod.__iconNode.map(([tag, { key, ...attrs }]) => [tag, attrs])).toEqual(icon.iconNode);
     }
   );

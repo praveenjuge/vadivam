@@ -63,9 +63,8 @@ export const styles = Object.freeze({
 export const styleIds = Object.freeze(Object.keys(styles));
 
 export function styleOf(id = "outline") {
-  const style = styles[id];
-  if (!style) throw new Error(`Unknown icon style: ${id}`);
-  return style;
+  if (!Object.hasOwn(styles, id)) throw new Error(`Unknown icon style: ${id}`);
+  return styles[id];
 }
 
 /** The root attributes every icon file of a style carries, in file order. */

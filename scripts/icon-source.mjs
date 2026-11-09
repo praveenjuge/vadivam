@@ -66,12 +66,23 @@ export function validateIconMetadata(names, metadata = lucideMetadata) {
   }
 }
 
-/** Every Lucide-derived file is for the release metadata/lucide.json pins. */
-export async function validateLucidePins() {
+/**
+ * Every Lucide-derived file is for the release metadata/lucide.json pins, and
+ * every icon has a canonical name in that release. The rankings list every
+ * canonical name, so a deprecated name fails here even if its metadata entry
+ * was renamed with it.
+ */
+export async function validateLucidePins(names) {
   const rankings = await readJson("metadata/lucide-rankings.json");
   assert(
     rankings.lucideVersion === lucideVersion,
     `metadata/lucide-rankings.json is for Lucide ${rankings.lucideVersion}, not the pinned ${lucideVersion}; run bun run icons:rankings`,
+  );
+  const canonical = new Set(rankings.icons.map(({ name }) => name));
+  const unknown = names.filter((name) => !canonical.has(name));
+  assert(
+    unknown.length === 0,
+    `Deprecated or non-canonical icon names for Lucide ${lucideVersion}: ${unknown.join(", ")}. Rename them to current canonical Lucide names`,
   );
   const docs = await readJson("apps/docs/package.json");
   const docsLucide = docs.dependencies?.lucide ?? docs.devDependencies?.lucide;

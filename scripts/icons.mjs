@@ -303,7 +303,7 @@ async function checkIcons() {
   }
   validateStyleTwins(namesByStyle);
   validateIconMetadata(namesByStyle.outline);
-  await validateLucidePins();
+  await validateLucidePins(namesByStyle.outline);
   await synchronizeDocCounts(namesByStyle.outline, { check: true });
   console.log(
     `Checked ${namesByStyle.outline.length} icons in ${Object.keys(styles).length} styles against Lucide ${lucideMetadata.lucideVersion}.`,
@@ -337,10 +337,10 @@ const commands = {
 };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const command = commands[process.argv[2]];
-  if (!command) {
+  const name = process.argv[2];
+  if (!Object.hasOwn(commands, name)) {
     console.error(`Usage: bun scripts/icons.mjs <${Object.keys(commands).join("|")}>`);
     process.exit(1);
   }
-  await command();
+  await commands[name]();
 }

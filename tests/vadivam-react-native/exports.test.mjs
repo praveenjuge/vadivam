@@ -47,6 +47,9 @@ describe("vadivam-react-native exports", () => {
       expect(subpath.default.displayName).toBe(icon.componentName);
       expect(alias.default).toBe(subpath.default);
       // React keys each element; the geometry is the icon's own.
+      const keys = subpath.__iconNode.map(([, attrs]) => attrs.key);
+      expect(new Set(keys).size).toBe(keys.length);
+      expect(keys.every((key) => typeof key === "string" && key.length > 0)).toBe(true);
       expect(subpath.__iconNode.map(([tag, { key, ...attrs }]) => [tag, attrs])).toEqual(icon.iconNode);
     },
   );

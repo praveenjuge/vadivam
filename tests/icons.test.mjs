@@ -4,6 +4,7 @@ import {
   readIcons,
   styles,
   validateIconMetadata,
+  validateLucidePins,
   validateStyleTwins,
   validateSvgContent,
 } from "../scripts/icon-source.mjs";
@@ -118,6 +119,13 @@ describe("icon validation", () => {
     await expect(
       assertIconNodesPassRuntimePolicy([icon([["path", { d: "M4 12h16", stroke: "url(https://example.com/x#a)" }]])]),
     ).rejects.toThrow("bad.svg: <path> attribute stroke is not allowed at runtime");
+  });
+
+  test("rejects deprecated Lucide names even when their metadata entry was renamed too", async () => {
+    await expect(validateLucidePins(["check"])).resolves.toBeUndefined();
+    await expect(validateLucidePins(["check", "alert-circle"])).rejects.toThrow(
+      "Deprecated or non-canonical icon names for Lucide",
+    );
   });
 
   test("requires tags and known categories for exactly the shipped icons", () => {
