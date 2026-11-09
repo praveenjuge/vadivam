@@ -24,6 +24,7 @@ export const unsafeIconNode = [
     onclick: "alert(1)",
     fill: "url(https://example.com/p.svg#x)",
     innerHTML: "<script>alert(1)</script>",
+    dangerouslySetInnerHTML: { __html: "<script>alert(1)</script>" },
     key: "safe",
   }],
   ["path", {
@@ -40,8 +41,8 @@ export function expectSafeIconMarkup(markup) {
   expect(markup).toContain('d="M4 12h16"');
   expect(markup).toContain('stroke="navy"');
   expect(markup).toContain('d="M2 4h2"');
-  for (const unsafe of ["<script", "<animate", "<image", "onclick", "onload", "href=", "alert(1)", "example.com", "innerHTML", "bad&quot;"]) {
-    expect(markup).not.toContain(unsafe);
+  for (const unsafe of ["<script", "<animate", "<image", "onclick", "onload", "href=", "alert(1)", "example.com", "innerhtml", "bad&quot;"]) {
+    expect(markup.toLowerCase()).not.toContain(unsafe);
   }
 }
 
@@ -60,10 +61,12 @@ export function svgAttributes(markup) {
 }
 
 /**
- * Bundles a small app the way an app bundler would. Returns its code and a
- * `bytesFrom(pattern)` that sums the output bytes of the modules whose path
- * matches, as the bundler reports them. The entry lives under tests/ so bare
- * package names resolve to the workspace packages.
+ * Bundles a small app the way an app bundler would. Returns its code, every
+ * module the imports reached (`modules`, what a bundler that does not
+ * tree-shake, such as Metro, would ship), and a `bytesFrom(pattern)` that sums
+ * the output bytes of the modules whose path matches after tree-shaking. The
+ * entry lives under tests/ so bare package names resolve to the workspace
+ * packages.
  */
 export async function bundle(source, { external = [], minify = false } = {}) {
   const directory = mkdtempSync(path.join(import.meta.dir, ".bundle-"));
@@ -76,7 +79,7 @@ export async function bundle(source, { external = [], minify = false } = {}) {
     const inputs = Object.entries(output.inputs);
     const bytesFrom = (pattern) =>
       inputs.filter(([file]) => pattern.test(file)).reduce((sum, [, { bytesInOutput }]) => sum + bytesInOutput, 0);
-    return { code: await result.outputs[0].text(), bytesFrom };
+    return { code: await result.outputs[0].text(), modules: Object.keys(result.metafile.inputs), bytesFrom };
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
