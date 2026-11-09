@@ -172,7 +172,7 @@ async function packageVersion(root, packageName) {
 export async function fontCacheKey(icons, registry, root, style = styles.outline) {
   const hash = createHash("sha256");
   hash.update(`vadivam-font-cache:${fontCacheVersion}\n`);
-  if (style !== styles.outline) hash.update(`${style.font.fontName}:${style.font.fontFamily}\n`);
+  hash.update(`${style.font.fontName}:${style.font.fontFamily}\n`);
   hash.update(`svgtofont:${await packageVersion(root, "svgtofont")}\n`);
   hash.update(
     `oslllo-svg-fixer:${await packageVersion(root, "oslllo-svg-fixer")}\n`,

@@ -13,6 +13,10 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+// The generated icons (scripts/generators/compose.mjs) extend VadivamIcons and
+// VadivamSolidIcons and call vadivamIcon and vadivamSolidIcon by these names,
+// one owner and builder per style; rename both sides together.
+
 /**
  * Every Vadivam icon, as an extension property such as `VadivamIcons.Activity`.
  *
