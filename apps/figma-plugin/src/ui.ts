@@ -1,18 +1,16 @@
 import index from "vadivam:ui-catalog";
+import { styles } from "../../../scripts/icon-styles.mjs";
+import { element, onPluginMessage, postToPlugin } from "../../figma-shared/channel";
+import { isIconStyle, type IconStyle } from "../../figma-shared/icons";
 import { createEntries, searchIcons, type IconEntry } from "./catalog";
-import type { IconStyle, PluginToUiMessage, UiToPluginMessage } from "./protocol";
+import type { PluginToUiMessage, UiToPluginMessage } from "./protocol";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+// The grid's width; ui.css reads it as --columns.
 const COLUMNS = 6;
 // About three screens of icons; more render as the list scrolls near its end.
 const BATCH_SIZE = 180;
 const LOAD_MORE_DISTANCE = 480;
-
-function element<T extends Element>(selector: string): T {
-  const match = document.querySelector<T>(selector);
-  if (!match) throw new Error(`Missing UI element: ${selector}`);
-  return match;
-}
 
 const search = element<HTMLInputElement>("#search");
 const categorySelect = element<HTMLSelectElement>("#category");
@@ -33,6 +31,8 @@ let pending = false;
 let confirmationId: string | null = null;
 let style: IconStyle = "outline";
 
+results.style.setProperty("--columns", String(COLUMNS));
+
 for (const [id, title] of index.categories) {
   const option = document.createElement("option");
   option.value = id;
@@ -40,8 +40,15 @@ for (const [id, title] of index.categories) {
   categorySelect.append(option);
 }
 
-function send(message: UiToPluginMessage): void {
-  parent.postMessage({ pluginMessage: message }, "*");
+const send: (message: UiToPluginMessage) => void = postToPlugin;
+
+const paintAttributes = [...new Set(Object.values(styles).flatMap((each) => Object.keys(each.paint)))];
+
+// Points a preview at its style's sprite symbol and paints it like that style's icon files.
+function drawPreview(svg: SVGElement, name: string): void {
+  for (const attribute of paintAttributes) svg.removeAttribute(attribute);
+  for (const [attribute, value] of Object.entries(styles[style].paint)) svg.setAttribute(attribute, String(value));
+  svg.querySelector("use")?.setAttribute("href", `#${styles[style].spriteIdPrefix}${name}`);
 }
 
 function setPending(value: boolean): void {
@@ -70,9 +77,8 @@ function iconButton(name: string): HTMLButtonElement {
   button.dataset.iconName = name;
   const svg = document.createElementNS(SVG_NAMESPACE, "svg");
   svg.setAttribute("aria-hidden", "true");
-  const use = document.createElementNS(SVG_NAMESPACE, "use");
-  use.setAttribute("href", `#${style === "solid" ? "s" : "i"}-${name}`);
-  svg.append(use);
+  svg.append(document.createElementNS(SVG_NAMESPACE, "use"));
+  drawPreview(svg, name);
   button.append(svg);
   buttons.set(name, button);
   return button;
@@ -111,18 +117,16 @@ function focusResult(index: number): void {
   (results.children[target] as HTMLButtonElement | undefined)?.focus();
 }
 
-// Outline symbols are `#i-<name>` and solid ones `#s-<name>` in the sprite.
 function setStyle(next: IconStyle): void {
   style = next;
-  results.dataset.style = next;
   for (const button of styleButtons) button.setAttribute("aria-pressed", String(button.dataset.style === next));
-  for (const [name, button] of buttons) {
-    button.querySelector("use")?.setAttribute("href", `#${next === "solid" ? "s" : "i"}-${name}`);
-  }
+  for (const [name, button] of buttons) drawPreview(button.querySelector("svg")!, name);
 }
 
 for (const button of styleButtons) {
-  button.addEventListener("click", () => setStyle(button.dataset.style === "solid" ? "solid" : "outline"));
+  button.addEventListener("click", () => {
+    if (isIconStyle(button.dataset.style)) setStyle(button.dataset.style);
+  });
 }
 
 search.addEventListener("input", render);
@@ -185,10 +189,8 @@ confirmDialog.addEventListener("close", () => {
   }
 });
 
-window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) => {
-  const message = event.data.pluginMessage;
-  if (!message) return;
-  if (message.type === "catalog") {
+onPluginMessage<PluginToUiMessage>((message) => {
+  if (message.type === "ready") {
     search.focus();
   } else if (message.type === "complete") {
     setPending(false);
@@ -206,6 +208,6 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
     setPending(false);
     search.focus();
   }
-};
+});
 
 render();

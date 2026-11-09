@@ -114,3 +114,10 @@ export function pascalCase(name) {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join("");
 }
+
+// --- Package layout (appended for the Figma plugins) ---
+
+/** A file's path in the published `vadivam` package for a style, such as `dist/solid/sprite.svg`. */
+export function packagePath(style, file) {
+  return ["dist", style.entryDirectory, file].filter(Boolean).join("/");
+}

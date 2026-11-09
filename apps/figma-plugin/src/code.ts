@@ -1,25 +1,20 @@
-import icons, { lucideAliases, solidSvgRoot, svgRoot } from "vadivam:catalog";
-import type { IconStyle, PluginToUiMessage, UiToPluginMessage } from "./protocol";
+import icons, { lucideAliases } from "vadivam:catalog";
+import { messageFromError, postToUi } from "../../figma-shared/channel";
+import { catalogSvg, describeIconComponent, isIconStyle, type CatalogIcon, type IconStyle } from "../../figma-shared/icons";
+import { iconNames } from "../../figma-shared/names";
+import type { PluginToUiMessage, UiToPluginMessage } from "./protocol";
 
 const UI_WIDTH = 320;
 const UI_HEIGHT = 480;
 const INSERTION_GAP = 16;
 const PLUGIN_DATA_KEY = "vadivam";
 const PLUGIN_DATA_SCHEMA = 1;
-const DOCUMENTATION_URL = "https://vadivam.praveenjuge.com";
 const catalog = new Map(icons.map((icon) => [icon.name, icon]));
+const names = iconNames(catalog.keys(), lucideAliases);
 // Selections are scanned on every change, so stop after this many layers.
 const MAX_SCAN_NODES = 5000;
 const SHAPE_TYPES = new Set(["VECTOR", "LINE", "ELLIPSE", "RECTANGLE", "POLYGON", "STAR", "BOOLEAN_OPERATION"]);
 const ICON_LAYER_TYPES = new Set(["FRAME", "GROUP", "COMPONENT", "INSTANCE"]);
-const compactName = (name: string) => name.replace(/[^a-z0-9]/g, "");
-// Current names win over deprecated ones that compact to the same letters.
-const iconsByCompactName = new Map([
-  ...Object.entries(lucideAliases).map(([alias, name]) => [compactName(alias), name] as const),
-  ...icons.map((icon) => [compactName(icon.name), icon.name] as const),
-]);
-
-type CatalogIcon = (typeof icons)[number];
 
 interface PendingReplacement {
   requestId: string;
@@ -38,23 +33,16 @@ figma.showUI(__html__, {
   themeColors: true,
 });
 
-function post(message: PluginToUiMessage): void {
-  figma.ui.postMessage(message);
-}
+const post: (message: PluginToUiMessage) => void = postToUi;
 
 function complete(message: string): void {
   figma.notify(message);
-  post({ type: "complete", message });
+  post({ type: "complete" });
 }
 
 function reportError(error: unknown): void {
-  const message = messageFromError(error);
-  figma.notify(message, { error: true });
-  post({ type: "error", message });
-}
-
-function messageFromError(error: unknown): string {
-  return error instanceof Error ? error.message : "Unexpected plugin error";
+  figma.notify(messageFromError(error), { error: true });
+  post({ type: "error" });
 }
 
 // Outline components carry no style, as before solid icons existed.
@@ -67,60 +55,25 @@ function componentName(name: string, style: IconStyle): string {
   return style === "solid" ? `${name}-solid` : name;
 }
 
+// Plugin data is private to this plugin, so it is always JSON this plugin wrote.
 function taggedIconName(node: BaseNode & PluginDataMixin): string | null {
   const value = node.getPluginData(PLUGIN_DATA_KEY);
   if (!value) return null;
-  try {
-    const parsed = JSON.parse(value) as Record<string, unknown>;
-    return parsed.schema === PLUGIN_DATA_SCHEMA &&
-      typeof parsed.iconName === "string" &&
-      catalog.has(parsed.iconName)
-      ? parsed.iconName
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-// Category titles and tags are plain words, so Figma's asset search finds the component by them.
-function iconDescription(icon: CatalogIcon, style: IconStyle): string {
-  return [
-    `24 px ${style} icon from Vadivam.`,
-    icon.categories.length > 0 ? `**Categories:** ${icon.categories.join(", ")}` : "",
-    icon.tags.length > 0 ? `**Tags:** ${icon.tags.join(", ")}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  const parsed = JSON.parse(value) as Record<string, unknown>;
+  return parsed.schema === PLUGIN_DATA_SCHEMA && typeof parsed.iconName === "string" && catalog.has(parsed.iconName)
+    ? parsed.iconName
+    : null;
 }
 
 function tagComponent(component: ComponentNode, icon: CatalogIcon, style: IconStyle): void {
-  const name = icon.name;
-  component.name = componentName(name, style);
-  component.setPluginData(PLUGIN_DATA_KEY, iconMetadata(name, style));
-  component.setRelaunchData({ replace: `Replace ${componentName(name, style)}` });
-  component.descriptionMarkdown = iconDescription(icon, style);
-  component.documentationLinks = [
-    { uri: `${DOCUMENTATION_URL}/icons/${encodeURIComponent(name)}` },
-  ];
-  component.exportSettings = [
-    {
-      format: "SVG",
-      suffix: "",
-      contentsOnly: true,
-      svgOutlineText: true,
-      svgIdAttribute: false,
-      svgSimplifyStroke: true,
-      colorProfile: "DOCUMENT",
-    },
-  ];
+  component.name = componentName(icon.name, style);
+  component.setPluginData(PLUGIN_DATA_KEY, iconMetadata(icon.name, style));
+  component.setRelaunchData({ replace: `Replace ${component.name}` });
+  describeIconComponent(component, icon, style);
 }
 
-function iconSvg(icon: CatalogIcon, style: IconStyle): string {
-  return style === "solid" ? `${solidSvgRoot}${icon.solidBody}</svg>` : `${svgRoot}${icon.body}</svg>`;
-}
-
-function createComponent(icon: CatalogIcon, style: IconStyle = "outline"): ComponentNode {
-  const frame = figma.createNodeFromSvg(iconSvg(icon, style));
+function createComponent(icon: CatalogIcon, style: IconStyle): ComponentNode {
+  const frame = figma.createNodeFromSvg(catalogSvg(icon, style));
   try {
     const component = figma.createComponentFromNode(frame);
     tagComponent(component, icon, style);
@@ -156,10 +109,6 @@ function uniformPaint(node: ChildrenMixin, key: "strokes" | "fills"): Paint[] | 
   return strokes.every((paints) => JSON.stringify(paints) === serialized)
     ? clonePaints(strokes[0] as readonly Paint[])
     : null;
-}
-
-function uniformStrokePaint(node: ChildrenMixin): Paint[] | null {
-  return uniformPaint(node, "strokes");
 }
 
 function applyStrokePaint(node: ChildrenMixin, paints: readonly Paint[] | null): void {
@@ -254,10 +203,10 @@ figma.on("selectionchange", () => {
   }
 });
 
-function replaceComponentGlyph(component: ComponentNode, icon: CatalogIcon, style: IconStyle = "outline"): void {
+function replaceComponentGlyph(component: ComponentNode, icon: CatalogIcon, style: IconStyle): void {
   const paint = iconPaint(component);
   const oldChildren = [...component.children];
-  const source = figma.createNodeFromSvg(iconSvg(icon, style));
+  const source = figma.createNodeFromSvg(catalogSvg(icon, style));
   const sourceWidth = source.width;
   const sourceHeight = source.height;
   const newChildren = [...source.children];
@@ -322,26 +271,9 @@ function applyStrokeWeight(node: ChildrenMixin, weight: number | null): void {
   }
 }
 
-/**
- * The Vadivam icon a layer name refers to: `arrow-right`, `ArrowRight`,
- * `lucide/arrow-right`, `LucideArrowRight`, `arrow-right icon`, or a
- * deprecated Lucide name such as `home`.
- */
+// Deprecated Lucide names, such as `home`, still name icons in older designs.
 function lucideIconName(layerName: string): string | null {
-  const segment = (layerName.split("/").pop() ?? "")
-    .trim()
-    .replace(/^lucide[\s_-]+/i, "")
-    .replace(/^Lucide(?=[A-Z])/, "");
-  for (const base of [segment, segment.replace(/[\s_-]*icon$/i, "")]) {
-    const name = base.replace(/([a-z])([A-Z])/g, "$1-$2").replace(/[\s_]+/g, "-").toLowerCase();
-    if (!name) continue;
-    if (catalog.has(name)) return name;
-    if (lucideAliases[name]) return lucideAliases[name];
-    // PascalCase drops the dashes around digits: ArrowDown01 is arrow-down-0-1.
-    const match = iconsByCompactName.get(compactName(name));
-    if (match) return match;
-  }
-  return null;
+  return names.current(layerName) ?? names.replacement(layerName);
 }
 
 const visiblePaints = (node: BaseNode, key: "fills" | "strokes"): boolean => {
@@ -453,10 +385,10 @@ function swapLayer(
     throw new Error(`${node.name} cannot be swapped in its current parent`);
   }
   const index = parent.children.indexOf(node);
-  const paint = uniformStrokePaint(node);
+  const paint = uniformPaint(node, "strokes");
   const weight = uniformStrokeWeight(node);
   const existing = components.get(icon.name);
-  const replacement = existing ? existing.createInstance() : createComponent(icon);
+  const replacement = existing ? existing.createInstance() : createComponent(icon, "outline");
   try {
     if (replacement.type === "INSTANCE") {
       replacement.resize(node.width, node.height);
@@ -497,7 +429,7 @@ async function swapLucideIcons(): Promise<void> {
       if (node.type === "COMPONENT") {
         // A local Lucide component keeps its instances: its glyph is redrawn in place.
         const weight = uniformStrokeWeight(node);
-        replaceComponentGlyph(node, icon);
+        replaceComponentGlyph(node, icon, "outline");
         applyStrokeWeight(node, weight);
         swapped.push(node);
       } else {
@@ -519,7 +451,7 @@ async function swapLucideIcons(): Promise<void> {
   );
 }
 
-async function performChoice(iconName: string, style: IconStyle = "outline"): Promise<void> {
+async function performChoice(iconName: string, style: IconStyle): Promise<void> {
   const icon = catalog.get(iconName);
   if (!icon) throw new Error("Unknown Vadivam icon");
   const selection = figma.currentPage.selection;
@@ -589,8 +521,8 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
   }
   const request = message as UiToPluginMessage;
   try {
-    if (request.type === "choose" && typeof request.iconName === "string") {
-      await performChoice(request.iconName, request.style === "solid" ? "solid" : "outline");
+    if (request.type === "choose" && typeof request.iconName === "string" && isIconStyle(request.style)) {
+      await performChoice(request.iconName, request.style);
     } else if (
       request.type === "confirm-replace" &&
       typeof request.requestId === "string" &&
@@ -607,5 +539,5 @@ figma.ui.onmessage = async (message: unknown): Promise<void> => {
   }
 };
 
-post({ type: "catalog", count: icons.length });
+post({ type: "ready" });
 postLucideSelection().catch(reportError);

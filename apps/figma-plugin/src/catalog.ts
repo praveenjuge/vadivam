@@ -1,3 +1,5 @@
+import { editDistance } from "../../figma-shared/names";
+
 export interface IconEntry {
   name: string;
   /** Category ids, used by the category filter. */
@@ -33,27 +35,6 @@ function nameTerm(term: string): string {
   return term.replace(/[^a-z0-9-]/g, "");
 }
 
-function distance(left: string, right: string): number {
-  if (left === right) return 0;
-  if (left.length === 0) return right.length;
-  if (right.length === 0) return left.length;
-
-  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
-  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
-    const current = [leftIndex];
-    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
-      current[rightIndex] = Math.min(
-        (current[rightIndex - 1] ?? 0) + 1,
-        (previous[rightIndex] ?? 0) + 1,
-        (previous[rightIndex - 1] ?? 0) +
-          (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
-      );
-    }
-    previous.splice(0, previous.length, ...current);
-  }
-  return previous[right.length] ?? Number.POSITIVE_INFINITY;
-}
-
 // Lower ranks sort first: exact name, name prefix, name word, tag prefix, tag, category, typo.
 function termRank(entry: IconEntry, term: string): number {
   const name = nameTerm(term);
@@ -70,14 +51,7 @@ function termRank(entry: IconEntry, term: string): number {
   if (entry.categoryTitles.some((title) => words.some((word) => title.includes(word)))) return 5;
 
   const limit = compactTerm.length >= 7 ? 2 : 1;
-  if (
-    compactTerm.length >= 3 &&
-    Math.abs(entry.compact.length - compactTerm.length) <= limit &&
-    distance(entry.compact, compactTerm) <= limit
-  ) {
-    return 6;
-  }
-  return -1;
+  return compactTerm.length >= 3 && editDistance(entry.compact, compactTerm, limit) <= limit ? 6 : -1;
 }
 
 function rankEntry(entry: IconEntry, terms: readonly string[]): number {

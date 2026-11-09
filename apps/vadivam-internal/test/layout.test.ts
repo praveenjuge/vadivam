@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { getBatchPositions, getGridPositions, parseColumns } from "../src/layout";
+import { getBatchPositions, getGridPositions } from "../src/layout";
 
 test("places a new batch one canonical row below existing icons", () => {
   expect(
@@ -38,12 +38,4 @@ test("arranges exactly the chosen number of icons per row", () => {
   expect(positions[39]).toEqual({ x: 1560, y: 0 });
   expect(positions[40]).toEqual({ x: 0, y: 72 });
   expect(getGridPositions(3, 2, { x: 0, y: 0 })[2]).toEqual({ x: 0, y: 72 });
-});
-
-test("clamps columns to a usable range", () => {
-  expect(parseColumns(0)).toBe(1);
-  expect(parseColumns(24)).toBe(24);
-  expect(parseColumns(500)).toBe(100);
-  expect(() => parseColumns(2.5)).toThrow("Columns must be a whole number");
-  expect(() => parseColumns("40")).toThrow("Columns must be a whole number");
 });

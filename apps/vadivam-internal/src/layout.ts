@@ -1,30 +1,25 @@
-export const ICON_SIZE = 24;
+import { canvasSize } from "../../../scripts/icon-styles.mjs";
+
+export const ICON_SIZE = canvasSize;
+// The source file's grid: one icon frame every 40 px across and 72 px down.
 export const COLUMN_STEP = 40;
 export const ROW_STEP = 72;
-export const DEFAULT_COLUMNS = 40;
-export const MAX_COLUMNS = 100;
+// The published component set keeps a fixed width; Arrange columns are a per-user setting.
+export const LIBRARY_COLUMNS = 40;
 
 export interface IconPosition {
   x: number;
   y: number;
 }
 
-export function parseColumns(value: unknown): number {
-  if (!Number.isInteger(value)) throw new Error("Columns must be a whole number");
-  return Math.min(MAX_COLUMNS, Math.max(1, value as number));
-}
-
-export function getGridPositions(
-  count: number,
-  columns: number,
-  origin: IconPosition,
-): IconPosition[] {
+export function getGridPositions(count: number, columns: number, origin: IconPosition): IconPosition[] {
   return Array.from({ length: count }, (_, index) => ({
     x: origin.x + (index % columns) * COLUMN_STEP,
     y: origin.y + Math.floor(index / columns) * ROW_STEP,
   }));
 }
 
+// A batch starts one row below the lowest icon, or at the viewport in an empty file.
 export function getBatchPositions(
   count: number,
   columns: number,
@@ -39,6 +34,5 @@ export function getBatchPositions(
     existing.length > 0
       ? Math.max(...existing.map((position) => position.y)) + ROW_STEP
       : Math.round(viewportCenter.y / ROW_STEP) * ROW_STEP;
-
   return getGridPositions(count, columns, { x: startX, y: startY });
 }

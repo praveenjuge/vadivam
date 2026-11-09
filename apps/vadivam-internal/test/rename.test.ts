@@ -1,23 +1,26 @@
 import { describe, expect, test } from "bun:test";
-import { suggestRenameIdeas, toKebabName } from "../src/rename";
+import { suggestRenameIdeas } from "../src/rename";
 
 function ideaNames(value: string): string[] {
   return suggestRenameIdeas(value).map((idea) => idea.name);
 }
 
-describe("toKebabName", () => {
-  test("normalizes common Figma layer names", () => {
-    expect(toKebabName("Icon=ArrowRight")).toBe("arrow-right");
-    expect(toKebabName("icons/arrow_right")).toBe("arrow-right");
-    expect(toKebabName(" Arrow Right ")).toBe("arrow-right");
-    expect(toKebabName("ABCTest")).toBe("abc-test");
-  });
-});
-
 describe("suggestRenameIdeas", () => {
   test("leaves canonical names alone", () => {
     expect(suggestRenameIdeas("x")).toEqual([]);
     expect(suggestRenameIdeas("arrow-down-0-1")).toEqual([]);
+  });
+
+  test("restores the separators PascalCase drops around digits and letters", () => {
+    expect(suggestRenameIdeas("ArrowDown01")).toEqual([{ name: "arrow-down-0-1", reason: "format" }]);
+    expect(suggestRenameIdeas("ArrowDownAZ")).toEqual([{ name: "arrow-down-a-z", reason: "format" }]);
+    expect(suggestRenameIdeas("ArrowDownZA")).toEqual([{ name: "arrow-down-z-a", reason: "format" }]);
+  });
+
+  test("points deprecated Lucide names at their replacement in any spelling", () => {
+    expect(suggestRenameIdeas("columns")).toEqual([{ name: "columns-2", reason: "deprecated" }]);
+    expect(suggestRenameIdeas("Columns")).toEqual([{ name: "columns-2", reason: "deprecated" }]);
+    expect(suggestRenameIdeas("CircleEuroSign")).toEqual([{ name: "circle-euro", reason: "deprecated" }]);
   });
 
   test("returns only the exact fix when one exists", () => {

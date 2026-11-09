@@ -1,25 +1,13 @@
-import type { LucideIconRanking } from "./catalog";
+import type { LucideIconRanking } from "./lucide";
 import type { RemoteFailure, RemoteSource } from "./remote";
+import type { PluginSettings, Tab } from "./settings";
 
-export interface CatalogSummary {
-  existingCount: number;
-  matchedCount: number;
-  remainingCount: number;
+export interface CatalogProgress {
   lucideVersion: string;
-  retrievedAt: string;
-  source: string;
-  ranking: string;
-  currentPage: string;
-}
-
-export const TABS = ["create", "replace", "arrange", "rename", "audit", "library"] as const;
-
-export type Tab = (typeof TABS)[number];
-
-export interface PluginSettings {
-  batchSize: number;
-  columns: number;
-  tab: Tab;
+  /** Current Lucide icons with a frame in the file, on pages of the current style. */
+  drawn: number;
+  /** Current Lucide icons with no frame yet. */
+  remaining: number;
 }
 
 export interface PageStatus {
@@ -44,18 +32,9 @@ export interface IconAuditSummary {
 }
 
 // "format" and "deprecated" ideas are exact matches; the rest are guesses.
-export type RenameReason =
-  | "format"
-  | "deprecated"
-  | "reordered"
-  | "tag"
-  | "spelling"
-  | "similar";
+export type RenameReason = "format" | "deprecated" | "reordered" | "tag" | "spelling" | "similar";
 
-export const EXACT_RENAME_REASONS: ReadonlySet<RenameReason> = new Set([
-  "format",
-  "deprecated",
-]);
+export const EXACT_RENAME_REASONS: ReadonlySet<RenameReason> = new Set(["format", "deprecated"]);
 
 // Replace limits: plenty for a full icon set while keeping one message reasonably small.
 export const MAX_SVG_FILES = 2_000;
@@ -86,37 +65,15 @@ export type PluginToUiMessage =
   | { type: "loading" }
   | { type: "settings"; settings: PluginSettings }
   | { type: "page"; page: PageStatus }
-  | {
-      type: "library-synced";
-      count: number;
-      created: boolean;
-      added: number;
-      retained: number;
-    }
-  | { type: "catalog"; summary: CatalogSummary; candidates: LucideIconRanking[] }
+  | { type: "library-synced"; count: number; created: boolean; added: number; retained: number }
+  | { type: "catalog"; progress: CatalogProgress; candidates: LucideIconRanking[] }
   | { type: "generated"; names: string[] }
   | { type: "arranged"; count: number; columns: number; rows: number }
   | { type: "replaced"; replaced: ReplacedIcon[]; added: ReplacedIcon[]; skipped: SkippedSvg[] }
   | { type: "rename-ideas"; icons: RenameSuggestion[]; renamed: number }
-  | {
-      type: "audit";
-      summary: IconAuditSummary;
-      issues: IconAuditIssue[];
-    }
-  | {
-      type: "remote-checked";
-      source: RemoteSource;
-      version: string;
-      total: number;
-      missing: string[];
-    }
-  | {
-      type: "remote-added";
-      source: RemoteSource;
-      version: string;
-      added: string[];
-      failed: RemoteFailure[];
-    }
+  | { type: "audit"; summary: IconAuditSummary; issues: IconAuditIssue[] }
+  | { type: "remote-checked"; source: RemoteSource; version: string; missing: string[] }
+  | { type: "remote-added"; version: string; added: string[]; failed: RemoteFailure[] }
   | { type: "error"; message: string };
 
 export type UiToPluginMessage =
@@ -126,7 +83,7 @@ export type UiToPluginMessage =
   | { type: "set-columns"; columns: number }
   | { type: "set-tab"; tab: Tab }
   | { type: "generate"; count: number }
-  | { type: "arrange"; columns?: number }
+  | { type: "arrange"; columns: number }
   | { type: "replace"; files: SvgFile[] }
   | { type: "suggest-names" }
   | { type: "rename"; renames: Array<{ id: string; name: string }> }

@@ -1,4 +1,5 @@
-import { afterEach, expect, mock, test } from "bun:test";
+import { beforeAll, expect, mock, test } from "bun:test";
+import { readFileSync } from "node:fs";
 
 mock.module("vadivam:ui-catalog", () => ({
   default: {
@@ -13,102 +14,93 @@ mock.module("vadivam:ui-catalog", () => ({
   },
 }));
 
-afterEach(() => {
-  document.body.replaceChildren();
+const sent: unknown[] = [];
+
+beforeAll(async () => {
+  const html = readFileSync(new URL("../src/ui.html", import.meta.url), "utf8");
+  document.body.innerHTML = /<body>([\s\S]*)<\/body>/.exec(html)![1]!;
+  window.parent.postMessage = (message: unknown) => sent.push(message);
+  await import("../src/ui");
 });
 
-test("renders an accessible glyph grid, filters by tag and category, and sends one-click choices", async () => {
-  document.body.innerHTML = `
-    <main>
-      <input id="search" />
-      <select id="category"><option value="">All</option></select>
-      <div class="style-switch"><button data-style="outline" aria-pressed="true"></button><button data-style="solid" aria-pressed="false"></button></div>
-      <div id="lucide-bar" hidden><span id="lucide-message"></span><button id="lucide-swap"></button></div>
-      <div id="results"></div>
-      <dialog id="confirm"><form method="dialog"><p id="confirm-message"></p></form></dialog>
-    </main>`;
-  const sent: unknown[] = [];
-  window.parent.postMessage = (message: unknown) => sent.push(message);
-  await import(`../src/ui.ts?test=${Date.now()}`);
+const $ = <T extends Element>(selector: string) => document.querySelector<T>(selector)!;
+const labels = () => [...document.querySelectorAll(".icon-button")].map((button) => button.getAttribute("aria-label"));
+const lastSent = () => (sent[sent.length - 1] as { pluginMessage: unknown }).pluginMessage;
+const receive = (pluginMessage: unknown) => window.dispatchEvent(new MessageEvent("message", { data: { pluginMessage } }));
 
-  const search = document.querySelector<HTMLInputElement>("#search")!;
-  const category = document.querySelector<HTMLSelectElement>("#category")!;
-  expect(document.querySelectorAll(".icon-button")).toHaveLength(2);
-  expect(
-    document.querySelector('[aria-label="search"] use')?.getAttribute("href"),
-  ).toBe("#i-search");
-  expect([...category.options].map((option) => option.textContent)).toEqual([
+function type(selector: string, value: string, event: string): void {
+  const field = $<HTMLInputElement | HTMLSelectElement>(selector);
+  field.value = value;
+  field.dispatchEvent(new Event(event));
+}
+
+test("renders the catalog as a grid of sprite previews", () => {
+  expect(labels()).toEqual(["search", "trash-2"]);
+  expect($("#results").getAttribute("style")).toContain("--columns: 6");
+  expect([...$<HTMLSelectElement>("#category").options].map((option) => option.textContent)).toEqual([
     "All",
     "Files",
     "Text formatting",
   ]);
+  const preview = $('[aria-label="search"] svg');
+  expect(preview.querySelector("use")?.getAttribute("href")).toBe("#vadivam-search");
+  expect(preview.getAttribute("stroke")).toBe("currentColor");
+  expect(preview.getAttribute("fill")).toBe("none");
+});
 
-  search.value = "garbage";
-  search.dispatchEvent(new Event("input"));
-  expect(
-    [...document.querySelectorAll(".icon-button")].map((button) => button.getAttribute("aria-label")),
-  ).toEqual(["trash-2"]);
+test("filters by tag and by category", () => {
+  type("#search", "garbage", "input");
+  expect(labels()).toEqual(["trash-2"]);
+  type("#search", "", "input");
+  type("#category", "text", "change");
+  expect(labels()).toEqual(["search"]);
+  type("#category", "", "change");
+});
 
-  search.value = "";
-  category.value = "text";
-  category.dispatchEvent(new Event("change"));
-  expect(
-    [...document.querySelectorAll(".icon-button")].map((button) => button.getAttribute("aria-label")),
-  ).toEqual(["search"]);
-  category.value = "";
-  category.dispatchEvent(new Event("change"));
-
-  window.dispatchEvent(
-    new MessageEvent("message", {
-      data: { pluginMessage: { type: "catalog", count: 2 } },
-    }),
-  );
-  const trash = document.querySelector<HTMLButtonElement>('[aria-label="trash-2"]')!;
-  expect(trash.title).toBe("trash-2");
+test("sends a choice and waits for the plugin before taking another", () => {
+  const trash = $<HTMLButtonElement>('[aria-label="trash-2"]');
   trash.click();
-  expect(sent[sent.length - 1]).toEqual({
-    pluginMessage: { type: "choose", iconName: "trash-2", style: "outline" },
-  });
+  expect(lastSent()).toEqual({ type: "choose", iconName: "trash-2", style: "outline" });
   expect(trash.disabled).toBe(true);
-
-  window.dispatchEvent(
-    new MessageEvent("message", {
-      data: { pluginMessage: { type: "complete", message: "Inserted trash-2" } },
-    }),
-  );
-  expect(search.value).toBe("");
+  type("#search", "trash", "input");
+  receive({ type: "complete" });
+  expect($<HTMLInputElement>("#search").value).toBe("");
   expect(trash.disabled).toBe(false);
+});
 
-  const lucideBar = document.querySelector<HTMLElement>("#lucide-bar")!;
-  const swap = document.querySelector<HTMLButtonElement>("#lucide-swap")!;
-  const selection = (count: number) =>
-    window.dispatchEvent(
-      new MessageEvent("message", { data: { pluginMessage: { type: "lucide-selection", count } } }),
-    );
-  selection(3);
-  expect(lucideBar.hidden).toBe(false);
-  expect(lucideBar.textContent).toContain("3 Lucide icons selected");
+test("offers to swap the Lucide icons in the selection", () => {
+  const bar = $<HTMLElement>("#lucide-bar");
+  const swap = $<HTMLButtonElement>("#lucide-swap");
+  receive({ type: "lucide-selection", count: 3 });
+  expect(bar.hidden).toBe(false);
+  expect(bar.textContent).toContain("3 Lucide icons selected");
   swap.click();
-  expect(sent[sent.length - 1]).toEqual({ pluginMessage: { type: "swap-lucide" } });
+  expect(lastSent()).toEqual({ type: "swap-lucide" });
   expect(swap.disabled).toBe(true);
-  expect(trash.disabled).toBe(true);
-  window.dispatchEvent(
-    new MessageEvent("message", {
-      data: { pluginMessage: { type: "complete", message: "Swapped 3 Lucide icons for Vadivam" } },
-    }),
-  );
+  receive({ type: "error" });
   expect(swap.disabled).toBe(false);
-  selection(0);
-  expect(lucideBar.hidden).toBe(true);
+  receive({ type: "lucide-selection", count: 0 });
+  expect(bar.hidden).toBe(true);
+});
 
-  // The style switch repoints every preview at the solid symbols and sends the style.
-  const solid = document.querySelector<HTMLButtonElement>('[data-style="solid"]')!;
+test("asks before redrawing a component with instances and sends the answer", () => {
+  receive({ type: "confirm-replace", requestId: "r1", iconName: "search", instanceCount: 2 });
+  expect($("#confirm-message").textContent).toBe("Replace search and update 2 instances?");
+  const dialog = $<HTMLDialogElement>("#confirm");
+  dialog.returnValue = "confirm";
+  dialog.dispatchEvent(new Event("close"));
+  expect(lastSent()).toEqual({ type: "confirm-replace", requestId: "r1", accepted: true });
+});
+
+test("switches previews and choices to the solid style", () => {
+  const solid = $<HTMLButtonElement>('[data-style="solid"]');
   solid.click();
   expect(solid.getAttribute("aria-pressed")).toBe("true");
-  expect(document.querySelector("#results")?.getAttribute("data-style")).toBe("solid");
-  expect(trash.querySelector("use")?.getAttribute("href")).toBe("#s-trash-2");
-  trash.click();
-  expect(sent[sent.length - 1]).toEqual({
-    pluginMessage: { type: "choose", iconName: "trash-2", style: "solid" },
-  });
+  expect($('[data-style="outline"]').getAttribute("aria-pressed")).toBe("false");
+  const preview = $('[aria-label="trash-2"] svg');
+  expect(preview.querySelector("use")?.getAttribute("href")).toBe("#vadivam-solid-trash-2");
+  expect(preview.getAttribute("fill")).toBe("currentColor");
+  expect(preview.hasAttribute("stroke")).toBe(false);
+  $<HTMLButtonElement>('[aria-label="trash-2"]').click();
+  expect(lastSent()).toEqual({ type: "choose", iconName: "trash-2", style: "solid" });
 });
