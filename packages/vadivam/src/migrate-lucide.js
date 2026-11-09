@@ -1,7 +1,8 @@
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { lucideAliases } from "./lucide-aliases.js";
+import { lucideAliases, lucideComponentAliases } from "./lucide-aliases.js";
 import { icons } from "./manifest.js";
+import { packageExports } from "./package-exports.js";
 
 // Every Vadivam icon keeps its Lucide name, and each framework package mirrors
 // the matching Lucide package's API with Lucide renamed to Vadivam. So moving
@@ -41,24 +42,18 @@ const skippedDirectories = new Set([
 const dependencyFields = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
 
 const iconNames = new Set(icons.map((icon) => icon.name));
-const componentNames = new Map(icons.map((icon) => [icon.name, icon.componentName]));
-// Deprecated Lucide component names (AlertCircle) and the canonical ones (CircleExclamationPoint).
-const pascalCase = (name) => name.split("-").map((part) => part[0].toUpperCase() + part.slice(1)).join("");
-const componentAliases = new Map(
-  Object.entries(lucideAliases).map(([alias, name]) => [pascalCase(alias), componentNames.get(name)]),
+// Every name each package exports, from the lists its generator wrote.
+const componentNames = icons.map((icon) => icon.componentName);
+const exportsByPackage = new Map(
+  Object.entries(packageExports).map(([packageName, { names, iconAliases }]) => [
+    packageName,
+    new Set([
+      "default",
+      ...names,
+      ...iconAliases.flatMap(([prefix, suffix]) => componentNames.map((name) => `${prefix}${name}${suffix}`)),
+    ]),
+  ]),
 );
-const iconExports = new Set(
-  icons.flatMap(({ componentName }) => [componentName, `${componentName}Icon`, `Vadivam${componentName}`]),
-);
-// The non-icon exports across the core and framework packages.
-const apiExports = new Set([
-  "Icon", "createIcon", "createVadivamIcon", "icons", "iconNames", "dynamicIconImports", "DynamicIcon",
-  "VadivamProvider", "useVadivamContext", "provideVadivam", "VadivamContext", "VADIVAM_CONTEXT",
-  "getVadivamContext", "setVadivamProps", "createElement", "createIcons", "manifest", "iconsByName",
-  "categories", "IconName", "IconNode", "Icons", "SVGElementType", "SVGAttributes", "SVGProps",
-  "VadivamProps", "VadivamIcon", "IconDefinition", "CreateIconsOptions", "IconCategoryId",
-  "VadivamIconCategory", "VadivamIconMetadata", "default",
-]);
 
 const specifierPattern = /(\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|\brequire\s*\(\s*|\.mock\s*\(\s*)(["'])([^"'\n]+)\2/g;
 // Named bindings taken from a Vadivam package: imports, re-exports, and
@@ -98,7 +93,7 @@ export function mapSpecifier(specifier) {
 /** The canonical export for a deprecated Lucide one: AlertCircleIcon -> CircleExclamationPointIcon. */
 function canonicalExport(name) {
   const [, prefix, base, suffix] = name.match(/^(Vadivam)?(\w+?)(Icon)?$/) ?? [];
-  const canonical = base && componentAliases.get(base);
+  const canonical = base && Object.prototype.hasOwnProperty.call(lucideComponentAliases, base) && lucideComponentAliases[base];
   return canonical ? `${prefix ?? ""}${canonical}${suffix ?? ""}` : name;
 }
 
@@ -195,9 +190,10 @@ export function migrateSource(text, { styles = false } = {}) {
   });
   for (const { pattern } of bindingLists) {
     for (const [, names, packageName] of output.matchAll(pattern)) {
-      if (packageName === "vadivam-angular") continue;
+      const exported = exportsByPackage.get(packageName);
+      if (!exported) continue;
       for (const [, , imported] of names.matchAll(bindingEntry)) {
-        if (iconExports.has(imported) || apiExports.has(imported)) continue;
+        if (exported.has(imported)) continue;
         warnings.push(`${imported} from ${packageName}: not a Vadivam export; search https://vadivam.praveenjuge.com/?q=${encodeURIComponent(imported)}`);
       }
     }
