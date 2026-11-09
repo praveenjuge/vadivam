@@ -65,8 +65,9 @@ export async function buildDocsWorker() {
       {
         name: "blume-worker-external",
         setup(build) {
-          const filter = new RegExp(`^${blumeImport.replaceAll(".", "\\.")}$`);
-          build.onResolve({ filter }, () => ({ path: blumeImport, external: true }));
+          build.onResolve({ filter: /^\.\// }, ({ path: specifier }) =>
+            specifier === blumeImport ? { path: blumeImport, external: true } : undefined,
+          );
         },
       },
     ],

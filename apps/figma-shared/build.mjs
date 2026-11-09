@@ -76,10 +76,10 @@ function iconModulesPlugin(modules, catalog) {
     setup(build) {
       build.onStart(catalog.reset);
       build.onResolve({ filter: /^vadivam:/ }, ({ path: specifier }) =>
-        modules[specifier] ? { path: specifier, namespace: "vadivam" } : undefined,
+        modules.has(specifier) ? { path: specifier, namespace: "vadivam" } : undefined,
       );
       build.onLoad({ filter: /.*/, namespace: "vadivam" }, async ({ path: specifier }) => ({
-        contents: modules[specifier](await catalog.load()),
+        contents: modules.get(specifier)(await catalog.load()),
         loader: "js",
         ...iconInputs,
       }));
@@ -134,7 +134,7 @@ export async function buildPlugin({ esbuild, name, root, modules = {}, html = (t
   const watch = process.argv.includes("--watch");
   const dist = path.join(root, "dist");
   await mkdir(dist, { recursive: true });
-  const iconModules = { "vadivam:catalog": catalogModule, ...modules };
+  const iconModules = new Map(Object.entries({ "vadivam:catalog": catalogModule, ...modules }));
   const uiCatalog = catalogLoader();
   const shared = { bundle: true, platform: "browser", format: "iife", minify: !watch, logLevel: "info" };
   const codeOptions = {

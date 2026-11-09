@@ -53,27 +53,41 @@ const MAX_ICONS = 10_000;
 const MAX_SVG_LENGTH = 100_000;
 const FETCH_CONCURRENCY = 8;
 
-const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 // Geometry values are numbers, path commands, and separators: no quotes,
 // markup, entities, or URLs can appear in them.
-const GEOMETRY_VALUE = '"[MLHVCSQTAZmlhvcsqtaz0-9.,eE+\\s-]*"';
-const ELEMENT = Object.entries(geometryAttributes)
-  .map(([tag, attributes]) => `<${tag}(?:\\s+(?:${attributes.join("|")})=${GEOMETRY_VALUE})+\\s*\\/>`)
-  .join("|");
+const ELEMENTS = /<([a-z]+)((?:\s+[a-z0-9]+="[MLHVCSQTAZmlhvcsqtaz0-9.,eE+\s-]*")+)\s*\/>/g;
+const ATTRIBUTE_NAMES = /\s+([a-z0-9]+)="/g;
+
+function isGeometryElement(tag: string, attributes: string): boolean {
+  if (!Object.prototype.hasOwnProperty.call(geometryAttributes, tag)) return false;
+  const allowed: readonly string[] = geometryAttributes[tag as keyof typeof geometryAttributes];
+  ATTRIBUTE_NAMES.lastIndex = 0;
+  for (let match = ATTRIBUTE_NAMES.exec(attributes); match; match = ATTRIBUTE_NAMES.exec(attributes)) {
+    if (!allowed.includes(match[1] ?? "")) return false;
+  }
+  return true;
+}
 
 // An icon file is its style's exact root tag around elements that carry only
 // geometry, the shape `bun run icons:check` enforces. Anything else (fills,
-// styles, links, scripts, other elements or attributes) fails the match.
-const canonicalSvg = Object.fromEntries(
-  Object.values(styles).map((style) => [
-    style.id,
-    new RegExp(`^${escapeRegExp(rootTag(style))}\\s*(?:(?:${ELEMENT})\\s*)+<\\/svg>$`),
-  ]),
-) as Record<IconStyle, RegExp>;
+// styles, links, scripts, other elements or attributes) fails the check.
+function isCanonicalSvg(svg: string, style: IconStyle): boolean {
+  const open = rootTag(styles[style]);
+  const close = "</svg>";
+  if (!svg.startsWith(open) || !svg.endsWith(close)) return false;
+  let elements = 0;
+  let valid = true;
+  const rest = svg.slice(open.length, -close.length).replace(ELEMENTS, (_, tag: string, attributes: string) => {
+    elements += 1;
+    valid &&= isGeometryElement(tag, attributes);
+    return "";
+  });
+  return valid && elements > 0 && rest.trim() === "";
+}
 
 export function validateRemoteSvg(svg: string, style: IconStyle): string | null {
   if (svg.length === 0 || svg.length > MAX_SVG_LENGTH) return "SVG is empty or too large";
-  if (!canonicalSvg[style].test(svg.trim())) return `Not a canonical ${style} Vadivam SVG`;
+  if (!isCanonicalSvg(svg.trim(), style)) return `Not a canonical ${style} Vadivam SVG`;
   return null;
 }
 
@@ -190,13 +204,13 @@ async function loadGitHub(fetchImpl: FetchLike, style: IconStyle): Promise<Remot
 export function parseSprite(sprite: string, style: IconStyle): Map<string, string> {
   const { spriteIdPrefix } = styles[style];
   const icons = new Map<string, string>();
-  const symbol = new RegExp(`<symbol id="([^"]+)" viewBox="${canvasAttributes.viewBox}">([\\s\\S]*?)<\\/symbol>`, "g");
+  const symbol = /<symbol id="([^"]+)" viewBox="([^"]*)">([\s\S]*?)<\/symbol>/g;
   // An exec loop rather than matchAll, which Figma's sandbox may lack.
   for (let match = symbol.exec(sprite); match; match = symbol.exec(sprite)) {
     const id = match[1] ?? "";
     const name = id.startsWith(spriteIdPrefix) ? id.slice(spriteIdPrefix.length) : "";
-    if (!isIconName(name)) continue;
-    const body = (match[2] ?? "").trim().replace(/\s*\n\s*/g, "");
+    if (match[2] !== canvasAttributes.viewBox || !isIconName(name)) continue;
+    const body = (match[3] ?? "").trim().replace(/\s*\n\s*/g, "");
     icons.set(name, iconSvg(styles[style], body).trim());
   }
   return icons;
