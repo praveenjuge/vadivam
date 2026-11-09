@@ -314,6 +314,8 @@ async function build() {
   const icons = await readIcons();
   const solidIcons = await readIcons(styles.solid);
   validateStyleTwins({ outline: icons.map((icon) => icon.name), solid: solidIcons.map((icon) => icon.name) });
+  // The MCP data ranks icons by the Lucide rankings, so they must be for the pinned release.
+  await validateLucidePins(icons.map((icon) => icon.name));
   await assertIconNodesPassRuntimePolicy([...icons, ...solidIcons]);
   await synchronizeDocCounts(icons.map((icon) => icon.name));
   const missing = targets.filter((target) => !generators[target.id]).map((target) => target.id);
