@@ -139,8 +139,7 @@ function restoreSubpathMoves(d) {
 
 // The optimized shapes inside the style's root, without the paint attributes
 // the root now sets, validated.
-function withStyleRoot(optimized, file, style, paintAttributes) {
-  const paint = new RegExp(`\\s(?:${paintAttributes.join("|")})="[^"]*"`, "g");
+function withStyleRoot(optimized, file, style, paint) {
   // SVGO writes a self-closing root when every shape was dropped.
   assert(optimized.includes("</svg>"), `${file}: optimized SVG is missing root`);
   const normalized = iconSvg(style, svgInner(mapPathData(optimized, restoreSubpathMoves)).replace(paint, "").trim());
@@ -194,13 +193,12 @@ function normalizeStrokedSvg(svg, file, style) {
   const cleaned = optimizeSvg(replacePaths(first, cleanPaths(pathData(first)).paths), file);
   const original = pathData(cleaned);
   const smoothed = replacePaths(cleaned, reattachEnds(original, original.map((d) => smoothCorners(d))));
-  return withStyleRoot(optimizeSvg(smoothed, file), file, style, [
-    "fill",
-    "stroke",
-    "stroke-width",
-    "stroke-linecap",
-    "stroke-linejoin",
-  ]);
+  return withStyleRoot(
+    optimizeSvg(smoothed, file),
+    file,
+    style,
+    /\s(?:fill|stroke|stroke-width|stroke-linecap|stroke-linejoin)="[^"]*"/g,
+  );
 }
 
 const pathKit = await loadPathKit();
@@ -223,15 +221,12 @@ function normalizeFilledSvg(svg, file, style) {
     if (next === optimized) break;
     optimized = next;
   }
-  return withStyleRoot(optimized, file, style, [
-    "fill",
-    "fill-rule",
-    "clip-rule",
-    "stroke",
-    "stroke-width",
-    "stroke-linecap",
-    "stroke-linejoin",
-  ]);
+  return withStyleRoot(
+    optimized,
+    file,
+    style,
+    /\s(?:fill|fill-rule|clip-rule|stroke|stroke-width|stroke-linecap|stroke-linejoin)="[^"]*"/g,
+  );
 }
 
 export function updateIconCountMarkers(content, count) {

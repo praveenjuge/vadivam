@@ -20,6 +20,17 @@ if (process.argv.includes("--list")) {
   process.exit(0);
 }
 
+function setWorkspaceVersion(lockfile, workspace, version) {
+  const entry = lockfile.indexOf(`"${workspace}": {`);
+  const key = '"version": "';
+  const start = lockfile.indexOf(key, entry) + key.length;
+  const end = lockfile.indexOf('"', start);
+  if (entry < 0 || start < key.length || lockfile.lastIndexOf("}", start) > entry) {
+    throw new Error(`bun.lock has no version for workspace ${workspace}`);
+  }
+  return `${lockfile.slice(0, start)}${version}${lockfile.slice(end)}`;
+}
+
 const read = (file) => readFile(path.join(root, file), "utf8");
 const write = (file, contents) => writeFile(path.join(root, file), contents);
 
@@ -36,9 +47,7 @@ for (const file of releaseManifests) {
   pkg.version = next;
   await write(file, `${JSON.stringify(pkg, null, 2)}\n`);
   // bun.lock records each workspace's version under its directory.
-  const workspace = path.dirname(file) === "." ? "" : path.dirname(file);
-  const entry = new RegExp(`("${workspace}": \\{\\n\\s*"name": "[^"]*",\\n\\s*"version": )"[^"]*"`);
-  if (workspace) lockfile = lockfile.replace(entry, `$1"${next}"`);
+  if (path.dirname(file) !== ".") lockfile = setWorkspaceVersion(lockfile, path.dirname(file), next);
 }
 await write("bun.lock", lockfile);
 
