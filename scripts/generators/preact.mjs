@@ -4,44 +4,65 @@ import {
   defaultAttributesSource,
   dynamicEntries,
   dynamicTypes,
+  defaultSize,
+  defaultStrokeWidth,
+  exportedNames,
   iconExports,
   iconImports,
   iconNameType,
   iconNode,
   iconRegistryEntries,
   iconRegistryTypes,
+  isLabelledSource,
+  mergeClassesSource,
+  objectEntries,
+  paintBindings,
   prepareDist,
+  scaledStrokeWidthSource,
   strokePropTypes,
   svgElementTypeSource,
   write,
+  writeExports,
   writeRuntimePolicy,
 } from "./shared.mjs";
+
+const indexExports = (icons, shared) => [
+  { icons },
+  { from: "./Icon.js", values: ["Icon"] },
+  { from: "./createVadivamIcon.js", values: ["createVadivamIcon"] },
+  { from: "./icons.js", values: ["icons"] },
+  { from: `${shared}context.js`, values: ["VadivamContext", "VadivamProvider", "useVadivamContext"] },
+  { from: "./dynamicIconImports.js", values: ["dynamicIconImports", "iconNames"] },
+  { from: "./types.js", types: ["IconName", "IconNode", "SVGElementType", "VadivamIcon", "VadivamProps"] },
+  { from: `${shared}context.js`, types: ["VadivamProviderProps"] },
+];
+
+// Written by the dynamic.js and dynamic.d.ts templates below.
+const dynamicExports = ["DynamicIcon", "DynamicIconProps", "dynamicIconImports", "iconNames"];
+
+/** Every name the root and dynamic entries export besides the icons. */
+export const apiExports = [...exportedNames(indexExports([], "./")), ...dynamicExports];
 
 export async function buildPreactPackage({ icons, solidIcons, directory }) {
   const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
   await write(dist, "context.js", `import { createContext, h } from "preact";\nimport { useContext, useMemo } from "preact/hooks";\nexport const VadivamContext = createContext({});\nexport function VadivamProvider({ children, size, color, strokeWidth, absoluteStrokeWidth, class: className }) { const value = useMemo(() => ({ size, color, strokeWidth, absoluteStrokeWidth, class: className }), [size, color, strokeWidth, absoluteStrokeWidth, className]); return h(VadivamContext.Provider, { value }, children); }\nexport function useVadivamContext() { return useContext(VadivamContext); }\n`);
-  await write(dist, "context.d.ts", `import type { ComponentChildren } from "preact";\nimport type { VadivamProps } from "./types.js";\nexport interface VadivamProviderProps extends Pick<VadivamProps, "size" | "color" | "strokeWidth" | "absoluteStrokeWidth" | "class"> { children: ComponentChildren; }\nexport declare function VadivamProvider(props: VadivamProviderProps): import("preact").VNode;\nexport declare function useVadivamContext(): Partial<VadivamProps>;\n`);
+  await write(dist, "context.d.ts", `import type { ComponentChildren, Context } from "preact";\nimport type { VadivamProps } from "./types.js";\nexport declare const VadivamContext: Context<Partial<VadivamProps>>;\nexport interface VadivamProviderProps extends Pick<VadivamProps, "size" | "color" | "strokeWidth" | "absoluteStrokeWidth" | "class"> { children: ComponentChildren; }\nexport declare function VadivamProvider(props: VadivamProviderProps): import("preact").VNode;\nexport declare function useVadivamContext(): Partial<VadivamProps>;\n`);
   await buildStyles(dist, { outline: icons, solid: solidIcons }, buildPreactEntry);
-}
-
-// An outline icon paints its stroke and scales its width; a solid icon paints
-// its fill and has no stroke to scale.
-function paintSource(style) {
-  if (!style.stroked) return { resolve: "", attributes: `fill: sanitizePaint(color ?? context.color)` };
-  return {
-    resolve: `const resolvedStroke = strokeWidth ?? context.strokeWidth ?? 2; const numericSize = Number(resolvedSize); const numericStroke = Number(resolvedStroke); const absolute = absoluteStrokeWidth ?? context.absoluteStrokeWidth ?? false; const calculated = absolute && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStroke) ? numericStroke * 24 / numericSize : resolvedStroke; `,
-    attributes: `stroke: sanitizePaint(color ?? context.color), "stroke-width": calculated`,
-  };
 }
 
 async function buildPreactEntry(dist, icons, style) {
   const shared = style.shared;
-  const paint = paintSource(style);
+  const paint = objectEntries(paintBindings(style, {
+    color: "sanitizePaint(color ?? context.color)",
+    strokeWidth: `strokeWidth ?? context.strokeWidth ?? ${defaultStrokeWidth}`,
+    size: "resolvedSize",
+    absolute: "absoluteStrokeWidth ?? context.absoluteStrokeWidth ?? false",
+  }));
   await write(dist, "types.d.ts", `import type { ComponentType, JSX } from "preact";\nexport type SVGElementType = ${svgElementTypeSource};\nexport type IconNode = readonly [tag: SVGElementType, attrs: Record<string, string | number | boolean>][];\nexport interface VadivamProps extends Omit<JSX.SVGAttributes<SVGSVGElement>, "color" | "size"${style.stroked ? "" : ' | "strokeWidth" | "stroke-width"'}> { name?: string; size?: string | number; color?: string;${strokePropTypes(style)} title?: string; iconNode?: IconNode; }\nexport type VadivamIcon = ComponentType<VadivamProps>;\nexport type IconName = ${iconNameType(icons)};\n`);
   await write(dist, "defaultAttributes.js", `export default ${defaultAttributesSource(style)};\n`);
-  await write(dist, "IconBase.js", `import { h, toChildArray } from "preact";\nimport defaultAttributes from "./defaultAttributes.js";\nimport { sanitizePaint, sanitizeRootAttributes } from "${shared}runtimePolicy.js";\nimport { useVadivamContext } from "${shared}context.js";\nfunction classes(...values) { return values.flatMap((value) => typeof value === "string" ? value.split(/\\s+/) : []).filter((value, index, all) => value && all.indexOf(value) === index).join(" "); }\nfunction hasA11y(props) { return Object.keys(props).some((name) => name.startsWith("aria-") || name === "role" || name === "title"); }\n// Renders nodes as given: built-in icons pass nodes checked when the package is\n// built, and Icon passes caller nodes after sanitizing them.\nexport function IconBase({ color, size, strokeWidth, absoluteStrokeWidth, children, iconNode = [], name, title, class: className = "", className: reactClass = "", ...rest }) { const context = useVadivamContext() ?? {}; const resolvedSize = size ?? context.size ?? 24; ${paint.resolve}const safeRest = sanitizeRootAttributes(rest, true); const labelled = Boolean(title) || hasA11y(safeRest); return h("svg", { ...defaultAttributes, width: resolvedSize, height: resolvedSize, ${paint.attributes}, class: classes("vadivam", name && "vadivam-" + name, context.class, className, reactClass), ...(!labelled ? { "aria-hidden": "true" } : {}), ...(title ? { role: "img" } : {}), ...safeRest }, [title ? h("title", null, title) : null, ...iconNode.map(([tag, attrs]) => h(tag, attrs)), ...toChildArray(children)]); }\n`);
+  await write(dist, "IconBase.js", `import { h, toChildArray } from "preact";\nimport defaultAttributes from "./defaultAttributes.js";\nimport { sanitizePaint, sanitizeRootAttributes } from "${shared}runtimePolicy.js";\nimport { useVadivamContext } from "${shared}context.js";\n${mergeClassesSource()}\n${isLabelledSource()}\n${style.stroked ? `${scaledStrokeWidthSource()}\n` : ""}// Renders nodes as given: built-in icons pass nodes checked when the package is\n// built, and Icon passes caller nodes after sanitizing them.\nexport function IconBase({ color, size, strokeWidth, absoluteStrokeWidth, children, iconNode = [], name, title, class: className = "", className: reactClass = "", ...rest }) { const context = useVadivamContext() ?? {}; const resolvedSize = size ?? context.size ?? ${defaultSize}; const safeRest = sanitizeRootAttributes(rest, true); const labelled = isLabelled(title, Object.keys(safeRest)); return h("svg", { ...defaultAttributes, width: resolvedSize, height: resolvedSize, ${paint}, class: mergeClasses("vadivam", name && "vadivam-" + name, context.class, className, reactClass), ...(!labelled ? { "aria-hidden": "true" } : {}), ...(title ? { role: "img" } : {}), ...safeRest }, [title ? h("title", null, title) : null, ...iconNode.map(([tag, attrs]) => h(tag, attrs)), ...toChildArray(children)]); }\n`);
   await write(dist, "Icon.js", `import { IconBase } from "./IconBase.js";\nimport { sanitizeIconNode } from "${shared}runtimePolicy.js";\nexport function Icon({ iconNode, ...props }) { return IconBase({ ...props, iconNode: sanitizeIconNode(iconNode) }); }\nexport default Icon;\n`);
   await write(dist, "Icon.d.ts", `import type { VadivamProps } from "./types.js";\nexport declare function Icon(props: VadivamProps): import("preact").VNode;\nexport default Icon;\n`);
   await write(dist, "defineIcon.js", `import { h } from "preact";\nimport { IconBase } from "./IconBase.js";\nexport function wrapIcon(Base, iconName, iconNode) { const Component = ({ children, ...props }) => h(Base, { ...props, name: iconName, iconNode }, children); Component.displayName = iconName.split("-").map((part) => part[0].toUpperCase() + part.slice(1)).join(""); return Component; }\nexport function defineIcon(iconName, iconNode) { return wrapIcon(IconBase, iconName, iconNode); }\n`);
@@ -53,13 +74,11 @@ async function buildPreactEntry(dist, icons, style) {
   }
   await write(dist, "icons.js", `${iconImports(icons)}\nexport const icons = {\n${iconRegistryEntries(icons)}\n};\nexport default icons;\n`);
   await write(dist, "icons.d.ts", `import type { VadivamIcon } from "./types.js";\nexport declare const icons: {\n${iconRegistryTypes(icons, "VadivamIcon")}\n};\nexport default icons;\n`);
-  await write(dist, "icons/index.js", `${iconExports(icons, "./")}\n`);
-  await write(dist, "icons/index.d.ts", `${iconExports(icons, "./")}\n`);
+  await write(dist, "icons/index.js", `${iconExports(icons, { prefix: "./" })}\n`);
+  await write(dist, "icons/index.d.ts", `${iconExports(icons, { prefix: "./" })}\n`);
   await write(dist, "dynamicIconImports.js", `const dynamicIconImports = {\n${dynamicEntries(icons)}\n};\nexport const iconNames = Object.keys(dynamicIconImports);\nexport { dynamicIconImports };\nexport default dynamicIconImports;\n`);
   await write(dist, "dynamicIconImports.d.ts", `import type { IconNode, VadivamIcon } from "./types.js";\nexport interface DynamicIconModule { default: VadivamIcon; __iconNode: IconNode; }\ndeclare const dynamicIconImports: {\n${dynamicTypes(icons)}\n};\nexport declare const iconNames: readonly (keyof typeof dynamicIconImports)[];\nexport { dynamicIconImports };\nexport default dynamicIconImports;\n`);
   await write(dist, "dynamic.js", `import { h } from "preact";\nimport { useEffect, useRef, useState } from "preact/hooks";\nimport dynamicIconImports, { iconNames } from "./dynamicIconImports.js";\nexport function DynamicIcon({ name, fallback = null, ...props }) { const [Component, setComponent] = useState(null); const request = useRef(0); useEffect(() => { const id = ++request.current; setComponent(null); const importer = Object.prototype.hasOwnProperty.call(dynamicIconImports, name) ? dynamicIconImports[name] : undefined; if (importer) importer().then((module) => { if (request.current === id) setComponent(() => module.default); }, () => { if (request.current === id) setComponent(null); }); return () => { request.current += 1; }; }, [name]); return Component ? h(Component, props) : fallback; }\nexport { dynamicIconImports, iconNames };\nexport default DynamicIcon;\n`);
   await write(dist, "dynamic.d.ts", `import type { ComponentChildren } from "preact";\nimport type { IconName, VadivamProps } from "./types.js";\nexport interface DynamicIconProps extends VadivamProps { name: IconName; fallback?: ComponentChildren; }\nexport declare function DynamicIcon(props: DynamicIconProps): import("preact").ComponentChildren;\nexport { default as dynamicIconImports, iconNames } from "./dynamicIconImports.js";\nexport default DynamicIcon;\n`);
-  const exports = iconExports(icons);
-  await write(dist, "index.js", `${exports}\nexport { Icon } from "./Icon.js";\nexport { createVadivamIcon } from "./createVadivamIcon.js";\nexport { icons } from "./icons.js";\nexport { VadivamContext, VadivamProvider, useVadivamContext } from "${shared}context.js";\nexport { dynamicIconImports, iconNames } from "./dynamicIconImports.js";\n`);
-  await write(dist, "index.d.ts", `${exports}\nexport { Icon } from "./Icon.js";\nexport { createVadivamIcon } from "./createVadivamIcon.js";\nexport { icons } from "./icons.js";\nexport { VadivamProvider, useVadivamContext } from "${shared}context.js";\nexport { dynamicIconImports, iconNames } from "./dynamicIconImports.js";\nexport type { IconName, IconNode, SVGElementType, VadivamIcon, VadivamProps } from "./types.js";\n`);
+  await writeExports(dist, "index", indexExports(icons, shared));
 }

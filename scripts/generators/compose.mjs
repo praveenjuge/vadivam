@@ -1,5 +1,6 @@
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
+import { canvasSize, pascalCase, styles } from "../icon-styles.mjs";
 import { iconPathData, iconSubpaths, round } from "./native-paths.mjs";
 import { write } from "./shared.mjs";
 
@@ -22,26 +23,40 @@ function pathBuilder(icon) {
   return lines.map((line) => `        ${line}`).join("\n");
 }
 
-export function drawableName(icon, { filled = false } = {}) {
-  return `vadivam_${filled ? "solid_" : ""}${icon.name.replace(/-/g, "_")}`;
-}
+// Android vector attributes for a style's SVG paint. Drawables are white and
+// tinted with colorControlNormal like Material icons.
+const androidPaint = {
+  fill: (value) => ["fillColor", value === "none" ? "#00000000" : "@android:color/white"],
+  stroke: () => ["strokeColor", "@android:color/white"],
+  "stroke-width": (value) => ["strokeWidth", value],
+  "stroke-linecap": (value) => ["strokeLineCap", value],
+  "stroke-linejoin": (value) => ["strokeLineJoin", value],
+  "fill-rule": (value) => ["fillType", value === "evenodd" ? "evenOdd" : "nonZero"],
+};
 
 // Same geometry as the SVG, for View-based apps and anything that takes a
-// drawable resource. Tinted with colorControlNormal like Material icons.
-// A solid icon is filled by the even-odd rule instead of stroked.
-export function vectorDrawable(icon, { filled = false } = {}) {
-  const paint = filled
-    ? `      android:fillColor="@android:color/white"\n      android:fillType="evenOdd"/>`
-    : `      android:fillColor="#00000000"\n      android:strokeColor="@android:color/white"\n      android:strokeWidth="2"\n      android:strokeLineCap="round"\n      android:strokeLineJoin="round"/>`;
-  return `<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="24dp"\n    android:height="24dp"\n    android:viewportWidth="24"\n    android:viewportHeight="24"\n    android:tint="?android:attr/colorControlNormal">\n  <path\n      android:pathData="${iconPathData(icon)}"\n${paint}\n</vector>\n`;
+// drawable resource.
+function vectorDrawable(icon, style) {
+  const paint = Object.entries(style.paint)
+    .map(([name, value]) => androidPaint[name](value))
+    .map(([name, value]) => `      android:${name}="${value}"`)
+    .join("\n");
+  return `<?xml version="1.0" encoding="utf-8"?>\n<vector xmlns:android="http://schemas.android.com/apk/res/android"\n    android:width="${canvasSize}dp"\n    android:height="${canvasSize}dp"\n    android:viewportWidth="${canvasSize}"\n    android:viewportHeight="${canvasSize}"\n    android:tint="?android:attr/colorControlNormal">\n  <path\n      android:pathData="${iconPathData(icon)}"\n${paint}/>\n</vector>\n`;
 }
 
-// Outline icons are extension properties on VadivamIcons in the icons package;
-// their solid twins are on VadivamSolidIcons in icons.solid.
-const styles = {
-  outline: { owner: "VadivamIcons", builder: "vadivamIcon", packageName: "com.praveenjuge.vadivam.icons", directory: "", filled: false },
-  solid: { owner: "VadivamSolidIcons", builder: "vadivamSolidIcon", packageName: "com.praveenjuge.vadivam.icons.solid", directory: "solid", filled: true },
-};
+// Each style's icons are extension properties on an owner object, built by a
+// builder function, in a package of their own: VadivamIcons and vadivamIcon in
+// .icons, VadivamSolidIcons and vadivamSolidIcon in .icons.solid. The owners
+// and builders are hand-written in VadivamIcons.kt under the same names.
+function composeStyle(style) {
+  const name = pascalCase(style.entryDirectory);
+  return {
+    owner: `Vadivam${name}Icons`,
+    builder: `vadivam${name}Icon`,
+    packageName: ["com.praveenjuge.vadivam.icons", style.entryDirectory].filter(Boolean).join("."),
+    drawablePrefix: ["vadivam", style.entryDirectory].filter(Boolean).join("_"),
+  };
+}
 
 export async function buildComposePackage({ icons, solidIcons, directory: packageDirectory }) {
   const iconsDirectory = path.join(packageDirectory, "src/main/kotlin/com/praveenjuge/vadivam/icons");
@@ -49,17 +64,19 @@ export async function buildComposePackage({ icons, solidIcons, directory: packag
   await rm(iconsDirectory, { recursive: true, force: true });
   await rm(path.join(packageDirectory, "src/main/res"), { recursive: true, force: true });
   await mkdir(drawables, { recursive: true });
-  await buildStyle(icons, styles.outline, iconsDirectory, drawables);
-  if (solidIcons.length) await buildStyle(solidIcons, styles.solid, path.join(iconsDirectory, styles.solid.directory), drawables);
+  const iconsByStyle = { outline: icons, solid: solidIcons };
+  for (const style of Object.values(styles)) {
+    if (iconsByStyle[style.id].length) await buildStyle(iconsByStyle[style.id], style, path.join(iconsDirectory, style.entryDirectory), drawables);
+  }
 }
 
 async function buildStyle(icons, style, iconsDirectory, drawables) {
-  const { owner, builder, packageName, filled } = style;
+  const { owner, builder, packageName, drawablePrefix } = composeStyle(style);
   await mkdir(iconsDirectory, { recursive: true });
   for (const icon of icons) {
     const backing = `_${icon.componentName}`;
     await write(iconsDirectory, `${icon.componentName}.kt`, `// Generated by scripts/icons.mjs. Do not edit.\npackage ${packageName}\n\nimport androidx.compose.ui.graphics.vector.ImageVector\nimport com.praveenjuge.vadivam.${owner}\nimport com.praveenjuge.vadivam.${builder}\n\n/** [${icon.name}](https://vadivam.praveenjuge.com/icons/${icon.name}) */\npublic val ${owner}.${icon.componentName}: ImageVector\n    get() = ${backing} ?: ${builder}("${icon.componentName}") {\n${pathBuilder(icon)}\n    }.also { ${backing} = it }\n\nprivate var ${backing}: ImageVector? = null\n`);
-    await write(drawables, `${drawableName(icon, { filled })}.xml`, vectorDrawable(icon, { filled }));
+    await write(drawables, `${drawablePrefix}_${icon.name.replace(/-/g, "_")}.xml`, vectorDrawable(icon, style));
   }
   // Filled in chunks: one function holding every entry would pass the JVM's
   // 64 KB method size limit.

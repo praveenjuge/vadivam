@@ -18,7 +18,3 @@ export function iconSubpaths(icon) {
 export function iconPathData(icon) {
   return serializePath(iconSubpaths(icon));
 }
-
-export function camelCase(name) {
-  return name.replace(/-([a-z0-9])/g, (_, char) => char.toUpperCase());
-}

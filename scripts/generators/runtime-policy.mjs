@@ -1,10 +1,8 @@
 import { svgElementTypes } from "../icon-styles.mjs";
 
-export const svgElementTypeSource = svgElementTypes
-  .map((tag) => JSON.stringify(tag))
-  .join(" | ");
-
-function buildRuntimePolicy(typeScript = false, preserveChildren = false) {
+// The packages ship this policy as JavaScript; Angular builds it from
+// TypeScript. Only the core package's icon nodes have children.
+function buildRuntimePolicy({ typeScript = false, children = false } = {}) {
   const types = {
     unknown: typeScript ? ": unknown" : "",
     string: typeScript ? ": string" : "",
@@ -17,7 +15,7 @@ function buildRuntimePolicy(typeScript = false, preserveChildren = false) {
     styleRecord: typeScript ? ": Record<string, string | number>" : "",
     iconAttributes: typeScript ? ": Record<string, string | number | boolean>" : "",
     rootAttributes: typeScript ? ": Record<string, unknown>" : "",
-    nodes: typeScript ? preserveChildren ? ": [SVGElementType, Record<string, string | number | boolean>, IconNode?][]" : ": [SVGElementType, Record<string, string | number | boolean>][]" : "",
+    nodes: typeScript ? children ? ": [SVGElementType, Record<string, string | number | boolean>, IconNode?][]" : ": [SVGElementType, Record<string, string | number | boolean>][]" : "",
     traversalArguments: typeScript ? ": unknown, activeArrays: WeakSet<object>, state: { count: number }, depth: number" : ", activeArrays, state, depth",
     nodeCast: typeScript ? " as [SVGElementType, Record<string, unknown>, unknown?]" : "",
     regexMatch: typeScript ? ": RegExpExecArray | null" : "",
@@ -138,7 +136,7 @@ function sanitizeNodes(iconNode${types.traversalArguments})${types.iconNodeRetur
     for (const [name, value] of Object.entries(attrs)) {
       if (isSafeIconAttribute(tag, name) && isSafeValue(name, value)) safeAttrs[name] = value;
     }
-    ${preserveChildren ? `const safeChildren = sanitizeNodes(children, activeArrays, state, depth + 1);
+    ${children ? `const safeChildren = sanitizeNodes(children, activeArrays, state, depth + 1);
     safeNodes.push(safeChildren.length ? [tag, safeAttrs, safeChildren] : [tag, safeAttrs]);` : "safeNodes.push([tag, safeAttrs]);"}
   }
   activeArrays.delete(iconNode);
@@ -170,8 +168,8 @@ export function sanitizeRootAttributes(attrs${types.unknown}, allowEventFunction
 }
 
 export const runtimePolicySource = buildRuntimePolicy();
-export const runtimePolicyRecursiveSource = buildRuntimePolicy(false, true);
-export const runtimePolicyTypeScriptSource = buildRuntimePolicy(true);
+export const runtimePolicyRecursiveSource = buildRuntimePolicy({ children: true });
+export const runtimePolicyTypeScriptSource = buildRuntimePolicy({ typeScript: true });
 
 // Generated components render built-in icon nodes without the runtime
 // sanitizer, so every node must already be exactly what the shipped policy

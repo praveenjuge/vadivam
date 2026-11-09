@@ -1,20 +1,62 @@
 import { chmod, copyFile, mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { styleIds, styles } from "../icon-styles.mjs";
+import { pascalCase, styleIds, styles } from "../icon-styles.mjs";
 import { iconCategories, lucideAliasesFor, root, sourceDirectory } from "../icon-source.mjs";
+import { targetsById } from "../packages.mjs";
+import * as angular from "./angular.mjs";
+import * as astro from "./astro.mjs";
 import { buildElements } from "./elements.mjs";
-import { runtimePolicyRecursiveSource, svgElementTypeSource } from "./runtime-policy.mjs";
+import * as lit from "./lit.mjs";
+import * as preact from "./preact.mjs";
+import * as qwik from "./qwik.mjs";
+import * as reactNative from "./react-native.mjs";
+import * as react from "./react.mjs";
+import { runtimePolicyRecursiveSource } from "./runtime-policy.mjs";
 import {
   buildStyles,
   defaultAttributesSource,
+  exportedNames,
+  iconAliases,
   iconImports,
   iconNameType,
   iconNode,
   iconRegistryEntries,
   iconRegistryTypes,
+  isLabelledSource,
+  mergeClassesSource,
   prepareDist,
+  svgElementTypeSource,
+  writeExports,
 } from "./shared.mjs";
+import * as solid from "./solid.mjs";
 import { buildStaticAssets } from "./static.mjs";
+import * as svelte from "./svelte.mjs";
+import * as vue from "./vue.mjs";
+
+// The core package exports each icon under its component name only.
+const coreIconAliases = [["", ""]];
+
+const indexExports = (icons, style) => [
+  { from: "./createElement.js", values: ["createElement"] },
+  { from: "./createIcons.js", values: ["createIcons"] },
+  { from: "./iconNodes.js", values: ["icons"] },
+  ...(style.entryDirectory ? [] : [{ from: "./manifest.js", values: ["icons as manifest", "iconNames", "iconsByName", "categories", "styles"] }]),
+  { icons, aliases: coreIconAliases },
+  { from: "./createIcons.js", types: ["CreateIconsOptions"] },
+  ...(style.entryDirectory ? [] : [{ from: "./manifest.js", types: ["IconCategoryId", "VadivamIconCategory", "VadivamIconMetadata", "VadivamIconStyle", "VadivamIconStyleId"] }]),
+  { from: `${style.shared}types.js`, types: ["IconName", "IconNode", "Icons", "SVGElementType", "SVGProps"] },
+];
+
+// The names each package exports besides its icons, and the aliases each icon
+// is exported under, keyed by target id. The migrate-lucide codemod reads them
+// from dist/package-exports.js to tell real exports from names to look up.
+const packageApis = {
+  core: { names: exportedNames(indexExports([], { shared: "./", entryDirectory: "" })), iconAliases: coreIconAliases },
+  ...Object.fromEntries(
+    Object.entries({ react, "react-native": reactNative, vue, svelte, solid, preact, astro, angular, qwik, lit })
+      .map(([id, generator]) => [id, { names: generator.apiExports, iconAliases: generator.iconExportAliases ?? iconAliases }]),
+  ),
+};
 
 // The docs site serves the same skill at /skill.md; ship one copy with the package.
 const skillSource = path.join(root, "apps/docs/skills/vadivam-icons/SKILL.md");
@@ -34,24 +76,34 @@ export async function buildVadivamPackage({ icons, solidIcons, directory }) {
   await buildStyles(dist, { outline: icons, solid: solidIcons }, (entry, styleIcons, style) =>
     buildEntry(entry, styleIcons, style, dist),
   );
-  // The custom element imports each style's createElement.js and the root's runtimePolicy.js.
-  await buildElements(icons, dist, solidIcons);
+  await buildElements(dist, { outline: icons, solid: solidIcons });
   await writeManifest(dist, icons, solidIcons);
+  await writeFile(
+    path.join(dist, "package-exports.js"),
+    `// Generated with each package: its non-icon exports and the aliases ([prefix, suffix]) each icon is exported under.\nexport const packageExports = ${JSON.stringify(Object.fromEntries(Object.entries(packageApis).map(([id, api]) => [targetsById[id].packageName, api])), null, 2)};\n`,
+  );
   // The Lucide migration CLI is hand-written in src/ and reads the generated
-  // manifest next to it, plus the deprecated Lucide aliases, so it can move
-  // alias imports to canonical names.
+  // manifest, package exports, and deprecated Lucide aliases next to it.
   for (const file of ["cli.js", "migrate-lucide.js"]) {
     await copyFile(path.join(directory, "src", file), path.join(dist, file));
   }
   await chmod(path.join(dist, "cli.js"), 0o755);
   await writeFile(
     path.join(dist, "lucide-aliases.js"),
-    `// Deprecated Lucide names and the canonical icon each one now points to.\nexport const lucideAliases = ${JSON.stringify(await lucideAliasesFor(icons.map((icon) => icon.name)))};\n`,
+    lucideAliasesSource(await lucideAliasesFor(icons.map((icon) => icon.name)), icons),
   );
   const skills = path.join(directory, "skills");
   await rm(skills, { recursive: true, force: true });
   await mkdir(path.join(skills, "vadivam-icons"), { recursive: true });
   await copyFile(skillSource, path.join(skills, "vadivam-icons/SKILL.md"));
+}
+
+// Deprecated Lucide names and the canonical icon each one now points to, by
+// icon name and by component name.
+function lucideAliasesSource(aliases, icons) {
+  const componentNames = new Map(icons.map((icon) => [icon.name, icon.componentName]));
+  const componentAliases = Object.fromEntries(Object.entries(aliases).map(([alias, name]) => [pascalCase(alias), componentNames.get(name)]));
+  return `// Deprecated Lucide names and the canonical icon each one now points to.\nexport const lucideAliases = ${JSON.stringify(aliases)};\nexport const lucideComponentAliases = ${JSON.stringify(componentAliases)};\n`;
 }
 
 async function writeManifest(dist, icons, solidIcons) {
@@ -87,9 +139,6 @@ async function buildEntry(dist, icons, style, packageDist) {
       `import type { IconNode } from "../${shared === "./" ? "" : "../"}types.js";\n/** @name ${icon.name}\n * @description Vadivam ${style.stroked ? "" : "solid "}SVG icon node.\n * @see https://vadivam.praveenjuge.com/icons/${icon.name}\n */\ndeclare const ${icon.componentName}: IconNode;\nexport default ${icon.componentName};\n`,
     );
   }
-  const namedExports = icons
-    .map((icon) => `export { default as ${icon.componentName} } from "./icons/${icon.name}.js";`)
-    .join("\n");
   await writeFile(
     path.join(dist, "defaultAttributes.js"),
     `const defaultAttributes = ${defaultAttributesSource(style)};\nexport default defaultAttributes;\n`,
@@ -118,13 +167,8 @@ import defaultAttributes from "./defaultAttributes.js";
 function attributes(element) {
   return Object.fromEntries(Array.from(element.attributes, ({ name, value }) => [name, value]));
 }
-function classes(value) {
-  if (Array.isArray(value)) return value;
-  return typeof value === "string" ? value.split(/\\s+/).filter(Boolean) : [];
-}
-function hasAccessibleName(attrs) {
-  return Object.keys(attrs).some((name) => name.startsWith("aria-") || name === "role" || name === "title");
-}
+${mergeClassesSource()}
+${isLabelledSource()}
 function replaceElement(element, { nameAttr, icons, attrs }) {
   const name = element.getAttribute(nameAttr);
   if (!name) return;
@@ -135,8 +179,8 @@ function replaceElement(element, { nameAttr, icons, attrs }) {
     return;
   }
   const elementAttrs = attributes(element);
-  const iconAttrs = { ...defaultAttributes, [nameAttr]: name, ...(hasAccessibleName(elementAttrs) ? {} : { "aria-hidden": "true" }), ...attrs, ...elementAttrs };
-  iconAttrs.class = ["vadivam", \`vadivam-\${name}\`, ...classes(elementAttrs.class), ...classes(attrs.class)].filter((value, index, all) => value && all.indexOf(value) === index).join(" ");
+  const iconAttrs = { ...defaultAttributes, [nameAttr]: name, ...(isLabelled(null, Object.keys(elementAttrs)) ? {} : { "aria-hidden": "true" }), ...attrs, ...elementAttrs };
+  iconAttrs.class = mergeClasses("vadivam", \`vadivam-\${name}\`, elementAttrs.class, ...[attrs.class].flat());
   element.parentNode?.replaceChild(createElement(iconNode, iconAttrs), element);
 }
 
@@ -156,20 +200,7 @@ export default createIcons;
     path.join(dist, "createIcons.d.ts"),
     `import type { Icons, SVGProps } from "${shared}types.js";\nexport interface CreateIconsOptions {\n  icons?: Icons;\n  nameAttr?: string;\n  attrs?: SVGProps;\n  root?: Element | Document | DocumentFragment;\n  inTemplates?: boolean;\n}\nexport declare function createIcons(options?: CreateIconsOptions): void;\nexport default createIcons;\n`,
   );
-  const manifestExports = style.stroked
-    ? `export { icons as manifest, iconNames, iconsByName, categories, styles } from "./manifest.js";\n`
-    : "";
-  const manifestTypes = style.stroked
-    ? `export type { IconCategoryId, VadivamIconCategory, VadivamIconMetadata, VadivamIconStyle, VadivamIconStyleId } from "./manifest.js";\n`
-    : "";
-  await writeFile(
-    path.join(dist, "index.js"),
-    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\n${manifestExports}${namedExports}\n`,
-  );
-  await writeFile(
-    path.join(dist, "index.d.ts"),
-    `export { createElement } from "./createElement.js";\nexport { createIcons } from "./createIcons.js";\nexport { icons } from "./iconNodes.js";\n${manifestExports}${namedExports}\nexport type { CreateIconsOptions } from "./createIcons.js";\n${manifestTypes}export type { IconName, IconNode, Icons, SVGElementType, SVGProps } from "${shared}types.js";\n`,
-  );
+  await writeExports(dist, "index", indexExports(icons, style));
   await buildStaticAssets(icons, {
     iconsDirectory: sourceDirectory(style),
     outputDirectory: dist,

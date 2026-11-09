@@ -1,31 +1,43 @@
-import { dynamicEntries, write } from "./shared.mjs";
+import { styles } from "../icon-styles.mjs";
+import { defaultSize, defaultStrokeWidth, dynamicEntries, mergeClassesSource, paintAttribute, write } from "./shared.mjs";
 
 // <vadivam-icon> for plain HTML, htmx, Alpine, and any framework that renders
 // custom elements. It ships inside the core package as `vadivam/elements` and
-// lazy-loads the core icon-node modules, so one CDN script covers every icon.
-// `variant="solid"` draws the solid twin from the core package's solid entry.
-export async function buildElements(icons, dist, solidIcons = []) {
-  const solidEntries = solidIcons.map(({ name }) => `  ${JSON.stringify(name)}: () => import("./solid/icons/${name}.js")`).join(",\n");
-  await write(dist, "elements.js", `import createElement from "./createElement.js";
-import createSolidElement from "./solid/createElement.js";
+// lazy-loads the icon-node modules of each style's entry, which must already
+// be built, so one CDN script covers every icon. `variant` picks the style:
+// outline by default, or `variant="solid"` for the solid twin.
+export async function buildElements(dist, iconsByStyle) {
+  const entries = Object.values(styles).map((style) => ({ style, folder: style.entryDirectory ? `./${style.entryDirectory}/` : "./" }));
+  const [defaultStyle] = entries;
+  const styleTable = entries
+    .map(({ style, folder }) => [
+      `  ${style.id}: {`,
+      `    createElement: ${style.id}CreateElement,`,
+      `    paint: "${paintAttribute(style)}",`,
+      `    stroked: ${style.stroked},`,
+      `    imports: {`,
+      dynamicEntries(iconsByStyle[style.id], { prefix: `${folder}icons/` }).replace(/^/gm, "    "),
+      `    },`,
+      `  },`,
+    ].join("\n"))
+    .join("\n");
+  await write(dist, "elements.js", `${entries.map(({ style, folder }) => `import ${style.id}CreateElement from "${folder}createElement.js";`).join("\n")}
 import { sanitizePaint } from "./runtimePolicy.js";
 
-const iconImports = {
-${dynamicEntries(icons)}
+const styles = {
+${styleTable}
 };
-const solidIconImports = {
-${solidEntries}
-};
-export const iconNames = Object.keys(iconImports);
+export const iconNames = Object.keys(styles.${defaultStyle.style.id}.imports);
+
+${mergeClassesSource()}
 
 const loading = new Map();
-function loadIcon(name, solid) {
-  const imports = solid ? solidIconImports : iconImports;
-  if (!Object.prototype.hasOwnProperty.call(imports, name)) return Promise.resolve(null);
-  const key = (solid ? "solid:" : "outline:") + name;
+function loadIcon(name, style) {
+  if (!Object.prototype.hasOwnProperty.call(style.imports, name)) return Promise.resolve(null);
+  const key = style.paint + ":" + name;
   let request = loading.get(key);
   if (!request) {
-    request = imports[name]().then((module) => module.default, () => {
+    request = style.imports[name]().then((module) => module.default, () => {
       loading.delete(key);
       return null;
     });
@@ -38,7 +50,7 @@ function loadIcon(name, solid) {
 const lengthPattern = /^(?:\\d+|\\d*\\.\\d+)(?:px|em|rem|%|vw|vh|vmin|vmax|ch|ex)?$/;
 function cssLength(value) {
   const length = value?.trim();
-  if (!length || !lengthPattern.test(length)) return "24px";
+  if (!length || !lengthPattern.test(length)) return "${defaultSize}px";
   return /^[\\d.]+$/.test(length) ? length + "px" : length;
 }
 
@@ -70,19 +82,21 @@ export class VadivamIconElement extends HTMLElementBase {
     // Styles on the element itself (width, height, color) win over :host.
     this.#style.textContent = \`:host{display:inline-block;flex-shrink:0;width:\${size};height:\${size};line-height:0;vertical-align:middle}svg{display:block;width:100%;height:100%}\`;
     const name = this.getAttribute("name") ?? "";
-    const solid = this.getAttribute("variant") === "solid";
-    const iconNode = await loadIcon(name, solid);
+    const variant = this.getAttribute("variant");
+    const style = Object.prototype.hasOwnProperty.call(styles, variant) ? styles[variant] : styles.${defaultStyle.style.id};
+    const iconNode = await loadIcon(name, style);
     if (request !== this.#request) return;
-    const strokeWidth = Number(this.getAttribute("stroke-width") ?? 2);
-    const numericStroke = Number.isFinite(strokeWidth) && strokeWidth >= 0 ? strokeWidth : 2;
-    const absolute = !solid && this.hasAttribute("absolute-stroke-width") && this.getAttribute("absolute-stroke-width") !== "false";
+    const strokeWidth = Number(this.getAttribute("stroke-width") ?? ${defaultStrokeWidth});
+    const numericStroke = Number.isFinite(strokeWidth) && strokeWidth >= 0 ? strokeWidth : ${defaultStrokeWidth};
+    const absolute = style.stroked && this.hasAttribute("absolute-stroke-width") && this.getAttribute("absolute-stroke-width") !== "false";
     const label = this.getAttribute("label");
     const paint = sanitizePaint(this.getAttribute("color") ?? undefined);
     // A solid icon is filled, so it takes no stroke settings.
-    const svg = (solid ? createSolidElement : createElement)(iconNode ?? [], {
+    const svg = style.createElement(iconNode ?? [], {
       part: "svg",
-      class: name ? \`vadivam vadivam-\${name}\` : "vadivam",
-      ...(solid ? { fill: paint } : { stroke: paint, "stroke-width": numericStroke }),
+      class: mergeClasses("vadivam", name && \`vadivam-\${name}\`),
+      [style.paint]: paint,
+      ...(style.stroked ? { "stroke-width": numericStroke } : {}),
       ...(label ? { role: "img", "aria-label": label } : { "aria-hidden": "true" }),
     });
     // The rendered size can come from em or % sizes and outside CSS, so an

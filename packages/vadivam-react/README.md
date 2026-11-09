@@ -50,6 +50,8 @@ Every icon also has a solid twin with the same name in `vadivam-react/solid`. So
 import { Activity } from "vadivam-react/solid";
 ```
 
-Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [Qwik](https://www.npmjs.com/package/vadivam-qwik) · [Lit](https://www.npmjs.com/package/vadivam-lit) · [Flutter](https://pub.dev/packages/vadivam) · [Jetpack Compose](https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
+<!-- vadivam-packages:start -->
+Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Qwik](https://www.npmjs.com/package/vadivam-qwik) · [Lit](https://www.npmjs.com/package/vadivam-lit) · [Flutter](https://pub.dev/packages/vadivam) · [Compose](https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
+<!-- vadivam-packages:end -->
 
 [Issues](https://github.com/praveenjuge/vadivam/issues)

@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 
 /// Path commands in [VadivamIconData.commands]. Each opcode is followed by its
 /// absolute coordinates in the 24 by 24 view box.
+// scripts/generators/flutter.mjs writes these opcodes into the generated
+// icons; change both together.
 abstract final class VadivamPathOp {
   /// `moveTo(x, y)`.
   static const double move = 0;

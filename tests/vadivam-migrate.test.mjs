@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -9,6 +10,8 @@ import {
   migratePackageJson,
   migrateSource,
 } from "../packages/vadivam/dist/migrate-lucide.js";
+import { icons } from "../packages/vadivam/dist/manifest.js";
+import { packageExports } from "../packages/vadivam/dist/package-exports.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cli = path.join(root, "packages/vadivam/dist/cli.js");
@@ -196,6 +199,16 @@ describe("migrate-lucide", () => {
     expect(warnings[1]).toContain("NotAnIcon from vadivam-react");
   });
 
+  test("knows each package's real exports, so they raise no warning", () => {
+    expect(migrateSource(`import { createIcons, styles, type VadivamIconStyleId } from "lucide";`).warnings).toEqual([]);
+    expect(migrateSource(`import { Icon, type IconProps, type VadivamProviderProps } from "lucide-react-native";`).warnings).toEqual([]);
+    expect(migrateSource(`import { VadivamConfig, ActivityNode } from "vadivam-angular";`).warnings).toEqual([]);
+    const { warnings } = migrateSource(`import { ActivityIcon, provideVadivam } from "vadivam-react";\nimport { NotAnIcon } from "vadivam-angular";`);
+    expect(warnings).toHaveLength(2);
+    expect(warnings[0]).toContain("provideVadivam from vadivam-react");
+    expect(warnings[1]).toContain("NotAnIcon from vadivam-angular");
+  });
+
   test("renames .lucide CSS classes", () => {
     const { text, changes } = migrateSource(`.lucide { stroke-width: 1.5; }\n.lucide-arrow-right, .lucideish {}`, { styles: true });
     expect(text).toBe(`.vadivam { stroke-width: 1.5; }\n.vadivam-arrow-right, .lucideish {}`);
@@ -256,6 +269,35 @@ describe("migrate-lucide", () => {
       expect(unknown.stdout).toContain("npx vadivam migrate-lucide");
     } finally {
       await rm(project, { recursive: true, force: true });
+    }
+  });
+
+  test("package-exports lists every name each package's type declarations export", () => {
+    // The declarations of each package's root and /dynamic entries, as built.
+    const declarations = {
+      vadivam: ["index.d.ts"],
+      "vadivam-angular": ["types/vadivam-angular.d.ts"],
+      "vadivam-astro": ["index.d.ts"],
+      "vadivam-svelte": ["index.d.ts"],
+      "vadivam-qwik": ["index.d.ts"],
+    };
+    const componentNames = new Set(icons.map((icon) => icon.componentName));
+    for (const [packageName, { names, iconAliases }] of Object.entries(packageExports)) {
+      const files = declarations[packageName] ?? ["index.d.ts", "dynamic.d.ts"];
+      const exported = files.flatMap((file) => {
+        const source = readFileSync(path.join(root, "packages", packageName, "dist", file), "utf8");
+        return [
+          ...[...source.matchAll(/^export (?:declare )?(?:abstract )?(?:const|function|class|interface|type) ([\w$]+)/gm)].map((match) => match[1]),
+          ...[...source.matchAll(/^export (?:type )?\{([^}]*)\}/gm)].flatMap((match) =>
+            match[1].split(",").map((entry) => entry.trim().split(/\s+as\s+/).pop().replace(/^type\s+/, "")).filter(Boolean),
+          ),
+        ];
+      });
+      expect(exported.length).toBeGreaterThan(0);
+      const isIcon = (name) => iconAliases.some(([prefix, suffix]) =>
+        name.startsWith(prefix) && name.endsWith(suffix) && componentNames.has(name.slice(prefix.length, name.length - suffix.length)));
+      const missing = [...new Set(exported)].filter((name) => name !== "default" && !names.includes(name) && !isIcon(name));
+      expect({ packageName, missing }).toEqual({ packageName, missing: [] });
     }
   });
 });

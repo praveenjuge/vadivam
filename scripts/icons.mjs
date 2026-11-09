@@ -71,12 +71,15 @@ const iconCountPattern =
 const categoriesDocPath = path.join(root, "apps/docs/docs/(icons)/03-categories.mdx");
 const categoryTablePattern =
   /(<!-- vadivam-categories:start --> \*\/\}(\r?\n))[\s\S]*?(\r?\n\{\/\* <!-- vadivam-categories:end -->)/;
+const packageReadmes = targets.map((target) => [target, path.join(root, target.directory, "README.md")]);
+const packageFamilyPattern = /(<!-- vadivam-packages:start -->\r?\n)[\s\S]*?(\r?\n<!-- vadivam-packages:end -->)/;
 
 /** Committed files the icon commands rewrite, which CI and the pre-commit hook check. */
 export const committedOutputs = [
   ...Object.values(styles).map(sourceDirectory),
   ...iconCountFiles,
   categoriesDocPath,
+  ...packageReadmes.map(([, readme]) => readme),
   previewPath,
   ogPath,
   fontCodepointsPath,
@@ -256,16 +259,30 @@ export function updateCategoryTableMarkers(content, names) {
   );
 }
 
+function registryUrl({ registry, packageName }) {
+  if (registry === "pub") return `https://pub.dev/packages/${packageName}`;
+  if (registry === "maven") return `https://central.sonatype.com/artifact/${packageName.replace(":", "/")}`;
+  return `https://www.npmjs.com/package/${packageName}`;
+}
+
+// Each package README links every other package in scripts/packages.mjs.
+export function updatePackageFamilyMarkers(content, target) {
+  assert(packageFamilyPattern.test(content), `missing vadivam-packages markers in the ${target.packageName} README`);
+  const family = targets.filter((other) => other !== target).map((other) => `[${other.label}](${registryUrl(other)})`);
+  return content.replace(packageFamilyPattern, (_match, start, end) => `${start}Package family: ${family.join(" · ")}${end}`);
+}
+
 async function synchronizeDocCounts(names, { check = false } = {}) {
   const updates = [
     ...iconCountFiles.map((filePath) => [filePath, (content) => updateIconCountMarkers(content, names.length)]),
     [categoriesDocPath, (content) => updateCategoryTableMarkers(content, names)],
+    ...packageReadmes.map(([target, readme]) => [readme, (content) => updatePackageFamilyMarkers(content, target)]),
   ];
   for (const [filePath, update] of updates) {
     const original = await readFile(filePath, "utf8");
     const updated = update(original);
     if (updated === original) continue;
-    assert(!check, `${path.relative(root, filePath)}: icon counts are stale; run bun run icons:optimize`);
+    assert(!check, `${path.relative(root, filePath)}: generated sections are stale; run bun run icons:optimize`);
     await writeFile(filePath, updated);
   }
 }

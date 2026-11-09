@@ -61,18 +61,13 @@ async function validatePackage({
     packageMetadata.homepage,
     `${packageMetadata.homepage}${documentation}`,
     `${repositoryUrl}/tree/main/${directory}`,
-    "Package family:",
   ];
   for (const expected of requiredReadmeContent) {
     if (!readme.includes(expected)) {
       throw new Error(`${name}: README is missing ${expected}`);
     }
   }
-  for (const other of npmPackages.filter((candidate) => candidate.packageName !== name)) {
-    if (!readme.includes(`https://www.npmjs.com/package/${other.packageName}`)) {
-      throw new Error(`${name}: README does not link package family member ${other.packageName}`);
-    }
-  }
+  // bun run icons:check keeps each README's package family line in step with scripts/packages.mjs.
   // publint opens every file its export globs match at once. Under Node, a
   // package with more matches than the open-file limit reports the files it
   // could not open as missing; Bun's runtime does not, so run it there.

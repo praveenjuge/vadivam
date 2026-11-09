@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { normalizeSvg, updateCategoryTableMarkers, updateIconCountMarkers } from "../scripts/icons.mjs";
+import { normalizeSvg, updateCategoryTableMarkers, updateIconCountMarkers, updatePackageFamilyMarkers } from "../scripts/icons.mjs";
+import { targets } from "../scripts/packages.mjs";
 import {
   readIcons,
   styles,
@@ -175,6 +176,20 @@ describe("icon validation", () => {
     expect(() => updateCategoryTableMarkers("No markers.", ["activity"])).toThrow(
       "missing vadivam categories markers",
     );
+  });
+
+  test("links every other package in a README's package family line", () => {
+    const react = targets.find(({ id }) => id === "react");
+    const content = "Intro.\n<!-- vadivam-packages:start -->\nstale\n<!-- vadivam-packages:end -->\nOutro.";
+    const updated = updatePackageFamilyMarkers(content, react);
+    const line = updated.split("\n")[2];
+    expect(line).toStartWith("Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · ");
+    for (const target of targets.filter((target) => target !== react)) expect(line).toContain(`[${target.label}](`);
+    expect(line).not.toContain("vadivam-react)");
+    expect(line).toContain("(https://pub.dev/packages/vadivam)");
+    expect(line).toContain("(https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose)");
+    expect(updatePackageFamilyMarkers(updated, react)).toBe(updated);
+    expect(() => updatePackageFamilyMarkers("No markers.", react)).toThrow("missing vadivam-packages markers");
   });
 });
 
