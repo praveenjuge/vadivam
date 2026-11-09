@@ -48,22 +48,22 @@ import { buildVuePackage } from "./generators/vue.mjs";
 import { buildWebAssets } from "./generators/web.mjs";
 
 // One generator per package in scripts/packages.mjs, keyed by its id.
-const generators = {
-  core: buildVadivamPackage,
-  react: buildReactPackage,
-  "react-native": buildReactNativePackage,
-  vue: buildVuePackage,
-  svelte: buildSveltePackage,
-  solid: buildSolidPackage,
-  preact: buildPreactPackage,
-  astro: buildAstroPackage,
-  angular: buildAngularPackage,
-  qwik: buildQwikPackage,
-  lit: buildLitPackage,
-  flutter: buildFlutterPackage,
-  compose: buildComposePackage,
-  mcp: buildMcpPackage,
-};
+const generators = new Map([
+  ["core", buildVadivamPackage],
+  ["react", buildReactPackage],
+  ["react-native", buildReactNativePackage],
+  ["vue", buildVuePackage],
+  ["svelte", buildSveltePackage],
+  ["solid", buildSolidPackage],
+  ["preact", buildPreactPackage],
+  ["astro", buildAstroPackage],
+  ["angular", buildAngularPackage],
+  ["qwik", buildQwikPackage],
+  ["lit", buildLitPackage],
+  ["flutter", buildFlutterPackage],
+  ["compose", buildComposePackage],
+  ["mcp", buildMcpPackage],
+]);
 
 const iconCountFiles = [path.join(root, "README.md"), path.join(root, "apps/docs/docs/index.mdx")];
 const iconCountPattern =
@@ -318,31 +318,31 @@ async function build() {
   await validateLucidePins(icons.map((icon) => icon.name));
   await assertIconNodesPassRuntimePolicy([...icons, ...solidIcons]);
   await synchronizeDocCounts(icons.map((icon) => icon.name));
-  const missing = targets.filter((target) => !generators[target.id]).map((target) => target.id);
+  const missing = targets.filter((target) => !generators.has(target.id)).map((target) => target.id);
   assert(missing.length === 0, `No generator for: ${missing.join(", ")}`);
   for (const target of targets) {
-    await generators[target.id]({ icons, solidIcons, directory: path.join(root, target.directory) });
+    await generators.get(target.id)({ icons, solidIcons, directory: path.join(root, target.directory) });
   }
   await buildWebAssets({ icons, solidIcons });
   await buildShadcnRegistry(icons, path.join(root, "apps/docs/public/r"), { solidIcons });
   console.log(`Built packages and web assets for ${icons.length} icons.`);
 }
 
-const commands = {
-  optimize: optimizeIcons,
-  check: checkIcons,
-  build,
-  "font-codepoints": async () => allocateFontCodepoints(await readIcons()),
-  preview: buildPreview,
-  og: buildOg,
-  outputs: async () => console.log(committedOutputs.join("\n")),
-};
+const commands = new Map([
+  ["optimize", optimizeIcons],
+  ["check", checkIcons],
+  ["build", build],
+  ["font-codepoints", async () => allocateFontCodepoints(await readIcons())],
+  ["preview", buildPreview],
+  ["og", buildOg],
+  ["outputs", async () => console.log(committedOutputs.join("\n"))],
+]);
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const name = process.argv[2];
-  if (!Object.hasOwn(commands, name)) {
-    console.error(`Usage: bun scripts/icons.mjs <${Object.keys(commands).join("|")}>`);
+  const command = commands.get(process.argv[2]);
+  if (!command) {
+    console.error(`Usage: bun scripts/icons.mjs <${[...commands.keys()].join("|")}>`);
     process.exit(1);
   }
-  await commands[name]();
+  await command();
 }
