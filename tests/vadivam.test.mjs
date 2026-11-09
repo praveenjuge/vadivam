@@ -9,13 +9,14 @@ import {
   iconNames,
   manifest,
 } from "vadivam";
+import { iconNames as sourceIconNames } from "../scripts/icon-source.mjs";
 
 describe("vadivam package", () => {
-  test("exports icon nodes and a complete manifest", () => {
+  test("exports icon nodes and a manifest of every source icon", async () => {
     expect(icons.Activity).toBe(Activity);
     expect(Activity[0][1].key).toBeUndefined();
-    expect(manifest.length).toBeGreaterThan(0);
-    expect(iconNames).toHaveLength(manifest.length);
+    expect(iconNames).toEqual(await sourceIconNames());
+    expect(manifest.map((icon) => icon.name)).toEqual(iconNames);
     expect(iconsByName.activity.componentName).toBe("Activity");
   });
 
