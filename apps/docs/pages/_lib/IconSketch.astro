@@ -1,11 +1,11 @@
 ---
 // The homepage hero's drawing: icons sketched one after another on the 24px
 // canvas, over the grid and keylines from the design guide. The drawing is
-// CSS; `.icon-sketch` in theme.css holds the timing, and a small script pauses
-// it while it's out of view.
+// CSS, timed below from the list of icons, and a small script pauses it while
+// it's out of view.
 import { iconsByName } from "vadivam/manifest";
+import { canvasSize, svgPathData } from "../../../../scripts/icon-styles.mjs";
 
-// The keyframes in theme.css assume sixteen icons, three seconds each.
 const names = [
   "rocket",
   "heart",
@@ -27,9 +27,30 @@ const names = [
 const sketches = names.map((name) => {
   const svg = iconsByName[name]?.svg;
   if (!svg) throw new Error(`Hero sketch icon "${name}" is not in the set`);
-  return Array.from(svg.matchAll(/ d="([^"]*)"/g), (match) => match[1]);
+  return svgPathData(svg);
 });
-const gridLines = Array.from({ length: 25 }, (_, index) => index);
+
+// Each icon has its own three-second slot in one loop through all of them:
+// it fades in, draws for 1.44s, holds, and fades out by the end of its slot.
+const slot = 3;
+const period = slot * names.length;
+const at = (seconds: number) => `${+((seconds / period) * 100).toFixed(4)}%`;
+const timing = `.icon-sketch-icon {
+  animation: icon-sketch ${period}s linear calc(var(--sketch-index) * ${slot}s) infinite both;
+}
+@keyframes icon-sketch {
+  0% { stroke-dashoffset: 1; opacity: 0; }
+  ${at(0.048)} { opacity: 1; }
+  ${at(1.44)} { stroke-dashoffset: 0; animation-timing-function: ease-out; }
+  ${at(2.52)} { stroke-dashoffset: 0; opacity: 1; }
+  ${at(slot)}, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+/* Without motion, the first icon stays drawn. */
+@media (prefers-reduced-motion: reduce) {
+  .icon-sketch-icon { animation: none; opacity: 0; }
+  .icon-sketch-icon[data-still] { opacity: 1; }
+}`;
+const gridLines = Array.from({ length: canvasSize + 1 }, (_, index) => index);
 ---
 
 <svg class="icon-sketch" viewBox="-4 -4 32 32" aria-hidden="true" focusable="false">
@@ -44,7 +65,7 @@ const gridLines = Array.from({ length: 25 }, (_, index) => index);
   </defs>
   <g mask="url(#iconSketchMask)">
     <g class="icon-sketch-grid">
-      {gridLines.map((line) => <path d={`M${line} 0V24M0 ${line}H24`} />)}
+      {gridLines.map((line) => <path d={`M${line} 0V${canvasSize}M0 ${line}H${canvasSize}`} />)}
     </g>
     <g class="icon-sketch-keylines">
       <path d="M-4 12H28M12-4V28M-4-4 28 28M28-4-4 28" />
@@ -62,6 +83,7 @@ const gridLines = Array.from({ length: 25 }, (_, index) => index);
     ))
   }
 </svg>
+<style is:inline set:html={timing}></style>
 
 <script>
   // Astro's client router swaps pages without reloading, so watch the drawing
@@ -75,3 +97,47 @@ const gridLines = Array.from({ length: 25 }, (_, index) => index);
     document.addEventListener("astro:before-swap", () => observer.disconnect(), { once: true });
   });
 </script>
+
+<style is:global>
+  /* The grid and keylines use a light blue so they read as guides, not as
+     part of the icon. */
+  .icon-sketch {
+    --sketch-guide: oklch(0.7 0.13 240);
+    display: block;
+    overflow: visible;
+  }
+  [data-theme="dark"] .icon-sketch {
+    --sketch-guide: oklch(0.62 0.14 240);
+  }
+  .icon-sketch-grid,
+  .icon-sketch-keylines {
+    fill: none;
+    stroke: var(--sketch-guide);
+    vector-effect: non-scaling-stroke;
+  }
+  .icon-sketch-grid > path,
+  .icon-sketch-keylines > * {
+    vector-effect: non-scaling-stroke;
+  }
+  .icon-sketch-grid {
+    stroke-width: 1px;
+    stroke-opacity: 0.16;
+  }
+  .icon-sketch-keylines {
+    stroke-width: 1px;
+    stroke-opacity: 0.5;
+  }
+  .icon-sketch-icon {
+    fill: none;
+    stroke: var(--color-foreground);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 1;
+  }
+  /* An off-screen animation still restyles every frame, so the drawing pauses
+     while it's out of view. */
+  .icon-sketch[data-paused] .icon-sketch-icon {
+    animation-play-state: paused;
+  }
+</style>

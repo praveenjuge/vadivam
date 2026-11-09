@@ -288,7 +288,7 @@ export const copyFormats = Object.freeze(
     { id: "font", label: "Icon font", install: "core", render: (icon, options) => fontSnippet(icon.name, options.style) },
     { id: "iconify", label: "Iconify name", styles: ["outline"], render: (icon) => iconifySnippet(icon.name) },
     { id: "shadcn", label: "shadcn add", render: (icon, options) => shadcnAddCommand(icon.name, options.style) },
-  ].map((format) => Object.freeze({ styles: styleIds, ...format })),
+  ].map((format) => Object.freeze({ styles: styleIds, framework: false, ...format })),
 );
 
 export const copyFormatsById = Object.freeze(Object.fromEntries(copyFormats.map((format) => [format.id, format])));

@@ -1,21 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import {
-  GENERATED_CONFIG,
-  GENERATED_ONLY_KEYS,
-  ROOT_CONFIG,
-  toRootConfig,
-} from "../scripts/sync-wrangler-config.mjs";
-import {
-  MCP_ROUTE,
-  WORKER_ENTRY,
-  runsWorkerFirst,
-  withWorkerEntry,
-} from "../scripts/docs-worker.mjs";
-
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+import { WORKER_ENTRY, runsWorkerFirst, withWorkerEntry } from "../apps/docs/scripts/docs-worker.mjs";
+import { docsPaths, repoRoot as root } from "../apps/docs/scripts/paths.mjs";
+import { GENERATED_ONLY_KEYS, toRootConfig } from "../apps/docs/scripts/sync-wrangler-config.mjs";
+import { mcpRoute as MCP_ROUTE } from "../apps/docs/worker/routes.mjs";
 
 const generated = {
   name: "vadivam",
@@ -76,15 +65,15 @@ describe("root wrangler config sync", () => {
   });
 
   test("committed root config matches the built docs Worker", () => {
-    const rootConfig = JSON.parse(readFileSync(path.join(root, ROOT_CONFIG), "utf8"));
+    const rootConfig = JSON.parse(readFileSync(path.join(root, docsPaths.rootConfig), "utf8"));
     for (const key of GENERATED_ONLY_KEYS) expect(rootConfig).not.toHaveProperty(key);
     expect(rootConfig.name).toBe("vadivam");
     expect(rootConfig.main).toBe(`apps/docs/dist/server/${WORKER_ENTRY}`);
     expect(runsWorkerFirst(rootConfig.assets.run_worker_first, MCP_ROUTE)).toBe(true);
     expect(rootConfig.assets.directory).toBe("apps/docs/dist/client");
 
-    const generatedPath = path.join(root, GENERATED_CONFIG);
-    if (!existsSync(generatedPath)) return;
+    // Runs after the docs build (test:seo:built), which writes the generated config.
+    const generatedPath = path.join(root, docsPaths.generatedConfig);
     const built = toRootConfig(JSON.parse(readFileSync(generatedPath, "utf8")));
     expect(rootConfig).toEqual(built);
     expect(existsSync(path.join(root, rootConfig.main))).toBe(true);

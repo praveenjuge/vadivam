@@ -22,6 +22,12 @@ describe("vadivam-mcp type declarations", () => {
     expect(union("UsageFramework")).toEqual(["core", ...frameworks.map((framework) => framework.id)]);
   });
 
+  test("the MCP docs page lists every format", () => {
+    const page = readFileSync(new URL("../../apps/docs/docs/(tools)/03-mcp.mdx", import.meta.url), "utf8");
+    const listed = page.match(/`format` accepts ([^.]*)\./)?.[1] ?? "";
+    expect([...listed.matchAll(/`([^`]+)`/g)].map((match) => match[1])).toEqual(copyFormats.map((format) => format.id));
+  });
+
   test("IconStyle lists every style", () => {
     expect(union("IconStyle")).toEqual([...styleIds]);
   });

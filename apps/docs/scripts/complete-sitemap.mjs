@@ -1,14 +1,10 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
-import { icons } from "../packages/vadivam/dist/manifest.js";
+import { icons } from "vadivam/manifest";
+import { siteUrl } from "../../../scripts/packages.mjs";
 import { iconLastmods } from "./icon-lastmods.mjs";
-
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const deployRoot = path.join(root, "apps/docs/dist/client");
-const sitemapPath = path.join(deployRoot, "sitemap.xml");
-const llmsPath = path.join(deployRoot, "llms.txt");
+import { docsPaths, fromRoot } from "./paths.mjs";
 
 const xmlEscape = (value) =>
   value
@@ -87,25 +83,20 @@ export function completeLlmsIndex(markdown, site) {
   return `${markdown.trimEnd()}\n\n## Icon catalog\n\n- [Browse all Vadivam icons](${homepage}): Search the complete icon catalog, copy SVG markup, and find framework components.\n`;
 }
 
-if (import.meta.main) {
-  const [xml, llms] = await Promise.all([
-    readFile(sitemapPath, "utf8"),
-    readFile(llmsPath, "utf8"),
-  ]);
-  const lastmods = iconLastmods(root);
-  const iconNames = icons.map(({ name }) => name);
-  const sitemap = completeSitemap(xml, iconNames, Object.fromEntries(lastmods));
-  const parsed = new XMLParser().parse(sitemap);
-  const [firstEntry] = asArray(parsed?.urlset?.url);
-  if (!firstEntry?.loc) throw new Error("Completed sitemap contains no URLs");
-  const llmsIndex = completeLlmsIndex(llms, firstEntry.loc);
 
+/** Add every icon page to Blume's sitemap.xml and the icon catalog to its llms.txt. */
+export async function completeSitemapFiles() {
+  const sitemapPath = path.join(fromRoot(docsPaths.client), "sitemap.xml");
+  const llmsPath = path.join(fromRoot(docsPaths.client), "llms.txt");
+  const [xml, llms] = await Promise.all([readFile(sitemapPath, "utf8"), readFile(llmsPath, "utf8")]);
+  const lastmods = iconLastmods();
+  const iconNames = icons.map(({ name }) => name);
   await Promise.all([
-    writeFile(sitemapPath, sitemap),
-    writeFile(llmsPath, llmsIndex),
+    writeFile(sitemapPath, completeSitemap(xml, iconNames, Object.fromEntries(lastmods))),
+    writeFile(llmsPath, completeLlmsIndex(llms, siteUrl)),
   ]);
   const applied = iconNames.filter((name) => lastmods.has(name)).length;
-  process.stdout.write(
-    `Completed sitemap.xml with ${icons.length} icon URLs (${applied} carrying lastmod) and added the icon catalog to llms.txt.\n`,
+  console.log(
+    `Completed sitemap.xml with ${icons.length} icon URLs (${applied} carrying lastmod) and added the icon catalog to llms.txt.`,
   );
 }

@@ -1,34 +1,29 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { blumeWorkerEntry, mcpRoute } from "../worker/routes.mjs";
+import { docsPaths, fromRoot } from "./paths.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const serverDirectory = path.join(root, "apps/docs/dist/server");
-
-export const WORKER_SOURCE = "apps/docs/worker/index.mjs";
 export const WORKER_ENTRY = "vadivam-worker.mjs";
-export const BLUME_ENTRY = "blume-worker.mjs";
-export const MCP_ROUTE = "/mcp";
 
 // Blume's generated config points at its own Worker and ships it unbundled.
-// Point it at the wrapper instead and make sure /mcp reaches the Worker
-// before the static assets layer.
+// Point it at the wrapper instead and make sure the MCP route reaches the
+// Worker before the static assets layer.
 export function withWorkerEntry(config) {
   const next = structuredClone(config);
-  if (next.main !== BLUME_ENTRY && next.main !== WORKER_ENTRY) {
+  if (next.main !== blumeWorkerEntry && next.main !== WORKER_ENTRY) {
     throw new Error(`Unexpected Worker entry "${next.main}" in the generated Wrangler config`);
   }
   next.main = WORKER_ENTRY;
   if (!Array.isArray(next.assets?.run_worker_first)) {
     throw new Error("The generated Wrangler config has no assets.run_worker_first list");
   }
-  const routes = next.assets.run_worker_first.filter((rule) => rule !== MCP_ROUTE);
+  const routes = next.assets.run_worker_first.filter((rule) => rule !== mcpRoute);
   next.assets.run_worker_first = routes;
   // Wrangler rejects a rule that another rule already covers, so only add
-  // /mcp when Blume's rules do not already send it to the Worker.
-  if (!runsWorkerFirst(routes, MCP_ROUTE)) routes.unshift(MCP_ROUTE);
-  if (!runsWorkerFirst(routes, MCP_ROUTE)) {
-    throw new Error(`${MCP_ROUTE} is excluded from assets.run_worker_first`);
+  // the route when Blume's rules do not already send it to the Worker.
+  if (!runsWorkerFirst(routes, mcpRoute)) routes.unshift(mcpRoute);
+  if (!runsWorkerFirst(routes, mcpRoute)) {
+    throw new Error(`${mcpRoute} is excluded from assets.run_worker_first`);
   }
   return next;
 }
@@ -55,10 +50,12 @@ export function runsWorkerFirst(routes, pathname) {
   return included && !excluded;
 }
 
+/** Bundle the docs Worker next to Blume's and point the generated config at it. */
 export async function buildDocsWorker() {
+  const blumeImport = `./${blumeWorkerEntry}`;
   const result = await Bun.build({
-    entrypoints: [path.join(root, WORKER_SOURCE)],
-    outdir: serverDirectory,
+    entrypoints: [fromRoot(docsPaths.workerSource)],
+    outdir: fromRoot(docsPaths.server),
     naming: WORKER_ENTRY,
     target: "browser",
     format: "esm",
@@ -68,10 +65,8 @@ export async function buildDocsWorker() {
       {
         name: "blume-worker-external",
         setup(build) {
-          build.onResolve({ filter: /^\.\/blume-worker\.mjs$/ }, () => ({
-            path: `./${BLUME_ENTRY}`,
-            external: true,
-          }));
+          const filter = new RegExp(`^${blumeImport.replaceAll(".", "\\.")}$`);
+          build.onResolve({ filter }, () => ({ path: blumeImport, external: true }));
         },
       },
     ],
@@ -79,13 +74,11 @@ export async function buildDocsWorker() {
   if (!result.success) {
     throw new AggregateError(result.logs, "Could not bundle the docs Worker");
   }
-  const configPath = path.join(serverDirectory, "wrangler.json");
+  const configPath = fromRoot(docsPaths.generatedConfig);
   const config = JSON.parse(await readFile(configPath, "utf8"));
   await writeFile(configPath, `${JSON.stringify(withWorkerEntry(config), null, 2)}\n`);
   const output = result.outputs[0];
   console.log(
-    `Bundled ${path.relative(root, output.path)} (${(output.size / 1024).toFixed(0)} KiB) with the MCP endpoint at ${MCP_ROUTE}.`,
+    `Bundled ${path.relative(fromRoot("."), output.path)} (${(output.size / 1024).toFixed(0)} KiB) with the MCP endpoint at ${mcpRoute}.`,
   );
 }
-
-if (import.meta.main) await buildDocsWorker();

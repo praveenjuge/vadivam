@@ -2,7 +2,7 @@
 // "Copy as" and "Download" menus. Items carry `data-action` names handled by
 // `runAction` in icon-tools.ts; menus open with the native Popover API.
 import VIcon from "./VIcon.astro";
-import { copyFormats } from "./icon-tools";
+import { menuFormats } from "./icon-tools";
 
 interface Props {
   /** Unique per page, so two instances can share a page. */
@@ -30,7 +30,7 @@ const downloads = [
 </button>
 <div class={menuClass} id={`${id}-copy`} popover data-menu role="menu" aria-label="Copy as">
   {
-    copyFormats.map((format) => (
+    menuFormats.map((format) => (
       <button class={itemClass} type="button" role="menuitem" data-action={`copy-${format.id}`}>
         {format.label}
       </button>

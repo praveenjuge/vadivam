@@ -1,10 +1,10 @@
-// The docs site's Worker entry. It answers the remote MCP endpoint at /mcp
-// and hands every other request to Blume's generated Worker unchanged.
-// scripts/docs-worker.mjs bundles this file next to Blume's build output.
+// The docs site's Worker entry. It answers the remote MCP endpoint and hands
+// every other request to Blume's generated Worker unchanged.
+// apps/docs/scripts/docs-worker.mjs bundles this file next to Blume's build
+// output, where this import (blumeWorkerEntry in routes.mjs) resolves.
 import { createVadivamHttpHandler } from "vadivam-mcp";
 import blume from "./blume-worker.mjs";
-
-const mcpPath = "/mcp";
+import { mcpRoute } from "./routes.mjs";
 
 // The endpoint is public, read-only, and uncredentialed, so browser-based
 // MCP clients may call it from any origin.
@@ -39,7 +39,7 @@ async function handleMcp(request) {
 export default {
   async fetch(request, env, context) {
     const { pathname } = new URL(request.url);
-    if (pathname === mcpPath || pathname === `${mcpPath}/`) return handleMcp(request);
+    if (pathname === mcpRoute || pathname === `${mcpRoute}/`) return handleMcp(request);
     return blume.fetch(request, env, context);
   },
 };

@@ -1,8 +1,9 @@
+// `blume audit`, failing on every error and warning except the ones Blume
+// raises for the changelog pages it generates from GitHub releases.
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { docsPaths, fromRoot } from "./paths.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const docs = path.join(root, "apps/docs");
+const docs = fromRoot(docsPaths.docs);
 const blume = path.join(docs, "node_modules/.bin/blume");
 
 const child = Bun.spawn([blume, "audit", "--json"], {

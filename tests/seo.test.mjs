@@ -4,9 +4,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { icons } from "../packages/vadivam/dist/manifest.js";
+import { docsPaths, fromRoot } from "../apps/docs/scripts/paths.mjs";
+import { gridChunkSize } from "../scripts/web-data.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const dist = path.join(root, "apps/docs/dist/client");
+const dist = fromRoot(docsPaths.client);
 const site = "https://vadivam.praveenjuge.com";
 const readDist = (...segments) =>
   readFileSync(path.join(dist, ...segments), "utf8");
@@ -85,9 +87,10 @@ describe("website SEO", () => {
     // Tiles carry only path data; presentation attributes live in CSS. A click
     // opens the drawer, so tiles opt out of Astro's hover prefetch.
     expect(html).toContain('<a href="/icons/activity" aria-label="activity" data-astro-prefetch="false"><svg viewBox="0 0 24 24"><path');
-    // Tiles render in chunks of 120 so off-screen chunks skip style and layout.
+    // Tiles render in chunks so off-screen chunks skip style and layout.
     const chunks = [...html.matchAll(/<div class="icon-chunk" data-solid="\/(icon-data\/solid-\d+\.[0-9a-f]{10}\.json)">/g)];
-    expect(chunks).toHaveLength(Math.ceil(icons.length / 120));
+    expect(chunks).toHaveLength(Math.ceil(icons.length / gridChunkSize));
+    expect(html).toContain(`style="--chunk-size: ${gridChunkSize}"`);
     expect(Buffer.byteLength(html, "utf8")).toBeLessThan(1024 * 1024);
     // Each chunk's solid paths load on demand, in tile order.
     const solid = chunks.flatMap(([, file]) => JSON.parse(readDist(file)));
@@ -107,7 +110,7 @@ describe("website SEO", () => {
   test("homepage icon data is served from the asset layer and cached for good", () => {
     // Content-hashed names change whenever the data does.
     const rules = JSON.parse(
-      readFileSync(path.join(root, "apps/docs/dist/server/wrangler.json"), "utf8"),
+      readFileSync(fromRoot(docsPaths.generatedConfig), "utf8"),
     ).assets?.run_worker_first;
     expect(rules).toContain("!/icon-data/*");
     expect(readDist("_headers")).toMatch(
@@ -173,8 +176,10 @@ describe("website SEO", () => {
 
   test("icon pages install each framework's own package and link related icons", () => {
     const html = readDist("icons", "bell", "index.html");
-    expect(html).toContain('data-install="vadivam-vue">npm install vadivam-vue</code>');
-    expect(html).toContain('data-install="vadivam">npm install vadivam</code>');
+    expect(html).toContain('data-install="vue">npm install vadivam-vue</code>');
+    expect(html).toContain('data-install="react-native">npm install vadivam-react-native react-native-svg</code>');
+    expect(html).toContain('data-install="core">npm install vadivam</code>');
+    expect(html).toContain(`https://cdn.jsdelivr.net/npm/vadivam@`);
     expect(html).toContain('class="related-tile" href="/icons/bell-ring"');
     expect(html).toContain('rel="prev"');
     expect(html).toContain('rel="next"');
@@ -336,7 +341,7 @@ describe("website SEO", () => {
     expect(wrangler).toContain('"html_handling": "drop-trailing-slash"');
   });
   test("Cloudflare build serves Markdown negotiation through the wrapper worker", () => {
-    const serverDir = path.join(root, "apps/docs/dist/server");
+    const serverDir = fromRoot(docsPaths.server);
     const config = JSON.parse(
       readFileSync(path.join(serverDir, "wrangler.json"), "utf8"),
     );
@@ -362,7 +367,7 @@ describe("website SEO", () => {
 
   test("shadcn registry ships as static JSON with CORS headers", () => {
     const rules = JSON.parse(
-      readFileSync(path.join(root, "apps/docs/dist/server/wrangler.json"), "utf8"),
+      readFileSync(fromRoot(docsPaths.generatedConfig), "utf8"),
     ).assets?.run_worker_first;
     expect(rules).toContain("!/r/*");
     const registry = JSON.parse(readDist("r", "registry.json"));
