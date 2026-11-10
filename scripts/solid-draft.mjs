@@ -28,6 +28,7 @@ import {
   toPathData,
 } from "./skia-path.mjs";
 import { iconSvg, styles, svgPathData } from "./icon-styles.mjs";
+import { metadataFiles, root } from "./lib/paths.mjs";
 
 const solidLineWidth = 2.5;
 const cutWidth = 2;
@@ -769,13 +770,12 @@ async function main(args) {
   const { mkdir, readFile, readdir, writeFile } = await import("node:fs/promises");
   const { existsSync } = await import("node:fs");
   const path = await import("node:path");
-  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const force = args.includes("--force");
   const requested = args.filter((arg) => !arg.startsWith("--"));
-  const iconsDir = path.join(root, "icons");
-  const solidDir = path.join(root, "icons-solid");
+  const iconsDir = path.join(root, styles.outline.sourceDirectory);
+  const solidDir = path.join(root, styles.solid.sourceDirectory);
   await mkdir(solidDir, { recursive: true });
-  const hintsPath = path.join(root, "metadata/solid-hints.json");
+  const hintsPath = path.join(root, metadataFiles.solidHints);
   const hints = existsSync(hintsPath) ? JSON.parse(await readFile(hintsPath, "utf8")) : {};
   const hintsFor = (name) => ({
     ...hints.icons?.[name],

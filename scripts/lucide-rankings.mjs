@@ -5,11 +5,12 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { lucideAliases, readLucideCheckout, root } from "./lucide-metadata.mjs";
+import { metadataFiles, root } from "./lib/paths.mjs";
+import { lucideAliases, readLucideCheckout } from "./lucide-metadata.mjs";
 
 const LUCIDE_ICONS_URL = "https://lucide.dev/icons/";
 const POPULARITY_RANKING = "Lucide icon-page visitors over the last 12 months";
-const rankingsPath = path.join(root, "metadata/lucide-rankings.json");
+const rankingsPath = path.join(root, metadataFiles.rankings);
 
 // lucide.dev can trail the newest release by a few days. More unlisted icons
 // than this means the site data changed shape rather than just lagging.

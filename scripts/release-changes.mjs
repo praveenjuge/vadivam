@@ -5,17 +5,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-
-// Data the build reads besides the icons and the scripts it imports.
-const buildData = [
-  "metadata/lucide.json",
-  "metadata/lucide-aliases.json",
-  "metadata/lucide-rankings.json",
-  "scripts/font-codepoints.json",
-  "apps/docs/skills/vadivam-icons/SKILL.md",
-];
+import { styles } from "./icon-styles.mjs";
+import { root } from "./lib/paths.mjs";
 
 /** Every script the build runs: the build command, the generators, and what they import. */
 function buildScripts() {
@@ -38,12 +29,20 @@ function buildScripts() {
   return seen;
 }
 
-const packageInputs = new Set([...buildData, ...buildScripts()]);
+// Data the build reads besides the icons: each script that reads a file lists
+// it in its `buildInputs` export.
+async function buildData(scripts) {
+  const modules = await Promise.all([...scripts].map((file) => import(path.join(root, file))));
+  return modules.flatMap((module) => module.buildInputs ?? []);
+}
+
+const scripts = buildScripts();
+const packageInputs = new Set([...(await buildData(scripts)), ...scripts]);
+const sourceDirectories = Object.values(styles).map((style) => `${style.sourceDirectory}/`);
 
 export function isReleasablePath(file) {
   return (
-    file.startsWith("icons/") ||
-    file.startsWith("icons-solid/") ||
+    sourceDirectories.some((directory) => file.startsWith(directory)) ||
     file.startsWith("packages/") ||
     file.startsWith("apps/figma-plugin/") ||
     file.startsWith("apps/figma-shared/") ||
