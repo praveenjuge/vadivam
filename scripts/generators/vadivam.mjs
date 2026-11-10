@@ -163,6 +163,7 @@ async function buildEntry(dist, icons, style, packageDist) {
     path.join(dist, "createIcons.js"),
     `import createElement from "./createElement.js";
 import defaultAttributes from "./defaultAttributes.js";
+import { sanitizeRootAttributes } from "${shared}runtimePolicy.js";
 
 function attributes(element) {
   return Object.fromEntries(Array.from(element.attributes, ({ name, value }) => [name, value]));
@@ -179,7 +180,7 @@ function replaceElement(element, { nameAttr, icons, attrs }) {
     return;
   }
   const elementAttrs = attributes(element);
-  const iconAttrs = { ...defaultAttributes, [nameAttr]: name, ...(isLabelled(null, Object.keys({ ...attrs, ...elementAttrs })) ? {} : { "aria-hidden": "true" }), ...attrs, ...elementAttrs };
+  const iconAttrs = { ...defaultAttributes, [nameAttr]: name, ...(isLabelled(null, Object.keys(sanitizeRootAttributes({ ...attrs, ...elementAttrs }))) ? {} : { "aria-hidden": "true" }), ...attrs, ...elementAttrs };
   iconAttrs.class = mergeClasses("vadivam", \`vadivam-\${name}\`, elementAttrs.class, ...[attrs.class].flat());
   element.parentNode?.replaceChild(createElement(iconNode, iconAttrs), element);
 }

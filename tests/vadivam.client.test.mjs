@@ -83,6 +83,12 @@ describe("vadivam browser API", () => {
     createIcons({ icons: { Activity }, root, attrs: { "aria-label": "Activity" } });
     expect(root.querySelector("svg").getAttribute("aria-label")).toBe("Activity");
     expect(root.querySelector("svg").getAttribute("aria-hidden")).toBeNull();
+
+    // A label that will not be rendered does not count.
+    root.innerHTML = '<i data-vadivam="activity"></i>';
+    createIcons({ icons: { Activity }, root, attrs: { "aria-label": undefined } });
+    expect(root.querySelector("svg").getAttribute("aria-label")).toBeNull();
+    expect(root.querySelector("svg").getAttribute("aria-hidden")).toBe("true");
   });
 
   test("createIcons finds attribute names that need escaping in a selector", () => {
