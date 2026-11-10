@@ -17,7 +17,7 @@ const exportedNames = (specifier) =>
 function iconTypes(name, subpath, icon) {
   const manifestPath = resolve(`${name}/package.json`);
   const { exports } = JSON.parse(readFileSync(manifestPath, "utf8"));
-  return path.join(path.dirname(manifestPath), exports[subpath].types.replace("*", icon));
+  return path.join(path.dirname(manifestPath), exports[subpath].types.replaceAll("*", icon));
 }
 
 // How this file checks each npm framework package: plain ESM it can import,
