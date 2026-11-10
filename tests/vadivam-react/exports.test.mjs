@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readIcons } from "../../scripts/icons.mjs";
+import { readIcons } from "../../scripts/icon-source.mjs";
 import * as named from "vadivam-react";
 import dynamicIconImports from "vadivam-react/dynamicIconImports";
 
@@ -13,14 +13,15 @@ const NON_ICON_EXPORTS = new Set([
   "useVadivamContext",
 ]);
 
+const iconAliases = (icon) => [icon.componentName, `${icon.componentName}Icon`, `Vadivam${icon.componentName}`];
+
 describe("vadivam-react exports", () => {
-  test("exposes one named export per icon", () => {
-    const iconExports = Object.keys(named).filter((key) => !NON_ICON_EXPORTS.has(key));
-    expect(iconExports.length).toBe(icons.length * 3);
+  test("exports each icon under its three names and nothing unexpected", () => {
+    expect(Object.keys(named).sort()).toEqual([...NON_ICON_EXPORTS, ...icons.flatMap(iconAliases)].sort());
   });
 
   test("exposes one dynamic import per icon", () => {
-    expect(Object.keys(dynamicIconImports).length).toBe(icons.length);
+    expect(Object.keys(dynamicIconImports)).toEqual(icons.map((icon) => icon.name));
   });
 
   test.each(icons.map((icon) => [icon.name, icon]))(
@@ -45,7 +46,11 @@ describe("vadivam-react exports", () => {
       expect(typeof importer).toBe("function");
       const mod = await importer();
       expect(mod.default.displayName).toBe(icon.componentName);
-      expect(mod.__iconNode).toEqual(icon.iconNode);
+      // React keys each element; the geometry is the icon's own.
+      const keys = mod.__iconNode.map(([, attrs]) => attrs.key);
+      expect(new Set(keys).size).toBe(keys.length);
+      expect(keys.every((key) => typeof key === "string" && key.length > 0)).toBe(true);
+      expect(mod.__iconNode.map(([tag, { key, ...attrs }]) => [tag, attrs])).toEqual(icon.iconNode);
     }
   );
 });

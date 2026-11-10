@@ -48,12 +48,21 @@ describe("vadivam-react-native Icon", () => {
     expect(svg.getAttribute("stroke-width")).toBe("4");
     expect(svg.getAttribute("fill")).toBe("gold");
     expect(svg.getAttribute("class")).toBe("nativewind-icon");
+    expect(svg.getAttribute("data-rn-label")).toBe("Activity");
     expect(svg.getAttribute("data-native")).toBe("yes");
   });
 
-  test("maps testID and preserves data-testid", () => {
-    expect(renderActivity({ testID: "activity" }).svg.getAttribute("data-testid")).toBe("activity");
-    expect(renderActivity({ "data-testid": "activity-data" }).svg.getAttribute("data-testid")).toBe("activity-data");
+  test("passes testID to the native Svg and mirrors it as data-testid for the web", () => {
+    const { svg } = renderActivity({ testID: "activity" });
+    expect(svg.getAttribute("data-rn-test-id")).toBe("activity");
+    expect(svg.getAttribute("data-testid")).toBe("activity");
+  });
+
+  test("a title renders a native Title and gives the icon the image role", () => {
+    const { svg } = renderActivity({ title: "Pulse" });
+    expect(svg.querySelector("title").textContent).toBe("Pulse");
+    expect(svg.getAttribute("data-rn-role")).toBe("image");
+    expect(renderActivity().svg.querySelector("title")).toBeNull();
   });
 
   test("calculates absolute stroke width only for valid numeric sizes", () => {

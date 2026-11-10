@@ -1,45 +1,74 @@
 // Builds real framework applications against materialized local packages and
 // verifies the browser packages from their production output.
-import { spawn } from "node:child_process";
-import { once } from "node:events";
+// Usage: bun scripts/integration.mjs [app...], --matrix for the CI shards, or
+// --cache-paths for every path CI caches.
 import { cpSync, existsSync, readFileSync, rmSync } from "node:fs";
 import { performance } from "node:perf_hooks";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { chromium } from "playwright";
+import { root } from "./lib/paths.mjs";
+import { forEachConcurrently, run } from "./lib/process.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const integrationDir = path.join(root, "tests", "integration");
 const commandTimeoutMs = 5 * 60 * 1000;
 const browserLaunchTimeoutMs = 60 * 1000;
+// The static app renders the activity icon from the icon font.
+const activityCodepoint = JSON.parse(readFileSync(path.join(root, "scripts/font-codepoints.json"), "utf8")).activity;
+// Each app runs in one CI shard on pull requests; `cache` lists build caches
+// worth keeping besides node_modules.
 const allApps = [
-  { name: "static", packages: ["vadivam"], output: "dist", verifier: "static-assets" },
-  { name: "nextjs", packages: ["vadivam-react"] },
-  { name: "tanstack-start", packages: ["vadivam-react"] },
-  { name: "vite-react", packages: ["vadivam-react"] },
+  { name: "static", shard: "react-web", packages: ["vadivam"], output: "dist", verifier: "static-assets" },
+  { name: "nextjs", shard: "react-web", packages: ["vadivam-react"], cache: [".next/cache"] },
+  { name: "tanstack-start", shard: "react-web", packages: ["vadivam-react"] },
+  { name: "vite-react", shard: "react-web", packages: ["vadivam-react"] },
   {
     name: "expo",
+    shard: "native-and-ui",
     packages: ["vadivam-react-native"],
     buildIncludesTypecheck: true,
   },
-  { name: "vue", packages: ["vadivam-vue"], output: "dist", verifiesFunctionEvents: true },
-  { name: "svelte", packages: ["vadivam-svelte"], output: "build", verifiesFunctionEvents: true },
-  { name: "solid", packages: ["vadivam-solid"], output: "dist", verifiesFunctionEvents: true },
+  { name: "vue", shard: "native-and-ui", packages: ["vadivam-vue"], output: "dist", verifiesFunctionEvents: true },
+  { name: "svelte", shard: "native-and-ui", packages: ["vadivam-svelte"], output: "build", verifiesFunctionEvents: true },
+  { name: "solid", shard: "native-and-ui", packages: ["vadivam-solid"], output: "dist", verifiesFunctionEvents: true },
   {
     name: "angular",
+    shard: "compiled-web",
     packages: ["vadivam-angular"],
     output: "dist/vadivam-integration-angular/browser",
     buildIncludesTypecheck: true,
   },
-  { name: "astro", packages: ["vadivam-astro"], output: "dist" },
-  { name: "preact", packages: ["vadivam-preact"], output: "dist", verifiesFunctionEvents: true },
+  { name: "astro", shard: "compiled-web", packages: ["vadivam-astro"], output: "dist" },
+  { name: "preact", shard: "compiled-web", packages: ["vadivam-preact"], output: "dist", verifiesFunctionEvents: true },
   // Qwik's client-only render() doesn't attach onClick$ listeners even on
   // plain elements, so event props are covered by tests/frameworks instead.
-  { name: "qwik", packages: ["vadivam-qwik"], output: "dist" },
+  { name: "qwik", shard: "compiled-web", packages: ["vadivam-qwik"], output: "dist" },
   // Lit templates can't spread attributes onto the icon, so each one renders
   // inside a wrapper element that carries its id and click handler.
-  { name: "lit", packages: ["vadivam-lit"], output: "dist", verifiesFunctionEvents: true, wrapped: true },
+  { name: "lit", shard: "compiled-web", packages: ["vadivam-lit"], output: "dist", verifiesFunctionEvents: true, wrapped: true },
 ];
+
+// What CI caches for a set of apps, one path per line.
+const cachePaths = (cachedApps) =>
+  cachedApps
+    .flatMap((app) => ["node_modules", ...(app.cache ?? [])].map((cache) => `tests/integration/${app.name}/${cache}`))
+    .join("\n");
+
+// The GitHub Actions matrix: one entry per shard with its apps and cache paths.
+if (process.argv[2] === "--matrix") {
+  const include = Object.entries(Object.groupBy(allApps, (app) => app.shard)).map(([shard, shardApps]) => ({
+    shard,
+    apps: shardApps.map((app) => app.name).join(" "),
+    cache_paths: cachePaths(shardApps),
+  }));
+  console.log(JSON.stringify({ include }));
+  process.exit(0);
+}
+
+// The push job runs every app in one job, so it caches them all.
+if (process.argv[2] === "--cache-paths") {
+  console.log(cachePaths(allApps));
+  process.exit(0);
+}
+
 const requestedApps = new Set(process.argv.slice(2));
 const apps = requestedApps.size
   ? allApps.filter(({ name }) => requestedApps.has(name))
@@ -48,38 +77,13 @@ if (requestedApps.size && apps.length !== requestedApps.size) {
   throw new Error(`Unknown integration app: ${[...requestedApps].filter((name) => !apps.some((app) => app.name === name)).join(", ")}`);
 }
 
-function run(command, args, cwd) {
+function step(command, args, cwd) {
   console.log(`\n$ ${command} ${args.join(" ")}  (cwd: ${path.relative(root, cwd)})`);
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd, stdio: "inherit" });
-    let timedOut = false;
-    let forceKillTimeout;
-    const timeout = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGTERM");
-      forceKillTimeout = setTimeout(() => child.kill("SIGKILL"), 5000);
-    }, commandTimeoutMs);
-    child.on("error", (error) => {
-      clearTimeout(timeout);
-      clearTimeout(forceKillTimeout);
-      reject(
-        new Error(`${command} ${args.join(" ")} failed in ${cwd}: ${error.message}`),
-      );
-    });
-    child.on("exit", (code, signal) => {
-      clearTimeout(timeout);
-      clearTimeout(forceKillTimeout);
-      if (code === 0) {
-        resolve();
-        return;
-      }
-      const reason = timedOut ? "timed out" : `exited with ${signal ?? code}`;
-      reject(new Error(`${command} ${args.join(" ")} ${reason} in ${cwd}`));
-    });
-  });
+  return run(command, args, { cwd, timeoutMs: commandTimeoutMs });
 }
 
 async function launchBrowser() {
+  const { chromium } = await import("playwright");
   let lastError;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
@@ -106,27 +110,28 @@ function materializePackage(cwd, packageName) {
   });
 }
 
-async function waitForServer(url) {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    try {
-      if ((await fetch(url)).ok) return;
-    } catch {}
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  throw new Error(`Timed out waiting for ${url}`);
+// Serves a production build, falling back to index.html like a static host.
+function serveDirectory(directory, port) {
+  return Bun.serve({
+    port,
+    async fetch(request) {
+      const pathname = new URL(request.url).pathname;
+      const resolved = path.resolve(directory, pathname === "/" ? "index.html" : pathname.slice(1));
+      if (!resolved.startsWith(`${directory}${path.sep}`) && resolved !== directory) {
+        return new Response("Not found", { status: 404 });
+      }
+      const file = Bun.file(resolved);
+      return new Response((await file.exists()) ? file : Bun.file(path.join(directory, "index.html")));
+    },
+  });
 }
 
 async function verifyBrowser(browser, app, cwd, index) {
   const port = 4310 + index;
   const url = `http://127.0.0.1:${port}`;
-  const server = spawn(
-    "bun",
-    [path.join(root, "scripts/serve-dist.mjs"), path.join(cwd, app.output), String(port)],
-    { cwd: root, stdio: "inherit" },
-  );
+  const server = serveDirectory(path.join(cwd, app.output), port);
   let page;
   try {
-    await waitForServer(url);
     page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     const errors = [];
     page.on("console", (message) => {
@@ -180,7 +185,7 @@ async function verifyBrowser(browser, app, cwd, index) {
       if (
         !result.fontLoaded ||
         !result.fontFamily.includes("Vadivam Icons") ||
-        result.fontGlyph !== 0xe004 ||
+        result.fontGlyph !== activityCodepoint ||
         result.fontWidth <= 0 ||
         result.fontHeight <= 0 ||
         result.spriteWidth <= 0 ||
@@ -251,11 +256,7 @@ async function verifyBrowser(browser, app, cwd, index) {
     console.log(`Browser smoke passed for ${app.name}.`);
   } finally {
     await page?.close();
-    if (server.exitCode === null && server.signalCode === null) {
-      const exited = once(server, "exit");
-      server.kill("SIGTERM");
-      await exited;
-    }
+    server.stop(true);
   }
 }
 
@@ -265,13 +266,13 @@ async function validateIntegrationApp(app, index) {
   const startedAt = performance.now();
   const cwd = path.join(integrationDir, app.name);
   if (!existsSync(cwd)) throw new Error(`integration app missing: ${cwd}`);
-  await run("bun", ["install", "--frozen-lockfile"], cwd);
+  await step("bun", ["install", "--frozen-lockfile"], cwd);
   for (const packageName of app.packages) materializePackage(cwd, packageName);
   const manifest = JSON.parse(readFileSync(path.join(cwd, "package.json"), "utf8"));
   if (manifest.scripts?.typecheck && !app.buildIncludesTypecheck) {
-    await run("bun", ["run", "typecheck"], cwd);
+    await step("bun", ["run", "typecheck"], cwd);
   }
-  await run("bun", ["run", "build"], cwd);
+  await step("bun", ["run", "build"], cwd);
   if (app.output) {
     browserPromise ??= launchBrowser();
     await verifyBrowser(await browserPromise, app, cwd, index);
@@ -281,31 +282,8 @@ async function validateIntegrationApp(app, index) {
   );
 }
 
-async function validateIntegrationApps(concurrency) {
-  let nextIndex = 0;
-  let firstError;
-  const workers = Array.from(
-    { length: Math.min(concurrency, apps.length) },
-    async () => {
-      while (!firstError) {
-        const index = nextIndex;
-        nextIndex += 1;
-        const app = apps[index];
-        if (!app) return;
-        try {
-          await validateIntegrationApp(app, index);
-        } catch (error) {
-          firstError ??= error;
-        }
-      }
-    },
-  );
-  await Promise.all(workers);
-  if (firstError) throw firstError;
-}
-
 try {
-  await validateIntegrationApps(3);
+  await forEachConcurrently(apps, 3, validateIntegrationApp);
   console.log(`\nIntegration builds passed for: ${apps.map(({ name }) => name).join(", ")}`);
 } finally {
   if (browserPromise) await (await browserPromise).close();

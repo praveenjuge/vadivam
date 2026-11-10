@@ -1,31 +1,44 @@
 // Reads the newest published icon set from GitHub `main` or npm `latest`, so
 // the library can pick up icons added after this plugin build. Everything
-// fetched here is untrusted: names and SVGs pass the same narrow checks the
-// repository applies before they reach `figma.createNodeFromSvg`.
+// fetched here is untrusted: names and SVGs must have the exact shape of a
+// canonical icon file before they reach `figma.createNodeFromSvg`.
+import {
+  canvasAttributes,
+  geometryAttributes,
+  iconSvg,
+  isIconName,
+  packagePath,
+  rootTag,
+  styles,
+} from "../../../scripts/icon-styles.mjs";
+import { repositoryUrl, targetsById } from "../../../scripts/packages.mjs";
+import type { IconStyle } from "../../figma-shared/icons";
+import { messageFromError } from "../../figma-shared/channel";
 
-export const REMOTE_SOURCES = ["github", "npm"] as const;
+export type RemoteSource = "github" | "npm";
 
-export type RemoteSource = (typeof REMOTE_SOURCES)[number];
+export function isRemoteSource(value: unknown): value is RemoteSource {
+  return value === "github" || value === "npm";
+}
 
 export interface RemoteIcon {
   name: string;
   svg: string;
 }
 
-export type RemoteStyle = "outline" | "solid";
+export interface RemoteFailure {
+  name: string;
+  reason: string;
+}
+
 export interface RemoteCatalog {
   source: RemoteSource;
-  style: RemoteStyle;
+  style: IconStyle;
   /** A short label for what was read, such as `main@1a2b3c4` or `vadivam@0.0.57`. */
   version: string;
   names: string[];
   /** Fetch SVGs for these names. Icons that fail to load or validate are reported, not thrown. */
   loadSvgs(names: readonly string[]): Promise<{ icons: RemoteIcon[]; failed: RemoteFailure[] }>;
-}
-
-export interface RemoteFailure {
-  name: string;
-  reason: string;
 }
 
 /** The subset of `fetch` both Figma's main thread and browsers provide. */
@@ -34,57 +47,48 @@ export type FetchLike = (
   init?: { headers?: Record<string, string> },
 ) => Promise<{ ok: boolean; status: number; text(): Promise<string> }>;
 
-const OWNER = "praveenjuge";
-const REPO = "vadivam";
-const PACKAGE = "vadivam";
+// `owner/name`, as GitHub's API and raw file URLs spell the repository.
+const REPOSITORY = repositoryUrl.replace(/^https:\/\/github\.com\//, "");
+const PACKAGE = targetsById.core.packageName;
 const MAX_ICONS = 10_000;
 const MAX_SVG_LENGTH = 100_000;
 const FETCH_CONCURRENCY = 8;
-// Matches the canonical source files and the published package's SVGs.
-const SVG_OPEN_TAG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
-const SOLID_SVG_OPEN_TAG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd">';
 
-export function isRemoteSource(value: unknown): value is RemoteSource {
-  return (REMOTE_SOURCES as readonly unknown[]).includes(value);
-}
+// Geometry values are numbers, path commands, and separators: no quotes,
+// markup, entities, or URLs can appear in them.
+const ELEMENTS = /<([a-z]+)((?:\s+[a-z0-9]+="[MLHVCSQTAZmlhvcsqtaz0-9.,eE+\s-]*")+)\s*\/>/g;
+const ATTRIBUTE_NAMES = /\s+([a-z0-9]+)="/g;
 
-export function isIconName(value: unknown): value is string {
-  return typeof value === "string" && value.length <= 80 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
-}
-
-// Every published icon is exactly the canonical root tag followed by path
-// elements that carry only path data (the shape `bun run icons:check` enforces
-// and the homepage build rebuilds icons from). Requiring that exact shape
-// rejects fills, styles, links, scripts, and any other element or attribute.
-// Written out rather than built from SVG_OPEN_TAG so it stays a literal; the
-// canonical-icon test fails if the two ever disagree.
-const CANONICAL_SVG =
-  /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\s*(?:<path d="[MLHVCSQTAZmlhvcsqtaz0-9.,eE+\s-]+"\/>)+\s*<\/svg>$/;
-const CANONICAL_SOLID_SVG =
-  /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd">\s*(?:<path d="[MLHVCSQTAZmlhvcsqtaz0-9.,eE+\s-]+"\/>)+\s*<\/svg>$/;
-
-// Where each style lives: its folder on GitHub, its sprite in the package, and
-// the id prefix of that sprite's symbols.
-const STYLES = {
-  outline: { folder: "icons", openTag: SVG_OPEN_TAG, pattern: CANONICAL_SVG, sprite: "dist/sprite.svg", prefix: `${PACKAGE}-` },
-  solid: {
-    folder: "icons-solid",
-    openTag: SOLID_SVG_OPEN_TAG,
-    pattern: CANONICAL_SOLID_SVG,
-    sprite: "dist/solid/sprite.svg",
-    prefix: `${PACKAGE}-solid-`,
-  },
-} as const;
-
-export function validateRemoteSvg(svg: string, style: RemoteStyle = "outline"): string | null {
-  if (svg.length === 0 || svg.length > MAX_SVG_LENGTH) return "SVG is empty or too large";
-  if (!STYLES[style].pattern.test(svg.trim())) {
-    return style === "solid"
-      ? "Not a canonical solid Vadivam SVG (24×24, currentColor even-odd fill, path data only)"
-      : "Not a canonical Vadivam SVG (24×24, 2 px currentColor stroke, path data only)";
+function isGeometryElement(tag: string, attributes: string): boolean {
+  if (!Object.prototype.hasOwnProperty.call(geometryAttributes, tag)) return false;
+  const allowed: readonly string[] = geometryAttributes[tag as keyof typeof geometryAttributes];
+  ATTRIBUTE_NAMES.lastIndex = 0;
+  for (let match = ATTRIBUTE_NAMES.exec(attributes); match; match = ATTRIBUTE_NAMES.exec(attributes)) {
+    if (!allowed.includes(match[1] ?? "")) return false;
   }
+  return true;
+}
+
+// An icon file is its style's exact root tag around elements that carry only
+// geometry, the shape `bun run icons:check` enforces. Anything else (fills,
+// styles, links, scripts, other elements or attributes) fails the check.
+function isCanonicalSvg(svg: string, style: IconStyle): boolean {
+  const open = rootTag(styles[style]);
+  const close = "</svg>";
+  if (!svg.startsWith(open) || !svg.endsWith(close)) return false;
+  let elements = 0;
+  let valid = true;
+  const rest = svg.slice(open.length, -close.length).replace(ELEMENTS, (_, tag: string, attributes: string) => {
+    elements += 1;
+    valid &&= isGeometryElement(tag, attributes);
+    return "";
+  });
+  return valid && elements > 0 && rest.trim() === "";
+}
+
+export function validateRemoteSvg(svg: string, style: IconStyle): string | null {
+  if (svg.length === 0 || svg.length > MAX_SVG_LENGTH) return "SVG is empty or too large";
+  if (!isCanonicalSvg(svg.trim(), style)) return `Not a canonical ${style} Vadivam SVG`;
   return null;
 }
 
@@ -96,6 +100,7 @@ async function fetchText(fetchImpl: FetchLike, url: string, accept = "*/*"): Pro
   try {
     response = await fetchImpl(url, { headers: { Accept: accept } });
   } catch {
+    // A failed fetch rejects with an opaque TypeError; naming the host is more useful.
     throw new Error(`Couldn't reach ${host(url)}`);
   }
   if (!response.ok) throw new Error(`${host(url)} answered HTTP ${response.status}`);
@@ -104,17 +109,19 @@ async function fetchText(fetchImpl: FetchLike, url: string, accept = "*/*"): Pro
 
 async function fetchJson(fetchImpl: FetchLike, url: string): Promise<Record<string, unknown>> {
   const text = await fetchText(fetchImpl, url, "application/vnd.github+json, application/json");
+  let value: unknown;
   try {
-    const value: unknown = JSON.parse(text);
-    if (value && typeof value === "object") return value as Record<string, unknown>;
+    value = JSON.parse(text);
   } catch {
-    // Reported below.
+    value = null;
   }
-  throw new Error(`Unexpected response from ${host(url)}`);
+  if (!value || typeof value !== "object") throw new Error(`Unexpected response from ${host(url)}`);
+  return value as Record<string, unknown>;
 }
 
+// Code-unit order, like the repository's own icon lists.
 function uniqueSortedNames(names: Iterable<string>): string[] {
-  const list = [...new Set(names)].filter(isIconName).sort((left, right) => left.localeCompare(right));
+  const list = [...new Set(names)].filter(isIconName).sort();
   if (list.length === 0) throw new Error("The source lists no icons");
   if (list.length > MAX_ICONS) throw new Error("The source lists too many icons");
   return list;
@@ -140,21 +147,18 @@ function treeEntries(tree: Record<string, unknown>): Array<{ path: string; type:
   }
   return tree.tree.filter(
     (entry): entry is { path: string; type: string; sha: string } =>
-      !!entry &&
-      typeof entry.path === "string" &&
-      typeof entry.type === "string" &&
-      typeof entry.sha === "string",
+      !!entry && typeof entry.path === "string" && typeof entry.type === "string" && typeof entry.sha === "string",
   );
 }
 
 /**
- * GitHub `main`: resolve the branch to one commit, list `icons/` at that
- * commit, and read only the SVGs asked for from the same commit, so names and
- * artwork always agree even if `main` moves meanwhile.
+ * GitHub `main`: resolve the branch to one commit, list the style's folder at
+ * that commit, and read only the SVGs asked for from the same commit, so names
+ * and artwork always agree even if `main` moves meanwhile.
  */
-async function loadGitHub(fetchImpl: FetchLike, style: RemoteStyle): Promise<RemoteCatalog> {
-  const { folder } = STYLES[style];
-  const api = `https://api.github.com/repos/${OWNER}/${REPO}`;
+async function loadGitHub(fetchImpl: FetchLike, style: IconStyle): Promise<RemoteCatalog> {
+  const folder = styles[style].sourceDirectory;
+  const api = `https://api.github.com/repos/${REPOSITORY}`;
   const commit = await fetchJson(fetchImpl, `${api}/commits/main`);
   const sha = commit.sha;
   if (typeof sha !== "string" || !/^[0-9a-f]{40}$/.test(sha)) throw new Error("GitHub returned no commit for main");
@@ -164,7 +168,7 @@ async function loadGitHub(fetchImpl: FetchLike, style: RemoteStyle): Promise<Rem
   const names = uniqueSortedNames(
     treeEntries(await fetchJson(fetchImpl, `${api}/git/trees/${iconsTree.sha}`))
       .filter((entry) => entry.type === "blob" && entry.path.endsWith(".svg"))
-      .map((entry) => entry.path.slice(0, -4)),
+      .map((entry) => entry.path.slice(0, -".svg".length)),
   );
   const available = new Set(names);
   return {
@@ -180,15 +184,15 @@ async function loadGitHub(fetchImpl: FetchLike, style: RemoteStyle): Promise<Rem
           return null;
         }
         try {
-          const svg = (await fetchText(fetchImpl, `https://raw.githubusercontent.com/${OWNER}/${REPO}/${sha}/${folder}/${name}.svg`)).trim();
+          const svg = await fetchText(fetchImpl, `https://raw.githubusercontent.com/${REPOSITORY}/${sha}/${folder}/${name}.svg`);
           const problem = validateRemoteSvg(svg, style);
           if (problem) {
             failed.push({ name, reason: problem });
             return null;
           }
-          return { name, svg };
+          return { name, svg: svg.trim() };
         } catch (error) {
-          failed.push({ name, reason: error instanceof Error ? error.message : "Download failed" });
+          failed.push({ name, reason: messageFromError(error) });
           return null;
         }
       });
@@ -197,50 +201,46 @@ async function loadGitHub(fetchImpl: FetchLike, style: RemoteStyle): Promise<Rem
   };
 }
 
-/** Split the published `sprite.svg` into one standalone SVG per icon. */
-export function parseSprite(sprite: string, prefix = `${PACKAGE}-`, openTag: string = SVG_OPEN_TAG): Map<string, string> {
+/** Split a style's published `sprite.svg` into one icon file per symbol. */
+export function parseSprite(sprite: string, style: IconStyle): Map<string, string> {
+  const { spriteIdPrefix } = styles[style];
   const icons = new Map<string, string>();
-  const symbol = /<symbol id="([^"]+)" viewBox="0 0 24 24">([\s\S]*?)<\/symbol>/g;
+  const symbol = /<symbol id="([^"]+)" viewBox="([^"]*)">([\s\S]*?)<\/symbol>/g;
   // An exec loop rather than matchAll, which Figma's sandbox may lack.
   for (let match = symbol.exec(sprite); match; match = symbol.exec(sprite)) {
     const id = match[1] ?? "";
-    const name = id.startsWith(prefix) ? id.slice(prefix.length) : "";
-    if (!isIconName(name)) continue;
-    const body = (match[2] ?? "").trim().replace(/\s*\n\s*/g, "");
-    icons.set(name, `${openTag}\n${body}\n</svg>`);
+    const name = id.startsWith(spriteIdPrefix) ? id.slice(spriteIdPrefix.length) : "";
+    if (match[2] !== canvasAttributes.viewBox || !isIconName(name)) continue;
+    const body = (match[3] ?? "").trim().replace(/\s*\n\s*/g, "");
+    icons.set(name, iconSvg(styles[style], body).trim());
   }
   return icons;
 }
 
 /**
  * npm `latest`: resolve the dist-tag to an exact version, then read that
- * version's sprite from jsDelivr. One download carries every icon.
+ * version's sprite for the style from jsDelivr. One download carries every icon.
  */
-async function loadNpm(fetchImpl: FetchLike, style: RemoteStyle): Promise<RemoteCatalog> {
-  const config = STYLES[style];
+async function loadNpm(fetchImpl: FetchLike, style: IconStyle): Promise<RemoteCatalog> {
   const latest = await fetchJson(fetchImpl, `https://registry.npmjs.org/${PACKAGE}/latest`);
   const version = latest.version;
   if (typeof version !== "string" || !/^\d+\.\d+\.\d+(?:-[\w.]+)?$/.test(version)) {
-    throw new Error("npm returned no version for vadivam");
+    throw new Error(`npm returned no version for ${PACKAGE}`);
   }
-  const sprite = parseSprite(
-    await fetchText(fetchImpl, `https://cdn.jsdelivr.net/npm/${PACKAGE}@${version}/${config.sprite}`, "image/svg+xml"),
-    config.prefix,
-    config.openTag,
-  );
-  const names = uniqueSortedNames(sprite.keys());
+  const spriteUrl = `https://cdn.jsdelivr.net/npm/${PACKAGE}@${version}/${packagePath(styles[style], "sprite.svg")}`;
+  const sprite = parseSprite(await fetchText(fetchImpl, spriteUrl, "image/svg+xml"), style);
   return {
     source: "npm",
     style,
     version: `${PACKAGE}@${version}`,
-    names,
+    names: uniqueSortedNames(sprite.keys()),
     async loadSvgs(requested) {
       const icons: RemoteIcon[] = [];
       const failed: RemoteFailure[] = [];
       for (const name of requested) {
         const svg = sprite.get(name);
         const problem = svg === undefined ? "Not in this version" : validateRemoteSvg(svg, style);
-        if (problem || svg === undefined) failed.push({ name, reason: problem ?? "Not in this version" });
+        if (svg === undefined || problem) failed.push({ name, reason: problem ?? "Not in this version" });
         else icons.push({ name, svg });
       }
       return { icons, failed };
@@ -248,10 +248,6 @@ async function loadNpm(fetchImpl: FetchLike, style: RemoteStyle): Promise<Remote
   };
 }
 
-export function loadRemoteCatalog(
-  source: RemoteSource,
-  fetchImpl: FetchLike,
-  style: RemoteStyle = "outline",
-): Promise<RemoteCatalog> {
+export function loadRemoteCatalog(source: RemoteSource, fetchImpl: FetchLike, style: IconStyle): Promise<RemoteCatalog> {
   return source === "github" ? loadGitHub(fetchImpl, style) : loadNpm(fetchImpl, style);
 }

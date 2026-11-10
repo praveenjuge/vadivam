@@ -1,44 +1,16 @@
+import { mcpRoute } from "../apps/docs/worker/routes.mjs";
 import { existsSync, readFileSync } from "node:fs";
 import { performance } from "node:perf_hooks";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { spawn } from "node:child_process";
-import { mcpServerManifest, packageMetadata, publishablePackages } from "./packages.mjs";
+import { sharedModules } from "./generators/mcp.mjs";
+import { packagePath, styles } from "./icon-styles.mjs";
+import { root } from "./lib/paths.mjs";
+import { forEachConcurrently, run } from "./lib/process.mjs";
+import { mcpServerManifest, npmPackages, packageMetadata, repositoryUrl } from "./packages.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rootVersion = JSON.parse(
   readFileSync(path.join(root, "package.json"), "utf8"),
 ).version;
-
-function run(command, args, cwd, capture = false) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd,
-      stdio: capture ? ["ignore", "pipe", "pipe"] : "inherit",
-    });
-    let stdout = "";
-    let stderr = "";
-    if (capture) {
-      child.stdout.setEncoding("utf8");
-      child.stderr.setEncoding("utf8");
-      child.stdout.on("data", (chunk) => {
-        stdout += chunk;
-      });
-      child.stderr.on("data", (chunk) => {
-        stderr += chunk;
-      });
-    }
-    child.on("error", reject);
-    child.on("exit", (code) => {
-      if (code === 0) {
-        resolve(stdout);
-        return;
-      }
-      if (capture) process.stderr.write(stderr || stdout);
-      reject(new Error(`${command} ${args.join(" ")} failed in ${cwd}`));
-    });
-  });
-}
 
 function getPackResult(packed, packageName) {
   const result = Array.isArray(packed)
@@ -51,7 +23,8 @@ function getPackResult(packed, packageName) {
 }
 
 async function validatePackage({
-  name,
+  id,
+  packageName: name,
   directory,
   description,
   documentation,
@@ -90,25 +63,19 @@ async function validatePackage({
     readmeSearchPhrase,
     packageMetadata.homepage,
     `${packageMetadata.homepage}${documentation}`,
-    `https://github.com/praveenjuge/vadivam/tree/main/${directory}`,
-    "Package family:",
+    `${repositoryUrl}/tree/main/${directory}`,
   ];
   for (const expected of requiredReadmeContent) {
     if (!readme.includes(expected)) {
       throw new Error(`${name}: README is missing ${expected}`);
     }
   }
-  for (const other of publishablePackages.filter((candidate) => candidate.name !== name)) {
-    if (!readme.includes(`https://www.npmjs.com/package/${other.name}`)) {
-      throw new Error(`${name}: README does not link package family member ${other.name}`);
-    }
-  }
   // publint opens every file its export globs match at once. Under Node, a
   // package with more matches than the open-file limit reports the files it
   // could not open as missing; Bun's runtime does not, so run it there.
-  await run("bun", ["--bun", "x", "publint", "."], cwd);
+  await run("bun", ["--bun", "x", "publint", "."], { cwd });
   const packed = JSON.parse(
-    await run("npm", ["pack", "--dry-run", "--json"], cwd, true),
+    await run("npm", ["pack", "--dry-run", "--json"], { cwd, capture: true }),
   );
   const packResult = getPackResult(packed, name);
   if (packResult.version !== rootVersion) {
@@ -121,48 +88,43 @@ async function validatePackage({
   if (!files.includes("README.md") || !files.includes("LICENSE")) {
     throw new Error(`${name}: npm tarball is missing README.md or LICENSE`);
   }
-  if (name === "vadivam") {
-    if (
-      JSON.stringify(manifest.sideEffects) !==
-      JSON.stringify(["./dist/elements.js", "./dist/font/vadivam.css", "./dist/font/vadivam-solid.css"])
-    ) {
-      throw new Error(`${name}: elements and font CSS must be preserved as side effects`);
-    }
-    const requiredStaticAssets = [
-      "dist/elements.d.ts",
-      "dist/elements.js",
-      "dist/font/vadivam.css",
-      "dist/font/vadivam.woff2",
-      "dist/font/vadivam-solid.css",
-      "dist/font/vadivam-solid.woff2",
-      "dist/sprite.svg",
-      "dist/strings/activity.d.ts",
-      "dist/strings/activity.js",
-      "dist/solid/sprite.svg",
-      "dist/solid/icons/activity.svg",
-      "dist/solid/strings/activity.js",
-      "skills/vadivam-icons/SKILL.md",
-    ];
-    for (const asset of requiredStaticAssets) {
-      if (!files.includes(asset)) {
-        throw new Error(`${name}: npm tarball is missing ${asset}`);
-      }
-    }
-    const forbiddenStaticAsset = files.find((file) =>
-      /(?:^|\/)(?:\.cache|cache|preview|tmp|temp)(?:\/|\.|$)|\.(?:ttf|eot|woff|svgfont)$/i.test(
-        file,
-      ) ||
-      (file.startsWith("dist/font/") &&
-        !/^dist\/font\/vadivam(?:-solid)?\.(?:css|woff2)$/.test(file)),
-    );
-    if (forbiddenStaticAsset) {
-      throw new Error(`${name}: npm tarball contains unexpected font asset ${forbiddenStaticAsset}`);
-    }
-  }
-  if (name === "vadivam-mcp") validateMcpPackage(manifest, files);
+  packageChecks[id]?.(manifest, files);
   console.log(
     `Validated ${name}@${rootVersion} (${files.length} files) in ${((performance.now() - startedAt) / 1000).toFixed(2)}s.`,
   );
+}
+
+// Every style's font is in the core package's one font/ folder, as a
+// stylesheet and the WOFF2 file it loads.
+const fontFiles = Object.values(styles).flatMap(({ font }) => ["css", "woff2"].map((extension) => `dist/font/${font.fontName}.${extension}`));
+const fontStylesheets = fontFiles.filter((file) => file.endsWith(".css"));
+
+function validateCorePackage(manifest, files) {
+  const { name } = manifest;
+  if (JSON.stringify(manifest.sideEffects) !== JSON.stringify(["dist/elements.js", ...fontStylesheets].map((file) => `./${file}`))) {
+    throw new Error(`${name}: elements and font CSS must be preserved as side effects`);
+  }
+  const requiredStaticAssets = [
+    "dist/elements.d.ts",
+    "dist/elements.js",
+    ...fontFiles,
+    ...Object.values(styles).flatMap((style) =>
+      ["sprite.svg", "icons/activity.svg", "strings/activity.d.ts", "strings/activity.js"].map((file) => packagePath(style, file)),
+    ),
+    "skills/vadivam-icons/SKILL.md",
+  ];
+  for (const asset of requiredStaticAssets) {
+    if (!files.includes(asset)) {
+      throw new Error(`${name}: npm tarball is missing ${asset}`);
+    }
+  }
+  const forbiddenStaticAsset = files.find((file) =>
+    /(?:^|\/)(?:\.cache|cache|preview|tmp|temp)(?:\/|\.|$)|\.(?:ttf|eot|woff|svgfont)$/i.test(file) ||
+    (file.startsWith("dist/font/") && !fontFiles.includes(file)),
+  );
+  if (forbiddenStaticAsset) {
+    throw new Error(`${name}: npm tarball contains unexpected font asset ${forbiddenStaticAsset}`);
+  }
 }
 
 function validateMcpPackage(manifest, files) {
@@ -172,7 +134,7 @@ function validateMcpPackage(manifest, files) {
   if (manifest.bin?.[name] !== "dist/cli.js") {
     throw new Error(`${name}: bin must map ${name} to dist/cli.js`);
   }
-  for (const file of ["dist/cli.js", "dist/data.js", "dist/index.js", "dist/index.d.ts", "dist/snippets.js"]) {
+  for (const file of ["cli.js", "data.js", "index.js", "index.d.ts", ...sharedModules].map((file) => `dist/${file}`)) {
     if (!files.includes(file)) throw new Error(`${name}: npm tarball is missing ${file}`);
   }
   for (const [dependency, version] of Object.entries(manifest.dependencies ?? {})) {
@@ -195,33 +157,13 @@ function validateMcpPackage(manifest, files) {
   if (npmEntry?.identifier !== name || npmEntry.transport?.type !== "stdio") {
     throw new Error(`${mcpServerManifest}: missing the stdio npm package entry for ${name}`);
   }
-  const remote = `${packageMetadata.homepage}/mcp`;
+  const remote = `${packageMetadata.homepage}${mcpRoute}`;
   if (!server.remotes?.some((entry) => entry.type === "streamable-http" && entry.url === remote)) {
     throw new Error(`${mcpServerManifest}: missing the streamable-http remote ${remote}`);
   }
 }
 
-async function validatePackages(concurrency) {
-  let nextIndex = 0;
-  let firstError;
-  const workers = Array.from(
-    { length: Math.min(concurrency, publishablePackages.length) },
-    async () => {
-      while (!firstError) {
-        const index = nextIndex;
-        nextIndex += 1;
-        const packageDefinition = publishablePackages[index];
-        if (!packageDefinition) return;
-        try {
-          await validatePackage(packageDefinition);
-        } catch (error) {
-          firstError ??= error;
-        }
-      }
-    },
-  );
-  await Promise.all(workers);
-  if (firstError) throw firstError;
-}
+// What a package must ship besides what every package does, by target id.
+const packageChecks = { core: validateCorePackage, mcp: validateMcpPackage };
 
-await validatePackages(3);
+await forEachConcurrently(npmPackages, 3, validatePackage);

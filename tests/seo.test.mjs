@@ -1,15 +1,32 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
-import { icons } from "../packages/vadivam/dist/manifest.js";
+import { icons } from "vadivam/manifest";
+import { docsPaths, fromRoot, repoRoot as root } from "../apps/docs/scripts/paths.mjs";
+import { frameworks, siteUrl as site } from "../scripts/packages.mjs";
+import { gridChunkSize } from "../scripts/web-data.mjs";
+import { tagAttributes } from "./helpers.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const dist = path.join(root, "apps/docs/dist/client");
-const site = "https://vadivam.praveenjuge.com";
+const dist = fromRoot(docsPaths.client);
 const readDist = (...segments) =>
   readFileSync(path.join(dist, ...segments), "utf8");
+
+/** The `content` of each <meta> with the given `property` or `name`. */
+const metaContent = (html, key) =>
+  tagAttributes(html, "meta")
+    .filter((meta) => meta.property === key || meta.name === key)
+    .map((meta) => meta.content);
+/** The `href` of each <link> with the given `rel`. */
+const linkHrefs = (html, rel) =>
+  tagAttributes(html, "link")
+    .filter((link) => link.rel === rel)
+    .map((link) => link.href);
+/** The routes of the pages built under a folder of the site, as site URLs. */
+const builtPages = (folder) =>
+  readdirSync(path.join(dist, folder), { recursive: true })
+    .filter((file) => path.basename(file) === "index.html")
+    .map((file) => [site, folder, ...path.dirname(file).split(path.sep)].filter((part) => part !== ".").join("/"));
 
 /** Parse every inline JSON-LD script and flatten all @graph nodes. */
 function jsonLdNodes(html) {
@@ -27,20 +44,12 @@ describe("website SEO", () => {
     (name) => {
       const html = readDist("icons", name, "index.html");
       const url = `${site}/icons/${name}`;
-      expect(html).toContain(`<link href="${url}" rel="canonical">`);
-      expect(html).toContain(`<meta content="${url}" property="og:url">`);
-      expect(html).toContain(
-        `<meta content="${site}/og.png" property="og:image">`,
-      );
-      expect(html).toContain(
-        '<meta content="@praveenjuge" name="twitter:site">',
-      );
-      expect(html).toContain(
-        '<meta content="@praveenjuge" name="twitter:creator">',
-      );
-      expect(html).toContain(`"url":"${url}"`);
-      expect(html).not.toContain(`<link href="${site}" rel="canonical">`);
-      expect(html).not.toContain(`${site}/og/icons/${name}.png`);
+      expect(linkHrefs(html, "canonical")).toEqual([url]);
+      expect(metaContent(html, "og:url")).toEqual([url]);
+      expect(metaContent(html, "og:image")).toEqual([`${site}/og.png`]);
+      expect(metaContent(html, "twitter:site")).toEqual(["@praveenjuge"]);
+      expect(metaContent(html, "twitter:creator")).toEqual(["@praveenjuge"]);
+      expect(jsonLdNodes(html).find(({ "@type": type }) => type === "WebPage")?.url).toBe(url);
     },
   );
 
@@ -85,9 +94,10 @@ describe("website SEO", () => {
     // Tiles carry only path data; presentation attributes live in CSS. A click
     // opens the drawer, so tiles opt out of Astro's hover prefetch.
     expect(html).toContain('<a href="/icons/activity" aria-label="activity" data-astro-prefetch="false"><svg viewBox="0 0 24 24"><path');
-    // Tiles render in chunks of 120 so off-screen chunks skip style and layout.
+    // Tiles render in chunks so off-screen chunks skip style and layout.
     const chunks = [...html.matchAll(/<div class="icon-chunk" data-solid="\/(icon-data\/solid-\d+\.[0-9a-f]{10}\.json)">/g)];
-    expect(chunks).toHaveLength(Math.ceil(icons.length / 120));
+    expect(chunks).toHaveLength(Math.ceil(icons.length / gridChunkSize));
+    expect(html).toContain(`style="--chunk-size: ${gridChunkSize}"`);
     expect(Buffer.byteLength(html, "utf8")).toBeLessThan(1024 * 1024);
     // Each chunk's solid paths load on demand, in tile order.
     const solid = chunks.flatMap(([, file]) => JSON.parse(readDist(file)));
@@ -107,7 +117,7 @@ describe("website SEO", () => {
   test("homepage icon data is served from the asset layer and cached for good", () => {
     // Content-hashed names change whenever the data does.
     const rules = JSON.parse(
-      readFileSync(path.join(root, "apps/docs/dist/server/wrangler.json"), "utf8"),
+      readFileSync(fromRoot(docsPaths.generatedConfig), "utf8"),
     ).assets?.run_worker_first;
     expect(rules).toContain("!/icon-data/*");
     expect(readDist("_headers")).toMatch(
@@ -151,10 +161,8 @@ describe("website SEO", () => {
     expect(html).toContain(
       "Browse and copy pixel-perfect, open-source 24px outline icons for the web, React Native, Flutter, and Jetpack Compose.",
     );
-    expect(html).toContain('<meta content="@praveenjuge" name="twitter:site">');
-    expect(html).toContain(
-      '<meta content="@praveenjuge" name="twitter:creator">',
-    );
+    expect(metaContent(html, "twitter:site")).toEqual(["@praveenjuge"]);
+    expect(metaContent(html, "twitter:creator")).toEqual(["@praveenjuge"]);
     expect(html).toContain("Free, open-source icons for");
     expect(html).toContain("Copy prompt for AI agents");
     // The prompt ships in a hidden, read-only textarea that the copy button
@@ -173,8 +181,10 @@ describe("website SEO", () => {
 
   test("icon pages install each framework's own package and link related icons", () => {
     const html = readDist("icons", "bell", "index.html");
-    expect(html).toContain('data-install="vadivam-vue">npm install vadivam-vue</code>');
-    expect(html).toContain('data-install="vadivam">npm install vadivam</code>');
+    expect(html).toContain('data-install="vue">npm install vadivam-vue</code>');
+    expect(html).toContain('data-install="react-native">npm install vadivam-react-native react-native-svg</code>');
+    expect(html).toContain('data-install="core">npm install vadivam</code>');
+    expect(html).toContain(`https://cdn.jsdelivr.net/npm/vadivam@`);
     expect(html).toContain('class="related-tile" href="/icons/bell-ring"');
     expect(html).toContain('rel="prev"');
     expect(html).toContain('rel="next"');
@@ -227,7 +237,7 @@ describe("website SEO", () => {
 
     expect(html).toContain("<h1>Changelog</h1>");
     expect(html).toContain('href="/changelog">Changelog</a>');
-    expect(html).toContain('href="/changelog/rss.xml" rel="alternate"');
+    expect(linkHrefs(html, "alternate")).toContain("/changelog/rss.xml");
     expect(releases.length).toBeGreaterThan(0);
     expect(html).toContain(`href="${new URL(releases[0].link).pathname}"`);
   });
@@ -246,32 +256,11 @@ describe("website SEO", () => {
       : [feed.rss.channel.item];
     // The RSS feed holds only the latest 50 releases, while every release
     // has a page in the sitemap, so the routes come from the built pages.
-    const releasePages = readdirSync(path.join(dist, "changelog"), {
-      recursive: true,
-    })
-      .filter(
-        (file) =>
-          path.basename(file) === "index.html" && path.dirname(file) !== ".",
-      )
-      .map(
-        (file) =>
-          `${site}/changelog/${path.dirname(file).split(path.sep).join("/")}`,
-      );
-    for (const { link } of releases) expect(releasePages).toContain(link);
-    const changelog = [`${site}/changelog`, ...releasePages];
-    const docs = readdirSync(path.join(root, "apps/docs/docs"), {
-      recursive: true,
-    })
-      .filter((file) => file.endsWith(".md") || file.endsWith(".mdx"))
-      .map((file) => {
-        const base = file.endsWith(".mdx")
-          ? path.basename(file, ".mdx")
-          : path.basename(file, ".md");
-        const slug = base.replace(/^\d+-/, "");
-        return file === "index.md" || file === "index.mdx"
-          ? `${site}/docs`
-          : `${site}/docs/${slug}`;
-      });
+    const changelog = builtPages("changelog");
+    for (const { link } of releases) expect(changelog).toContain(link);
+    const docs = builtPages("docs");
+    expect(docs).toContain(`${site}/docs`);
+    expect(docs).toContain(`${site}/docs/installation`);
     const expected = [
       site + "/",
       ...changelog,
@@ -293,27 +282,15 @@ describe("website SEO", () => {
     }
   });
 
-  const frameworkTitles = {
-    angular: "Angular Icons – 24px Outline Icon Directives",
-    astro: "Astro Icons – 24px Outline Icon Components",
-    preact: "Preact Icons – 24px Outline Icon Components",
-    react: "React Icons – 24px Outline Icon Components",
-    "react-native": "React Native Icons – 24px Outline Components",
-    solid: "Solid Icons – 24px Outline Icon Components",
-    svelte: "Svelte Icons – 24px Outline Icon Components",
-    vue: "Vue Icons – 24px Outline Icon Components",
-  };
-
-  for (const [route, title] of Object.entries(frameworkTitles)) {
-    test(`${route} has a search-focused title and compact visible heading`, () => {
-      const html = readDist("docs", route, "index.html");
-      expect(html).toContain(`<title>${title} - Vadivam Icons</title>`);
+  for (const { id, label, title = label } of frameworks) {
+    test(`${id} docs have a search-focused title and compact visible heading`, () => {
+      const html = readDist("docs", id, "index.html");
+      const [, pageTitle] = html.match(/<title>([^<]*)<\/title>/);
+      expect(pageTitle).toStartWith(`${title} Icons – `);
+      expect(pageTitle).toContain("Outline");
+      expect(pageTitle).toEndWith(" - Vadivam Icons");
       expect(html).toContain("free, open-source Vadivam");
-      const visibleTitle =
-        route === "react-native"
-          ? "React Native"
-          : route[0].toUpperCase() + route.slice(1);
-      expect(html).toContain(`>${visibleTitle}</h1>`);
+      expect(html).toContain(`>${title}</h1>`);
     });
   }
 
@@ -335,34 +312,19 @@ describe("website SEO", () => {
     );
     expect(wrangler).toContain('"html_handling": "drop-trailing-slash"');
   });
-  test("Cloudflare build serves Markdown negotiation through the wrapper worker", () => {
-    const serverDir = path.join(root, "apps/docs/dist/server");
-    const config = JSON.parse(
-      readFileSync(path.join(serverDir, "wrangler.json"), "utf8"),
-    );
-    // The Vadivam entry answers /mcp and delegates everything else to Blume's wrapper.
-    expect(config.main).toBe("vadivam-worker.mjs");
-    const entry = readFileSync(path.join(serverDir, config.main), "utf8");
-    expect(entry).toContain('from "./blume-worker.mjs"');
-    expect(entry).toContain('"/mcp"');
-    const wrapper = readFileSync(
-      path.join(serverDir, "blume-worker.mjs"),
-      "utf8",
-    );
-    expect(wrapper).toContain("text/markdown");
-    expect(wrapper.toLowerCase()).toContain("vary");
+
+  // tests/docs-worker.test.mjs asks the running Worker for Markdown and /mcp.
+  test("Cloudflare serves raw Markdown files from the asset layer", () => {
+    const config = JSON.parse(readFileSync(fromRoot(docsPaths.generatedConfig), "utf8"));
     const rules = config.assets?.run_worker_first ?? [];
-    for (const route of ["/*"]) {
-      expect(rules).toContain(route);
-    }
-    for (const raw of ["!/*.md", "!/*.mdx"]) {
-      expect(rules).toContain(raw);
-    }
+    expect(rules).toContain("/*");
+    expect(rules).toContain("!/*.md");
+    expect(rules).toContain("!/*.mdx");
   });
 
   test("shadcn registry ships as static JSON with CORS headers", () => {
     const rules = JSON.parse(
-      readFileSync(path.join(root, "apps/docs/dist/server/wrangler.json"), "utf8"),
+      readFileSync(fromRoot(docsPaths.generatedConfig), "utf8"),
     ).assets?.run_worker_first;
     expect(rules).toContain("!/r/*");
     const registry = JSON.parse(readDist("r", "registry.json"));

@@ -38,7 +38,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
+          bun-version-file: package.json
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -70,13 +70,22 @@ jobs:
         if: github.event_name == 'push'
         run: bunx playwright install --with-deps --only-shell chromium
 
+      # The cache paths come from scripts/integration.mjs, as the shards' do.
+      - name: List integration cache paths
+        if: github.event_name == 'push'
+        id: integration-cache
+        run: |
+          {
+            echo "paths<<EOF"
+            bun scripts/integration.mjs --cache-paths
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Cache integration app dependencies
         if: github.event_name == 'push'
         uses: actions/cache@v6
         with:
-          path: |
-            tests/integration/*/node_modules
-            tests/integration/nextjs/.next/cache
+          path: ${{ steps.integration-cache.outputs.paths }}
           key: integration-${{ runner.os }}-${{ hashFiles('tests/integration/*/bun.lock') }}
           restore-keys: |
             integration-${{ runner.os }}-
@@ -85,10 +94,6 @@ jobs:
         run: bun run icons:optimize
 
       - name: Check icons
-        # Checking names against Lucide reads the GitHub API; anonymous calls
-        # from shared runners get rate-limited.
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
         run: bun run icons:check
 
       - name: Render preview
@@ -107,8 +112,9 @@ jobs:
         if: github.event_name == 'push'
         id: normalize
         run: |
-          if [ -n "$(git status --porcelain icons icons-solid README.md apps/docs/docs/index.mdx "apps/docs/docs/(icons)/03-categories.mdx" apps/docs/public/preview.png apps/docs/public/og.png)" ]; then
-            git add icons icons-solid README.md apps/docs/docs/index.mdx "apps/docs/docs/(icons)/03-categories.mdx" apps/docs/public/preview.png apps/docs/public/og.png
+          outputs=$(bun scripts/icons.mjs outputs)
+          if [ -n "$(git status --porcelain -- $outputs)" ]; then
+            git add -- $outputs
             git commit -m "chore(icons): normalize via icons:optimize"
             echo "committed=true" >> "$GITHUB_OUTPUT"
           else
@@ -141,7 +147,7 @@ jobs:
         run: |
           version=$(bun scripts/bump-version.mjs)
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          git add package.json packages/*/package.json packages/vadivam-mcp/server.json apps/figma-plugin/package.json README.md packages/*/README.md packages/vadivam-flutter/pubspec.yaml packages/vadivam-compose/gradle.properties
+          git add -- $(bun scripts/bump-version.mjs --list)
           git commit -m "chore(release): v$version"
 
       # The docs build reads the changelog from GitHub Releases. Anonymous API
@@ -168,7 +174,7 @@ jobs:
 
       - name: Check generated inputs
         if: github.event_name == 'pull_request'
-        run: git diff --exit-code -- icons icons-solid README.md apps/docs/docs/index.mdx "apps/docs/docs/(icons)/03-categories.mdx" apps/docs/public/preview.png apps/docs/public/og.png scripts/font-codepoints.json
+        run: git diff --exit-code -- $(bun scripts/icons.mjs outputs)
 
       - name: Push tested commits
         if: github.event_name == 'push' && (steps.normalize.outputs.committed == 'true' || steps.changes.outputs.changed == 'true')
@@ -194,37 +200,12 @@ jobs:
           git tag -a "v${{ steps.bump.outputs.version }}" -m "v${{ steps.bump.outputs.version }}"
           git push origin "v${{ steps.bump.outputs.version }}"
 
-  integration-matrix:
+  # The shards and their apps come from scripts/integration.mjs.
+  integration-shards:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      max-parallel: 3
-      matrix:
-        include:
-          - shard: react-web
-            apps: static nextjs tanstack-start vite-react
-            cache_paths: |
-              tests/integration/static/node_modules
-              tests/integration/nextjs/node_modules
-              tests/integration/nextjs/.next/cache
-              tests/integration/tanstack-start/node_modules
-              tests/integration/vite-react/node_modules
-          - shard: native-and-ui
-            apps: expo vue svelte solid
-            cache_paths: |
-              tests/integration/expo/node_modules
-              tests/integration/vue/node_modules
-              tests/integration/svelte/node_modules
-              tests/integration/solid/node_modules
-          - shard: compiled-web
-            apps: angular astro preact qwik lit
-            cache_paths: |
-              tests/integration/angular/node_modules
-              tests/integration/astro/node_modules
-              tests/integration/preact/node_modules
-              tests/integration/qwik/node_modules
-              tests/integration/lit/node_modules
+    outputs:
+      matrix: ${{ steps.shards.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -232,7 +213,27 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
+          bun-version-file: package.json
+
+      - name: List integration shards
+        id: shards
+        run: echo "matrix=$(bun scripts/integration.mjs --matrix)" >> "$GITHUB_OUTPUT"
+
+  integration-matrix:
+    needs: integration-shards
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.integration-shards.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -264,7 +265,7 @@ jobs:
   # this job so matrix renames never leave a required check waiting forever.
   pr-checks:
     if: always() && github.event_name == 'pull_request'
-    needs: [optimize-and-release, integration-matrix]
+    needs: [optimize-and-release, integration-shards, integration-matrix]
     runs-on: ubuntu-latest
     steps:
       - name: Require every pull request job to pass

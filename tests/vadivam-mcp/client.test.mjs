@@ -4,13 +4,10 @@ import {
   InMemoryTransport,
   StreamableHTTPClientTransport,
 } from "@modelcontextprotocol/client";
-import {
-  createVadivamHttpHandler,
-  createVadivamServer,
-  version,
-} from "../../packages/vadivam-mcp/dist/index.js";
+import { createVadivamHttpHandler, createVadivamServer, version } from "vadivam-mcp";
+import { siteUrl, targetsById } from "../../scripts/packages.mjs";
+import { mcpToolNames } from "../helpers.mjs";
 
-const toolNames = ["get_icon", "get_usage", "list_categories", "search_icons", "suggest_icons"];
 const clients = [];
 
 async function inMemoryClient() {
@@ -48,7 +45,7 @@ function text(result) {
 
 async function exerciseTools(client) {
   const { tools } = await client.listTools();
-  expect(tools.map((tool) => tool.name).sort()).toEqual(toolNames);
+  expect(tools.map((tool) => tool.name).sort()).toEqual(mcpToolNames);
   for (const tool of tools) {
     expect(tool.annotations?.readOnlyHint).toBe(true);
     expect(tool.outputSchema?.type).toBe("object");
@@ -140,7 +137,7 @@ async function exerciseTools(client) {
   expect(usage.structuredContent).toMatchObject({
     packageName: "vadivam-vue",
     install: "npm install vadivam-vue",
-    docs: "https://vadivam.praveenjuge.com/docs/vue",
+    docs: `${siteUrl}${targetsById.vue.documentation}`,
   });
 }
 

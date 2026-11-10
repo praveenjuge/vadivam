@@ -1,7 +1,7 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { createElement } from "react";
-import { renderToStaticMarkup, renderToString } from "react-dom/server";
-import { readIcons, styles } from "../../scripts/icons.mjs";
+import { renderToReadableStream, renderToStaticMarkup, renderToString } from "react-dom/server";
+import { readIcons, styles } from "../../scripts/icon-source.mjs";
 import { House as OutlineHouse } from "vadivam-react";
 import * as solid from "vadivam-react/solid";
 import SolidHouse from "vadivam-react/solid/icons/house";
@@ -60,8 +60,12 @@ describe("vadivam-react/solid", () => {
     expect(solid.House).not.toBe(OutlineHouse);
   });
 
-  test("renders a dynamic solid icon's fallback during SSR", () => {
-    const html = renderToStaticMarkup(createElement(DynamicIcon, { name: "house", fallback: createElement("span", null, "…") }));
-    expect(html).toBe("<span>…</span>");
+  test("a dynamic solid icon resolves to the solid artwork", async () => {
+    const stream = await renderToReadableStream(createElement(DynamicIcon, { name: "house", fallback: createElement("span", null, "loading") }));
+    await stream.allReady;
+    const html = await new Response(stream).text();
+    const icon = solidIcons.find(({ name }) => name === "house");
+    expect(html).toContain(`d="${icon.iconNode[0][1].d}"`);
+    expect(html).not.toContain("loading");
   });
 });

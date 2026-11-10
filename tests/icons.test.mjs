@@ -1,17 +1,16 @@
 import { describe, expect, test } from "bun:test";
+import { normalizeSvg, updateCategoryTableMarkers, updateIconCountMarkers, updatePackageFamilyMarkers } from "../scripts/icons.mjs";
+import { targets, targetsById } from "../scripts/packages.mjs";
 import {
-  fetchPinnedLucideCatalog,
-  normalizeSvg,
+  lucideVersion,
   readIcons,
-  shuffleUnique,
   styles,
-  updateCategoryTableMarkers,
-  updateIconCountMarkers,
   validateIconMetadata,
-  validateLucideIconNames,
+  validateLucidePins,
   validateStyleTwins,
   validateSvgContent,
-} from "../scripts/icons.mjs";
+} from "../scripts/icon-source.mjs";
+import { shuffleUnique } from "../scripts/generators/images.mjs";
 import {
   detectCircle,
   detectRoundedRect,
@@ -28,7 +27,8 @@ import {
 } from "../scripts/corner-smoothing.mjs";
 import { cleanPaths } from "../scripts/path-cleanup.mjs";
 import { assertIconNodesPassRuntimePolicy } from "../scripts/generators/runtime-policy.mjs";
-import { area, loadPathKit, solidPath } from "../scripts/solid-draft.mjs";
+import { solidPath } from "../scripts/solid-draft.mjs";
+import { area, loadPathKit } from "../scripts/skia-path.mjs";
 
 const validSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></svg>`;
 
@@ -65,14 +65,14 @@ describe("icon validation", () => {
   });
 
   test.each([
-    ["wrong viewBox", validSvg.replace("0 0 24 24", "0 0 32 32")],
-    ["black stroke", validSvg.replace("currentColor", "black")],
-    ["filled path", validSvg.replace("<path", '<path fill="red"')],
-    ["square caps", validSvg.replace("round", "square")],
-    ["wrong stroke width", validSvg.replace('stroke-width="2"', 'stroke-width="1.5"')],
-    ["unsafe markup", validSvg.replace("<path", "<script/><path")]
-  ])("rejects %s", (_name, svg) => {
-    expect(() => validateSvgContent(svg, "invalid-fixture.svg")).toThrow();
+    ["wrong viewBox", validSvg.replace("0 0 24 24", "0 0 32 32"), 'expected viewBox="0 0 24 24"'],
+    ["black stroke", validSvg.replace("currentColor", "black"), 'expected stroke="currentColor"'],
+    ["filled path", validSvg.replace("<path", '<path fill="red"'), "unsupported path attribute fill"],
+    ["square caps", validSvg.replace("round", "square"), 'expected stroke-linecap="round"'],
+    ["wrong stroke width", validSvg.replace('stroke-width="2"', 'stroke-width="1.5"'), 'expected stroke-width="2"'],
+    ["unsafe markup", validSvg.replace("<path", "<script/><path"), "unsupported <script> element"],
+  ])("rejects %s", (_name, svg, message) => {
+    expect(() => validateSvgContent(svg, "invalid-fixture.svg")).toThrow(`invalid-fixture.svg: ${message}`);
   });
 
   test("accepts geometry that keeps the 2px stroke inside the 1px padding", () => {
@@ -97,13 +97,10 @@ describe("icon validation", () => {
     expect(() => validateSvgContent(broken, "broken-path.svg")).toThrow("broken-path.svg:");
   });
 
-  test("validates every canonical icon", async () => {
-    const icons = await readIcons();
-    expect(icons.length).toBeGreaterThan(0);
-    for (const icon of icons) {
-      expect(icon.svgPath).toBe(`icons/${icon.fileName}`);
-      expect(icon.componentName).toMatch(/^[A-Z][A-Za-z0-9]*$/);
-    }
+  test("every canonical icon passes validation in both styles", async () => {
+    const [outline, solid] = await Promise.all([readIcons(), readIcons(styles.solid)]);
+    expect(outline.length).toBeGreaterThan(0);
+    expect(solid.map((icon) => icon.name)).toEqual(outline.map((icon) => icon.name));
   });
 
   test("every generated icon node passes the shipped runtime policy unchanged", async () => {
@@ -123,102 +120,15 @@ describe("icon validation", () => {
     ).rejects.toThrow("bad.svg: <path> attribute stroke is not allowed at runtime");
   });
 
-  test("loads canonical names from the pinned Lucide release", async () => {
-    const requests = [];
-    const fetchImpl = async (url) => {
-      requests.push(url);
-      if (url === "https://registry.npmjs.org/lucide/1.68.0") {
-        return Response.json({ version: "1.68.0" });
-      }
-      return Response.json({
-        truncated: false,
-        tree: [
-          { path: "icons/check.svg" },
-          { path: "icons/columns-2.svg" },
-          { path: "icons/columns-2.json" },
-          { path: "packages/lucide/icons/check.svg" },
-        ],
-      });
-    };
-
-    const catalog = await fetchPinnedLucideCatalog(fetchImpl);
-    expect(catalog.version).toBe("1.68.0");
-    expect(catalog.names).toEqual(new Set(["check", "columns-2"]));
-    expect(requests).toEqual([
-      "https://registry.npmjs.org/lucide/1.68.0",
-      "https://api.github.com/repos/lucide-icons/lucide/git/trees/1.68.0?recursive=1",
-    ]);
-  });
-
-  test("authenticates GitHub API requests only, when a token is set", async () => {
-    const authorization = {};
-    const fetchImpl = async (url, { headers }) => {
-      authorization[new URL(url).host] = headers.Authorization;
-      if (url.startsWith("https://registry.npmjs.org/")) return Response.json({ version: "1.68.0" });
-      return Response.json({ truncated: false, tree: [{ path: "icons/check.svg" }] });
-    };
-    const previous = process.env.GITHUB_TOKEN;
-    process.env.GITHUB_TOKEN = "test-token";
-    try {
-      await fetchPinnedLucideCatalog(fetchImpl);
-    } finally {
-      if (previous === undefined) delete process.env.GITHUB_TOKEN;
-      else process.env.GITHUB_TOKEN = previous;
-    }
-    expect(authorization).toEqual({ "registry.npmjs.org": undefined, "api.github.com": "Bearer test-token" });
-  });
-
-  test("rejects a registry response that does not match the pin", async () => {
-    const fetchImpl = async (url) => {
-      if (url === "https://registry.npmjs.org/lucide/1.68.0") {
-        return Response.json({ version: "1.41.0" });
-      }
-      throw new Error(`Unexpected request: ${url}`);
-    };
-
-    await expect(fetchPinnedLucideCatalog(fetchImpl)).rejects.toThrow(
-      "The pinned Lucide release must resolve to 1.68.0",
+  test("rejects deprecated Lucide names even when their metadata entry was renamed too", async () => {
+    await expect(validateLucidePins(["check"])).resolves.toBeUndefined();
+    await expect(validateLucidePins(["check", "alert-circle"])).rejects.toThrow(
+      "Deprecated or non-canonical icon names for Lucide",
     );
-  });
-
-  test("accepts renamed icons and rejects their retired names through catalog parsing", async () => {
-    const fetchImpl = async (url) => {
-      if (url === "https://registry.npmjs.org/lucide/1.68.0") {
-        return Response.json({ version: "1.68.0" });
-      }
-      return Response.json({
-        truncated: false,
-        tree: [
-          { path: "icons/building-complex.svg" },
-          { path: "icons/eighth-notes.svg" },
-          { path: "icons/square-bookmark.svg" },
-          { path: "icons/trash.svg" },
-        ],
-      });
-    };
-
-    const catalog = await fetchPinnedLucideCatalog(fetchImpl);
-    expect(() =>
-      validateLucideIconNames(
-        ["building-complex.svg", "eighth-notes.svg", "square-bookmark.svg", "trash.svg"],
-        catalog,
-      ),
-    ).not.toThrow();
-    expect(() =>
-      validateLucideIconNames(["album.svg", "building-2.svg", "music.svg", "trash-2.svg"], catalog),
-    ).toThrow(
-      "Deprecated or non-canonical icon names for Lucide 1.68.0: album.svg, building-2.svg, music.svg, trash-2.svg",
-    );
-  });
-
-  test("rejects deprecated and unknown Lucide icon filenames", () => {
-    const catalog = { version: "1.68.0", names: new Set(["check", "columns-2"]) };
-    expect(() =>
-      validateLucideIconNames(["check.svg", "columns-2.svg"], catalog),
-    ).not.toThrow();
-    expect(() => validateLucideIconNames(["columns.svg", "custom.svg"], catalog)).toThrow(
-      "Deprecated or non-canonical icon names for Lucide 1.68.0: columns.svg, custom.svg",
-    );
+    const rankings = { lucideVersion: "0.0.1", icons: [{ name: "check" }] };
+    await expect(validateLucidePins(["check"], { rankings })).rejects.toThrow("metadata/lucide-rankings.json is for Lucide 0.0.1");
+    const docs = { dependencies: { lucide: "0.0.1" } };
+    await expect(validateLucidePins(["check"], { docs })).rejects.toThrow("apps/docs/package.json pins lucide 0.0.1");
   });
 
   test("requires tags and known categories for exactly the shipped icons", () => {
@@ -268,6 +178,20 @@ describe("icon validation", () => {
     expect(() => updateCategoryTableMarkers("No markers.", ["activity"])).toThrow(
       "missing vadivam categories markers",
     );
+  });
+
+  test("links every other package in a README's package family line", () => {
+    const react = targetsById.react;
+    const content = "Intro.\n<!-- vadivam-packages:start -->\nstale\n<!-- vadivam-packages:end -->\nOutro.";
+    const updated = updatePackageFamilyMarkers(content, react);
+    const line = updated.split("\n")[2];
+    expect(line).toStartWith("Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · ");
+    for (const target of targets.filter((target) => target !== react)) expect(line).toContain(`[${target.label}](`);
+    expect(line).not.toContain("vadivam-react)");
+    expect(line).toContain("(https://pub.dev/packages/vadivam)");
+    expect(line).toContain("(https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose)");
+    expect(updatePackageFamilyMarkers(updated, react)).toBe(updated);
+    expect(() => updatePackageFamilyMarkers("No markers.", react)).toThrow("missing vadivam-packages markers");
   });
 });
 
@@ -352,12 +276,6 @@ describe("solid icon validation", () => {
     expect(() => validateStyleTwins({ outline: ["a", "b"], solid: ["a", "b"] })).not.toThrow();
     expect(() => validateStyleTwins({ outline: ["a", "b"], solid: ["a"] })).toThrow("solid is missing 1 icon(s) drawn in outline: b");
     expect(() => validateStyleTwins({ outline: ["a"], solid: ["a", "c"] })).toThrow("solid has 1 icon(s) with no outline twin: c");
-  });
-
-  test("validates every solid icon, one for each outline icon", async () => {
-    const [outline, solid] = await Promise.all([readIcons(), readIcons(styles.solid)]);
-    expect(solid.map((icon) => icon.name)).toEqual(outline.map((icon) => icon.name));
-    for (const icon of solid) expect(icon.svgPath).toBe(`icons-solid/${icon.fileName}`);
   });
 });
 
@@ -618,9 +536,7 @@ describe("stroke joins", () => {
 
 describe("Lucide comparison", () => {
   test("the docs compare against the pinned Lucide release", async () => {
-    const read = async (file) => JSON.parse(await Bun.file(new URL(`../${file}`, import.meta.url)).text());
-    const { lucideVersion } = await read("metadata/lucide.json");
-    const docs = await read("apps/docs/package.json");
+    const docs = await Bun.file(new URL("../apps/docs/package.json", import.meta.url)).json();
     expect(docs.devDependencies.lucide).toBe(lucideVersion);
   });
 });

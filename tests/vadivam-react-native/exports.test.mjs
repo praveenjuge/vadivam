@@ -1,7 +1,7 @@
 import "./mock.mjs";
 import { describe, expect, test } from "bun:test";
-import { readFile } from "node:fs/promises";
-import { readIcons } from "../../scripts/icons.mjs";
+import { readIcons } from "../../scripts/icon-source.mjs";
+import { bundle } from "../helpers.mjs";
 
 const named = await import("vadivam-react-native");
 const iconsBarrel = await import("vadivam-react-native/icons");
@@ -15,22 +15,23 @@ const NON_ICON_EXPORTS = new Set([
   "useVadivamContext",
 ]);
 
+const iconAliases = (icon) => [icon.componentName, `${icon.componentName}Icon`, `Vadivam${icon.componentName}`];
+
 describe("vadivam-react-native exports", () => {
-  test("exposes exactly three aliases per canonical icon", () => {
-    const rootIconExports = Object.keys(named).filter((key) => !NON_ICON_EXPORTS.has(key));
-    expect(rootIconExports.length).toBe(icons.length * 3);
-    expect(Object.keys(iconsBarrel).length).toBe(icons.length * 3);
-    expect("icons" in named).toBe(false);
-    expect("DynamicIcon" in named).toBe(false);
+  test("exports each icon under its three names and nothing unexpected", () => {
+    const aliases = icons.flatMap(iconAliases);
+    expect(Object.keys(named).sort()).toEqual([...NON_ICON_EXPORTS, ...aliases].sort());
+    expect(Object.keys(iconsBarrel).sort()).toEqual(aliases.sort());
   });
 
-  test("direct icon modules do not import an icon barrel", async () => {
-    const source = await readFile(
-      new URL("../../packages/vadivam-react-native/dist/icons/activity.js", import.meta.url),
-      "utf8",
-    );
-    expect(source).toContain('from "../createVadivamIcon.js"');
-    expect(source).not.toContain("index.js");
+  // Metro does not tree-shake, so a direct import must not reach an icon barrel.
+  test("a direct icon import reaches no other icon", async () => {
+    const { modules } = await bundle('export { default } from "vadivam-react-native/icons/activity";\n', {
+      external: ["react", "react-native-svg"],
+    });
+    const reached = modules.filter((file) => file.includes("vadivam-react-native/dist/"));
+    expect(reached.some((file) => file.endsWith("/icons/activity.js"))).toBe(true);
+    expect(reached.filter((file) => /\/(?:icons\/(?!activity\.js$)|index\.js$)/.test(file))).toEqual([]);
   });
 
   test.each(icons.map((icon) => [icon.name, icon]))(
@@ -46,7 +47,11 @@ describe("vadivam-react-native exports", () => {
       const alias = await import(`vadivam-react-native/${icon.name}`);
       expect(subpath.default.displayName).toBe(icon.componentName);
       expect(alias.default).toBe(subpath.default);
-      expect(subpath.__iconNode).toEqual(icon.iconNode);
+      // React keys each element; the geometry is the icon's own.
+      const keys = subpath.__iconNode.map(([, attrs]) => attrs.key);
+      expect(new Set(keys).size).toBe(keys.length);
+      expect(keys.every((key) => typeof key === "string" && key.length > 0)).toBe(true);
+      expect(subpath.__iconNode.map(([tag, { key, ...attrs }]) => [tag, attrs])).toEqual(icon.iconNode);
     },
   );
 });

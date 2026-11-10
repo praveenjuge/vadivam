@@ -31,6 +31,8 @@ import com.praveenjuge.vadivam.icons.solid.Activity
 Icon(VadivamSolidIcons.Activity, contentDescription = null)
 ```
 
-Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [Qwik](https://www.npmjs.com/package/vadivam-qwik) · [Lit](https://www.npmjs.com/package/vadivam-lit) · [Flutter](https://pub.dev/packages/vadivam) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
+<!-- vadivam-packages:start -->
+Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Qwik](https://www.npmjs.com/package/vadivam-qwik) · [Lit](https://www.npmjs.com/package/vadivam-lit) · [Flutter](https://pub.dev/packages/vadivam) · [MCP server](https://www.npmjs.com/package/vadivam-mcp)
+<!-- vadivam-packages:end -->
 
 [Issues](https://github.com/praveenjuge/vadivam/issues)

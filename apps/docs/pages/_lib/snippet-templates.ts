@@ -1,103 +1,120 @@
 import { highlightCode } from "blume/markdown";
-import { componentSource, dartIconName, frameworks } from "../../../../scripts/snippets.mjs";
+import { icons } from "vadivam/manifest";
+import { attributeString, iconSvg, rootAttributes, rootTag, styleIds, styles, svgPathData } from "../../../../scripts/icon-styles.mjs";
+import { dartIconName } from "../../../../scripts/package-names.mjs";
+import { frameworks } from "../../../../scripts/packages.mjs";
+import { componentSource } from "../../../../scripts/snippets.mjs";
+import { defaultStyle, type IconStyle } from "./site";
 
 // Shiki-highlighted snippet templates, rendered once at build time. The client
 // swaps the placeholders for an icon's component name, props, and path data so
 // every icon (and every customizer setting) shares one small set of templates.
 // Distinct from real API names such as Flutter's `VadivamIcon` widget.
-export const COMPONENT_PLACEHOLDER = "VadivamComponentName";
-export const DART_COMPONENT_PLACEHOLDER = dartIconName(COMPONENT_PLACEHOLDER);
-export const PROPS_PLACEHOLDER = "__PROPS__";
-export const SVG_OPEN_TAG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
-export const SOLID_SVG_OPEN_TAG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd">';
-
-const svgTemplateOpenTag =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="__SIZE__" height="__SIZE__" viewBox="0 0 24 24" fill="none" stroke="__COLOR__" stroke-width="__STROKE__" stroke-linecap="round" stroke-linejoin="round">';
-const solidSvgTemplateOpenTag =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="__SIZE__" height="__SIZE__" viewBox="0 0 24 24" fill="__COLOR__" fill-rule="evenodd">';
-
-export type IconStyle = "outline" | "solid";
+const componentPlaceholder = "VadivamComponentName";
+const propsPlaceholder = "__PROPS__";
 
 interface StyleTemplates {
-  svgOpenTag: string;
   /** Per framework: `plain` has no props, `props` has a props placeholder. */
   frameworks: Record<string, { plain: string; props: string }>;
   /** Raw SVG shells keyed by path count, with `__Dn__` path placeholders. */
   svg: Record<string, string>;
 }
 
-export interface SnippetTemplates extends StyleTemplates {
+export interface SnippetTemplates {
   component: string;
   dartComponent: string;
   props: string;
-  /** The same templates for the solid twin. */
-  solid: StyleTemplates;
+  styles: Record<IconStyle, StyleTemplates>;
 }
 
+const iconStyles = styleIds as readonly IconStyle[];
+
 type HighlightThemes = NonNullable<Parameters<typeof highlightCode>[2]>["themes"];
+
+const pathCount = (svg: string) => svgPathData(svg).length;
+
+type ManifestIcon = (typeof icons)[number];
+
+/** A manifest icon's SVG in a style: the default style's at the top level, every other style's under its id. */
+function styleSvg(icon: ManifestIcon, style: IconStyle): string {
+  if (style === defaultStyle) return icon.svg;
+  return (icon as unknown as Partial<Record<IconStyle, { svg: string }>>)[style]?.svg ?? "";
+}
+
+/** Every distinct path count among a style's icons. */
+function pathCounts(style: IconStyle) {
+  const svgs = icons.map((icon) => styleSvg(icon, style));
+  return [...new Set(svgs.map(pathCount))].filter((count) => count > 0).sort((left, right) => left - right);
+}
+
+// A root tag whose size and paint are placeholders for the client to fill in:
+// whatever the style paints with `currentColor` takes the color, and its
+// stroke width, if it has one, the stroke setting.
+function templateRootTag(style: IconStyle) {
+  const attributes: Record<string, string | number> = { ...rootAttributes(styles[style]), width: "__SIZE__", height: "__SIZE__" };
+  for (const [name, value] of Object.entries(styles[style].paint)) {
+    if (value === "currentColor") attributes[name] = "__COLOR__";
+    if (name === "stroke-width") attributes[name] = "__STROKE__";
+  }
+  return `<svg ${attributeString(attributes)}>`;
+}
 
 // Every page of a build shares one set of templates, so each icon page
 // doesn't re-run Shiki for the same snippets.
 const cache = new Map<string, Promise<SnippetTemplates>>();
 
-export function buildSnippetTemplates(
-  themes: HighlightThemes,
-  pathCounts: number[],
-  solidPathCounts: number[] = [],
-): Promise<SnippetTemplates> {
-  const sorted = (counts: number[]) => [...counts].sort((left, right) => left - right);
-  const key = JSON.stringify([themes, sorted(pathCounts), sorted(solidPathCounts)]);
+export function buildSnippetTemplates(themes: HighlightThemes): Promise<SnippetTemplates> {
+  const key = JSON.stringify(themes);
   let templates = cache.get(key);
   if (!templates) {
-    templates = renderSnippetTemplates(themes, pathCounts, solidPathCounts);
+    templates = renderSnippetTemplates(themes);
     cache.set(key, templates);
   }
   return templates;
 }
 
+/** The templates one icon page needs: the SVG shells for its own path counts only. */
+export function iconTemplates(templates: SnippetTemplates, svgs: Record<IconStyle, string>): SnippetTemplates {
+  const trimmed = (style: IconStyle) => {
+    const count = String(pathCount(svgs[style]));
+    return { ...templates.styles[style], svg: { [count]: templates.styles[style].svg[count] ?? "" } };
+  };
+  return { ...templates, styles: Object.fromEntries(iconStyles.map((style) => [style, trimmed(style)])) as SnippetTemplates["styles"] };
+}
+
 async function renderStyleTemplates(
   highlight: (code: string, lang: string) => Promise<string>,
-  pathCounts: number[],
   style: IconStyle,
 ): Promise<StyleTemplates> {
-  const result: StyleTemplates = {
-    svgOpenTag: style === "solid" ? SOLID_SVG_OPEN_TAG : SVG_OPEN_TAG,
-    frameworks: {},
-    svg: {},
-  };
+  const result: StyleTemplates = { frameworks: {}, svg: {} };
+  const dartPlaceholder = dartIconName(componentPlaceholder);
   for (const framework of frameworks) {
-    const plain = await highlight(componentSource(framework.id, COMPONENT_PLACEHOLDER, "", style), framework.lang);
-    const props = await highlight(componentSource(framework.id, COMPONENT_PLACEHOLDER, ` ${PROPS_PLACEHOLDER}`, style), framework.lang);
+    const plain = await highlight(componentSource(framework.id, componentPlaceholder, "", style), framework.lang);
+    const props = await highlight(componentSource(framework.id, componentPlaceholder, ` ${propsPlaceholder}`, style), framework.lang);
     // The client swaps placeholders by plain string replacement, so each must
     // survive highlighting as one unbroken token.
-    const name = framework.id === "flutter" ? DART_COMPONENT_PLACEHOLDER : COMPONENT_PLACEHOLDER;
-    if (!plain.includes(name) || !props.includes(PROPS_PLACEHOLDER)) {
+    const name = framework.id === "flutter" ? dartPlaceholder : componentPlaceholder;
+    if (!plain.includes(name) || !props.includes(propsPlaceholder)) {
       throw new Error(`${framework.id} snippet placeholders were split by the highlighter`);
     }
     result.frameworks[framework.id] = { plain, props };
   }
-  const openTag = style === "solid" ? solidSvgTemplateOpenTag : svgTemplateOpenTag;
-  for (const count of pathCounts) {
+  for (const count of pathCounts(style)) {
     const paths = Array.from({ length: count }, (_, index) => `<path d="__D${index + 1}__"/>`).join("");
-    result.svg[count] = await highlight(`${openTag}\n${paths}\n</svg>`, "html");
+    const svg = iconSvg(styles[style], paths).replace(rootTag(styles[style]), templateRootTag(style));
+    result.svg[count] = await highlight(svg.trimEnd(), "html");
   }
   return result;
 }
 
-async function renderSnippetTemplates(
-  themes: HighlightThemes,
-  pathCounts: number[],
-  solidPathCounts: number[],
-): Promise<SnippetTemplates> {
+async function renderSnippetTemplates(themes: HighlightThemes): Promise<SnippetTemplates> {
   const highlight = (code: string, lang: string) => highlightCode(code, lang, { icons: false, themes });
+  const entries = await Promise.all(iconStyles.map(async (style) => [style, await renderStyleTemplates(highlight, style)] as const));
   return {
-    component: COMPONENT_PLACEHOLDER,
-    dartComponent: DART_COMPONENT_PLACEHOLDER,
-    props: PROPS_PLACEHOLDER,
-    ...(await renderStyleTemplates(highlight, pathCounts, "outline")),
-    solid: await renderStyleTemplates(highlight, solidPathCounts, "solid"),
+    component: componentPlaceholder,
+    dartComponent: dartIconName(componentPlaceholder),
+    props: propsPlaceholder,
+    styles: Object.fromEntries(entries) as Record<IconStyle, StyleTemplates>,
   };
 }
 

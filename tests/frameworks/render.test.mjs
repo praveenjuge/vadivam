@@ -1,8 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { createRequire } from "node:module";
-import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { h as preactH } from "preact";
+import renderPreact from "preact-render-to-string";
 import { createComponent as createSolidComponent } from "solid-js";
 import { renderToString as renderSolid } from "solid-js/web";
 import { createSSRApp, h as vueH } from "vue";
@@ -11,87 +9,33 @@ import {
   Activity as PreactActivity,
   Icon as PreactIcon,
   VadivamProvider as PreactProvider,
-} from "../../packages/vadivam-preact/dist/index.js";
+} from "vadivam-preact";
 import {
   Activity as SolidActivity,
   Icon as SolidIcon,
   VadivamProvider as SolidProvider,
-} from "../../packages/vadivam-solid/dist/index.js";
+} from "vadivam-solid";
 import {
   Activity as VueActivity,
   Icon as VueIcon,
   VadivamProvider as VueProvider,
-} from "../../packages/vadivam-vue/dist/index.js";
-import { Activity as SolidPreactActivity } from "../../packages/vadivam-preact/dist/solid/index.js";
-import { Activity as SolidSolidActivity } from "../../packages/vadivam-solid/dist/solid/index.js";
-import { Activity as SolidVueActivity } from "../../packages/vadivam-vue/dist/solid/index.js";
-
-const rootRequire = createRequire(import.meta.url);
-const preactRequire = createRequire(rootRequire.resolve("preact"));
-const preactRendererDirectory = path.resolve(
-  path.dirname(preactRequire.resolve("preact-render-to-string")),
-  "..",
-);
-const renderPreact = (
-  await import(
-    pathToFileURL(path.join(preactRendererDirectory, "dist/index.mjs"))
-  )
-).default;
+} from "vadivam-vue";
+import { Activity as SolidPreactActivity } from "vadivam-preact/solid";
+import { Activity as SolidSolidActivity } from "vadivam-solid/solid";
+import { Activity as SolidVueActivity } from "vadivam-vue/solid";
+import { expectSafeIconMarkup, svgAttributes, unsafeIconNode } from "../helpers.mjs";
 
 function assertMarkup(markup) {
-  expect(markup).toContain("<svg");
-  expect(markup).toContain("width=\"48\"");
-  expect(markup).toContain("height=\"48\"");
-  expect(markup).toContain("stroke=\"navy\"");
-  expect(markup).toContain("stroke-width=\"1\"");
+  expect(svgAttributes(markup)).toMatchObject({ width: "48", height: "48", stroke: "navy", "stroke-width": "1", role: "img" });
   expect(markup).toContain("vadivam-activity");
   expect(markup).toContain("Activity chart</title>");
-  expect(markup).toContain('role="img"');
   expect(markup).not.toContain("aria-hidden");
 }
 
 function assertSafeFallback(markup) {
-  expect(markup).toContain('width="0"');
-  expect(markup).toContain('stroke-width="3"');
+  expect(svgAttributes(markup)).toMatchObject({ width: "0", "stroke-width": "3", "aria-hidden": "true" });
   expect(markup).not.toContain("Infinity");
   expect(markup).not.toContain("NaN");
-  expect(markup).toContain('aria-hidden="true"');
-}
-
-const unsafeIconNode = [
-  ["script", { href: "https://example.com/x.js", key: "script" }],
-  ["animate", { attributeName: "href", values: "javascript:alert(1)", key: "animate" }],
-  ["image", { href: "javascript:alert(1)", key: "image" }],
-  ["path", {
-    d: "M4 12h16",
-    stroke: "navy",
-    onclick: "alert(1)",
-    innerHTML: "<script>alert(1)</script>",
-    key: "safe",
-  }],
-  ["path", {
-    d: "M2 4h2",
-    'bad" onload': "alert(1)",
-    ".innerHTML": "<script>alert(1)</script>",
-    "prop:innerHTML": "<script>alert(1)</script>",
-    key: "malformed",
-  }],
-];
-
-function assertSafeCustomIcon(markup) {
-  expect(markup).toContain('stroke="currentColor"');
-  expect(markup).toContain("<path");
-  expect(markup).toContain('d="M4 12h16"');
-  expect(markup).toContain('stroke="navy"');
-  expect(markup).not.toContain("<script");
-  expect(markup).not.toContain("<animate");
-  expect(markup).not.toContain("<image");
-  expect(markup).not.toContain("onclick");
-  expect(markup).not.toContain("onload");
-  expect(markup).not.toContain("href=");
-  expect(markup).not.toContain("alert(1)");
-  expect(markup).not.toContain("prop:innerHTML");
-  expect(markup).not.toContain("bad&quot;");
 }
 
 describe("framework-native server rendering", () => {
@@ -122,7 +66,7 @@ describe("framework-native server rendering", () => {
         href: "javascript:alert(1)",
       }),
     });
-    assertSafeCustomIcon(await renderVue(app));
+    expectSafeIconMarkup(await renderVue(app));
   });
 
   test("Preact renders provider defaults, title, and absolute stroke width", () => {
@@ -148,7 +92,7 @@ describe("framework-native server rendering", () => {
   });
 
   test("Preact strips executable custom icon data during SSR", () => {
-    assertSafeCustomIcon(renderPreact(preactH(PreactIcon, {
+    expectSafeIconMarkup(renderPreact(preactH(PreactIcon, {
       iconNode: unsafeIconNode,
       color: "url(https://example.com/paint.svg#x)",
       onLoad: "alert(1)",
@@ -183,7 +127,7 @@ describe("framework-native server rendering", () => {
   });
 
   test("Solid strips executable custom icon data during SSR", () => {
-    assertSafeCustomIcon(renderSolid(() => createSolidComponent(SolidIcon, {
+    expectSafeIconMarkup(renderSolid(() => createSolidComponent(SolidIcon, {
       iconNode: unsafeIconNode,
       color: "url(https://example.com/paint.svg#x)",
       onload: "alert(1)",
@@ -210,11 +154,21 @@ describe("framework-native server rendering", () => {
       })),
     ];
     for (const markup of markups) {
-      expect(markup).toContain('width="48"');
-      expect(markup).toContain('fill="navy"');
-      expect(markup).toContain('fill-rule="evenodd"');
+      expect(svgAttributes(markup)).toMatchObject({ width: "48", fill: "navy", "fill-rule": "evenodd" });
       expect(markup).not.toContain("stroke");
       expect(markup).toContain("Activity chart</title>");
+    }
+  });
+
+  test("solid icons fill with currentColor by default", async () => {
+    const markups = [
+      await renderVue(createSSRApp({ render: () => vueH(SolidVueActivity) })),
+      renderPreact(preactH(SolidPreactActivity)),
+      renderSolid(() => createSolidComponent(SolidSolidActivity, {})),
+    ];
+    for (const markup of markups) {
+      expect(svgAttributes(markup)).toMatchObject({ fill: "currentColor", "fill-rule": "evenodd" });
+      expect(markup).not.toContain("stroke");
     }
   });
 });
@@ -223,6 +177,7 @@ describe("framework-native server rendering", () => {
 // but keep sanitizing root props and color. createVadivamIcon still renders
 // through the fully sanitizing Icon, so it is the reference markup.
 const builtInSample = ["activity", "a-arrow-down", "house", "search", "settings"];
+const hostileProps = { color: "url(https://example.com/paint.svg#x)", onload: "alert(1)", innerHTML: "<script>alert(1)</script>", href: "javascript:alert(1)" };
 const builtInPropSets = [
   {},
   { size: 32, color: "red", strokeWidth: 1.5 },
@@ -230,22 +185,22 @@ const builtInPropSets = [
   { title: "Open" },
   { "aria-label": "Open", class: "local vadivam local" },
   { width: undefined, fill: null, "data-x": "1" },
-  { color: "url(https://example.com/paint.svg#x)", onload: "alert(1)", innerHTML: "<script>alert(1)</script>", href: "javascript:alert(1)" },
+  hostileProps,
   { iconNode: unsafeIconNode },
 ];
 const builtInRenderers = {
   Vue: {
-    dist: "vue",
+    packageName: "vadivam-vue",
     render: (Component, props) => renderVue(createSSRApp({
       render: () => vueH(VueProvider, { size: 40, color: "url(https://example.com/x#y)" }, () => vueH(Component, props)),
     })),
   },
   Preact: {
-    dist: "preact",
+    packageName: "vadivam-preact",
     render: (Component, props) => renderPreact(preactH(PreactProvider, { size: 40, color: "url(https://example.com/x#y)" }, preactH(Component, props))),
   },
   Solid: {
-    dist: "solid",
+    packageName: "vadivam-solid",
     render: (Component, props) => renderSolid(() => createSolidComponent(SolidProvider, {
       size: 40,
       color: "url(https://example.com/x#y)",
@@ -257,12 +212,11 @@ const builtInRenderers = {
 };
 
 describe("built-in icon render path", () => {
-  for (const [framework, { dist, render }] of Object.entries(builtInRenderers)) {
+  for (const [framework, { packageName, render }] of Object.entries(builtInRenderers)) {
     test(`${framework} built-in icons render the same markup as the sanitizing path`, async () => {
-      const directory = path.resolve(import.meta.dir, `../../packages/vadivam-${dist}/dist`);
-      const { createVadivamIcon } = await import(pathToFileURL(path.join(directory, "index.js")));
+      const { createVadivamIcon } = await import(packageName);
       for (const name of builtInSample) {
-        const { default: BuiltIn, __iconNode } = await import(pathToFileURL(path.join(directory, `icons/${name}.js`)));
+        const { default: BuiltIn, __iconNode } = await import(`${packageName}/icons/${name}`);
         const Reference = createVadivamIcon(name, __iconNode);
         for (const props of builtInPropSets) {
           const markup = await render(BuiltIn, props);
@@ -273,9 +227,8 @@ describe("built-in icon render path", () => {
     });
 
     test(`${framework} built-in icons still sanitize root props and color`, async () => {
-      const directory = path.resolve(import.meta.dir, `../../packages/vadivam-${dist}/dist`);
-      const { Activity } = await import(pathToFileURL(path.join(directory, "index.js")));
-      const markup = await render(Activity, builtInPropSets.at(-2));
+      const { Activity } = await import(packageName);
+      const markup = await render(Activity, hostileProps);
       expect(markup).toContain('stroke="currentColor"');
       expect(markup).not.toContain("onload");
       expect(markup).not.toContain("href=");

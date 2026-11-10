@@ -63,7 +63,16 @@ bun run icons:check                                # validate without writing
 bun run icons:build                                # regenerate packages and site assets
 ```
 
-The Lucide checkout must be on the release tag pinned as `lucideVersion` in `metadata/lucide.json`. Commit the updated `metadata/lucide.json` and `scripts/font-codepoints.json` with the SVG.
+The Lucide checkout must be on the release tag pinned as `lucideVersion` in `metadata/lucide.json`. Commit the updated `metadata/lucide.json`, `metadata/lucide-aliases.json`, and `scripts/font-codepoints.json` with the SVG.
+
+To move to a newer Lucide release, run both metadata commands from a checkout on its tag, then pin the same `lucide` version in `apps/docs/package.json`:
+
+```sh
+bun run icons:metadata -- /path/to/lucide-checkout  # lucideVersion, tags, categories, and aliases
+bun run icons:rankings -- /path/to/lucide-checkout  # metadata/lucide-rankings.json
+```
+
+`bun run icons:check` fails until `metadata/lucide-rankings.json` and the docs' `lucide` pin match `lucideVersion`, and while any icon keeps a name the release deprecated.
 
 Do not hand-edit generated output to fix an icon; correct the canonical SVG and regenerate.
 
@@ -79,7 +88,7 @@ It regenerates the packages, runs every unit test, builds and checks the docs si
 
 | Command | Checks |
 | --- | --- |
-| `bun run icons:check` | Icon rules and names |
+| `bun run icons:check` | Icon rules, names, and Lucide pins |
 | `bun run test:vadivam` | Core SVG package |
 | `bun run test:vadivam-react` | React package |
 | `bun run test:vadivam-react-native` | React Native package |

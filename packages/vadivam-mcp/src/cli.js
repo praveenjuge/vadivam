@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { version } from "./data.js";
+import { siteUrl, targetsById } from "./packages.mjs";
 import { createVadivamServer } from "./server.js";
 
 const args = process.argv.slice(2);
@@ -16,7 +17,7 @@ Add it to an MCP client, for example:
 
   claude mcp add vadivam -- npx -y vadivam-mcp
 
-Docs: https://vadivam.praveenjuge.com/docs/mcp`);
+Docs: ${siteUrl}${targetsById.mcp.documentation}`);
   process.exit(0);
 }
 

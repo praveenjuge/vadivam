@@ -1,10 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { publishablePackages } from "./packages.mjs";
+import { root } from "./lib/paths.mjs";
+import { npmPackages } from "./packages.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const registry = "https://registry.npmjs.org";
 // npm can take well over five minutes to serve a version it has accepted.
 const verifyTimeoutMinutes = 30;
@@ -34,7 +33,7 @@ const pending = [];
 const failed = [];
 
 // Publish everything first so one slow package does not hold back the rest.
-for (const { name, directory } of publishablePackages) {
+for (const { packageName: name, directory } of npmPackages) {
   const cwd = path.join(root, directory);
   const { version } = JSON.parse(await readFile(path.join(cwd, "package.json"), "utf8"));
   // If the lookup fails, publish anyway: npm reports an existing version as a conflict.
@@ -83,4 +82,4 @@ if (pending.length > 0) {
 }
 if (problems.length > 0) throw new Error(problems.join("\n"));
 
-console.log(`Confirmed ${publishablePackages.length} package versions on npm.`);
+console.log(`Confirmed ${npmPackages.length} package versions on npm.`);

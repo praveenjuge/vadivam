@@ -1,115 +1,40 @@
-import { build, context } from "esbuild";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import * as esbuild from "esbuild";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { iconCategories, readIcons, styles } from "../../../scripts/icons.mjs";
+import { buildPlugin } from "../../figma-shared/build.mjs";
+import { sourceDirectory } from "../../../scripts/icon-source.mjs";
+import { root as repositoryRoot } from "../../../scripts/lib/paths.mjs";
+import { isIconName, styles } from "../../../scripts/icon-styles.mjs";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const dist = resolve(root, "dist");
-const iconsRoot = resolve(root, "../../icons");
-const solidIconsRoot = resolve(root, "../../icons-solid");
-const watch = process.argv.includes("--watch");
-const categoryTitles = new Map(iconCategories.map(({ id, title }) => [id, title]));
+const logo = path.join(repositoryRoot, "apps/docs/public/favicon.svg");
 
-function createCatalogSource(icons, solidIcons) {
-  const solid = new Map(solidIcons.map((icon) => [icon.name, icon.svg]));
-  return `export default ${JSON.stringify(
-    icons
-      .map(({ name, svg, tags, categories }) => ({
-        name,
-        svg,
-        solidSvg: solid.get(name),
-        tags,
-        categories: categories.map((id) => categoryTitles.get(id)),
-      }))
-      .sort((left, right) => left.name.localeCompare(right.name)),
-  )};`;
+async function inlineSvg(file, className) {
+  const svg = await readFile(file, "utf8");
+  return svg.trim().replace("<svg ", `<svg class="${className}" aria-hidden="true" `);
 }
 
-const catalogPlugin = {
-  name: "vadivam-icon-catalog",
-  setup(pluginBuild) {
-    pluginBuild.onResolve({ filter: /^vadivam:icon-catalog$/ }, () => ({
-      path: "icon-catalog",
-      namespace: "vadivam",
-    }));
-    pluginBuild.onLoad({ filter: /.*/, namespace: "vadivam" }, async () => ({
-      contents: createCatalogSource(await readIcons(), await readIcons(styles.solid)),
-      loader: "js",
-      watchDirs: [iconsRoot, solidIconsRoot],
-    }));
-  },
-};
-
-await mkdir(dist, { recursive: true });
-
-const codeOptions = {
-  entryPoints: [resolve(root, "src/code.ts")],
-  bundle: true,
-  outfile: resolve(dist, "code.js"),
-  platform: "browser",
-  target: ["es2019"],
-  format: "iife",
-  plugins: [catalogPlugin],
-  logLevel: "info",
-};
-
-const uiOptions = {
-  entryPoints: [resolve(root, "src/ui.ts")],
-  bundle: true,
-  outfile: resolve(dist, "ui.js"),
-  platform: "browser",
-  target: ["es2020"],
-  format: "iife",
-  logLevel: "info",
-};
-
-// The UI draws its own icons from the canonical set: <!-- icon:name --> becomes that SVG.
-async function injectIcons(template) {
-  const pattern = /<!-- icon:([a-z0-9-]+) -->/g;
+// The UI draws with the canonical icons: <!-- icon:name --> becomes that
+// outline SVG, and <!-- logo --> the site's mark.
+async function injectSvgs(template) {
+  const pattern = /<!-- icon:(\S+) -->/g;
   const names = [...new Set([...template.matchAll(pattern)].map((match) => match[1]))];
   const svgs = new Map(
     await Promise.all(
       names.map(async (name) => {
-        const svg = await readFile(resolve(iconsRoot, `${name}.svg`), "utf8");
-        return [name, svg.trim().replace("<svg ", '<svg class="icon" aria-hidden="true" ')];
+        if (!isIconName(name)) throw new Error(`ui.html: ${name} is not an icon name`);
+        return [name, await inlineSvg(path.join(sourceDirectory(styles.outline), `${name}.svg`), "icon")];
       }),
     ),
   );
-  return template.replace(pattern, (_, name) => svgs.get(name));
+  const mark = await inlineSvg(logo, "logo");
+  return template.replace(pattern, (_, name) => svgs.get(name)).replace("<!-- logo -->", () => mark);
 }
 
-async function buildHtml() {
-  const [template, css, javascript] = await Promise.all([
-    readFile(resolve(root, "src/ui.html"), "utf8").then(injectIcons),
-    readFile(resolve(root, "src/ui.css"), "utf8"),
-    readFile(resolve(dist, "ui.js"), "utf8"),
-  ]);
-  const html = template
-    .replace("/* INJECT_UI_STYLES */", css)
-    .replace("/* INJECT_UI_SCRIPT */", javascript);
-  await writeFile(resolve(dist, "ui.html"), html);
-}
-
-if (watch) {
-  const codeContext = await context(codeOptions);
-  const uiContext = await context({
-    ...uiOptions,
-    plugins: [
-      {
-        name: "rebuild-ui-html",
-        setup(pluginBuild) {
-          pluginBuild.onEnd(async (result) => {
-            if (result.errors.length === 0) await buildHtml();
-          });
-        },
-      },
-    ],
-  });
-  await Promise.all([codeContext.watch(), uiContext.watch()]);
-  console.log("[vadivam-internal] watching for changes");
-} else {
-  await Promise.all([build(codeOptions), build(uiOptions)]);
-  await buildHtml();
-  console.log("[vadivam-internal] build complete");
-}
+await buildPlugin({
+  esbuild,
+  name: "vadivam-internal",
+  root: path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."),
+  html: injectSvgs,
+  htmlInputs: [logo],
+});

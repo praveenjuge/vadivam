@@ -1,37 +1,18 @@
 // Copy formats shared by the docs site, the shadcn registry, and the MCP
-// server. Browser-safe: no Node imports.
+// server, which ships this file with the modules it imports.
+// Browser-safe: imports only browser-safe modules.
+import { attributeString, canvasSize, entryPath, packagePath, paintAttribute, resizeSvg, styleIds, styleOf, styles } from "./icon-styles.mjs";
+import { angularSelectorPrefix, composePackage, dartIconName, iconsOwner, shadcnItemPath, styleEntry } from "./package-names.mjs";
+import { frameworks, siteUrl, targetsById } from "./packages.mjs";
 
 export const iconDefaults = Object.freeze({
-  size: 24,
-  strokeWidth: 2,
-  color: "currentColor",
+  size: canvasSize,
+  strokeWidth: styles.outline.paint["stroke-width"],
+  color: styles.outline.paint.stroke,
   absoluteStrokeWidth: false,
 });
 
-export const frameworks = Object.freeze([
-  { id: "react", label: "React", packageName: "vadivam-react", lang: "tsx" },
-  { id: "react-native", label: "React Native", packageName: "vadivam-react-native", lang: "tsx" },
-  { id: "vue", label: "Vue", packageName: "vadivam-vue", lang: "vue" },
-  { id: "svelte", label: "Svelte", packageName: "vadivam-svelte", lang: "svelte" },
-  { id: "solid", label: "Solid", packageName: "vadivam-solid", lang: "tsx" },
-  { id: "preact", label: "Preact", packageName: "vadivam-preact", lang: "tsx" },
-  { id: "astro", label: "Astro", packageName: "vadivam-astro", lang: "astro" },
-  { id: "angular", label: "Angular", packageName: "vadivam-angular", lang: "ts" },
-  { id: "qwik", label: "Qwik", packageName: "vadivam-qwik", lang: "tsx" },
-  { id: "lit", label: "Lit", packageName: "vadivam-lit", lang: "ts" },
-  { id: "flutter", label: "Flutter", packageName: "vadivam", registry: "pub", lang: "dart" },
-  { id: "compose", label: "Compose", packageName: "com.praveenjuge:vadivam-compose", registry: "maven", lang: "kotlin" },
-].map((framework) => ({ registry: "npm", ...framework })));
-
-export const frameworksById = Object.freeze(
-  Object.fromEntries(frameworks.map((framework) => [framework.id, framework])),
-);
-
-// Every icon is drawn in each of these styles. Solid icons are filled, so they
-// take no stroke options.
-export const iconStyles = Object.freeze(["outline", "solid"]);
-
-const isSolid = (options) => options?.style === "solid";
+const optionsStyle = (options) => styleOf(options?.style ?? "outline");
 
 /** Resolve options against the defaults, keeping only finite numbers and plain colors. */
 export function resolveOptions(options = {}) {
@@ -51,26 +32,32 @@ export function resolveOptions(options = {}) {
 /** The stroke width written into the SVG, matching the components' `absoluteStrokeWidth` math. */
 export function effectiveStrokeWidth(options = {}) {
   const { size, strokeWidth, absoluteStrokeWidth } = resolveOptions(options);
-  const value = absoluteStrokeWidth ? (strokeWidth * 24) / size : strokeWidth;
+  const value = absoluteStrokeWidth ? (strokeWidth * canvasSize) / size : strokeWidth;
   return Number(value.toFixed(3));
 }
 
 /**
- * The command that adds a framework's package. npm packages honor `manager`.
- * @param {string} frameworkId
+ * The command that adds a package, with its peers, such as `core` or a
+ * framework id. npm packages honor `manager`.
+ * @param {string} targetId
  * @param {{ manager?: string, version?: string }} [options]
  */
-export function installCommand(frameworkId, { manager = "npm", version } = {}) {
-  const framework = frameworksById[frameworkId];
-  if (!framework) throw new Error(`Unknown framework: ${frameworkId}`);
-  if (framework.registry === "pub") return `flutter pub add ${framework.packageName}`;
-  if (framework.registry === "maven") return `implementation("${framework.packageName}:${version ?? "<version>"}")`;
-  return `${manager} ${manager === "npm" ? "install" : "add"} ${framework.packageName}`;
+export function installCommand(targetId, { manager = "npm", version } = {}) {
+  const target = targetsById[targetId];
+  if (!target) throw new Error(`Unknown package: ${targetId}`);
+  if (target.registry === "pub") return `flutter pub add ${target.packageName}`;
+  if (target.registry === "maven") return `implementation("${target.packageName}:${version ?? "<version>"}")`;
+  return `${manager} ${manager === "npm" ? "install" : "add"} ${[target.packageName, ...(target.peers ?? [])].join(" ")}`;
 }
 
-/** Flutter's generated icons use lowerCamelCase names, such as `arrowRight`. */
-export function dartIconName(componentName) {
-  return componentName[0].toLowerCase() + componentName.slice(1);
+/** How to render an icon from a runtime name with a package, in one line for agents. */
+export function dynamicIconUsage(targetId) {
+  const { packageName, dynamicIcon } = targetsById[targetId];
+  const docs = `${siteUrl}/docs/dynamic-icons`;
+  if (dynamicIcon.lookup) return `${dynamicIcon.lookup} ${docs}`;
+  const binding = dynamicIcon.export === "default" ? "DynamicIcon" : "{ DynamicIcon }";
+  const directive = dynamicIcon.directive ? ` (directive: <svg ${dynamicIcon.directive} name="activity"></svg>)` : "";
+  return `import ${binding} from "${packageName}/dynamic"${directive}. Validate runtime names against iconNames first. ${docs}`;
 }
 
 // Native color literals accept hex colors only; other CSS colors are left out.
@@ -86,7 +73,7 @@ function changedProps(options) {
   const props = [];
   if (resolved.size !== iconDefaults.size) props.push(["size", resolved.size]);
   if (resolved.color !== iconDefaults.color) props.push(["color", resolved.color]);
-  if (isSolid(options)) return props;
+  if (!optionsStyle(options).stroked) return props;
   if (resolved.strokeWidth !== iconDefaults.strokeWidth) props.push(["strokeWidth", resolved.strokeWidth]);
   if (resolved.absoluteStrokeWidth) props.push(["absoluteStrokeWidth", true]);
   return props;
@@ -106,7 +93,7 @@ export function propsSource(frameworkId, options) {
     const { size, strokeWidth, absoluteStrokeWidth } = resolveOptions(options);
     const named = Object.fromEntries(props);
     let source = "";
-    if (!isSolid(options) && (named.strokeWidth !== undefined || absoluteStrokeWidth)) {
+    if (optionsStyle(options).stroked && (named.strokeWidth !== undefined || absoluteStrokeWidth)) {
       source += `.withStrokeWidth(${strokeWidth}f${absoluteStrokeWidth ? `, absoluteSize = ${size}.dp` : ""})`;
     }
     source += ",\n    contentDescription = null";
@@ -137,11 +124,11 @@ export function propsSource(frameworkId, options) {
 }
 
 /** Import-and-render source for one framework and style, given its props source. */
-export function componentSource(frameworkId, componentName, props, style = "outline") {
-  const framework = frameworksById[frameworkId];
-  if (!framework) throw new Error(`Unknown framework: ${frameworkId}`);
-  const solid = style === "solid";
-  const from = solid ? `${framework.packageName}/solid` : framework.packageName;
+export function componentSource(frameworkId, componentName, props, styleId = "outline") {
+  const framework = targetsById[frameworkId];
+  if (!framework?.framework) throw new Error(`Unknown framework: ${frameworkId}`);
+  const style = styleOf(styleId);
+  const from = styleEntry(framework.packageName, style);
   switch (frameworkId) {
     case "vue":
       return `<script setup>\nimport { ${componentName} } from "${from}";\n</script>\n\n<template>\n  <${componentName}${props} />\n</template>`;
@@ -150,13 +137,13 @@ export function componentSource(frameworkId, componentName, props, style = "outl
     case "astro":
       return `---\nimport { ${componentName} } from "${from}";\n---\n\n<${componentName}${props} />`;
     case "angular":
-      return `import { ${componentName} } from "${from}";\n\n<svg vadivam${solid ? "Solid" : ""}${componentName}${props}></svg>`;
+      return `import { ${componentName} } from "${from}";\n\n<svg ${angularSelectorPrefix(style)}${componentName}${props}></svg>`;
     case "lit":
       return `import { html } from "lit";\nimport { ${componentName} } from "${from}";\n\nhtml\`\${${componentName}(${props.trim()})}\`;`;
     case "flutter":
-      return `import 'package:vadivam/vadivam.dart';\n\nVadivamIcon(${solid ? "VadivamSolidIcons" : "VadivamIcons"}.${dartIconName(componentName)}${props.trimStart()})`;
+      return `import 'package:vadivam/vadivam.dart';\n\nVadivamIcon(${iconsOwner(style)}.${dartIconName(componentName)}${props.trimStart()})`;
     case "compose":
-      return `import com.praveenjuge.vadivam.*\nimport com.praveenjuge.vadivam.icons.${solid ? "solid." : ""}${componentName}\n\nIcon(\n    imageVector = ${solid ? "VadivamSolidIcons" : "VadivamIcons"}.${componentName}${props.trimStart()},\n)`;
+      return `import com.praveenjuge.vadivam.*\nimport ${composePackage(style)}.${componentName}\n\nIcon(\n    imageVector = ${iconsOwner(style)}.${componentName}${props.trimStart()},\n)`;
     default:
       return `import { ${componentName} } from "${from}";\n\n<${componentName}${props} />`;
   }
@@ -164,24 +151,15 @@ export function componentSource(frameworkId, componentName, props, style = "outl
 
 /** Import-and-render snippet for one framework, with only the non-default props. */
 export function componentSnippet(frameworkId, componentName, options = {}) {
-  return componentSource(frameworkId, componentName, propsSource(frameworkId, options), isSolid(options) ? "solid" : "outline");
+  return componentSource(frameworkId, componentName, propsSource(frameworkId, options), optionsStyle(options).id);
 }
 
 /** Apply size, color, and stroke settings to an icon's normalized SVG markup. */
 export function customizeSvg(svg, options = {}) {
   const { size, color } = resolveOptions(options);
-  if (isSolid(options)) {
-    return svg
-      .replace(/ width="[^"]*"/, ` width="${size}"`)
-      .replace(/ height="[^"]*"/, ` height="${size}"`)
-      .replace(/ fill="[^"]*"/, ` fill="${color}"`);
-  }
-  const strokeWidth = effectiveStrokeWidth(options);
-  return svg
-    .replace(/ width="[^"]*"/, ` width="${size}"`)
-    .replace(/ height="[^"]*"/, ` height="${size}"`)
-    .replace(/ stroke="[^"]*"/, ` stroke="${color}"`)
-    .replace(/ stroke-width="[^"]*"/, ` stroke-width="${strokeWidth}"`);
+  const style = optionsStyle(options);
+  const painted = resizeSvg(svg, size).replace(new RegExp(` ${paintAttribute(style)}="[^"]*"`), ` ${paintAttribute(style)}="${color}"`);
+  return style.stroked ? painted.replace(/ stroke-width="[^"]*"/, ` stroke-width="${effectiveStrokeWidth(options)}"`) : painted;
 }
 
 const jsxAttributes = {
@@ -236,32 +214,89 @@ export function tailwindMaskSnippet(svg, options = {}) {
   return `<span class="inline-block size-[${size}px] bg-current [mask:url(${mask})_no-repeat_center/contain]" aria-hidden="true"></span>`;
 }
 
-export const siteUrl = "https://vadivam.praveenjuge.com";
+const iconFile = (name) => `icons/${name}.svg`;
 
-export function cdnUrl(name, version, style = "outline") {
-  return `https://cdn.jsdelivr.net/npm/vadivam@${version}/dist/${style === "solid" ? "solid/" : ""}icons/${name}.svg`;
+/** An icon's SVG file as the vadivam package exports it, such as `solid/icons/house.svg`. */
+export function iconAssetPath(name, style = "outline") {
+  return entryPath(styleOf(style), iconFile(name));
 }
 
+export function cdnUrl(name, version, style = "outline") {
+  return `https://cdn.jsdelivr.net/npm/${targetsById.core.packageName}@${version}/${packagePath(styleOf(style), iconFile(name))}`;
+}
+
+// Points at the package's sprite served from the app's root, with the solid
+// sprite saved as sprite-solid.svg, as the core docs show.
 export function spriteSnippet(name, style = "outline") {
-  if (style === "solid") {
-    return `<svg width="24" height="24" fill="currentColor" fill-rule="evenodd" aria-hidden="true">\n  <use href="/sprite-solid.svg#vadivam-solid-${name}" />\n</svg>`;
-  }
-  return `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">\n  <use href="/sprite.svg#vadivam-${name}" />\n</svg>`;
+  const { paint, spriteIdPrefix } = styleOf(style);
+  const file = style === "outline" ? "sprite.svg" : `sprite-${style}.svg`;
+  return `<svg width="${canvasSize}" height="${canvasSize}" ${attributeString(paint)} aria-hidden="true">\n  <use href="/${file}#${spriteIdPrefix}${name}" />\n</svg>`;
 }
 
 export function fontSnippet(name, style = "outline") {
-  return `<i class="${style === "solid" ? "vadivam-solid-icon" : "vadivam-icon"} vadivam-icon-${name}" aria-hidden="true"></i>`;
+  const { baseClass, glyphClassPrefix } = styleOf(style).font;
+  return `<i class="${baseClass} ${glyphClassPrefix}${name}" aria-hidden="true"></i>`;
 }
 
-export function iconifySnippet(name, style = "outline") {
-  if (style === "solid") throw new Error("Iconify has the outline icons only; use another format for solid icons.");
+// Iconify publishes the outline icons only; the copy formats below say so.
+export function iconifySnippet(name) {
   return `vadivam:${name}`;
 }
 
 export function shadcnItemUrl(name, baseUrl = siteUrl, style = "outline") {
-  return `${baseUrl}/r/${style === "solid" ? "solid/" : ""}${name}.json`;
+  return `${baseUrl}/${shadcnItemPath(name, styleOf(style))}`;
 }
 
 export function shadcnAddCommand(name, style = "outline") {
   return `npx shadcn@latest add ${shadcnItemUrl(name, siteUrl, style)}`;
+}
+
+const styledSvg = (icon, options) => customizeSvg(icon.svg, options);
+
+/**
+ * Every format an icon can be copied as, in the order the MCP server lists
+ * them. The docs site's Copy as menu shows the ones that aren't framework
+ * snippets; its framework tabs show the rest. `render(icon, options, version)`
+ * takes `{ name, componentName, svg }`, where `svg` is the uncustomized markup
+ * of `options.style`. `install` is the package the output needs, if any.
+ */
+export const copyFormats = Object.freeze(
+  [
+    { id: "svg", label: "SVG", render: styledSvg },
+    { id: "jsx", label: "JSX", render: (icon, options) => svgToJsx(styledSvg(icon, options)) },
+    ...frameworks.map(({ id, label }) => ({
+      id,
+      label,
+      framework: true,
+      install: id,
+      render: (icon, options) => componentSnippet(id, icon.componentName, options),
+    })),
+    { id: "data-uri", label: "Data URI", render: (icon, options) => svgDataUri(styledSvg(icon, options)) },
+    { id: "base64", label: "Base64", render: (icon, options) => svgBase64(styledSvg(icon, options)) },
+    { id: "css-mask", label: "CSS mask", render: (icon, options) => cssMaskSnippet(icon.name, icon.svg, options) },
+    { id: "tailwind", label: "Tailwind class", render: (icon, options) => tailwindMaskSnippet(icon.svg, options) },
+    { id: "cdn", label: "CDN URL", render: (icon, options, version) => cdnUrl(icon.name, version, options.style) },
+    { id: "sprite", label: "Sprite <use>", install: "core", render: (icon, options) => spriteSnippet(icon.name, options.style) },
+    { id: "font", label: "Icon font", install: "core", render: (icon, options) => fontSnippet(icon.name, options.style) },
+    { id: "iconify", label: "Iconify name", styles: ["outline"], render: (icon) => iconifySnippet(icon.name) },
+    { id: "shadcn", label: "shadcn add", render: (icon, options) => shadcnAddCommand(icon.name, options.style) },
+  ].map((format) => Object.freeze({ styles: styleIds, framework: false, ...format })),
+);
+
+export const copyFormatsById = Object.freeze(Object.fromEntries(copyFormats.map((format) => [format.id, format])));
+
+/** Why a format can't show an icon in a style, or null when it can. */
+export function unsupportedStyle(format, style = "outline") {
+  return format.styles.includes(style)
+    ? null
+    : `${format.label} has ${format.styles.join(" and ")} icons only; use another format for ${style} icons.`;
+}
+
+/** One icon in one copy format; throws for an unknown format or a style the format lacks. */
+export function renderCopyFormat(formatId, icon, options = {}, version) {
+  const format = copyFormatsById[formatId];
+  if (!format) throw new Error(`Unknown format "${formatId}". Use one of: ${copyFormats.map(({ id }) => id).join(", ")}.`);
+  const problem = unsupportedStyle(format, options.style);
+  if (problem) throw new Error(problem);
+  return format.render(icon, options, version);
 }

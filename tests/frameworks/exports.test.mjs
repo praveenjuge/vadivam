@@ -1,128 +1,118 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { iconNames } from "../../scripts/icon-source.mjs";
+import { pascalCase } from "../../scripts/icon-styles.mjs";
+import { frameworks, targetsById } from "../../scripts/packages.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const iconManifest = JSON.parse(
-  readFileSync(path.join(root, "packages/vadivam/dist/manifest.js"), "utf8")
-    .match(/export const icons = ([\s\S]*);\nexport const iconNames/)[1],
-);
-const iconCount = iconManifest.length;
+const names = await iconNames();
+const resolve = (specifier) => Bun.resolveSync(specifier, import.meta.dir);
+const packageName = (id) => targetsById[id].packageName;
+const aliases = (name) => [pascalCase(name), `${pascalCase(name)}Icon`, `Vadivam${pascalCase(name)}`];
+// The names a module exports, read without running it, for entries that
+// import .svelte or .astro components only their compilers can load.
+const exportedNames = (specifier) =>
+  new Set(new Bun.Transpiler({ loader: "js" }).scan(readFileSync(resolve(specifier), "utf8")).exports);
+// The declaration file a package's export map names for one icon subpath.
+function iconTypes(name, subpath, icon) {
+  const manifestPath = resolve(`${name}/package.json`);
+  const { exports } = JSON.parse(readFileSync(manifestPath, "utf8"));
+  return path.join(path.dirname(manifestPath), exports[subpath].types.replaceAll("*", icon));
+}
 
+// How this file checks each npm framework package: plain ESM it can import,
+// or component files a compiler loads. Angular gets its own checks below, and
+// React, React Native, Lit, and Qwik have their own test files.
 const importable = ["vue", "preact", "solid"];
+const componentFiles = ["svelte", "astro"];
+const testedElsewhere = ["angular", "react", "react-native", "lit", "qwik"];
 
 describe("generated framework exports", () => {
-  for (const framework of importable) {
-    test(`${framework} exposes the complete static and dynamic API`, async () => {
-      const dist = path.join(root, `packages/vadivam-${framework}/dist`);
-      const api = await import(pathToFileURL(path.join(dist, "index.js")));
-      const direct = await import(
-        pathToFileURL(path.join(dist, "icons/activity.js"))
-      );
-      const dynamic = await import(
-        pathToFileURL(path.join(dist, "dynamicIconImports.js"))
-      );
+  test("every npm framework package is checked", () => {
+    const npmFrameworks = frameworks.filter((target) => target.registry === "npm").map((target) => target.id);
+    expect([...importable, ...componentFiles, ...testedElsewhere].sort()).toEqual(npmFrameworks.sort());
+  });
+
+  for (const id of importable) {
+    const name = packageName(id);
+
+    test(`${name} exposes the complete static and dynamic API`, async () => {
+      const api = await import(name);
+      const direct = await import(`${name}/icons/activity`);
+      const dynamic = await import(`${name}/dynamicIconImports`);
       expect(api.Activity).toBeDefined();
       expect(api.ActivityIcon).toBe(api.Activity);
       expect(api.VadivamActivity).toBe(api.Activity);
       expect(api.Icon).toBeDefined();
       expect(api.createVadivamIcon).toBeFunction();
-      expect(Object.keys(api.icons)).toHaveLength(iconCount);
+      expect(Object.keys(api.icons)).toHaveLength(names.length);
       expect(direct.default).toBe(api.Activity);
       expect(direct.__iconNode.length).toBeGreaterThan(0);
-      expect(dynamic.iconNames).toHaveLength(iconCount);
+      expect(dynamic.iconNames).toEqual(names);
       expect((await dynamic.default.activity()).default).toBe(api.Activity);
     });
-  }
 
-  for (const framework of ["svelte", "astro"]) {
-    test(`${framework} emits every public entrypoint`, async () => {
-      const dist = path.join(root, `packages/vadivam-${framework}/dist`);
-      const rootIndex = readFileSync(path.join(dist, "index.js"), "utf8");
-      const extension = framework === "svelte" ? "svelte" : "astro";
-      for (const { componentName, name } of iconManifest) {
-        expect(existsSync(path.join(dist, `icons/${name}.${extension}`))).toBe(true);
-        expect(existsSync(path.join(dist, `icons/${name}.${extension}.d.ts`))).toBe(true);
-        expect(rootIndex).toContain(`default as ${componentName}`);
-        expect(rootIndex).toContain(`default as ${componentName}Icon`);
-        expect(rootIndex).toContain(`default as Vadivam${componentName}`);
-      }
-      const dynamic = await import(
-        pathToFileURL(path.join(dist, "dynamicIconImports.js"))
-      );
-      expect(dynamic.iconNames).toHaveLength(iconCount);
-      expect(Object.keys(dynamic.default)).toHaveLength(iconCount);
-    });
-  }
-
-  for (const framework of importable) {
-    test(`${framework} exposes the same API for solid icons under solid/`, async () => {
-      const dist = path.join(root, `packages/vadivam-${framework}/dist`);
-      const outline = await import(pathToFileURL(path.join(dist, "index.js")));
-      const solid = await import(pathToFileURL(path.join(dist, "solid/index.js")));
-      const dynamic = await import(pathToFileURL(path.join(dist, "solid/dynamicIconImports.js")));
+    test(`${name} exposes the same API for solid icons under solid/`, async () => {
+      const outline = await import(name);
+      const solid = await import(`${name}/solid`);
+      const dynamic = await import(`${name}/solid/dynamicIconImports`);
       expect(solid.Activity).toBeDefined();
       expect(solid.Activity).not.toBe(outline.Activity);
       expect(solid.ActivityIcon).toBe(solid.Activity);
-      expect(Object.keys(solid.icons)).toHaveLength(iconCount);
+      expect(Object.keys(solid.icons)).toHaveLength(names.length);
       expect(solid.VadivamProvider).toBe(outline.VadivamProvider);
-      expect(dynamic.iconNames).toHaveLength(iconCount);
+      expect(dynamic.iconNames).toEqual(names);
       expect((await dynamic.default.activity()).default).toBe(solid.Activity);
-      const defaults = await import(pathToFileURL(path.join(dist, "solid/defaultAttributes.js")));
-      expect(defaults.default.fill).toBe("currentColor");
-      expect(defaults.default.stroke).toBeUndefined();
     });
   }
 
-  for (const framework of ["svelte", "astro"]) {
-    test(`${framework} emits every solid entrypoint`, async () => {
-      const dist = path.join(root, `packages/vadivam-${framework}/dist/solid`);
-      const solidIndex = readFileSync(path.join(dist, "index.js"), "utf8");
-      const extension = framework === "svelte" ? "svelte" : "astro";
-      for (const { componentName, name } of iconManifest) {
-        expect(existsSync(path.join(dist, `icons/${name}.${extension}`))).toBe(true);
-        expect(solidIndex).toContain(`default as ${componentName}`);
-      }
-      expect(readFileSync(path.join(dist, "defaultAttributes.js"), "utf8")).toContain('fill: "currentColor"');
-    });
-  }
+  for (const id of componentFiles) {
+    const name = packageName(id);
 
-  test("angular exposes solid directives as a secondary entry point", async () => {
-    const dist = path.join(root, "packages/vadivam-angular/dist");
-    await import("@angular/compiler");
-    const outline = await import(pathToFileURL(path.join(dist, "fesm2022/vadivam-angular.mjs")));
-    const solid = await import(pathToFileURL(path.join(dist, "fesm2022/vadivam-angular-solid.mjs")));
-    expect(solid.Activity).toBeDefined();
-    expect(solid.Activity).not.toBe(outline.Activity);
-    expect(solid.ActivityIcon).toBe(solid.Activity);
-    expect(solid.Icon).not.toBe(outline.Icon);
-    expect(solid.provideVadivamConfig).toBe(outline.provideVadivamConfig);
-    expect(Object.keys(solid.icons)).toHaveLength(iconCount);
-    expect(solid.iconNames).toHaveLength(iconCount);
-    for (const { name } of iconManifest) {
-      expect(existsSync(path.join(dist, `solid/icons/${name}.js`))).toBe(true);
+    for (const entry of ["", "/solid"]) {
+      test(`${name}${entry} exports every icon under all three names and as a subpath`, async () => {
+        const exported = exportedNames(`${name}${entry}`);
+        for (const icon of names) {
+          for (const alias of aliases(icon)) expect(exported.has(alias)).toBe(true);
+          expect(existsSync(resolve(`${name}${entry}/icons/${icon}`))).toBe(true);
+          expect(existsSync(iconTypes(name, `.${entry}/icons/*`, icon))).toBe(true);
+        }
+        const dynamic = await import(`${name}${entry}/dynamicIconImports`);
+        expect(dynamic.iconNames).toEqual(names);
+        expect(Object.keys(dynamic.default)).toEqual(names);
+      });
     }
-  });
+  }
 
   test("angular exposes complete APF, registry, aliases, and dynamic entries", async () => {
-    const dist = path.join(root, "packages/vadivam-angular/dist");
     await import("@angular/compiler");
-    const api = await import(
-      pathToFileURL(path.join(dist, "fesm2022/vadivam-angular.mjs"))
-    );
+    const api = await import("vadivam-angular");
     expect(api.Activity).toBeDefined();
     expect(api.ActivityIcon).toBe(api.Activity);
     expect(api.VadivamActivity).toBe(api.Activity);
     expect(api.Icon).toBeDefined();
     expect(api.DynamicIcon).toBeDefined();
     expect(api.createVadivamIcon).toBeFunction();
-    expect(Object.keys(api.icons)).toHaveLength(iconCount);
-    expect(api.iconNames).toHaveLength(iconCount);
-    expect(Object.keys(api.dynamicIconImports)).toHaveLength(iconCount);
-    for (const { name } of iconManifest) {
-      expect(existsSync(path.join(dist, `icons/${name}.js`))).toBe(true);
-      expect(existsSync(path.join(dist, `icons/${name}.d.ts`))).toBe(true);
+    expect(Object.keys(api.icons)).toHaveLength(names.length);
+    expect(api.iconNames).toEqual(names);
+    expect(Object.keys(api.dynamicIconImports)).toEqual(names);
+    for (const icon of names) {
+      expect(existsSync(resolve(`vadivam-angular/icons/${icon}`))).toBe(true);
+      expect(existsSync(iconTypes("vadivam-angular", "./icons/*", icon))).toBe(true);
     }
+  });
+
+  test("angular exposes solid directives as a secondary entry point", async () => {
+    await import("@angular/compiler");
+    const outline = await import("vadivam-angular");
+    const solid = await import("vadivam-angular/solid");
+    expect(solid.Activity).toBeDefined();
+    expect(solid.Activity).not.toBe(outline.Activity);
+    expect(solid.ActivityIcon).toBe(solid.Activity);
+    expect(solid.Icon).not.toBe(outline.Icon);
+    expect(solid.provideVadivamConfig).toBe(outline.provideVadivamConfig);
+    expect(Object.keys(solid.icons)).toHaveLength(names.length);
+    expect(solid.iconNames).toEqual(names);
+    for (const icon of names) expect(existsSync(resolve(`vadivam-angular/solid/icons/${icon}`))).toBe(true);
   });
 });

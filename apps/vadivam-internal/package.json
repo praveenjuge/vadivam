@@ -7,14 +7,13 @@
   "scripts": {
     "build": "bun scripts/build.mjs",
     "dev": "bun scripts/build.mjs --watch",
-    "test": "bun run build && bun test && bun run typecheck",
-    "typecheck": "tsc --noEmit",
-    "update:lucide-data": "bun scripts/update-lucide-data.mjs"
+    "test": "bun run build && bun test ./test ../figma-shared/test && bun run typecheck",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@figma/plugin-typings": "^1.142.0",
+    "@figma/plugin-typings": "1.142.0",
     "@types/bun": "^1.4.4",
-    "esbuild": "^0.28.2",
-    "typescript": "^7.0.2"
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
   }
 }

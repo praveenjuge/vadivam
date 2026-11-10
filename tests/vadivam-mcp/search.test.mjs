@@ -5,33 +5,30 @@ import {
   closestIconNames,
   findIcon,
   icons,
+  instructions,
   renderIcon,
   searchIcons,
   suggestIcons,
   usageFor,
   version,
-} from "../../packages/vadivam-mcp/dist/index.js";
+} from "vadivam-mcp";
+import { iconCategories, readIcons, styles } from "../../scripts/icon-source.mjs";
+import { frameworks, npmPackages, siteUrl, targetsById } from "../../scripts/packages.mjs";
 
-const root = new URL("../../", import.meta.url);
 const packageVersion = JSON.parse(
-  readFileSync(new URL("packages/vadivam-mcp/package.json", root), "utf8"),
+  readFileSync(new URL("../../packages/vadivam-mcp/package.json", import.meta.url), "utf8"),
 ).version;
 const names = (result) => result.results.map((icon) => icon.name);
+const npmFrameworks = frameworks.filter((target) => target.registry === "npm");
 
 describe("vadivam-mcp data", () => {
-  test("bundles every icon and category from the release", () => {
-    const sourceCount = readFileSync(new URL("README.md", root), "utf8").match(
-      /library of (\d+) pixel-perfect/,
-    )[1];
-    expect(icons.length).toBe(Number(sourceCount));
-    expect(categories.length).toBeGreaterThan(30);
+  test("bundles every icon in both styles and every category from the release", async () => {
+    const [outline, solid] = await Promise.all([readIcons(), readIcons(styles.solid)]);
+    expect(icons.map((icon) => icon.name)).toEqual(outline.map((icon) => icon.name));
+    expect(icons.map((icon) => icon.svg)).toEqual(outline.map((icon) => icon.svg.trim()));
+    expect(icons.map((icon) => icon.solidSvg)).toEqual(solid.map((icon) => icon.svg.trim()));
+    expect(categories).toEqual(iconCategories);
     expect(version).toBe(packageVersion);
-    for (const icon of icons) {
-      expect(icon.svg.startsWith("<svg")).toBe(true);
-      for (const id of icon.categories) {
-        expect(categories.some((category) => category.id === id)).toBe(true);
-      }
-    }
   });
 });
 
@@ -44,11 +41,12 @@ describe("search_icons ranking", () => {
   });
 
   test("name prefixes and name words rank above tags", () => {
-    const results = names(searchIcons("arrow", { limit: 100 }));
-    const firstTagOnly = results.findIndex((name) => !name.includes("arrow"));
-    const lastNamed = results.findLastIndex((name) => name.startsWith("arrow"));
-    expect(results[0].startsWith("arrow-")).toBe(true);
-    if (firstTagOnly !== -1) expect(lastNamed).toBeLessThan(firstTagOnly);
+    const results = names(searchIcons("heart", { limit: 100 }));
+    const firstTagOnly = results.findIndex((name) => !name.includes("heart"));
+    expect(results[0]).toStartWith("heart");
+    expect(firstTagOnly).toBeGreaterThan(0);
+    expect(results.findLastIndex((name) => name.startsWith("heart"))).toBeLessThan(firstTagOnly);
+    expect(results.slice(firstTagOnly).some((name) => name.includes("heart"))).toBe(false);
   });
 
   test("tags find synonyms", () => {
@@ -73,7 +71,8 @@ describe("search_icons ranking", () => {
         !icons.find((candidate) => candidate.name === result.name).tags.some((tag) => tag.includes("weather")),
     );
     expect(tagged).toBeGreaterThanOrEqual(0);
-    if (categoryOnly !== -1) expect(tagged).toBeLessThan(categoryOnly);
+    expect(categoryOnly).toBeGreaterThanOrEqual(0);
+    expect(tagged).toBeLessThan(categoryOnly);
   });
 
   test("every query word must match", () => {
@@ -88,7 +87,7 @@ describe("search_icons ranking", () => {
       componentName: "Activity",
       categories: expect.any(Array),
       tags: expect.any(Array),
-      url: "https://vadivam.praveenjuge.com/icons/activity",
+      url: `${siteUrl}/icons/activity`,
     });
     for (const result of searchIcons("a", { limit: 100 }).results) {
       expect(result.tags.length).toBeLessThanOrEqual(8);
@@ -192,20 +191,8 @@ describe("get_icon formats", () => {
   });
 
   test("framework snippets import from the matching package", () => {
-    const packages = {
-      react: "vadivam-react",
-      "react-native": "vadivam-react-native",
-      vue: "vadivam-vue",
-      svelte: "vadivam-svelte",
-      solid: "vadivam-solid",
-      preact: "vadivam-preact",
-      astro: "vadivam-astro",
-      angular: "vadivam-angular",
-      qwik: "vadivam-qwik",
-      lit: "vadivam-lit",
-    };
-    for (const [format, packageName] of Object.entries(packages)) {
-      const code = renderIcon(activity, format, { size: 20 });
+    for (const { id, packageName } of npmFrameworks) {
+      const code = renderIcon(activity, id, { size: 20 });
       expect(code).toContain(`from "${packageName}"`);
       expect(code).toContain("Activity");
       expect(code).toContain("20");
@@ -221,21 +208,13 @@ describe("get_icon formats", () => {
     expect(renderIcon(activity, "sprite")).toContain("#vadivam-activity");
     expect(renderIcon(activity, "font")).toContain("vadivam-icon-activity");
     expect(renderIcon(activity, "iconify")).toBe("vadivam:activity");
-    expect(renderIcon(activity, "shadcn")).toBe(
-      "npx shadcn@latest add https://vadivam.praveenjuge.com/r/activity.json",
-    );
+    expect(renderIcon(activity, "shadcn")).toBe(`npx shadcn@latest add ${siteUrl}/r/activity.json`);
     expect(() => renderIcon(activity, "png")).toThrow(/Unknown format/);
   });
 });
 
 describe("get_icon solid style", () => {
   const activity = findIcon("activity");
-
-  test("every icon carries its solid SVG", () => {
-    for (const name of ["activity", "house", "x"]) {
-      expect(findIcon(name).solidSvg).toStartWith('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd">');
-    }
-  });
 
   test("svg paints the fill and ignores stroke options", () => {
     expect(renderIcon(activity, "svg", { style: "solid" })).toBe(activity.solidSvg);
@@ -261,25 +240,36 @@ describe("get_icon solid style", () => {
     expect(renderIcon(activity, "font", { style: "solid" })).toBe(
       '<i class="vadivam-solid-icon vadivam-icon-activity" aria-hidden="true"></i>',
     );
-    expect(renderIcon(activity, "shadcn", { style: "solid" })).toBe(
-      "npx shadcn@latest add https://vadivam.praveenjuge.com/r/solid/activity.json",
-    );
+    expect(renderIcon(activity, "shadcn", { style: "solid" })).toBe(`npx shadcn@latest add ${siteUrl}/r/solid/activity.json`);
     expect(() => renderIcon(activity, "iconify", { style: "solid" })).toThrow(/outline icons only/);
   });
 });
 
 describe("get_usage", () => {
-  test("links each framework to its docs page", () => {
-    for (const framework of ["core", "react", "react-native", "vue", "svelte", "solid", "angular", "astro", "preact", "qwik", "lit"]) {
-      const usage = usageFor(framework);
-      expect(usage.docs).toBe(`https://vadivam.praveenjuge.com/docs/${framework}`);
-      expect(usage.install).toStartWith(`npm install ${usage.packageName}`);
-      expect(usage.example).toContain(usage.packageName);
-      expect(usage.solid).toContain(`${usage.packageName}/solid`);
+  test("links each package to its docs page", () => {
+    for (const { id, packageName, documentation } of npmPackages.filter((target) => target.id !== "mcp")) {
+      const usage = usageFor(id);
+      expect(usage.packageName).toBe(packageName);
+      expect(usage.docs).toBe(`${siteUrl}${documentation}`);
+      expect(usage.install).toStartWith(`npm install ${packageName}`);
+      expect(usage.example).toContain(packageName);
+      expect(usage.solid).toContain(`${packageName}/solid`);
     }
     expect(usageFor("react-native").install).toContain("react-native-svg");
     expect(usageFor("flutter").install).toBe("flutter pub add vadivam");
     expect(usageFor("compose").install).toBe(`implementation("com.praveenjuge:vadivam-compose:${version}")`);
-    expect(usageFor("compose").docs).toBe("https://vadivam.praveenjuge.com/docs/compose");
+    expect(usageFor("compose").docs).toBe(`${siteUrl}${targetsById.compose.documentation}`);
+  });
+
+  test("describes each package's dynamic icon API", () => {
+    expect(usageFor("react").dynamic).toStartWith('import { DynamicIcon } from "vadivam-react/dynamic".');
+    expect(usageFor("svelte").dynamic).toStartWith('import DynamicIcon from "vadivam-svelte/dynamic".');
+    expect(usageFor("angular").dynamic).toContain("<svg vadivamDynamicIcon");
+    expect(usageFor("qwik").dynamic).toStartWith("No DynamicIcon in vadivam-qwik");
+    expect(usageFor("core").dynamic).toContain('"vadivam/elements"');
+  });
+
+  test("instructions name every framework", () => {
+    for (const { label, title = label } of frameworks) expect(instructions).toContain(title);
   });
 });

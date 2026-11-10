@@ -1,18 +1,42 @@
+import path from "node:path";
 import {
   buildStyles,
+  defaultSize,
+  defaultStrokeWidth,
+  dynamicDeclarations,
   dynamicEntries,
+  dynamicExports,
   dynamicTypes,
+  exportedNames,
   iconExports,
   iconImports,
   iconNameType,
   iconRegistryEntries,
   iconRegistryTypes,
+  mergeClassesSource,
+  paintBindings,
   prepareDist,
+  rootAttributeMarkup,
+  scaledStrokeWidthSource,
   strokePropTypes,
   svgElementTypeSource,
   write,
+  writeExports,
   writeRuntimePolicy,
 } from "./shared.mjs";
+
+const indexExports = (icons) => [
+  { icons },
+  { from: "./Icon.js", values: ["Icon"] },
+  { from: "./createVadivamIcon.js", values: ["createVadivamIcon"] },
+  { from: "./icons.js", values: ["icons"] },
+  { from: "./dynamicIconImports.js", values: ["dynamicIconImports", "iconNames"] },
+  { from: "./Icon.js", types: ["IconProps"] },
+  { from: "./types.js", types: ["IconName", "IconNode", "SVGElementType", "VadivamIcon", "VadivamProps"] },
+];
+
+/** Every name the root and dynamic entries export besides the icons. */
+export const apiExports = [...exportedNames(indexExports([])), ...dynamicExports];
 
 function escapeAttribute(value) {
   return String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
@@ -24,7 +48,6 @@ function iconMarkup(icon) {
   return icon.iconNode
     .map(([tag, attrs]) => {
       const attributes = Object.entries(attrs)
-        .filter(([name]) => name !== "key")
         .map(([name, value]) => `${name}="${escapeAttribute(value)}"`)
         .join(" ");
       return `<${tag} ${attributes}></${tag}>`;
@@ -32,28 +55,22 @@ function iconMarkup(icon) {
     .join("");
 }
 
-export async function buildLitPackage(icons, dist, solidIcons = []) {
+export async function build({ iconsByStyle, directory }) {
+  const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
-  await buildStyles(dist, { outline: icons, solid: solidIcons }, buildLitEntry);
-}
-
-// An outline icon paints its stroke and scales its width; a solid icon paints
-// its fill and has no stroke to scale.
-function paintSource(style) {
-  if (!style.stroked) {
-    return { props: "", resolve: "", attributes: 'fill=\${sanitizePaint(color)} fill-rule="evenodd"' };
-  }
-  return {
-    props: "strokeWidth = 2, absoluteStrokeWidth = false, ",
-    resolve: "  const numericSize = Number(size);\n  const numericStroke = Number(strokeWidth);\n  const stroke = absoluteStrokeWidth && Number.isFinite(numericSize) && numericSize !== 0 && Number.isFinite(numericStroke) ? numericStroke * 24 / numericSize : strokeWidth;\n",
-    attributes: 'fill="none" stroke=\${sanitizePaint(color)} stroke-width=\${stroke} stroke-linecap="round" stroke-linejoin="round"',
-  };
+  await buildStyles(dist, iconsByStyle, buildLitEntry);
 }
 
 async function buildLitEntry(dist, icons, style) {
   const shared = style.shared;
-  const paint = paintSource(style);
+  const strokeProps = style.stroked ? `strokeWidth = ${defaultStrokeWidth}, absoluteStrokeWidth = false, ` : "";
+  const bindings = [
+    ["width", "size"],
+    ["height", "size"],
+    ...paintBindings(style, { color: "sanitizePaint(color)", strokeWidth: "strokeWidth", size: "size", absolute: "absoluteStrokeWidth" }),
+  ];
+  const root = rootAttributeMarkup(style, bindings, { bind: (expression) => `\${${expression}}` });
   await write(dist, "types.d.ts", `import type { TemplateResult } from "lit";\nexport type SVGElementType = ${svgElementTypeSource};\nexport type IconNode = readonly [tag: SVGElementType, attrs: Record<string, string | number | boolean>][];\nexport interface VadivamProps { size?: string | number; color?: string;${strokePropTypes(style)} class?: string; label?: string; }\nexport type VadivamIcon = (props?: VadivamProps) => TemplateResult;\nexport type IconName = ${iconNameType(icons)};\n`);
   await write(dist, "IconBase.js", `import { html, nothing } from "lit";
 import { unsafeSVG } from "lit/directives/unsafe-svg.js";
@@ -65,14 +82,12 @@ function titleMarkup(label) {
   return unsafeSVG("<title>" + String(label).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</title>");
 }
 
-function classes(...values) {
-  return values.flatMap((value) => typeof value === "string" ? value.split(/\\s+/) : []).filter((value, index, all) => value && all.indexOf(value) === index).join(" ");
-}
-
+${mergeClassesSource()}
+${style.stroked ? `${scaledStrokeWidthSource()}\n` : ""}
 // Renders built-in icon content as given: it is a static template generated
 // with the package. Icon passes caller nodes only after sanitizing them.
-export function renderIcon(name, content, { size = 24, color, ${paint.props}class: className, label } = {}) {
-${paint.resolve}  return html\`<svg xmlns="http://www.w3.org/2000/svg" width=\${size} height=\${size} viewBox="0 0 24 24" ${paint.attributes} class=\${classes("vadivam", name && "vadivam-" + name, className)} role=\${label ? "img" : nothing} aria-label=\${label || nothing} aria-hidden=\${label ? nothing : "true"}>\${label ? titleMarkup(label) : nothing}\${content}</svg>\`;
+export function renderIcon(name, content, { size = ${defaultSize}, color, ${strokeProps}class: className, label } = {}) {
+  return html\`<svg ${root} class=\${mergeClasses("vadivam", name && "vadivam-" + name, className)} role=\${label ? "img" : nothing} aria-label=\${label || nothing} aria-hidden=\${label ? nothing : "true"}>\${label ? titleMarkup(label) : nothing}\${content}</svg>\`;
 }
 `);
   await write(dist, "Icon.js", `import { svg } from "lit";
@@ -102,8 +117,8 @@ export default Icon;
   }
   await write(dist, "icons.js", `${iconImports(icons)}\nexport const icons = {\n${iconRegistryEntries(icons)}\n};\nexport default icons;\n`);
   await write(dist, "icons.d.ts", `import type { VadivamIcon } from "./types.js";\nexport declare const icons: {\n${iconRegistryTypes(icons, "VadivamIcon")}\n};\nexport default icons;\n`);
-  await write(dist, "icons/index.js", `${iconExports(icons, "./")}\n`);
-  await write(dist, "icons/index.d.ts", `${iconExports(icons, "./")}\n`);
+  await write(dist, "icons/index.js", `${iconExports(icons, { prefix: "./" })}\n`);
+  await write(dist, "icons/index.d.ts", `${iconExports(icons, { prefix: "./" })}\n`);
   await write(dist, "dynamicIconImports.js", `const dynamicIconImports = {\n${dynamicEntries(icons)}\n};\nexport const iconNames = Object.keys(dynamicIconImports);\nexport { dynamicIconImports };\nexport default dynamicIconImports;\n`);
   await write(dist, "dynamicIconImports.d.ts", `import type { VadivamIcon } from "./types.js";\nexport interface DynamicIconModule { default: VadivamIcon; }\ndeclare const dynamicIconImports: {\n${dynamicTypes(icons)}\n};\nexport declare const iconNames: readonly (keyof typeof dynamicIconImports)[];\nexport { dynamicIconImports };\nexport default dynamicIconImports;\n`);
   await write(dist, "dynamic.js", `import { until } from "lit/directives/until.js";
@@ -126,8 +141,6 @@ export function DynamicIcon({ name, fallback = nothing, ...props } = {}) {
 export { dynamicIconImports, iconNames };
 export default DynamicIcon;
 `);
-  await write(dist, "dynamic.d.ts", `import type { IconName, VadivamProps } from "./types.js";\nexport interface DynamicIconProps extends VadivamProps { name: IconName; fallback?: unknown; }\nexport declare function DynamicIcon(props: DynamicIconProps): unknown;\nexport { default as dynamicIconImports, iconNames } from "./dynamicIconImports.js";\nexport default DynamicIcon;\n`);
-  const exports = iconExports(icons);
-  await write(dist, "index.js", `${exports}\nexport { Icon } from "./Icon.js";\nexport { createVadivamIcon } from "./createVadivamIcon.js";\nexport { icons } from "./icons.js";\nexport { dynamicIconImports, iconNames } from "./dynamicIconImports.js";\n`);
-  await write(dist, "index.d.ts", `${exports}\nexport { Icon } from "./Icon.js";\nexport { createVadivamIcon } from "./createVadivamIcon.js";\nexport { icons } from "./icons.js";\nexport { dynamicIconImports, iconNames } from "./dynamicIconImports.js";\nexport type { IconProps } from "./Icon.js";\nexport type { IconName, IconNode, SVGElementType, VadivamIcon, VadivamProps } from "./types.js";\n`);
+  await write(dist, "dynamic.d.ts", dynamicDeclarations({ fallback: "unknown", declaration: `export declare function DynamicIcon(props: DynamicIconProps): unknown;` }));
+  await writeExports(dist, "index", indexExports(icons));
 }

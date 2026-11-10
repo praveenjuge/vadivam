@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { area, draftSolid, loadPathKit, pathDataOf, solidPath, solidSvg, spliceCorner, toPathData } from "../scripts/solid-draft.mjs";
+import { draftSolid, solidPath, solidSvg, spliceCorner } from "../scripts/solid-draft.mjs";
+import { area, loadPathKit, toPathData } from "../scripts/skia-path.mjs";
+import { svgPathData } from "../scripts/icon-styles.mjs";
 
 const PK = await loadPathKit();
-const outline = (name) => pathDataOf(readFileSync(new URL(`../icons/${name}.svg`, import.meta.url), "utf8"));
+const outline = (name) => svgPathData(readFileSync(new URL(`../icons/${name}.svg`, import.meta.url), "utf8"));
 const inkCircle = Math.PI * 11 ** 2;
 // How much of a 1px square centered on a point the draft fills, from 0 to 1.
 const coverage = (drafted, [x, y]) => {
@@ -53,10 +55,11 @@ describe("solid drafts", () => {
   });
 
   test("leaves out subpaths listed under drop", () => {
-    // Without its spokes, the cog keeps the fill they were cut from.
-    const withSpokes = area(draftSolid(PK, outline("cog")));
-    const withoutSpokes = area(draftSolid(PK, outline("cog"), { hints: { drop: [2, 6, 10] } }));
-    expect(withoutSpokes).toBeGreaterThan(withSpokes + 1.5);
+    // A line inside a square is cut out of its fill unless the hint drops it.
+    const square = "M4 4h16v16H4z";
+    const alone = area(draftSolid(PK, [square]));
+    expect(area(draftSolid(PK, [square, "M8 12h8"]))).toBeLessThan(alone - 10);
+    expect(area(draftSolid(PK, [square, "M8 12h8"], { hints: { drop: [1] } }))).toBeCloseTo(alone, 0);
   });
 
   test("draws a badge in a shape's gap in front of it with a gap", () => {

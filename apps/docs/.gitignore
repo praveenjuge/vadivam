@@ -2,3 +2,5 @@
 dist/
 .blume-verify/
 .wrangler/
+public/404.md
+public/404.json

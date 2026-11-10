@@ -1,5 +1,6 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { Activity, createElement, createIcons, icons } from "vadivam";
+import { eventually, expectSafeIconMarkup, unsafeIconNode } from "./helpers.mjs";
 
 describe("vadivam browser API", () => {
   test("createElement renders a customizable SVG", () => {
@@ -28,13 +29,7 @@ describe("vadivam browser API", () => {
 
   test("createElement keeps safe recursive geometry and removes executable SVG", () => {
     const svg = createElement([
-      ["rect", { x: 2, y: 2, width: 20, height: 20, rx: 2, "data-part": "frame" }, [
-        ["path", { d: "M4 12h16", stroke: "navy", onclick: "alert(1)", fill: "url(https://example.com/p.svg#x)" }],
-        ["script", { href: "https://example.com/x.js" }],
-      ]],
-      ["animate", { attributeName: "href", values: "javascript:alert(1)" }],
-      ["image", { href: "javascript:alert(1)" }],
-      ["path", { d: "M2 4h2", 'bad" onload': "alert(1)", ".innerHTML": "<script>alert(1)</script>", "prop:innerHTML": "<script>alert(1)</script>" }],
+      ["rect", { x: 2, y: 2, width: 20, height: 20, rx: 2, "data-part": "frame" }, unsafeIconNode],
     ], {
       width: 32,
       "aria-label": "Safe custom icon",
@@ -43,16 +38,11 @@ describe("vadivam browser API", () => {
       srcdoc: "<script>alert(1)</script>",
     });
 
-    expect(svg.querySelectorAll("rect, path")).toHaveLength(3);
+    expectSafeIconMarkup(svg.outerHTML);
+    expect(svg.querySelectorAll("rect > path")).toHaveLength(2);
     expect(svg.querySelector("rect").getAttribute("data-part")).toBe("frame");
-    expect(svg.querySelector("path").getAttribute("stroke")).toBe("navy");
-    expect(svg.querySelector("path").getAttribute("onclick")).toBeNull();
-    expect(svg.querySelector("path").getAttribute("fill")).toBeNull();
-    expect(svg.querySelector("script, animate, image")).toBeNull();
     expect(svg.getAttribute("aria-label")).toBe("Safe custom icon");
-    expect(svg.getAttribute("onload")).toBeNull();
     expect(svg.getAttribute("srcdoc")).toBeNull();
-    expect(svg.innerHTML).not.toContain("alert(1)");
   });
 
   test("createElement safely bounds cyclic and deeply nested custom data", () => {
@@ -83,26 +73,37 @@ describe("vadivam browser API", () => {
     expect(svg.getAttribute("aria-hidden")).toBeNull();
   });
 
+  test("createIcons hides only unlabelled icons, wherever the label comes from", () => {
+    const root = document.createElement("div");
+    root.innerHTML = '<i data-vadivam="activity"></i>';
+    createIcons({ icons: { Activity }, root });
+    expect(root.querySelector("svg").getAttribute("aria-hidden")).toBe("true");
+
+    root.innerHTML = '<i data-vadivam="activity"></i>';
+    createIcons({ icons: { Activity }, root, attrs: { "aria-label": "Activity" } });
+    expect(root.querySelector("svg").getAttribute("aria-label")).toBe("Activity");
+    expect(root.querySelector("svg").getAttribute("aria-hidden")).toBeNull();
+
+    // A label that will not be rendered does not count.
+    root.innerHTML = '<i data-vadivam="activity"></i>';
+    createIcons({ icons: { Activity }, root, attrs: { "aria-label": undefined } });
+    expect(root.querySelector("svg").getAttribute("aria-label")).toBeNull();
+    expect(root.querySelector("svg").getAttribute("aria-hidden")).toBe("true");
+  });
+
+  test("createIcons finds attribute names that need escaping in a selector", () => {
+    const root = document.createElement("div");
+    root.innerHTML = '<i data.icon="activity"></i><i xml:icon="activity"></i>';
+    createIcons({ icons: { Activity }, root, nameAttr: "data.icon" });
+    createIcons({ icons: { Activity }, root, nameAttr: "xml:icon" });
+    expect(root.querySelectorAll("svg")).toHaveLength(2);
+  });
+
   test("createIcons sanitizes poisoned registry entries and root attributes", () => {
     const root = document.createElement("div");
     root.innerHTML = '<i data-vadivam="poisoned" onload="alert(1)" href="javascript:alert(1)"></i>';
-    createIcons({
-      icons: {
-        Poisoned: [
-          ["script", { href: "https://example.com/x.js" }],
-          ["path", { d: "M2 2h2", onclick: "alert(1)" }],
-        ],
-      },
-      root,
-      attrs: { innerHTML: "<script>alert(1)</script>" },
-    });
-    const svg = root.querySelector("svg");
-    expect(svg.querySelector("path")).not.toBeNull();
-    expect(svg.querySelector("script")).toBeNull();
-    expect(svg.querySelector("[onclick]")).toBeNull();
-    expect(svg.getAttribute("onload")).toBeNull();
-    expect(svg.getAttribute("href")).toBeNull();
-    expect(svg.innerHTML).not.toContain("alert(1)");
+    createIcons({ icons: { Poisoned: unsafeIconNode }, root, attrs: { innerHTML: "<script>alert(1)</script>" } });
+    expectSafeIconMarkup(root.querySelector("svg").outerHTML);
   });
 
   test("createIcons supports custom attributes, templates, and shadow roots", () => {
@@ -128,12 +129,14 @@ describe("vadivam browser API", () => {
 });
 
 describe("<vadivam-icon>", () => {
-  const rendered = async (element) => {
-    for (let attempt = 0; attempt < 50 && !element.shadowRoot?.querySelector("svg path"); attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-    return element.shadowRoot.querySelector("svg");
-  };
+  // The element loads its icon module asynchronously, then swaps in the <svg>.
+  const rendered = (element, check = (svg) => expect(svg.querySelector("path")).not.toBeNull()) =>
+    eventually(() => {
+      const svg = element.shadowRoot.querySelector("svg");
+      expect(svg).not.toBeNull();
+      check(svg);
+      return svg;
+    });
 
   test("registers once and lazy-loads the named icon", async () => {
     const { VadivamIconElement, iconNames } = await import("vadivam/elements");
@@ -169,10 +172,9 @@ describe("<vadivam-icon>", () => {
 
     element.setAttribute("name", "activity");
     element.setAttribute("absolute-stroke-width", "false");
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(element.shadowRoot.querySelector("svg path").getAttribute("vector-effect")).toBeNull();
+    const activity = await rendered(element, (next) => expect(next.getAttribute("class")).toBe("vadivam vadivam-activity"));
+    expect(activity.querySelector("path").getAttribute("vector-effect")).toBeNull();
     expect(element.shadowRoot.querySelectorAll("svg")).toHaveLength(1);
-    expect(element.shadowRoot.querySelector("svg").getAttribute("class")).toBe("vadivam vadivam-activity");
     host.remove();
   });
 
@@ -192,9 +194,7 @@ describe("<vadivam-icon>", () => {
     const solidPath = svg.querySelector("path").getAttribute("d");
 
     element.removeAttribute("variant");
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    const outline = element.shadowRoot.querySelector("svg");
-    expect(outline.getAttribute("stroke")).toBe("navy");
+    const outline = await rendered(element, (next) => expect(next.getAttribute("stroke")).toBe("navy"));
     expect(outline.querySelector("path").getAttribute("d")).not.toBe(solidPath);
     element.remove();
   });
@@ -206,8 +206,7 @@ describe("<vadivam-icon>", () => {
     element.setAttribute("color", "url(https://example.com/paint.svg#x)");
     element.setAttribute("size", "10px;background:url(https://example.com)");
     document.body.append(element);
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    const svg = element.shadowRoot.querySelector("svg");
+    const svg = await rendered(element, () => {});
     expect(svg.querySelector("path")).toBeNull();
     expect(svg.getAttribute("stroke")).toBe("currentColor");
     expect(element.shadowRoot.querySelector("style").textContent).not.toContain("example.com");

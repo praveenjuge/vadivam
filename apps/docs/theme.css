@@ -1,7 +1,9 @@
 /* The homepage renders one bare `<a><svg>` tile per icon, grouped into chunks
-   of 120. Tile styles live here once instead of in every tile's attributes,
-   which keeps the page's HTML small as the icon set grows. Every column count
-   below divides 120, so chunks stack into one seamless grid. */
+   of `--chunk-size` tiles (`gridChunkSize` in scripts/web-data.mjs, set on
+   `.icon-browser`). Tile styles live here once instead of in every tile's
+   attributes, which keeps the page's HTML small as the icon set grows. Every
+   column count below divides the chunk size, so chunks stack into one
+   seamless grid. */
 @layer components {
   .icon-browser {
     container-type: inline-size;
@@ -9,26 +11,26 @@
 
   /* Off-screen chunks skip style, layout, and paint until they scroll near
      the viewport. Chunking (rather than per-tile containment) keeps the
-     browser tracking ~16 boxes instead of ~1900. The intrinsic size is the
-     chunk's real height: 120 square tiles across the container's width. */
+     browser tracking ~16 boxes instead of ~2000. The intrinsic size is the
+     chunk's real height: its square tiles across the container's width. */
   .icon-chunk {
     @apply grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-24;
     content-visibility: auto;
-    contain-intrinsic-size: auto calc(100cqw * 120 / 25);
+    contain-intrinsic-size: auto calc(100cqw * var(--chunk-size) / 25);
   }
   @media (width >= 40rem) {
     .icon-chunk {
-      contain-intrinsic-size: auto calc(100cqw * 120 / 64);
+      contain-intrinsic-size: auto calc(100cqw * var(--chunk-size) / 64);
     }
   }
   @media (width >= 48rem) {
     .icon-chunk {
-      contain-intrinsic-size: auto calc(100cqw * 120 / 100);
+      contain-intrinsic-size: auto calc(100cqw * var(--chunk-size) / 100);
     }
   }
   @media (width >= 64rem) {
     .icon-chunk {
-      contain-intrinsic-size: auto calc(100cqw * 120 / 576);
+      contain-intrinsic-size: auto calc(100cqw * var(--chunk-size) / 576);
     }
   }
 
@@ -131,82 +133,6 @@
 }
 .guide-pixel-half {
   fill-opacity: 0.42;
-}
-
-/* The hero's drawing (pages/_lib/IconSketch.astro): sixteen icons, each
-   drawn in its own three-second slot of a 48-second loop. The grid and keylines
-   use a light blue so they read as guides, not as part of the icon. */
-.icon-sketch {
-  --sketch-guide: oklch(0.7 0.13 240);
-  display: block;
-  overflow: visible;
-}
-[data-theme="dark"] .icon-sketch {
-  --sketch-guide: oklch(0.62 0.14 240);
-}
-.icon-sketch-grid,
-.icon-sketch-keylines {
-  fill: none;
-  stroke: var(--sketch-guide);
-  vector-effect: non-scaling-stroke;
-}
-.icon-sketch-grid > path,
-.icon-sketch-keylines > * {
-  vector-effect: non-scaling-stroke;
-}
-.icon-sketch-grid {
-  stroke-width: 1px;
-  stroke-opacity: 0.16;
-}
-.icon-sketch-keylines {
-  stroke-width: 1px;
-  stroke-opacity: 0.5;
-}
-.icon-sketch-icon {
-  fill: none;
-  stroke: var(--color-foreground);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 1;
-  animation: icon-sketch 48s linear calc(var(--sketch-index) * 3s) infinite both;
-}
-@keyframes icon-sketch {
-  0% {
-    stroke-dashoffset: 1;
-    opacity: 0;
-  }
-  0.1% {
-    opacity: 1;
-  }
-  3% {
-    stroke-dashoffset: 0;
-    animation-timing-function: ease-out;
-  }
-  5.25% {
-    stroke-dashoffset: 0;
-    opacity: 1;
-  }
-  6.25%,
-  100% {
-    stroke-dashoffset: 0;
-    opacity: 0;
-  }
-}
-/* Without motion, the first icon stays drawn. */
-/* An off-screen animation still restyles every frame, so the drawing pauses
-   while it's out of view. */
-.icon-sketch[data-paused] .icon-sketch-icon {
-  animation-play-state: paused;
-}
-@media (prefers-reduced-motion: reduce) {
-  .icon-sketch-icon {
-    animation: none;
-    opacity: 0;
-  }
-  .icon-sketch-icon[data-still] {
-    opacity: 1;
-  }
 }
 
 /* Blume centers the header tabs; here they sit at the end, beside the search

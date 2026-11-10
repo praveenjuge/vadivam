@@ -12,17 +12,22 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
 import { icons } from "vadivam/manifest";
 import { buildShadcnRegistry } from "../scripts/generators/shadcn.mjs";
+import { svgAttributes, tagAttributes } from "./helpers.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cli = path.join(root, "node_modules/shadcn/dist/index.js");
 const tsc = path.join(root, "node_modules/typescript/bin/tsc");
+// The shadcn CLI runs on Node, as users run it.
 const node = Bun.which("node");
+if (!node) throw new Error("The shadcn CLI tests need Node on PATH.");
 const picked = icons.filter(({ name }) => ["activity", "arrow-right"].includes(name));
 const pickedSolid = picked.map((icon) => ({ ...icon, svg: icon.solid.svg, iconNode: icon.solid.iconNode }));
 
 let project;
 let server;
 let registryUrl;
+// CLI output of each install, run once before the tests that read it.
+const installs = {};
 
 const fetchGuard = `const realFetch = globalThis.fetch;
 globalThis.fetch = (input, init) => {
@@ -72,7 +77,7 @@ beforeAll(async () => {
     },
   });
   registryUrl = `http://127.0.0.1:${server.port}`;
-  await buildShadcnRegistry(picked, path.join(publicDir, "r"), { baseUrl: registryUrl, solidIcons: pickedSolid });
+  await buildShadcnRegistry({ outline: picked, solid: pickedSolid }, path.join(publicDir, "r"), { baseUrl: registryUrl });
   await mkdir(path.join(publicDir, "shadcn/r/colors"), { recursive: true });
   await writeFile(
     path.join(publicDir, "shadcn/r/colors/neutral.json"),
@@ -122,7 +127,11 @@ beforeAll(async () => {
       registries: { "@vadivam": `${registryUrl}/r/{name}.json`, "@vadivam-solid": `${registryUrl}/r/solid/{name}.json` },
     }),
   );
-});
+
+  installs.byUrl = await shadcn("add", `${registryUrl}/r/activity.json`, "--yes", "--overwrite");
+  installs.byNamespace = await shadcn("add", "@vadivam/arrow-right", "--yes", "--overwrite");
+  installs.solid = await shadcn("add", "@vadivam-solid/activity", "--yes", "--overwrite");
+}, 300_000);
 
 afterAll(async () => {
   server?.stop(true);
@@ -131,29 +140,27 @@ afterAll(async () => {
 
 const iconsDir = () => path.join(project, "src/components/icons");
 
-describe.skipIf(!node)("shadcn CLI install", () => {
+describe("shadcn CLI install", () => {
   test("adds an icon by URL together with the shared base component", async () => {
-    const output = await shadcn("add", `${registryUrl}/r/activity.json`, "--yes", "--overwrite");
-    expect(output).toContain("src/components/icons/vadivam-icon.tsx");
-    expect(output).toContain("src/components/icons/activity.tsx");
+    expect(installs.byUrl).toContain("src/components/icons/vadivam-icon.tsx");
+    expect(installs.byUrl).toContain("src/components/icons/activity.tsx");
     const installed = await readFile(path.join(iconsDir(), "activity.tsx"), "utf8");
     const [{ content }] = (await Bun.file(path.join(project, "public/r/activity.json")).json()).files;
     expect(installed).toBe(content);
-  }, 120_000);
+  });
 
   test("adds an icon through the @vadivam namespace and finds it with search", async () => {
-    await shadcn("add", "@vadivam/arrow-right", "--yes", "--overwrite");
+    expect(installs.byNamespace).toContain("src/components/icons/arrow-right.tsx");
     expect(await Bun.file(path.join(iconsDir(), "arrow-right.tsx")).exists()).toBe(true);
     const output = await shadcn("search", "@vadivam", "-q", "arrow-right");
     expect(output).toContain("@vadivam/arrow-right");
   }, 120_000);
 
   test("adds a solid icon through the @vadivam-solid namespace beside the outline one", async () => {
-    const output = await shadcn("add", "@vadivam-solid/activity", "--yes", "--overwrite");
-    expect(output).toContain("src/components/icons/solid/vadivam-icon.tsx");
-    expect(output).toContain("src/components/icons/solid/activity.tsx");
+    expect(installs.solid).toContain("src/components/icons/solid/vadivam-icon.tsx");
+    expect(installs.solid).toContain("src/components/icons/solid/activity.tsx");
     expect(await Bun.file(path.join(iconsDir(), "activity.tsx")).exists()).toBe(true);
-  }, 120_000);
+  });
 
   test("installed components typecheck under strict TypeScript", async () => {
     await writeFile(
@@ -189,12 +196,15 @@ export const solidStroke = <SolidActivity strokeWidth={2} />;
 
   test("installed components render the icon with the documented props", async () => {
     const { Activity } = await import(path.join(iconsDir(), "activity.tsx"));
-    const svg = picked.find(({ name }) => name === "activity").svg;
-    const [, d] = svg.match(/ d="([^"]+)"/);
+    const icon = picked.find(({ name }) => name === "activity");
 
-    expect(renderToStaticMarkup(createElement(Activity))).toBe(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="vadivam vadivam-activity" aria-hidden="true"><path d="${d}"></path></svg>`,
-    );
+    const markup = renderToStaticMarkup(createElement(Activity));
+    expect(svgAttributes(markup)).toEqual({
+      ...svgAttributes(icon.svg),
+      class: "vadivam vadivam-activity",
+      "aria-hidden": "true",
+    });
+    expect(tagAttributes(markup, "path")).toEqual(tagAttributes(icon.svg, "path"));
 
     const labelled = renderToStaticMarkup(
       createElement(Activity, { size: 48, color: "red", strokeWidth: 2, absoluteStrokeWidth: true, title: "Pulse", className: "x" }),
@@ -214,9 +224,14 @@ export const solidStroke = <SolidActivity strokeWidth={2} />;
 
   test("installed solid components paint a fill", async () => {
     const { Activity } = await import(path.join(iconsDir(), "solid/activity.tsx"));
-    const [, d] = pickedSolid.find(({ name }) => name === "activity").svg.match(/ d="([^"]+)"/);
-    expect(renderToStaticMarkup(createElement(Activity, { color: "red" }))).toBe(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="red" fill-rule="evenodd" class="vadivam vadivam-activity" aria-hidden="true"><path d="${d}"></path></svg>`,
-    );
+    const icon = pickedSolid.find(({ name }) => name === "activity");
+    const markup = renderToStaticMarkup(createElement(Activity, { color: "red" }));
+    expect(svgAttributes(markup)).toEqual({
+      ...svgAttributes(icon.svg),
+      fill: "red",
+      class: "vadivam vadivam-activity",
+      "aria-hidden": "true",
+    });
+    expect(tagAttributes(markup, "path")).toEqual(tagAttributes(icon.svg, "path"));
   });
 });

@@ -8,7 +8,7 @@
   </head>
   <body>
     <header class="header">
-      <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 5v10a3 3 0 0 1-3 3h-3.5c1-1.5 1.5-3.3 1.5-5.5a5.5 5.5 0 0 0-11 0c0 3 1.6 5.5 4 5.5a2.5 2.5 0 0 0 0-5c-1.6 0-2.8.6-3.7 1.6"/></svg>
+      <!-- logo -->
       <div class="heading">
         <h1>Vadivam Internal</h1>
         <p id="progress-label" class="subtle">Reading the Lucide catalog…</p>
@@ -32,7 +32,7 @@
         <div class="row">
           <div class="stepper" role="group" aria-label="Frames to create">
             <button type="button" data-step="count" data-delta="-1" aria-label="Fewer frames"><!-- icon:minus --></button>
-            <input id="count" type="number" min="1" max="100" step="1" value="20" aria-label="Frames to create" />
+            <input id="count" type="number" step="1" aria-label="Frames to create" />
             <button type="button" data-step="count" data-delta="1" aria-label="More frames"><!-- icon:plus --></button>
           </div>
           <button id="generate" class="primary" type="button" data-action disabled>Create frames</button>
@@ -71,7 +71,7 @@
           <label class="field-label" for="columns">Columns</label>
           <div class="stepper" role="group" aria-label="Columns">
             <button type="button" data-step="columns" data-delta="-1" aria-label="Fewer columns"><!-- icon:minus --></button>
-            <input id="columns" type="number" min="1" max="100" step="1" value="40" />
+            <input id="columns" type="number" step="1" />
             <button type="button" data-step="columns" data-delta="1" aria-label="More columns"><!-- icon:plus --></button>
           </div>
           <div class="presets" role="group" aria-label="Column presets">
@@ -124,7 +124,7 @@
 
     <section id="panel-library" class="panel" role="tabpanel" aria-labelledby="tab-library" hidden>
       <div class="controls">
-        <p class="lede">Build the Vadivam Icons component set from every SVG in <code>icons/</code>, 40 per row, with docs links on each variant.</p>
+        <p class="lede">Build the Vadivam Icons component set from every SVG in <code>icons/</code>, <span id="library-columns"></span> per row, with docs links on each variant.</p>
       </div>
       <dl class="facts">
         <div><dt>Icons in repo</dt><dd id="library-count">–</dd></div>

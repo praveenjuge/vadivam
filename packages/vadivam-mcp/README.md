@@ -32,7 +32,7 @@ claude mcp add vadivam -- npx -y vadivam-mcp
 | ----------------- | ----------------------------------------------------------------------------------------------- |
 | `search_icons`    | Ranked search over names, tags, and categories, with an optional category filter                |
 | `suggest_icons`   | Candidate icons for each thing a UI description mentions                                        |
-| `get_icon`        | One icon as SVG, JSX, a framework snippet, data URI, CSS mask, Tailwind class, CDN URL, sprite, font, or shadcn |
+| `get_icon`        | One icon as SVG, JSX, a framework snippet, data URI, CSS mask, Tailwind class, CDN URL, sprite, font, Iconify id, or shadcn |
 | `list_categories` | Every category with its id, title, description, and icon count                                  |
 | `get_usage`       | Install command, import example, and docs link for a framework package                          |
 
@@ -44,6 +44,8 @@ import { createVadivamHttpHandler } from "vadivam-mcp";
 export default createVadivamHttpHandler();
 ```
 
-Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [Qwik](https://www.npmjs.com/package/vadivam-qwik) · [Lit](https://www.npmjs.com/package/vadivam-lit) · [Flutter](https://pub.dev/packages/vadivam) · [Jetpack Compose](https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose)
+<!-- vadivam-packages:start -->
+Package family: [SVG and JavaScript](https://www.npmjs.com/package/vadivam) · [React](https://www.npmjs.com/package/vadivam-react) · [React Native](https://www.npmjs.com/package/vadivam-react-native) · [Vue](https://www.npmjs.com/package/vadivam-vue) · [Svelte](https://www.npmjs.com/package/vadivam-svelte) · [Solid](https://www.npmjs.com/package/vadivam-solid) · [Preact](https://www.npmjs.com/package/vadivam-preact) · [Astro](https://www.npmjs.com/package/vadivam-astro) · [Angular](https://www.npmjs.com/package/vadivam-angular) · [Qwik](https://www.npmjs.com/package/vadivam-qwik) · [Lit](https://www.npmjs.com/package/vadivam-lit) · [Flutter](https://pub.dev/packages/vadivam) · [Compose](https://central.sonatype.com/artifact/com.praveenjuge/vadivam-compose)
+<!-- vadivam-packages:end -->
 
 [Issues](https://github.com/praveenjuge/vadivam/issues)

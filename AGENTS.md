@@ -4,12 +4,14 @@ The public docs in `apps/docs/docs` (published at https://vadivam.praveenjuge.co
 
 ## Repository map
 
-- `icons/` is the canonical SVG source exported from Figma, and `icons-solid/` its solid twin under the same names; `metadata/lucide.json` holds the pinned Lucide version, tags, and categories.
-- `scripts/icons.mjs` optimizes, checks, and builds each style in `styles`; `validateSvgContent` is the source of truth for what an SVG may contain. `scripts/solid-draft.mjs` drafts solid icons from outlines, guided by `metadata/solid-hints.json`. `scripts/path-cleanup.mjs`, `scripts/corner-smoothing.mjs`, and `scripts/icon-geometry.mjs` hold the geometry, and `scripts/generators/` the per-framework output.
+- `icons/` is the canonical SVG source exported from Figma, and `icons-solid/` its solid twin under the same names. `metadata/` holds the Lucide data for the pinned release: `lucide.json` (version, tags, categories), `lucide-aliases.json`, and `lucide-rankings.json`, written by `bun run icons:metadata` and `bun run icons:rankings`.
+- `scripts/icon-styles.mjs` is the browser-safe icon contract (styles, root attributes, element types, names) that validation, generators, the docs site, the Figma plugins, and the MCP server share. `scripts/icon-source.mjs` reads and validates the source; its `validateSvgContent` is the source of truth for what an SVG may contain. `scripts/icons.mjs` is the CLI: optimize, check, and build, with one generator in `scripts/generators/` per entry in `scripts/packages.mjs`; `scripts/generators/index.mjs` maps each package id to its generator, and the build fails when the two lists differ.
+- `scripts/packages.mjs` is the one list of published packages (npm, pub.dev, Maven) that the build, the release scripts, the docs site, and the MCP server read. `scripts/package-names.mjs` holds what each package calls a style's icons (entries, selectors, classes), for the generators and the copy formats in `scripts/snippets.mjs`. `scripts/lib/paths.mjs` holds the repository paths the scripts share, and `scripts/lib/release-versions.mjs` every place the release version is written.
+- `scripts/solid-draft.mjs` drafts solid icons from outlines, guided by `metadata/solid-hints.json`. `scripts/icon-geometry.mjs`, `scripts/path-cleanup.mjs`, `scripts/corner-smoothing.mjs`, and `scripts/skia-path.mjs` hold the geometry; `scripts/icon-report.mjs` prints the measurements the design guide is written from.
 - `packages/vadivam` (raw SVGs, metadata, `vadivam/elements`, and the `migrate-lucide` codemod in `src`), `packages/vadivam-{react,react-native,vue,svelte,solid,angular,astro,preact,qwik,lit}`, and `packages/vadivam-mcp` (hand-written `src`, generated data in `dist`, `server.json` for the MCP Registry).
 - `packages/vadivam-flutter` (pub.dev, hand-written widget in `lib/src/vadivam_icon.dart`, generated `lib/src/generated`) and `packages/vadivam-compose` (Maven Central, hand-written `VadivamIcons.kt`, generated icons and drawables). They aren't npm workspaces; `scripts/packages.mjs` lists them as `nativePackages`.
-- `apps/docs` is the Blume docs site; `apps/docs/public/r/` is the generated shadcn/ui registry; `apps/docs/worker/index.mjs` serves `/mcp` and delegates the rest to Blume's Worker.
-- `apps/figma-plugin` is the public Figma plugin; `apps/vadivam-internal` is the private Figma plugin for the source file.
+- `apps/docs` is the Blume docs site; `apps/docs/public/r/` is the generated shadcn/ui registry; `apps/docs/worker/index.mjs` serves `/mcp` and delegates the rest to Blume's Worker. `apps/docs/scripts/build.mjs` is the docs build: it writes the 404 twins, runs `blume build`, bundles the Worker, syncs the root `wrangler.jsonc` that `wrangler deploy` reads, and completes the sitemap.
+- `apps/figma-plugin` is the public Figma plugin; `apps/vadivam-internal` is the private Figma plugin for the source file. Both build through `apps/figma-shared` (esbuild setup, icon catalog, layer names, the UI channel, a Figma test double, and the icon search ranker the docs homepage also uses).
 - Generated output (package `dist`, registry, web icons, icon counts, the categories table) comes from `bun run icons:build`. Never edit it by hand.
 
 ## Commands
@@ -25,15 +27,15 @@ The public docs in `apps/docs/docs` (published at https://vadivam.praveenjuge.co
 - Prefer small, direct modules and one canonical implementation path; remove dead or duplicate code when replacing behavior.
 - Keep package APIs ESM-only and generated from the canonical icon source.
 - Keep the website minimal: compact type, simple ruled sections, no nested card layouts. Verify UI changes in a browser at desktop and mobile widths.
-- When a design guide rule becomes machine-checkable and every icon passes, enforce it in `scripts/icons.mjs` and update the guide.
-- When bumping `lucideVersion` in `metadata/lucide.json`, pin the same `lucide` version in `apps/docs/package.json`.
+- When a design guide rule becomes machine-checkable and every icon passes, enforce it in `validateSvgContent` (`scripts/icon-source.mjs`) and update the guide.
+- When bumping `lucideVersion` in `metadata/lucide.json`, pin the same `lucide` version in `apps/docs/package.json` and rerun `bun run icons:rankings`; `bun run icons:check` fails until they match.
 - React render tests (`tests/vadivam-react/*.client.test.mjs`) run on happy-dom through `tests/setup/happydom.ts`; SSR and export tests run with no DOM. Keep the two groups separate.
 - Integration apps under `tests/integration/` consume freshly generated packages through `file:` dependencies with committed lockfiles.
 - If GitHub Actions fails, read the logs with `gh run view --log-failed` before changing workflow files.
 
 ## Releases
 
-- Keep the root package, every entry in `scripts/packages.mjs` (including `pubspec.yaml` and `gradle.properties` for the native packages), `apps/figma-plugin/package.json`, and `packages/vadivam-mcp/server.json` on one version.
+- Keep every file `bun scripts/bump-version.mjs --list` prints on one version; `bun run release:validate` checks them.
 - Release by committing the version bump and pushing a matching tag such as `v0.0.3`; the `Release` workflow publishes through npm Trusted Publishing, pub.dev automated publishing, Maven Central (secrets `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `MAVEN_SIGNING_KEY`, `MAVEN_SIGNING_KEY_PASSWORD`), and the MCP Registry. Do not publish manually unless asked.
 - Never commit secrets, tokens, `.env` files, or local auth output.
 

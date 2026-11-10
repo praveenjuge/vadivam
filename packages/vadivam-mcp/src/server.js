@@ -1,25 +1,17 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import { categories, icons, version } from "./data.js";
+import { styleIds, styles, svgField } from "./icon-styles.mjs";
+import { styleEntry } from "./package-names.mjs";
+import { frameworks, siteUrl, targetsById } from "./packages.mjs";
 import {
-  cdnUrl,
   componentSnippet,
-  cssMaskSnippet,
-  customizeSvg,
-  fontSnippet,
-  frameworks,
-  frameworksById,
-  iconStyles,
-  iconifySnippet,
+  copyFormats,
+  copyFormatsById,
+  dynamicIconUsage,
   installCommand,
-  shadcnAddCommand,
-  siteUrl,
-  spriteSnippet,
-  svgBase64,
-  svgDataUri,
-  svgToJsx,
-  tailwindMaskSnippet,
-} from "./snippets.js";
+  renderCopyFormat,
+} from "./snippets.mjs";
 import {
   closestIconNames,
   findIcon,
@@ -28,7 +20,12 @@ import {
   suggestIcons,
 } from "./search.js";
 
-export const instructions = `Vadivam is an open-source set of ${icons.length} pixel-perfect 24px icons (the Lucide icon names, redrawn), each in an outline and a solid style, for SVG, React, React Native, Vue, Svelte, Solid, Preact, Astro, and Angular.
+const platforms = new Intl.ListFormat("en", { type: "conjunction" }).format([
+  "SVG",
+  ...frameworks.map((framework) => framework.title ?? framework.label),
+]);
+
+export const instructions = `Vadivam is an open-source set of ${icons.length} pixel-perfect 24px icons (the Lucide icon names, redrawn), each in an outline and a solid style, for ${platforms}.
 - Always call search_icons first to find a real icon name; never guess names. Search matches names, tags (synonyms), and categories.
 - To pick icons for a whole screen or feature, call suggest_icons with a short description of the UI; it returns candidates for each thing it mentions.
 - Prefer importing components from the framework package (get_usage, then get_icon with format set to the framework) over pasting raw SVG. Use format "svg" only when no package fits.
@@ -37,21 +34,9 @@ export const instructions = `Vadivam is an open-source set of ${icons.length} pi
 - Label meaningful icons (aria-label or title) and hide decorative ones (aria-hidden="true").
 Docs: ${siteUrl}/docs`;
 
-const formatIds = [
-  "svg",
-  "jsx",
-  ...frameworks.map((framework) => framework.id),
-  "data-uri",
-  "base64",
-  "css-mask",
-  "tailwind",
-  "cdn",
-  "sprite",
-  "font",
-  "iconify",
-  "shadcn",
-];
+const formatIds = copyFormats.map((format) => format.id);
 
+// The core package, for raw SVG and JavaScript, then every framework package.
 const usageIds = ["core", ...frameworks.map((framework) => framework.id)];
 
 const readOnly = {
@@ -69,16 +54,6 @@ const iconSummarySchema = z.object({
   url: z.string(),
 });
 
-function installFor(frameworkId) {
-  if (frameworkId === "core") return "npm install vadivam";
-  if (frameworkId === "react-native") return "npm install vadivam-react-native react-native-svg";
-  return installCommand(frameworkId, { version });
-}
-
-function docsUrl(frameworkId) {
-  return `${siteUrl}/docs/${frameworkId}`;
-}
-
 function textResult(text, structuredContent) {
   return { content: [{ type: "text", text }], structuredContent };
 }
@@ -90,74 +65,30 @@ function errorResult(text) {
 /** Code for one icon in one format and style, with any customization applied. */
 export function renderIcon(icon, format = "svg", options = {}) {
   const style = options.style ?? "outline";
-  const source = style === "solid" ? icon.solidSvg : icon.svg;
-  if (!source) throw new Error(`"${icon.name}" has no ${style} style.`);
-  const svg = customizeSvg(source, options);
-  if (frameworksById[format]) return componentSnippet(format, icon.componentName, options);
-  switch (format) {
-    case "svg":
-      return svg.trim();
-    case "jsx":
-      return svgToJsx(svg);
-    case "data-uri":
-      return svgDataUri(svg);
-    case "base64":
-      return svgBase64(svg);
-    case "css-mask":
-      return cssMaskSnippet(icon.name, source, options);
-    case "tailwind":
-      return tailwindMaskSnippet(source, options);
-    case "cdn":
-      return cdnUrl(icon.name, version, style);
-    case "sprite":
-      return spriteSnippet(icon.name, style);
-    case "font":
-      return fontSnippet(icon.name, style);
-    case "iconify":
-      return iconifySnippet(icon.name, style);
-    case "shadcn":
-      return shadcnAddCommand(icon.name, style);
-    default:
-      throw new Error(`Unknown format "${format}". Use one of: ${formatIds.join(", ")}.`);
-  }
+  const svg = Object.hasOwn(styles, style) ? icon[svgField(styles[style])] : undefined;
+  if (!svg) throw new Error(`"${icon.name}" has no ${style} style.`);
+  return renderCopyFormat(format, { ...icon, svg }, options, version);
 }
 
-function formatInstall(format) {
-  if (frameworksById[format]) return installFor(format);
-  if (format === "sprite" || format === "font") return "npm install vadivam";
-  return undefined;
-}
+const coreExample = (entry) =>
+  `import { Activity, createElement } from "${entry}";\nimport activitySvg from "${entry}/strings/activity";`;
 
 /** Install command, import example, and docs link for one framework (or "core"). */
 export function usageFor(frameworkId) {
-  const framework = frameworksById[frameworkId];
-  const packageName = framework?.packageName ?? "vadivam";
-  const example = framework
-    ? componentSnippet(frameworkId, "Activity", { size: 20 })
-    : `import { Activity, createElement } from "vadivam";\nimport activitySvg from "vadivam/strings/activity";\n\nconst svg = createElement(Activity, { width: 20, height: 20, "aria-label": "Activity" });`;
-  const dynamicImport =
-    frameworkId === "svelte" || frameworkId === "astro"
-      ? `import DynamicIcon from "${packageName}/dynamic"`
-      : `import { DynamicIcon } from "${packageName}/dynamic"`;
-  const nativeDynamic = {
-    qwik: `No DynamicIcon in vadivam-qwik; look icons up in the \`icons\` registry from "vadivam-qwik" after validating the name. ${siteUrl}/docs/qwik`,
-    flutter: `VadivamIcons.all[name] returns the icon data or null. Referencing it keeps every icon in the build. ${siteUrl}/docs/flutter`,
-    compose: `VadivamIcons.byName(name) returns the ImageVector or null. Calling it keeps every icon in the app. ${siteUrl}/docs/compose`,
-  };
-  const dynamic = nativeDynamic[frameworkId] ?? (framework
-    ? `${dynamicImport}${frameworkId === "angular" ? ' (directive: <svg vadivamDynamicIcon name="activity"></svg>)' : ""}. Validate runtime names against iconNames first. ${siteUrl}/docs/dynamic-icons`
-    : `No DynamicIcon in vadivam; validate names with iconNames from "vadivam/manifest", or render <vadivam-icon name="…"> from "vadivam/elements". ${siteUrl}/docs/dynamic-icons`);
+  const { label, packageName, documentation, framework } = targetsById[frameworkId];
   return {
     framework: frameworkId,
-    label: framework?.label ?? "SVG and JavaScript",
+    label,
     packageName,
-    install: installFor(frameworkId),
-    example,
+    install: installCommand(frameworkId, { version }),
+    example: framework
+      ? componentSnippet(frameworkId, "Activity", { size: 20 })
+      : `${coreExample(packageName)}\n\nconst svg = createElement(Activity, { width: 20, height: 20, "aria-label": "Activity" });`,
     solid: framework
       ? componentSnippet(frameworkId, "Activity", { size: 20, style: "solid" })
-      : `import { Activity, createElement } from "vadivam/solid";\nimport activitySvg from "vadivam/solid/strings/activity";`,
-    dynamic,
-    docs: docsUrl(frameworkId),
+      : coreExample(styleEntry(packageName, styles.solid)),
+    dynamic: dynamicIconUsage(frameworkId),
+    docs: `${siteUrl}${documentation}`,
   };
 }
 
@@ -261,7 +192,7 @@ export function createVadivamServer() {
       inputSchema: z.object({
         name: z.string().max(100).describe("Icon name from search_icons, such as \"arrow-right\" (PascalCase also works)."),
         format: z.enum(formatIds).optional().describe("Output format (default \"svg\"). Framework ids return an import snippet."),
-        style: z.enum(iconStyles).optional().describe("Icon style (default \"outline\"). \"solid\" is the filled twin, for selected or active states; it ignores stroke options."),
+        style: z.enum(styleIds).optional().describe("Icon style (default \"outline\"). \"solid\" is the filled twin, for selected or active states; it ignores stroke options."),
         size: z.number().positive().max(1024).optional().describe("Width and height in pixels (default 24)."),
         strokeWidth: z.number().positive().max(24).optional().describe("Stroke width (default 2). Outline only."),
         color: z.string().max(64).optional().describe("Stroke color, or fill color for solid (default currentColor)."),
@@ -271,7 +202,7 @@ export function createVadivamServer() {
         name: z.string(),
         componentName: z.string(),
         format: z.string(),
-        style: z.enum(iconStyles),
+        style: z.enum(styleIds),
         code: z.string(),
         install: z.string().optional(),
         url: z.string(),
@@ -292,7 +223,8 @@ export function createVadivamServer() {
       } catch (error) {
         return errorResult(error.message);
       }
-      const install = formatInstall(format);
+      const installTarget = copyFormatsById[format].install;
+      const install = installTarget && installCommand(installTarget, { version });
       const output = {
         name: icon.name,
         componentName: icon.componentName,

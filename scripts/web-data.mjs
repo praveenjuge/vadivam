@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
 
-// The homepage grid groups its tiles in chunks of this many icons. 120 divides
-// every column count the grid uses (5, 8, 10, 24), so chunks stack without
-// ragged rows, and the solid paths load one chunk at a time to match.
+// The homepage grid groups its tiles in chunks of this many icons, and its
+// search results render in chunks of the same size. Every column count the
+// grid uses (5, 8, 10, 24) divides it, so chunks stack without ragged rows,
+// and the solid paths load one chunk at a time to match. The page hands it to
+// theme.css as `--chunk-size`.
 export const gridChunkSize = 120;
 
 // Data the homepage fetches on demand, served from `/icon-data/` under
@@ -18,7 +20,7 @@ const hashedFile = (name, data) => {
 /**
  * The homepage's lazily loaded data, from manifest-shaped icons in grid order:
  * one search index of tags and categories, and the solid path data for each
- * grid chunk as an array of path lists in tile order. `scripts/icons.mjs`
+ * grid chunk as an array of path lists in tile order. `generators/web.mjs`
  * writes these files and the homepage derives the same names, so the two
  * always agree.
  */

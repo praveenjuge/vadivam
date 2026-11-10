@@ -1,33 +1,26 @@
+import { canvasSize } from "../../../scripts/icon-styles.mjs";
+import { element, onPluginMessage, postToPlugin } from "../../figma-shared/channel";
+import { COLUMN_STEP, LIBRARY_COLUMNS, ROW_STEP } from "./layout";
+import type { LucideIconRanking } from "./lucide";
 import {
   EXACT_RENAME_REASONS,
   MAX_SVG_FILES,
   MAX_SVG_LENGTH,
-  TABS,
-  type CatalogSummary,
+  type CatalogProgress,
   type IconAuditIssue,
   type IconAuditSummary,
   type PageStatus,
-  type PluginSettings,
   type PluginToUiMessage,
   type RenameReason,
   type RenameSuggestion,
   type ReplacedIcon,
   type SkippedSvg,
-  type Tab,
   type UiToPluginMessage,
 } from "./protocol";
-import type { LucideIconRanking } from "./catalog";
-import { MAX_BATCH_SIZE } from "./catalog";
-import { MAX_COLUMNS } from "./layout";
 import { isRemoteSource, type RemoteFailure, type RemoteSource } from "./remote";
+import { clampCount, COUNT_LIMITS, isTab, type CountSetting, type PluginSettings, type Tab } from "./settings";
 
 type Tone = "idle" | "busy" | "success" | "error";
-
-function element<T extends Element>(selector: string): T {
-  const match = document.querySelector<T>(selector);
-  if (!match) throw new Error(`Missing UI element: ${selector}`);
-  return match;
-}
 
 const progressLabel = element<HTMLParagraphElement>("#progress-label");
 const progressBar = element<HTMLSpanElement>("#progress-bar");
@@ -65,7 +58,7 @@ const PREVIEW_MAX_HEIGHT = 140;
 const PREVIEW_MAX_CELL = 24;
 
 let candidates: LucideIconRanking[] = [];
-let catalog: CatalogSummary | null = null;
+let progress: CatalogProgress | null = null;
 let page: PageStatus | null = null;
 let busy = true;
 let remoteSource: RemoteSource = "github";
@@ -87,9 +80,7 @@ function plural(count: number, word: string, many = `${word}s`): string {
   return `${numberFormat.format(count)} ${count === 1 ? word : many}`;
 }
 
-function send(message: UiToPluginMessage): void {
-  parent.postMessage({ pluginMessage: message }, "*");
-}
+const send: (message: UiToPluginMessage) => void = postToPlugin;
 
 function icon(id: "success" | "locate"): Element {
   const template = element<HTMLTemplateElement>(`#icon-${id}`);
@@ -168,10 +159,6 @@ function selectTab(tab: Tab, focus = false): void {
   if (tab === "arrange") renderPreview();
 }
 
-function isTab(value: string | undefined): value is Tab {
-  return (TABS as readonly string[]).includes(value ?? "");
-}
-
 for (const button of tabs) {
   button.addEventListener("click", () => {
     const tab = button.dataset.tab;
@@ -198,29 +185,33 @@ element<HTMLElement>("[role=tablist]").addEventListener("keydown", (event) => {
 
 // Number inputs
 
-function clampInput(input: HTMLInputElement, max: number, fallback: number): number {
-  const value = Number(input.value);
-  const clamped = Number.isInteger(value) ? Math.min(max, Math.max(1, value)) : fallback;
-  input.value = String(clamped);
-  return clamped;
+const countInputs: Record<CountSetting, HTMLInputElement> = { batchSize: countInput, columns: columnsInput };
+for (const [setting, input] of Object.entries(countInputs) as Array<[CountSetting, HTMLInputElement]>) {
+  input.min = "1";
+  input.max = String(COUNT_LIMITS[setting].max);
+  input.value = String(COUNT_LIMITS[setting].initial);
+}
+element<HTMLElement>("#library-columns").textContent = String(LIBRARY_COLUMNS);
+
+/** The input's value brought into range, or the setting's initial value when it isn't a whole number. */
+function countValue(setting: CountSetting): number {
+  return clampCount(setting, Number(countInputs[setting].value)) ?? COUNT_LIMITS[setting].initial;
 }
 
-function readCount(): number {
-  return clampInput(countInput, MAX_BATCH_SIZE, 20);
-}
-
-function readColumns(): number {
-  return clampInput(columnsInput, MAX_COLUMNS, 40);
+function readCount(setting: CountSetting): number {
+  const value = countValue(setting);
+  countInputs[setting].value = String(value);
+  return value;
 }
 
 function commitCount(): void {
-  const count = readCount();
+  const count = readCount("batchSize");
   updateGenerateLabel();
   send({ type: "set-count", count });
 }
 
 function commitColumns(): void {
-  send({ type: "set-columns", columns: readColumns() });
+  send({ type: "set-columns", columns: readCount("columns") });
   renderPreview();
 }
 
@@ -243,7 +234,7 @@ for (const button of document.querySelectorAll<HTMLButtonElement>("[data-step]")
 
 for (const button of presetButtons) {
   button.addEventListener("click", () => {
-    columnsInput.value = button.dataset.columns ?? "40";
+    columnsInput.value = button.dataset.columns ?? "";
     commitColumns();
   });
 }
@@ -251,7 +242,7 @@ for (const button of presetButtons) {
 // Create
 
 function updateGenerateLabel(): void {
-  const count = Math.min(readCount(), candidates.length || readCount());
+  const count = Math.min(readCount("batchSize"), candidates.length || readCount("batchSize"));
   generateButton.textContent = `Create ${plural(count, "frame")}`;
 }
 
@@ -282,11 +273,11 @@ function renderCandidates(): void {
 }
 
 function renderProgress(): void {
-  if (!catalog) return;
-  const total = catalog.matchedCount + catalog.remainingCount;
-  progressLabel.textContent = `Lucide ${catalog.lucideVersion} · ${numberFormat.format(catalog.matchedCount)} of ${numberFormat.format(total)} drawn`;
-  progressBar.style.width = `${total === 0 ? 0 : (catalog.matchedCount / total) * 100}%`;
-  setBadge("create", catalog.remainingCount);
+  if (!progress) return;
+  const total = progress.drawn + progress.remaining;
+  progressLabel.textContent = `Lucide ${progress.lucideVersion} · ${numberFormat.format(progress.drawn)} of ${numberFormat.format(total)} drawn`;
+  progressBar.style.width = `${total === 0 ? 0 : (progress.drawn / total) * 100}%`;
+  setBadge("create", progress.remaining);
 }
 
 // Replace
@@ -363,7 +354,7 @@ function renderReplaced(
 // Arrange
 
 function renderPreview(): void {
-  const columns = Math.min(MAX_COLUMNS, Math.max(1, Math.round(Number(columnsInput.value)) || 1));
+  const columns = countValue("columns");
   const frames = page?.iconFrames ?? 0;
   const rows = Math.ceil(frames / columns);
 
@@ -378,14 +369,17 @@ function renderPreview(): void {
   arrangeButton.textContent =
     frames === 0 ? "Arrange icons" : `Arrange ${plural(frames, "icon")}`;
 
-  // Cells keep the real 40×72 grid step so the preview matches the canvas shape.
+  // Cells keep the canvas grid step and frame size so the preview matches the canvas shape.
   const available = Math.max(1, preview.clientWidth - 16 || document.body.clientWidth - 40);
   const cell = Math.min(PREVIEW_MAX_CELL, available / columns);
-  const maxRows = Math.max(1, Math.floor(PREVIEW_MAX_HEIGHT / (cell * 1.8)));
+  const rowHeight = (cell * ROW_STEP) / COLUMN_STEP;
+  const maxRows = Math.max(1, Math.floor(PREVIEW_MAX_HEIGHT / rowHeight));
   const shownRows = frames === 0 ? Math.min(2, maxRows) : Math.min(rows, maxRows);
   const shownCells = frames === 0 ? columns * shownRows : Math.min(frames, columns * shownRows);
 
   preview.style.gridTemplateColumns = `repeat(${columns}, ${cell}px)`;
+  preview.style.gridAutoRows = `${rowHeight}px`;
+  preview.style.setProperty("--frame", `${(cell * canvasSize) / COLUMN_STEP}px`);
   const fragment = document.createDocumentFragment();
   for (let index = 0; index < shownCells; index += 1) {
     const dot = document.createElement("i");
@@ -620,10 +614,10 @@ refreshButton.addEventListener("click", () => {
   startAction("Scanning every page…", { type: "refresh" });
 });
 generateButton.addEventListener("click", () => {
-  startAction("Creating frames…", { type: "generate", count: readCount() });
+  startAction("Creating frames…", { type: "generate", count: readCount("batchSize") });
 });
 arrangeButton.addEventListener("click", () => {
-  startAction("Arranging icons A–Z…", { type: "arrange", columns: readColumns() });
+  startAction("Arranging icons A–Z…", { type: "arrange", columns: readCount("columns") });
 });
 chooseSvgsButton.addEventListener("click", () => svgFilesInput.click());
 svgFilesInput.addEventListener("change", () => {
@@ -655,10 +649,7 @@ function applySettings(settings: PluginSettings): void {
   selectTab(settings.tab);
 }
 
-window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) => {
-  const message = event.data.pluginMessage;
-  if (!message) return;
-
+onPluginMessage<PluginToUiMessage>((message) => {
   switch (message.type) {
     case "settings":
       applySettings(message.settings);
@@ -675,14 +666,14 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
       return;
     case "catalog": {
       candidates = message.candidates;
-      catalog = message.summary;
+      progress = message.progress;
       renderProgress();
       renderCandidates();
       updateGenerateLabel();
-      const left = catalog.remainingCount;
+      const left = progress.remaining;
       finishAction(
         left === 0
-          ? `All ${numberFormat.format(catalog.matchedCount)} Lucide icons are drawn`
+          ? `All ${numberFormat.format(progress.drawn)} Lucide icons are drawn`
           : `${plural(left, "Lucide icon")} left to draw`,
         "idle",
       );
@@ -717,11 +708,8 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
       renderRenameIdeas(message.icons);
       const left = message.icons.length;
       const remaining = left === 0 ? "every name is current" : `${plural(left, "frame")} to fix`;
-      const renamed = message.renamed > 0 ? `Renamed ${plural(message.renamed, "icon")} · ` : "";
-      finishAction(
-        renamed ? `${renamed}${remaining}` : remaining.replace(/^e/, "E"),
-        left === 0 ? "success" : "idle",
-      );
+      const status = message.renamed > 0 ? `Renamed ${plural(message.renamed, "icon")} · ${remaining}` : remaining;
+      finishAction(status.charAt(0).toUpperCase() + status.slice(1), left === 0 ? "success" : "idle");
       return;
     }
     case "audit": {
@@ -774,6 +762,6 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: PluginToUiMessage }>) 
       finishAction(message.message, "error");
       return;
   }
-};
+});
 
 updateActions();
