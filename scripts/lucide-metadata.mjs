@@ -2,10 +2,11 @@ import { execFileSync } from "node:child_process";
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { styles } from "./icon-styles.mjs";
+import { metadataFiles, root } from "./lib/paths.mjs";
 
-export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const lucideMetadataPath = path.join(root, "metadata/lucide.json");
-const lucideAliasesPath = path.join(root, "metadata/lucide-aliases.json");
+const lucideMetadataPath = path.join(root, metadataFiles.lucide);
+const lucideAliasesPath = path.join(root, metadataFiles.aliases);
 
 // Lucide 1.25 renamed this canonical SVG without retaining alias metadata.
 const missingDeprecatedAliases = { "circle-euro-sign": "circle-euro" };
@@ -152,7 +153,7 @@ export async function writeLucideMetadata(catalog) {
   // Only drawn icons get an entry, so a Lucide release can be pinned before
   // every new name has a Vadivam drawing. Rerun after adding icons.
   const drawn = new Set(
-    (await readdir(path.join(root, "icons")))
+    (await readdir(path.join(root, styles.outline.sourceDirectory)))
       .filter((fileName) => fileName.endsWith(".svg"))
       .map((fileName) => fileName.slice(0, -4)),
   );

@@ -6,7 +6,9 @@ import {
   defaultAttributesSource,
   defaultSize,
   defaultStrokeWidth,
+  dynamicDeclarations,
   dynamicEntries,
+  dynamicExports,
   dynamicTypes,
   exportedNames,
   iconExports,
@@ -32,21 +34,18 @@ const indexExports = (icons, shared) => [
   { from: "./types.js", types: ["IconName", "IconNode", "SVGElementType", "VadivamIcon", "VadivamProps"] },
 ];
 
-// Written by the dynamic.js and dynamic.d.ts templates below.
-const dynamicExports = ["DynamicIcon", "DynamicIconProps", "dynamicIconImports", "iconNames"];
-
 /** Every name the root and dynamic entries export besides the icons. */
 export const apiExports = [...exportedNames(indexExports([], "./")), ...dynamicExports];
 
 // react-native-svg's component for each element an icon draws with.
 const primitives = `{ ${svgElementTypes.map((tag) => `${tag}: NativeSvg.${pascalCase(tag)}`).join(", ")} }`;
 
-export async function buildReactNativePackage({ icons, solidIcons, directory }) {
+export async function build({ iconsByStyle, directory }) {
   const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await write(dist, "context.js", `import React from "react";\nconst VadivamContext = React.createContext({});\nexport function VadivamProvider({ children, size, color, strokeWidth, absoluteStrokeWidth }) {\n  const value = React.useMemo(() => ({ size, color, strokeWidth, absoluteStrokeWidth }), [size, color, strokeWidth, absoluteStrokeWidth]);\n  return React.createElement(VadivamContext.Provider, { value }, children);\n}\nexport function useVadivamContext() { return React.useContext(VadivamContext); }\n`);
   await write(dist, "context.d.ts", `import type * as React from "react";\nimport type { VadivamProps } from "./types.js";\nexport interface VadivamProviderProps extends Pick<VadivamProps, "size" | "color" | "strokeWidth" | "absoluteStrokeWidth"> { children: React.ReactNode; }\nexport declare function VadivamProvider(props: VadivamProviderProps): React.ReactElement;\nexport declare function useVadivamContext(): Partial<VadivamProps>;\n`);
-  await buildStyles(dist, { outline: icons, solid: solidIcons }, buildReactNativeEntry);
+  await buildStyles(dist, iconsByStyle, buildReactNativeEntry);
 }
 
 async function buildReactNativeEntry(dist, icons, style) {
@@ -74,6 +73,6 @@ async function buildReactNativeEntry(dist, icons, style) {
   await write(dist, "dynamicIconImports.js", `const dynamicIconImports = {\n${dynamicEntries(icons)}\n};\nexport const iconNames = Object.keys(dynamicIconImports);\nexport { dynamicIconImports };\nexport default dynamicIconImports;\n`);
   await write(dist, "dynamicIconImports.d.ts", `import type { IconNode, VadivamIcon } from "./types.js";\nexport interface DynamicIconModule { default: VadivamIcon; __iconNode: IconNode; }\ndeclare const dynamicIconImports: {\n${dynamicTypes(icons)}\n};\nexport declare const iconNames: readonly (keyof typeof dynamicIconImports)[];\nexport { dynamicIconImports };\nexport default dynamicIconImports;\n`);
   await write(dist, "dynamic.js", `import React, { forwardRef } from "react";\nimport dynamicIconImports, { iconNames } from "./dynamicIconImports.js";\nexport const DynamicIcon = forwardRef(({ name, fallback = null, ...props }, ref) => { const importer = dynamicIconImports[name]; const Component = React.useMemo(() => importer ? React.lazy(importer) : null, [importer]); if (!Component) return fallback; return React.createElement(React.Suspense, { fallback }, React.createElement(Component, { ...props, ref })); });\nDynamicIcon.displayName = "DynamicIcon";\nexport { dynamicIconImports, iconNames };\nexport default DynamicIcon;\n`);
-  await write(dist, "dynamic.d.ts", `import type * as React from "react";\nimport type { Svg } from "react-native-svg";\nimport type { IconName, VadivamProps } from "./types.js";\nexport interface DynamicIconProps extends VadivamProps { name: IconName; fallback?: React.ReactNode; }\nexport declare const DynamicIcon: React.ForwardRefExoticComponent<DynamicIconProps & React.RefAttributes<Svg>>;\nexport { default as dynamicIconImports, iconNames } from "./dynamicIconImports.js";\nexport default DynamicIcon;\n`);
+  await write(dist, "dynamic.d.ts", dynamicDeclarations({ imports: `import type * as React from "react";\nimport type { Svg } from "react-native-svg";\n`, fallback: "React.ReactNode", declaration: `export declare const DynamicIcon: React.ForwardRefExoticComponent<DynamicIconProps & React.RefAttributes<Svg>>;` }));
   await writeExports(dist, "index", indexExports(icons, shared));
 }

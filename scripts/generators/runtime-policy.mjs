@@ -1,4 +1,12 @@
-import { svgElementTypes } from "../icon-styles.mjs";
+import { geometryAttributes, svgElementTypes } from "../icon-styles.mjs";
+
+// Shapes whose outline has a length also take pathLength, which icon files
+// don't carry but callers of Icon may pass.
+const measuredTags = new Set(["path", "polygon", "polyline", "rect"]);
+const allowedGeometry = svgElementTypes
+  .map((tag) => [tag, [...geometryAttributes[tag], ...(measuredTags.has(tag) ? ["pathLength"] : [])]])
+  .map(([tag, names]) => `  ${tag}: /* @__PURE__ */ new Set([${names.map((name) => JSON.stringify(name)).join(", ")}]),`)
+  .join("\n");
 
 // The packages ship this policy as JavaScript; Angular builds it from
 // TypeScript. Only the core package's icon nodes have children.
@@ -24,13 +32,7 @@ function buildRuntimePolicy({ typeScript = false, children = false } = {}) {
 // root-attribute and paint sanitizers are imported.
 const SAFE_ICON_TAGS = /* @__PURE__ */ new Set(${JSON.stringify(svgElementTypes)});
 const GEOMETRY_ATTRIBUTES = {
-  circle: /* @__PURE__ */ new Set(["cx", "cy", "r"]),
-  ellipse: /* @__PURE__ */ new Set(["cx", "cy", "rx", "ry"]),
-  line: /* @__PURE__ */ new Set(["x1", "y1", "x2", "y2"]),
-  path: /* @__PURE__ */ new Set(["d", "pathLength"]),
-  polygon: /* @__PURE__ */ new Set(["points", "pathLength"]),
-  polyline: /* @__PURE__ */ new Set(["points", "pathLength"]),
-  rect: /* @__PURE__ */ new Set(["x", "y", "width", "height", "rx", "ry", "pathLength"]),
+${allowedGeometry}
 };
 const PRESENTATION_ATTRIBUTES = /* @__PURE__ */ new Set([
   "class", "className", "id", "role", "key", "opacity", "transform",

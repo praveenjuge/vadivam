@@ -3,20 +3,21 @@
 // truth for what an icon file may contain.
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { elementPathData, inkBounds, parsePath, shortStrokeEnds } from "./icon-geometry.mjs";
 import { findUnsmoothedCorners } from "./corner-smoothing.mjs";
 import { cleanPaths, gridTolerance } from "./path-cleanup.mjs";
 import { canvasSize, geometryAttributes, iconNamePattern, pascalCase, rootAttributes, styles } from "./icon-styles.mjs";
+import { metadataFiles, root } from "./lib/paths.mjs";
 
-export { styles };
+export { root, styles };
 
-export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+/** Data files the build reads here, for scripts/release-changes.mjs. */
+export const buildInputs = [metadataFiles.lucide, metadataFiles.aliases, metadataFiles.rankings];
 
 const readJson = async (relativePath) => JSON.parse(await readFile(path.join(root, relativePath), "utf8"));
 
-export const lucideMetadata = await readJson("metadata/lucide.json");
+export const lucideMetadata = await readJson(metadataFiles.lucide);
 export const lucideVersion = lucideMetadata.lucideVersion;
 
 export const iconCategories = Object.entries(lucideMetadata.categories).map(
@@ -66,6 +67,11 @@ export function validateIconMetadata(names, metadata = lucideMetadata) {
   }
 }
 
+/** Lucide's icons ranked by popularity, for the release the file was written for. */
+export function lucideRankings() {
+  return readJson(metadataFiles.rankings);
+}
+
 /**
  * Every Lucide-derived file is for the release metadata/lucide.json pins, and
  * every icon has a canonical name in that release. The rankings list every
@@ -73,10 +79,10 @@ export function validateIconMetadata(names, metadata = lucideMetadata) {
  * was renamed with it.
  */
 export async function validateLucidePins(names, { rankings, docs } = {}) {
-  rankings ??= await readJson("metadata/lucide-rankings.json");
+  rankings ??= await lucideRankings();
   assert(
     rankings.lucideVersion === lucideVersion,
-    `metadata/lucide-rankings.json is for Lucide ${rankings.lucideVersion}, not the pinned ${lucideVersion}; run bun run icons:rankings`,
+    `${metadataFiles.rankings} is for Lucide ${rankings.lucideVersion}, not the pinned ${lucideVersion}; run bun run icons:rankings`,
   );
   const canonical = new Set(rankings.icons.map(({ name }) => name));
   const unknown = names.filter((name) => !canonical.has(name));
@@ -99,7 +105,7 @@ export async function validateLucidePins(names, { rankings, docs } = {}) {
 export async function lucideAliasesFor(names) {
   const drawn = new Set(names);
   return Object.fromEntries(
-    Object.entries(await readJson("metadata/lucide-aliases.json")).filter(([alias, name]) => !drawn.has(alias) && drawn.has(name)),
+    Object.entries(await readJson(metadataFiles.aliases)).filter(([alias, name]) => !drawn.has(alias) && drawn.has(name)),
   );
 }
 

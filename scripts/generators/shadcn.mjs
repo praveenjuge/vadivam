@@ -3,8 +3,9 @@
 // second registry at /r/solid/, installed under components/icons/solid/.
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { styleOf } from "../icon-styles.mjs";
-import { shadcnItemUrl, siteUrl } from "../snippets.mjs";
+import { styleOf, styles } from "../icon-styles.mjs";
+import { siteUrl } from "../packages.mjs";
+import { shadcnItemUrl } from "../snippets.mjs";
 import {
   defaultSize,
   defaultStrokeWidth,
@@ -163,24 +164,18 @@ function registryIndex(items, style) {
   };
 }
 
-export async function buildShadcnRegistry(icons, outDir, options = {}) {
-  const items = registryItems(icons, options);
-  await rm(outDir, { recursive: true, force: true });
-  await mkdir(outDir, { recursive: true });
-  await writeFile(
-    path.join(outDir, "registry.json"),
-    `${JSON.stringify(registryIndex(items, styleOf(options.style)))}\n`,
-  );
-  for (const item of items) {
-    await writeFile(
-      path.join(outDir, `${item.name}.json`),
-      `${JSON.stringify(item, null, 2)}\n`,
-    );
+/** Writes each style's registry: outline at `outDir`, the others in their entry's folder under it. */
+export async function buildShadcnRegistry(iconsByStyle, outDir, options = {}) {
+  for (const style of Object.values(styles)) {
+    const icons = iconsByStyle[style.id];
+    if (!icons?.length) continue;
+    const directory = path.join(outDir, style.entryDirectory);
+    const items = registryItems(icons, { ...options, style: style.id });
+    await rm(directory, { recursive: true, force: true });
+    await mkdir(directory, { recursive: true });
+    await writeFile(path.join(directory, "registry.json"), `${JSON.stringify(registryIndex(items, style))}\n`);
+    for (const item of items) {
+      await writeFile(path.join(directory, `${item.name}.json`), `${JSON.stringify(item, null, 2)}\n`);
+    }
   }
-  if (options.solidIcons?.length) {
-    const { solidIcons, ...rest } = options;
-    const solid = styleOf("solid");
-    await buildShadcnRegistry(solidIcons, path.join(outDir, solid.entryDirectory), { ...rest, style: solid.id });
-  }
-  return items;
 }

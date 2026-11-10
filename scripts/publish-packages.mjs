@@ -1,10 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { root } from "./lib/paths.mjs";
 import { npmPackages } from "./packages.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const registry = "https://registry.npmjs.org";
 // npm can take well over five minutes to serve a version it has accepted.
 const verifyTimeoutMinutes = 30;

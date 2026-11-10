@@ -1,34 +1,32 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
-import { nativePackages, npmPackages } from "./packages.mjs";
+import { styles } from "./icon-styles.mjs";
+import { root } from "./lib/paths.mjs";
+import { releaseLink, targets } from "./packages.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const packageLinks = new Map(targets.map((target) => [target.directory, releaseLink(target)]));
 
-const packageLinks = new Map([
-  ...npmPackages.map(({ packageName, directory }) => [
-    directory,
-    `[${packageName}](https://www.npmjs.com/package/${packageName})`,
-  ]),
-  ...nativePackages.map(({ directory, releaseLink }) => [directory, releaseLink]),
-]);
+// Each style's source folder; an icon is its outline, and the other styles hold its twins.
+const sourceDirectories = Object.values(styles).map((style) => style.sourceDirectory);
+const styleDirectory = (file) => sourceDirectories.find((directory) => file.startsWith(`${directory}/`));
+const releasePaths = [...sourceDirectories, "packages", "apps/docs", "apps/figma-plugin", "apps/figma-shared", "README.md", "CONTRIBUTING.md", "scripts", ".github/workflows"];
 
 const iconName = (file) => path.basename(file, ".svg");
 const uniqueSorted = (values) => [...new Set(values)].sort();
 
 export function summarizeReleaseDiff(diff) {
   const icons = { added: [], changed: [], removed: [] };
-  // Each icon is listed once, whichever of its styles changed. A solid twin
-  // added or removed while its outline stays is an update to that icon.
-  const solidOnly = { added: [], removed: [] };
+  // Each icon is listed once, whichever of its styles changed. A twin added
+  // or removed while its outline stays is an update to that icon.
+  const twinOnly = { added: [], removed: [] };
   const record = (kind, file) =>
-    (file.startsWith("icons-solid/") && kind !== "changed" ? solidOnly : icons)[kind].push(iconName(file));
+    (styleDirectory(file) !== styles.outline.sourceDirectory && kind !== "changed" ? twinOnly : icons)[kind].push(iconName(file));
   const changedFiles = [];
   for (const line of diff.split("\n").filter(Boolean)) {
     const [status, ...files] = line.split("\t");
     changedFiles.push(...files);
-    const iconFiles = files.filter((file) => /^icons(?:-solid)?\//.test(file) && file.endsWith(".svg"));
+    const iconFiles = files.filter((file) => styleDirectory(file) && file.endsWith(".svg"));
     if (status.startsWith("R") && iconFiles.length === 2) {
       record("removed", iconFiles[0]);
       record("added", iconFiles[1]);
@@ -41,7 +39,7 @@ export function summarizeReleaseDiff(diff) {
     }
   }
   for (const kind of ["added", "removed"]) {
-    for (const name of solidOnly[kind]) (icons[kind].includes(name) ? icons[kind] : icons.changed).push(name);
+    for (const name of twinOnly[kind]) (icons[kind].includes(name) ? icons[kind] : icons.changed).push(name);
   }
 
   const surfaces = [];
@@ -100,8 +98,8 @@ export function escapeHtmlTags(markdown) {
 
 function gitDiff(from, to) {
   const args = from
-    ? ["diff", "--name-status", "--find-renames", `${from}..${to}`, "--", "icons", "icons-solid", "packages", "apps/docs", "apps/figma-plugin", "apps/figma-shared", "README.md", "CONTRIBUTING.md", "scripts", ".github/workflows"]
-    : ["show", "--pretty=", "--name-status", to, "--", "icons", "icons-solid", "packages", "apps/docs", "apps/figma-plugin", "apps/figma-shared", "README.md", "CONTRIBUTING.md", "scripts", ".github/workflows"];
+    ? ["diff", "--name-status", "--find-renames", `${from}..${to}`, "--", ...releasePaths]
+    : ["show", "--pretty=", "--name-status", to, "--", ...releasePaths];
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
   if (result.status !== 0) throw new Error(result.stderr || "Unable to read release diff");
   return result.stdout;
@@ -109,7 +107,7 @@ function gitDiff(from, to) {
 
 if (import.meta.main) {
   const [from = "", to = "HEAD", generatedNotesFile] = process.argv.slice(2);
-  const totalIcons = readdirSync(path.join(root, "icons")).filter((file) => file.endsWith(".svg")).length;
+  const totalIcons = readdirSync(path.join(root, styles.outline.sourceDirectory)).filter((file) => file.endsWith(".svg")).length;
   const generated = generatedNotesFile ? escapeHtmlTags(readFileSync(generatedNotesFile, "utf8")) : "";
   process.stdout.write(
     renderReleaseNotes(summarizeReleaseDiff(gitDiff(from, to)), totalIcons, to) +

@@ -2,7 +2,9 @@ import path from "node:path";
 import {
   buildStyles,
   defaultAttributesSource,
+  dynamicDeclarations,
   dynamicEntries,
+  dynamicExports,
   dynamicTypes,
   defaultSize,
   defaultStrokeWidth,
@@ -36,19 +38,16 @@ const indexExports = (icons, shared) => [
   { from: "./types.js", types: ["IconName", "IconNode", "SVGElementType", "VadivamIcon", "VadivamProps"] },
 ];
 
-// Written by the dynamic.js and dynamic.d.ts templates below.
-const dynamicExports = ["DynamicIcon", "DynamicIconProps", "dynamicIconImports", "iconNames"];
-
 /** Every name the root and dynamic entries export besides the icons. */
 export const apiExports = [...exportedNames(indexExports([], "./")), ...dynamicExports];
 
-export async function buildVuePackage({ icons, solidIcons, directory }) {
+export async function build({ iconsByStyle, directory }) {
   const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
   await write(dist, "context.js", `import { defineComponent, h, inject, provide } from "vue";\nexport const VADIVAM_CONTEXT = Symbol("vadivam-icons");\nexport function provideVadivam(props) { provide(VADIVAM_CONTEXT, props); return props; }\nexport function useVadivamContext() { return inject(VADIVAM_CONTEXT, {}); }\nexport const VadivamProvider = defineComponent({ name: "VadivamProvider", inheritAttrs: false, props: { size: [String, Number], color: String, strokeWidth: [String, Number], absoluteStrokeWidth: Boolean, class: String }, setup(props, { slots }) { provideVadivam(props); return () => slots.default?.() ?? null; } });\n`);
   await write(dist, "context.d.ts", `import type { DefineComponent } from "vue";\nimport type { VadivamProps } from "./types.js";\nexport declare const VADIVAM_CONTEXT: unique symbol;\nexport declare function provideVadivam(props: Partial<VadivamProps>): Partial<VadivamProps>;\nexport declare function useVadivamContext(): Partial<VadivamProps>;\nexport declare const VadivamProvider: DefineComponent<Pick<VadivamProps, "size" | "color" | "strokeWidth" | "absoluteStrokeWidth" | "class">>;\n`);
-  await buildStyles(dist, { outline: icons, solid: solidIcons }, buildVueEntry);
+  await buildStyles(dist, iconsByStyle, buildVueEntry);
 }
 
 async function buildVueEntry(dist, icons, style) {
@@ -78,6 +77,6 @@ async function buildVueEntry(dist, icons, style) {
   await write(dist, "dynamicIconImports.js", `const dynamicIconImports = {\n${dynamicEntries(icons)}\n};\nexport const iconNames = Object.keys(dynamicIconImports);\nexport { dynamicIconImports };\nexport default dynamicIconImports;\n`);
   await write(dist, "dynamicIconImports.d.ts", `import type { IconNode, VadivamIcon } from "./types.js";\nexport interface DynamicIconModule { default: VadivamIcon; __iconNode: IconNode; }\ndeclare const dynamicIconImports: {\n${dynamicTypes(icons)}\n};\nexport declare const iconNames: readonly (keyof typeof dynamicIconImports)[];\nexport { dynamicIconImports };\nexport default dynamicIconImports;\n`);
   await write(dist, "dynamic.js", `import { defineAsyncComponent, defineComponent, h } from "vue";\nimport dynamicIconImports, { iconNames } from "./dynamicIconImports.js";\nexport const DynamicIcon = defineComponent({ name: "DynamicIcon", inheritAttrs: false, props: { name: { type: String, required: true }, fallback: null }, setup(props, { attrs, slots }) { return () => { const importer = Object.prototype.hasOwnProperty.call(dynamicIconImports, props.name) ? dynamicIconImports[props.name] : undefined; if (!importer) return slots.fallback?.() ?? props.fallback ?? null; const AsyncIcon = defineAsyncComponent({ loader: importer, loadingComponent: slots.fallback ? { setup: () => slots.fallback } : undefined }); return h(AsyncIcon, attrs, slots); }; } });\nexport { dynamicIconImports, iconNames };\nexport default DynamicIcon;\n`);
-  await write(dist, "dynamic.d.ts", `import type { DefineComponent } from "vue";\nimport type { IconName, VadivamProps } from "./types.js";\nexport interface DynamicIconProps extends VadivamProps { name: IconName; fallback?: unknown; }\nexport declare const DynamicIcon: DefineComponent<DynamicIconProps>;\nexport { default as dynamicIconImports, iconNames } from "./dynamicIconImports.js";\nexport default DynamicIcon;\n`);
+  await write(dist, "dynamic.d.ts", dynamicDeclarations({ imports: `import type { DefineComponent } from "vue";\n`, fallback: "unknown", declaration: `export declare const DynamicIcon: DefineComponent<DynamicIconProps>;` }));
   await writeExports(dist, "index", indexExports(icons, shared));
 }

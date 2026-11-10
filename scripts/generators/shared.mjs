@@ -1,6 +1,6 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { canvasSize, rootAttributes, styles, svgElementTypes } from "../icon-styles.mjs";
+import { canvasSize, paintAttribute, rootAttributes, styles, svgElementTypes } from "../icon-styles.mjs";
 import { runtimePolicySource } from "./runtime-policy.mjs";
 
 export async function prepareDist(dist) {
@@ -59,11 +59,6 @@ export async function buildStyles(dist, iconsByStyle, buildEntry) {
 // The root's classes are `vadivam vadivam-<name>` and then the provider's and
 // the caller's, without repeats. An icon with a title, a role, or an aria-*
 // attribute is labelled; any other icon is hidden from assistive technology.
-
-/** The root attribute that takes the icon color: `stroke` or `fill`. */
-export function paintAttribute(style) {
-  return Object.keys(style.paint).find((name) => style.paint[name] === "currentColor");
-}
 
 export const defaultSize = canvasSize;
 export const defaultStrokeWidth = styles.outline.paint["stroke-width"];
@@ -177,6 +172,16 @@ export function dynamicEntries(icons, location) {
 
 export function dynamicTypes(icons, moduleType = "DynamicIconModule") {
   return icons.map(({ name }) => `  readonly ${JSON.stringify(name)}: () => Promise<${moduleType}>;`).join("\n");
+}
+
+// The /dynamic entry's declarations for the packages whose DynamicIcon takes
+// VadivamProps and a fallback, and the names they export: `imports` are the
+// framework's type imports, `fallback` the fallback prop's type, and
+// `declaration` declares DynamicIcon.
+export const dynamicExports = Object.freeze(["DynamicIcon", "DynamicIconProps", "dynamicIconImports", "iconNames"]);
+
+export function dynamicDeclarations({ imports = "", fallback, declaration }) {
+  return `${imports}import type { IconName, VadivamProps } from "./types.js";\nexport interface DynamicIconProps extends VadivamProps { name: IconName; fallback?: ${fallback}; }\n${declaration}\nexport { default as dynamicIconImports, iconNames } from "./dynamicIconImports.js";\nexport default DynamicIcon;\n`;
 }
 
 // An entry module's exports as one list, written as a .js and .d.ts pair so

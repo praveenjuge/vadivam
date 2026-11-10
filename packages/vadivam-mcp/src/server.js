@@ -1,17 +1,16 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import { categories, icons, version } from "./data.js";
-import { styleIds } from "./icon-styles.mjs";
-import { targetsById } from "./packages.mjs";
+import { styleIds, styles } from "./icon-styles.mjs";
+import { styleEntry } from "./package-names.mjs";
+import { frameworks, siteUrl, targetsById } from "./packages.mjs";
 import {
   componentSnippet,
   copyFormats,
   copyFormatsById,
   dynamicIconUsage,
-  frameworks,
   installCommand,
   renderCopyFormat,
-  siteUrl,
 } from "./snippets.mjs";
 import {
   closestIconNames,
@@ -66,7 +65,7 @@ function errorResult(text) {
 /** Code for one icon in one format and style, with any customization applied. */
 export function renderIcon(icon, format = "svg", options = {}) {
   const style = options.style ?? "outline";
-  const svg = style === "solid" ? icon.solidSvg : icon.svg;
+  const svg = icon.svgs[style];
   if (!svg) throw new Error(`"${icon.name}" has no ${style} style.`);
   return renderCopyFormat(format, { ...icon, svg }, options, version);
 }
@@ -87,7 +86,7 @@ export function usageFor(frameworkId) {
       : `${coreExample(packageName)}\n\nconst svg = createElement(Activity, { width: 20, height: 20, "aria-label": "Activity" });`,
     solid: framework
       ? componentSnippet(frameworkId, "Activity", { size: 20, style: "solid" })
-      : coreExample(`${packageName}/solid`),
+      : coreExample(styleEntry(packageName, styles.solid)),
     dynamic: dynamicIconUsage(frameworkId),
     docs: `${siteUrl}${documentation}`,
   };

@@ -1,5 +1,5 @@
 import { categories, iconRanks, icons } from "./data.js";
-import { siteUrl } from "./snippets.mjs";
+import { siteUrl } from "./packages.mjs";
 
 const iconsByName = new Map(icons.map((icon) => [icon.name, icon]));
 const iconsByComponentName = new Map(

@@ -2,33 +2,18 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { lucideAliases, lucideComponentAliases } from "./lucide-aliases.js";
 import { icons } from "./manifest.js";
-import { packageExports } from "./package-exports.js";
+import { lucidePackages, manualLucidePackages, packageExports, siteUrl } from "./package-exports.js";
 
 // Every Vadivam icon keeps its Lucide name, and each framework package mirrors
 // the matching Lucide package's API with Lucide renamed to Vadivam. So moving
 // over is a package rename plus `Lucide` -> `Vadivam` in imported identifiers.
-export const packageMap = {
-  lucide: "vadivam",
-  "lucide-react": "vadivam-react",
-  "lucide-react-native": "vadivam-react-native",
-  "lucide-vue-next": "vadivam-vue",
-  "@lucide/vue": "vadivam-vue",
-  "lucide-svelte": "vadivam-svelte",
-  "@lucide/svelte": "vadivam-svelte",
-  "lucide-solid": "vadivam-solid",
-  "lucide-preact": "vadivam-preact",
-  "@lucide/astro": "vadivam-astro",
-};
+// The package names come from scripts/packages.mjs, through package-exports.js.
+export const packageMap = lucidePackages;
 
 // Packages whose API differs enough that they need a hand migration.
-const manualPackages = {
-  "lucide-angular": "vadivam-angular uses one standalone directive per icon",
-  "@lucide/angular": "vadivam-angular uses one standalone directive per icon",
-  "lucide-static": "use vadivam/icons/<name>.svg, vadivam/strings/<name>, the sprite, or the font",
-  "lucide-vue": "Vue 2 is not supported; vadivam-vue targets Vue 3",
-};
+const manualPackages = manualLucidePackages;
 
-export const guideUrl = "https://vadivam.praveenjuge.com/docs/migrate-from-lucide";
+export const guideUrl = `${siteUrl}/docs/migrate-from-lucide`;
 
 const sourceExtensions = new Set([
   ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts",
@@ -194,7 +179,7 @@ export function migrateSource(text, { styles = false } = {}) {
       if (!exported) continue;
       for (const [, , imported] of names.matchAll(bindingEntry)) {
         if (exported.has(imported)) continue;
-        warnings.push(`${imported} from ${packageName}: not a Vadivam export; search https://vadivam.praveenjuge.com/?q=${encodeURIComponent(imported)}`);
+        warnings.push(`${imported} from ${packageName}: not a Vadivam export; search ${siteUrl}/?q=${encodeURIComponent(imported)}`);
       }
     }
   }

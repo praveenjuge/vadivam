@@ -2,7 +2,9 @@ import path from "node:path";
 import {
   buildStyles,
   defaultAttributesSource,
+  dynamicDeclarations,
   dynamicEntries,
+  dynamicExports,
   dynamicTypes,
   defaultSize,
   defaultStrokeWidth,
@@ -37,19 +39,16 @@ const indexExports = (icons, shared) => [
   { from: `${shared}context.js`, types: ["VadivamProviderProps"] },
 ];
 
-// Written by the dynamic.js and dynamic.d.ts templates below.
-const dynamicExports = ["DynamicIcon", "DynamicIconProps", "dynamicIconImports", "iconNames"];
-
 /** Every name the root and dynamic entries export besides the icons. */
 export const apiExports = [...exportedNames(indexExports([], "./")), ...dynamicExports];
 
-export async function buildPreactPackage({ icons, solidIcons, directory }) {
+export async function build({ iconsByStyle, directory }) {
   const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
   await write(dist, "context.js", `import { createContext, h } from "preact";\nimport { useContext, useMemo } from "preact/hooks";\nexport const VadivamContext = createContext({});\nexport function VadivamProvider({ children, size, color, strokeWidth, absoluteStrokeWidth, class: className }) { const value = useMemo(() => ({ size, color, strokeWidth, absoluteStrokeWidth, class: className }), [size, color, strokeWidth, absoluteStrokeWidth, className]); return h(VadivamContext.Provider, { value }, children); }\nexport function useVadivamContext() { return useContext(VadivamContext); }\n`);
   await write(dist, "context.d.ts", `import type { ComponentChildren, Context } from "preact";\nimport type { VadivamProps } from "./types.js";\nexport declare const VadivamContext: Context<Partial<VadivamProps>>;\nexport interface VadivamProviderProps extends Pick<VadivamProps, "size" | "color" | "strokeWidth" | "absoluteStrokeWidth" | "class"> { children: ComponentChildren; }\nexport declare function VadivamProvider(props: VadivamProviderProps): import("preact").VNode;\nexport declare function useVadivamContext(): Partial<VadivamProps>;\n`);
-  await buildStyles(dist, { outline: icons, solid: solidIcons }, buildPreactEntry);
+  await buildStyles(dist, iconsByStyle, buildPreactEntry);
 }
 
 async function buildPreactEntry(dist, icons, style) {
@@ -79,6 +78,6 @@ async function buildPreactEntry(dist, icons, style) {
   await write(dist, "dynamicIconImports.js", `const dynamicIconImports = {\n${dynamicEntries(icons)}\n};\nexport const iconNames = Object.keys(dynamicIconImports);\nexport { dynamicIconImports };\nexport default dynamicIconImports;\n`);
   await write(dist, "dynamicIconImports.d.ts", `import type { IconNode, VadivamIcon } from "./types.js";\nexport interface DynamicIconModule { default: VadivamIcon; __iconNode: IconNode; }\ndeclare const dynamicIconImports: {\n${dynamicTypes(icons)}\n};\nexport declare const iconNames: readonly (keyof typeof dynamicIconImports)[];\nexport { dynamicIconImports };\nexport default dynamicIconImports;\n`);
   await write(dist, "dynamic.js", `import { h } from "preact";\nimport { useEffect, useRef, useState } from "preact/hooks";\nimport dynamicIconImports, { iconNames } from "./dynamicIconImports.js";\nexport function DynamicIcon({ name, fallback = null, ...props }) { const [Component, setComponent] = useState(null); const request = useRef(0); useEffect(() => { const id = ++request.current; setComponent(null); const importer = Object.prototype.hasOwnProperty.call(dynamicIconImports, name) ? dynamicIconImports[name] : undefined; if (importer) importer().then((module) => { if (request.current === id) setComponent(() => module.default); }, () => { if (request.current === id) setComponent(null); }); return () => { request.current += 1; }; }, [name]); return Component ? h(Component, props) : fallback; }\nexport { dynamicIconImports, iconNames };\nexport default DynamicIcon;\n`);
-  await write(dist, "dynamic.d.ts", `import type { ComponentChildren } from "preact";\nimport type { IconName, VadivamProps } from "./types.js";\nexport interface DynamicIconProps extends VadivamProps { name: IconName; fallback?: ComponentChildren; }\nexport declare function DynamicIcon(props: DynamicIconProps): import("preact").ComponentChildren;\nexport { default as dynamicIconImports, iconNames } from "./dynamicIconImports.js";\nexport default DynamicIcon;\n`);
+  await write(dist, "dynamic.d.ts", dynamicDeclarations({ imports: `import type { ComponentChildren } from "preact";\n`, fallback: "ComponentChildren", declaration: `export declare function DynamicIcon(props: DynamicIconProps): import("preact").ComponentChildren;` }));
   await writeExports(dist, "index", indexExports(icons, shared));
 }

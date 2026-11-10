@@ -6,7 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { cornerSmoothing, fullSmoothingEdge, measureCorners } from "./corner-smoothing.mjs";
 import { bounds, detectCircle, detectRoundedRect, gridClass, inkBounds, parsePath, sampleSubpath, segmentLength } from "./icon-geometry.mjs";
-import { svgPathData } from "./icon-styles.mjs";
+import { styles, svgPathData } from "./icon-styles.mjs";
+import { root } from "./lib/paths.mjs";
 
 const near = (a, b, tolerance) => Math.abs(a - b) <= tolerance;
 
@@ -281,6 +282,5 @@ async function report(iconsDir) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-  console.log(await report(path.join(root, "icons")));
+  console.log(await report(path.join(root, styles.outline.sourceDirectory)));
 }

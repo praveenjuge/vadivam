@@ -3,7 +3,9 @@ import {
   buildStyles,
   defaultSize,
   defaultStrokeWidth,
+  dynamicDeclarations,
   dynamicEntries,
+  dynamicExports,
   dynamicTypes,
   exportedNames,
   iconExports,
@@ -33,9 +35,6 @@ const indexExports = (icons) => [
   { from: "./types.js", types: ["IconName", "IconNode", "SVGElementType", "VadivamIcon", "VadivamProps"] },
 ];
 
-// Written by the dynamic.js and dynamic.d.ts templates below.
-const dynamicExports = ["DynamicIcon", "DynamicIconProps", "dynamicIconImports", "iconNames"];
-
 /** Every name the root and dynamic entries export besides the icons. */
 export const apiExports = [...exportedNames(indexExports([])), ...dynamicExports];
 
@@ -56,11 +55,11 @@ function iconMarkup(icon) {
     .join("");
 }
 
-export async function buildLitPackage({ icons, solidIcons, directory }) {
+export async function build({ iconsByStyle, directory }) {
   const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
-  await buildStyles(dist, { outline: icons, solid: solidIcons }, buildLitEntry);
+  await buildStyles(dist, iconsByStyle, buildLitEntry);
 }
 
 async function buildLitEntry(dist, icons, style) {
@@ -142,6 +141,6 @@ export function DynamicIcon({ name, fallback = nothing, ...props } = {}) {
 export { dynamicIconImports, iconNames };
 export default DynamicIcon;
 `);
-  await write(dist, "dynamic.d.ts", `import type { IconName, VadivamProps } from "./types.js";\nexport interface DynamicIconProps extends VadivamProps { name: IconName; fallback?: unknown; }\nexport declare function DynamicIcon(props: DynamicIconProps): unknown;\nexport { default as dynamicIconImports, iconNames } from "./dynamicIconImports.js";\nexport default DynamicIcon;\n`);
+  await write(dist, "dynamic.d.ts", dynamicDeclarations({ fallback: "unknown", declaration: `export declare function DynamicIcon(props: DynamicIconProps): unknown;` }));
   await writeExports(dist, "index", indexExports(icons));
 }

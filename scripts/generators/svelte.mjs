@@ -46,7 +46,7 @@ async function writeSvelte(dist, relativePath, source) {
   await write(dist, relativePath, source);
 }
 
-export async function buildSveltePackage({ icons, solidIcons, directory }) {
+export async function build({ iconsByStyle, directory }) {
   const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
@@ -55,7 +55,7 @@ export async function buildSveltePackage({ icons, solidIcons, directory }) {
   await write(dist, "context.d.ts", `import type { VadivamProps } from "./types.js";\nexport declare const VADIVAM_CONTEXT: unique symbol;\nexport declare function setVadivamProps(props: Partial<VadivamProps>): Partial<VadivamProps>;\nexport declare function getVadivamContext(): Partial<VadivamProps>;\n`);
   await writeSvelte(dist, "VadivamProvider.svelte", `<script lang="ts">\n  import { setVadivamProps } from "./context.js";\n  import type { Snippet } from "svelte";\n  import type { VadivamProps } from "./types.js";\n  let { children, size, color, strokeWidth, absoluteStrokeWidth, class: className }: Partial<VadivamProps> & { children: Snippet } = $props();\n  setVadivamProps({\n    get size() { return size; },\n    get color() { return color; },\n    get strokeWidth() { return strokeWidth; },\n    get absoluteStrokeWidth() { return absoluteStrokeWidth; },\n    get class() { return className; }\n  });\n</script>\n{@render children()}\n`);
   await write(dist, "VadivamProvider.svelte.d.ts", `import type { Component, Snippet } from "svelte";\nimport type { VadivamProps } from "./types.js";\ndeclare const VadivamProvider: Component<Partial<VadivamProps> & { children: Snippet }>;\nexport default VadivamProvider;\n`);
-  await buildStyles(dist, { outline: icons, solid: solidIcons }, buildSvelteEntry);
+  await buildStyles(dist, iconsByStyle, buildSvelteEntry);
 }
 
 async function buildSvelteEntry(dist, icons, style) {

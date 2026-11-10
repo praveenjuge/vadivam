@@ -7,8 +7,8 @@ import { registryItemSchema, registrySchema } from "shadcn/schema";
 import { icons } from "vadivam/manifest";
 import { svgPathData } from "../scripts/icon-styles.mjs";
 import { baseItemName, iconItem, registryItems } from "../scripts/generators/shadcn.mjs";
-import { packageMetadata } from "../scripts/packages.mjs";
-import { shadcnAddCommand, siteUrl } from "../scripts/snippets.mjs";
+import { packageMetadata, siteUrl } from "../scripts/packages.mjs";
+import { shadcnAddCommand } from "../scripts/snippets.mjs";
 import { repoRoot, svgAttributes, tagAttributes } from "./helpers.mjs";
 
 const registryDir = path.join(repoRoot, "apps/docs/public/r");
