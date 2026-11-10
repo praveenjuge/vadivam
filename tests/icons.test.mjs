@@ -125,6 +125,10 @@ describe("icon validation", () => {
     await expect(validateLucidePins(["check", "alert-circle"])).rejects.toThrow(
       "Deprecated or non-canonical icon names for Lucide",
     );
+    const rankings = { lucideVersion: "0.0.1", icons: [{ name: "check" }] };
+    await expect(validateLucidePins(["check"], { rankings })).rejects.toThrow("metadata/lucide-rankings.json is for Lucide 0.0.1");
+    const docs = { dependencies: { lucide: "0.0.1" } };
+    await expect(validateLucidePins(["check"], { docs })).rejects.toThrow("apps/docs/package.json pins lucide 0.0.1");
   });
 
   test("requires tags and known categories for exactly the shipped icons", () => {

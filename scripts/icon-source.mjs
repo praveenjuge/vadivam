@@ -72,8 +72,8 @@ export function validateIconMetadata(names, metadata = lucideMetadata) {
  * canonical name, so a deprecated name fails here even if its metadata entry
  * was renamed with it.
  */
-export async function validateLucidePins(names) {
-  const rankings = await readJson("metadata/lucide-rankings.json");
+export async function validateLucidePins(names, { rankings, docs } = {}) {
+  rankings ??= await readJson("metadata/lucide-rankings.json");
   assert(
     rankings.lucideVersion === lucideVersion,
     `metadata/lucide-rankings.json is for Lucide ${rankings.lucideVersion}, not the pinned ${lucideVersion}; run bun run icons:rankings`,
@@ -84,7 +84,7 @@ export async function validateLucidePins(names) {
     unknown.length === 0,
     `Deprecated or non-canonical icon names for Lucide ${lucideVersion}: ${unknown.join(", ")}. Rename them to current canonical Lucide names`,
   );
-  const docs = await readJson("apps/docs/package.json");
+  docs ??= await readJson("apps/docs/package.json");
   const docsLucide = docs.dependencies?.lucide ?? docs.devDependencies?.lucide;
   assert(
     docsLucide === lucideVersion,
