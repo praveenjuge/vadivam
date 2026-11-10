@@ -1,8 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
-import { pascalCase, styles } from "../icon-styles.mjs";
-import { root } from "../icon-source.mjs";
+import { styles } from "../icon-styles.mjs";
+import { root } from "../lib/paths.mjs";
+import { angularSelectorPrefix } from "../package-names.mjs";
 import { runtimePolicyTypeScriptSource } from "./runtime-policy.mjs";
 import {
   defaultAttributesSource,
@@ -29,7 +30,7 @@ function entryOf(style) {
   const primary = !style.entryDirectory;
   return {
     source: primary ? "src" : style.entryDirectory,
-    selector: `vadivam${pascalCase(style.entryDirectory)}`,
+    selector: angularSelectorPrefix(style),
     core: primary ? "./core" : "vadivam-angular",
     iconCore: primary ? "../core" : "vadivam-angular",
     bundle: primary ? "vadivam-angular" : `vadivam-angular-${style.entryDirectory}`,
@@ -46,7 +47,7 @@ export const apiExports = [
 export const iconExportAliases = [...iconAliases, ["", "Node"]];
 const iconExportsOf = (componentName) => iconExportAliases.map(([prefix, suffix]) => `${prefix}${componentName}${suffix}`);
 
-export async function buildAngularPackage({ icons, solidIcons, directory }) {
+export async function build({ iconsByStyle, directory }) {
   const generated = path.join(directory, ".generated");
   const dist = path.join(directory, "dist");
   const manifest = JSON.parse(await readFile(path.join(directory, "package.json"), "utf8"));
@@ -64,9 +65,8 @@ export async function buildAngularPackage({ icons, solidIcons, directory }) {
     lib: { entryFile: "src/public-api.ts" },
   }, null, 2)}\n`);
   await write(generated, "src/runtime-policy.ts", `export type SVGElementType = ${svgElementTypeSource};\nexport type IconNode = readonly [tag: SVGElementType, attrs: Record<string, string | number | boolean>][];\n${runtimePolicyTypeScriptSource}`);
-  const iconsByStyle = { outline: icons, solid: solidIcons };
   for (const style of Object.values(styles)) {
-    if (iconsByStyle[style.id].length) await writeEntry(path.join(generated, entryOf(style).source), iconsByStyle[style.id], style, icons);
+    if (iconsByStyle[style.id].length) await writeEntry(path.join(generated, entryOf(style).source), iconsByStyle[style.id], style, iconsByStyle.outline);
   }
   const result = spawnSync("bun", ["x", "ng-packagr", "-p", path.join(generated, "ng-package.json")], { cwd: root, stdio: "inherit" });
   if (result.status !== 0) throw new Error("ng-packagr failed for vadivam-angular");

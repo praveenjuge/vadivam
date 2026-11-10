@@ -4,7 +4,9 @@ import solidPreset from "babel-preset-solid";
 import {
   buildStyles,
   defaultAttributesSource,
+  dynamicDeclarations,
   dynamicEntries,
+  dynamicExports,
   dynamicTypes,
   defaultSize,
   defaultStrokeWidth,
@@ -63,20 +65,17 @@ const indexExports = (icons, paths, location) => [
   { from: paths.context, types: ["VadivamProviderProps"] },
 ];
 
-// Written by the dynamic.js and dynamic.d.ts templates below.
-const dynamicExports = ["DynamicIcon", "DynamicIconProps", "dynamicIconImports", "iconNames"];
-
 /** Every name the root and dynamic entries export besides the icons. */
 export const apiExports = [...exportedNames(indexExports([], modulePaths({ shared: "./" }, false))), ...dynamicExports];
 
-export async function buildSolidPackage({ icons, solidIcons, directory }) {
+export async function build({ iconsByStyle, directory }) {
   const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
   await write(dist, "source/runtimePolicy.js", `export * from "../runtimePolicy.js";\n`);
   await writeJsx(dist, "context.js", () => `import { createContext, splitProps, useContext } from "solid-js";\nexport const VadivamContext = createContext({});\nexport function VadivamProvider(props) { const [value, rest] = splitProps(props, ["size", "color", "strokeWidth", "absoluteStrokeWidth", "class"]); return <VadivamContext.Provider value={value}>{rest.children}</VadivamContext.Provider>; }\nexport function useVadivamContext() { return useContext(VadivamContext); }\n`);
   await write(dist, "context.d.ts", `import type { JSX } from "solid-js";\nimport type { VadivamProps } from "./types.js";\nexport interface VadivamProviderProps extends Pick<VadivamProps, "size" | "color" | "strokeWidth" | "absoluteStrokeWidth" | "class"> { children: JSX.Element; }\nexport declare function VadivamProvider(props: VadivamProviderProps): JSX.Element;\nexport declare function useVadivamContext(): Partial<VadivamProps>;\n`);
-  await buildStyles(dist, { outline: icons, solid: solidIcons }, buildSolidEntry);
+  await buildStyles(dist, iconsByStyle, buildSolidEntry);
 }
 
 async function buildSolidEntry(dist, icons, style) {
@@ -112,7 +111,7 @@ async function buildSolidEntry(dist, icons, style) {
   await write(dist, "dynamicIconImports.d.ts", `import type { IconNode, VadivamIcon } from "./types.js";\nexport interface DynamicIconModule { default: VadivamIcon; __iconNode: IconNode; }\ndeclare const dynamicIconImports: {\n${dynamicTypes(icons)}\n};\nexport declare const iconNames: readonly (keyof typeof dynamicIconImports)[];\nexport { dynamicIconImports };\nexport default dynamicIconImports;\n`);
   await write(dist, "source/dynamicIconImports.js", `const dynamicIconImports = {\n${dynamicEntries(icons, { extension: "jsx" })}\n};\nexport const iconNames = Object.keys(dynamicIconImports);\nexport { dynamicIconImports };\nexport default dynamicIconImports;\n`);
   await writeJsx(dist, "dynamic.js", () => `import { createMemo, lazy, Show, splitProps, Suspense } from "solid-js";\nimport { Dynamic } from "solid-js/web";\nimport dynamicIconImports, { iconNames } from "./dynamicIconImports.js";\nexport function DynamicIcon(props) { const [local, rest] = splitProps(props, ["name", "fallback"]); const component = createMemo(() => { const importer = Object.prototype.hasOwnProperty.call(dynamicIconImports, local.name) ? dynamicIconImports[local.name] : undefined; return importer ? lazy(importer) : null; }); return <Show when={component()} fallback={local.fallback ?? null}>{(Loaded) => <Suspense fallback={local.fallback ?? null}><Dynamic component={Loaded()} {...rest} /></Suspense>}</Show>; }\nexport { dynamicIconImports, iconNames };\nexport default DynamicIcon;\n`, style);
-  await write(dist, "dynamic.d.ts", `import type { JSX } from "solid-js";\nimport type { IconName, VadivamProps } from "./types.js";\nexport interface DynamicIconProps extends VadivamProps { name: IconName; fallback?: JSX.Element; }\nexport declare function DynamicIcon(props: DynamicIconProps): JSX.Element;\nexport { default as dynamicIconImports, iconNames } from "./dynamicIconImports.js";\nexport default DynamicIcon;\n`);
+  await write(dist, "dynamic.d.ts", dynamicDeclarations({ imports: `import type { JSX } from "solid-js";\n`, fallback: "JSX.Element", declaration: `export declare function DynamicIcon(props: DynamicIconProps): JSX.Element;` }));
   await writeExports(dist, "index", indexExports(icons, modulePaths(style, false)));
   await write(dist, "source/index.jsx", exportsSource(indexExports(icons, modulePaths(style, true), { extension: "jsx" })));
 }

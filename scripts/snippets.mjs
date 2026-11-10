@@ -1,10 +1,11 @@
 // Copy formats shared by the docs site, the shadcn registry, and the MCP
-// server, which ships this file with packages.mjs and icon-styles.mjs.
+// server, which ships this file with the modules it imports.
 // Browser-safe: imports only browser-safe modules.
-import { attributeString, canvasSize, resizeSvg, styleIds, styleOf, styles } from "./icon-styles.mjs";
+import { attributeString, canvasSize, entryPath, packagePath, paintAttribute, resizeSvg, styleIds, styleOf, styles } from "./icon-styles.mjs";
+import { angularSelectorPrefix, composePackage, dartIconName, iconsOwner, shadcnItemPath, styleEntry } from "./package-names.mjs";
 import { frameworks, siteUrl, targetsById } from "./packages.mjs";
 
-export { frameworks, siteUrl };
+export { dartIconName, frameworks };
 
 export const iconDefaults = Object.freeze({
   size: canvasSize,
@@ -13,7 +14,7 @@ export const iconDefaults = Object.freeze({
   absoluteStrokeWidth: false,
 });
 
-const isSolid = (options) => options?.style === "solid";
+const optionsStyle = (options) => styleOf(options?.style ?? "outline");
 
 /** Resolve options against the defaults, keeping only finite numbers and plain colors. */
 export function resolveOptions(options = {}) {
@@ -61,11 +62,6 @@ export function dynamicIconUsage(targetId) {
   return `import ${binding} from "${packageName}/dynamic"${directive}. Validate runtime names against iconNames first. ${docs}`;
 }
 
-/** Flutter's generated icons use lowerCamelCase names, such as `arrowRight`. */
-export function dartIconName(componentName) {
-  return componentName[0].toLowerCase() + componentName.slice(1);
-}
-
 // Native color literals accept hex colors only; other CSS colors are left out.
 function argbHex(color) {
   const hex = color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)?.[1];
@@ -79,7 +75,7 @@ function changedProps(options) {
   const props = [];
   if (resolved.size !== iconDefaults.size) props.push(["size", resolved.size]);
   if (resolved.color !== iconDefaults.color) props.push(["color", resolved.color]);
-  if (isSolid(options)) return props;
+  if (!optionsStyle(options).stroked) return props;
   if (resolved.strokeWidth !== iconDefaults.strokeWidth) props.push(["strokeWidth", resolved.strokeWidth]);
   if (resolved.absoluteStrokeWidth) props.push(["absoluteStrokeWidth", true]);
   return props;
@@ -99,7 +95,7 @@ export function propsSource(frameworkId, options) {
     const { size, strokeWidth, absoluteStrokeWidth } = resolveOptions(options);
     const named = Object.fromEntries(props);
     let source = "";
-    if (!isSolid(options) && (named.strokeWidth !== undefined || absoluteStrokeWidth)) {
+    if (optionsStyle(options).stroked && (named.strokeWidth !== undefined || absoluteStrokeWidth)) {
       source += `.withStrokeWidth(${strokeWidth}f${absoluteStrokeWidth ? `, absoluteSize = ${size}.dp` : ""})`;
     }
     source += ",\n    contentDescription = null";
@@ -130,11 +126,11 @@ export function propsSource(frameworkId, options) {
 }
 
 /** Import-and-render source for one framework and style, given its props source. */
-export function componentSource(frameworkId, componentName, props, style = "outline") {
+export function componentSource(frameworkId, componentName, props, styleId = "outline") {
   const framework = targetsById[frameworkId];
   if (!framework?.framework) throw new Error(`Unknown framework: ${frameworkId}`);
-  const solid = style === "solid";
-  const from = solid ? `${framework.packageName}/solid` : framework.packageName;
+  const style = styleOf(styleId);
+  const from = styleEntry(framework.packageName, style);
   switch (frameworkId) {
     case "vue":
       return `<script setup>\nimport { ${componentName} } from "${from}";\n</script>\n\n<template>\n  <${componentName}${props} />\n</template>`;
@@ -143,13 +139,13 @@ export function componentSource(frameworkId, componentName, props, style = "outl
     case "astro":
       return `---\nimport { ${componentName} } from "${from}";\n---\n\n<${componentName}${props} />`;
     case "angular":
-      return `import { ${componentName} } from "${from}";\n\n<svg vadivam${solid ? "Solid" : ""}${componentName}${props}></svg>`;
+      return `import { ${componentName} } from "${from}";\n\n<svg ${angularSelectorPrefix(style)}${componentName}${props}></svg>`;
     case "lit":
       return `import { html } from "lit";\nimport { ${componentName} } from "${from}";\n\nhtml\`\${${componentName}(${props.trim()})}\`;`;
     case "flutter":
-      return `import 'package:vadivam/vadivam.dart';\n\nVadivamIcon(${solid ? "VadivamSolidIcons" : "VadivamIcons"}.${dartIconName(componentName)}${props.trimStart()})`;
+      return `import 'package:vadivam/vadivam.dart';\n\nVadivamIcon(${iconsOwner(style)}.${dartIconName(componentName)}${props.trimStart()})`;
     case "compose":
-      return `import com.praveenjuge.vadivam.*\nimport com.praveenjuge.vadivam.icons.${solid ? "solid." : ""}${componentName}\n\nIcon(\n    imageVector = ${solid ? "VadivamSolidIcons" : "VadivamIcons"}.${componentName}${props.trimStart()},\n)`;
+      return `import com.praveenjuge.vadivam.*\nimport ${composePackage(style)}.${componentName}\n\nIcon(\n    imageVector = ${iconsOwner(style)}.${componentName}${props.trimStart()},\n)`;
     default:
       return `import { ${componentName} } from "${from}";\n\n<${componentName}${props} />`;
   }
@@ -157,18 +153,15 @@ export function componentSource(frameworkId, componentName, props, style = "outl
 
 /** Import-and-render snippet for one framework, with only the non-default props. */
 export function componentSnippet(frameworkId, componentName, options = {}) {
-  return componentSource(frameworkId, componentName, propsSource(frameworkId, options), isSolid(options) ? "solid" : "outline");
+  return componentSource(frameworkId, componentName, propsSource(frameworkId, options), optionsStyle(options).id);
 }
 
 /** Apply size, color, and stroke settings to an icon's normalized SVG markup. */
 export function customizeSvg(svg, options = {}) {
   const { size, color } = resolveOptions(options);
-  const sized = resizeSvg(svg, size);
-  if (isSolid(options)) return sized.replace(/ fill="[^"]*"/, ` fill="${color}"`);
-  const strokeWidth = effectiveStrokeWidth(options);
-  return sized
-    .replace(/ stroke="[^"]*"/, ` stroke="${color}"`)
-    .replace(/ stroke-width="[^"]*"/, ` stroke-width="${strokeWidth}"`);
+  const style = optionsStyle(options);
+  const painted = resizeSvg(svg, size).replace(new RegExp(` ${paintAttribute(style)}="[^"]*"`), ` ${paintAttribute(style)}="${color}"`);
+  return style.stroked ? painted.replace(/ stroke-width="[^"]*"/, ` stroke-width="${effectiveStrokeWidth(options)}"`) : painted;
 }
 
 const jsxAttributes = {
@@ -223,15 +216,15 @@ export function tailwindMaskSnippet(svg, options = {}) {
   return `<span class="inline-block size-[${size}px] bg-current [mask:url(${mask})_no-repeat_center/contain]" aria-hidden="true"></span>`;
 }
 
+const iconFile = (name) => `icons/${name}.svg`;
 
-/** Where an icon's SVG file sits in the vadivam package, such as `solid/icons/house.svg`. */
+/** An icon's SVG file as the vadivam package exports it, such as `solid/icons/house.svg`. */
 export function iconAssetPath(name, style = "outline") {
-  const { entryDirectory } = styleOf(style);
-  return `${entryDirectory ? `${entryDirectory}/` : ""}icons/${name}.svg`;
+  return entryPath(styleOf(style), iconFile(name));
 }
 
 export function cdnUrl(name, version, style = "outline") {
-  return `https://cdn.jsdelivr.net/npm/vadivam@${version}/dist/${iconAssetPath(name, style)}`;
+  return `https://cdn.jsdelivr.net/npm/${targetsById.core.packageName}@${version}/${packagePath(styleOf(style), iconFile(name))}`;
 }
 
 // Points at the package's sprite served from the app's root, with the solid
@@ -243,7 +236,8 @@ export function spriteSnippet(name, style = "outline") {
 }
 
 export function fontSnippet(name, style = "outline") {
-  return `<i class="${styleOf(style).font.baseClass} vadivam-icon-${name}" aria-hidden="true"></i>`;
+  const { baseClass, glyphClassPrefix } = styleOf(style).font;
+  return `<i class="${baseClass} ${glyphClassPrefix}${name}" aria-hidden="true"></i>`;
 }
 
 // Iconify publishes the outline icons only; the copy formats below say so.
@@ -252,7 +246,7 @@ export function iconifySnippet(name) {
 }
 
 export function shadcnItemUrl(name, baseUrl = siteUrl, style = "outline") {
-  return `${baseUrl}/r/${style === "solid" ? "solid/" : ""}${name}.json`;
+  return `${baseUrl}/${shadcnItemPath(name, styleOf(style))}`;
 }
 
 export function shadcnAddCommand(name, style = "outline") {

@@ -1,10 +1,12 @@
 import path from "node:path";
+import { siteUrl } from "../packages.mjs";
 import {
   buildStyles,
   defaultAttributesSource,
   defaultSize,
   defaultStrokeWidth,
   dynamicEntries,
+  dynamicExports,
   dynamicTypes,
   exportedNames,
   iconImports,
@@ -35,19 +37,16 @@ const indexExports = (icons, shared) => [
   { from: `${shared}context.js`, types: ["VadivamProviderProps"] },
 ];
 
-// Written by the dynamic.js and dynamic.d.ts templates below.
-const dynamicExports = ["DynamicIcon", "DynamicIconModule", "DynamicIconProps", "IconName", "dynamicIconImports", "iconNames"];
+/** Every name the root and dynamic entries export besides the icons; the dynamic.d.ts template below adds two types. */
+export const apiExports = [...exportedNames(indexExports([], "./")), ...dynamicExports, "DynamicIconModule", "IconName"];
 
-/** Every name the root and dynamic entries export besides the icons. */
-export const apiExports = [...exportedNames(indexExports([], "./")), ...dynamicExports];
-
-export async function buildReactPackage({ icons, solidIcons, directory }) {
+export async function build({ iconsByStyle, directory }) {
   const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
   await write(dist, "context.js", `"use client";\nimport React from "react";\n\nconst VadivamContext = React.createContext({});\nexport function VadivamProvider({ children, size, color, strokeWidth, absoluteStrokeWidth, className }) {\n  const value = React.useMemo(() => ({ size, color, strokeWidth, absoluteStrokeWidth, className }), [size, color, strokeWidth, absoluteStrokeWidth, className]);\n  return React.createElement(VadivamContext.Provider, { value }, children);\n}\nexport function useVadivamContext() {\n  return React.useContext(VadivamContext);\n}\n`);
   await write(dist, "context.d.ts", `import type * as React from "react";\nimport type { VadivamProps } from "./types.js";\nexport interface VadivamProviderProps extends Pick<VadivamProps, "size" | "color" | "strokeWidth" | "absoluteStrokeWidth" | "className"> { children: React.ReactNode; }\nexport declare function VadivamProvider(props: VadivamProviderProps): React.ReactElement;\nexport declare function useVadivamContext(): Partial<VadivamProps>;\n`);
-  await buildStyles(dist, { outline: icons, solid: solidIcons }, buildReactEntry);
+  await buildStyles(dist, iconsByStyle, buildReactEntry);
 }
 
 async function buildReactEntry(dist, icons, style) {
@@ -72,7 +71,7 @@ async function buildReactEntry(dist, icons, style) {
 
   for (const icon of icons) {
     await write(dist, `icons/${icon.name}.js`, `import { defineIcon } from "../defineIcon.js";\nexport const __iconNode = ${keyedIconNode(icon)};\nconst ${icon.componentName} = /* @__PURE__ */ defineIcon("${icon.name}", "${icon.componentName}", __iconNode);\nexport default ${icon.componentName};\n`);
-    await write(dist, `icons/${icon.name}.d.ts`, `import type { IconNode, VadivamIcon } from "../types.js";\nexport declare const __iconNode: IconNode;\n/** @component\n * @name ${icon.componentName}\n * @description Vadivam ${style.stroked ? "" : "solid "}SVG icon component.\n * @see https://vadivam.praveenjuge.com/icons/${icon.name}\n */\ndeclare const ${icon.componentName}: VadivamIcon;\nexport default ${icon.componentName};\n`);
+    await write(dist, `icons/${icon.name}.d.ts`, `import type { IconNode, VadivamIcon } from "../types.js";\nexport declare const __iconNode: IconNode;\n/** @component\n * @name ${icon.componentName}\n * @description Vadivam ${style.stroked ? "" : "solid "}SVG icon component.\n * @see ${siteUrl}/icons/${icon.name}\n */\ndeclare const ${icon.componentName}: VadivamIcon;\nexport default ${icon.componentName};\n`);
   }
 
   await write(dist, "icons.js", `${iconImports(icons)}\n\nexport const icons = {\n${iconRegistryEntries(icons)}\n};\nexport default icons;\n`);

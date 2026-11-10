@@ -28,7 +28,10 @@ export const svgElementTypes = Object.freeze(Object.keys(geometryAttributes).sor
 // Each style is one folder of SVGs with the same names. Outline icons are
 // centerline strokes; solid icons are filled shapes whose cut-outs rely on the
 // even-odd rule. Solid lines are 2.5px wide on the outline's centerlines, so
-// their ink reaches 0.25px further into the padding than a 2px stroke.
+// their ink reaches 0.25px further into the padding than a 2px stroke. Each
+// style has a font; the solid font reuses the outline font's codepoints and
+// per-icon glyph classes, so only its family and base class differ.
+const glyphClassPrefix = "vadivam-icon-";
 export const styles = Object.freeze({
   outline: Object.freeze({
     id: "outline",
@@ -45,7 +48,7 @@ export const styles = Object.freeze({
     inkWidth: 2,
     padding: 1,
     spriteIdPrefix: "vadivam-",
-    font: Object.freeze({ fontName: "vadivam", fontFamily: "Vadivam Icons", baseClass: "vadivam-icon" }),
+    font: Object.freeze({ fontName: "vadivam", fontFamily: "Vadivam Icons", baseClass: "vadivam-icon", glyphClassPrefix }),
   }),
   solid: Object.freeze({
     id: "solid",
@@ -56,7 +59,7 @@ export const styles = Object.freeze({
     inkWidth: 0,
     padding: 0.75,
     spriteIdPrefix: "vadivam-solid-",
-    font: Object.freeze({ fontName: "vadivam-solid", fontFamily: "Vadivam Icons Solid", baseClass: "vadivam-solid-icon" }),
+    font: Object.freeze({ fontName: "vadivam-solid", fontFamily: "Vadivam Icons Solid", baseClass: "vadivam-solid-icon", glyphClassPrefix }),
   }),
 });
 
@@ -70,6 +73,11 @@ export function styleOf(id = "outline") {
 /** The root attributes every icon file of a style carries, in file order. */
 export function rootAttributes(style) {
   return { ...canvasAttributes, ...style.paint };
+}
+
+/** The root attribute that takes the icon color: an outline's `stroke`, a solid's `fill`. */
+export function paintAttribute(style) {
+  return Object.keys(style.paint).find((name) => style.paint[name] === "currentColor");
 }
 
 export function attributeString(attributes) {
@@ -124,7 +132,12 @@ export function pathIconSvg(style, pathData) {
   return iconSvg(style, pathData.map((d) => `<path d="${d}"/>`).join(""));
 }
 
+/** A file's path in a style's entry of a package, such as `solid/sprite.svg`. */
+export function entryPath(style, file) {
+  return [style.entryDirectory, file].filter(Boolean).join("/");
+}
+
 /** A file's path in the published `vadivam` package for a style, such as `dist/solid/sprite.svg`. */
 export function packagePath(style, file) {
-  return ["dist", style.entryDirectory, file].filter(Boolean).join("/");
+  return `dist/${entryPath(style, file)}`;
 }

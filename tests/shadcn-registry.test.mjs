@@ -9,7 +9,8 @@ import {
   iconItem,
   registryItems,
 } from "../scripts/generators/shadcn.mjs";
-import { shadcnAddCommand, siteUrl } from "../scripts/snippets.mjs";
+import { siteUrl } from "../scripts/packages.mjs";
+import { shadcnAddCommand } from "../scripts/snippets.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const registryDir = path.join(root, "apps/docs/public/r");

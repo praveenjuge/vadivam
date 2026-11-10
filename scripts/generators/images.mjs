@@ -3,10 +3,11 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import { canvasSize, svgInner } from "../icon-styles.mjs";
-import { readIcons, root } from "../icon-source.mjs";
+import { readIcons } from "../icon-source.mjs";
+import { docsPublicDirectory, root } from "../lib/paths.mjs";
 
-export const previewPath = path.join(root, "apps/docs/public/preview.png");
-export const ogPath = path.join(root, "apps/docs/public/og.png");
+export const previewPath = path.join(docsPublicDirectory, "preview.png");
+export const ogPath = path.join(docsPublicDirectory, "og.png");
 
 export async function buildPreview() {
   const icons = await readIcons();

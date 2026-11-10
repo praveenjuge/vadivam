@@ -37,11 +37,11 @@ export const apiExports = exportedNames(indexExports([]));
 
 // Icons are Qwik inline components: plain functions that render during SSR and
 // ship no client JavaScript, so they need no component$ boundary or QRLs.
-export async function buildQwikPackage({ icons, solidIcons, directory }) {
+export async function build({ iconsByStyle, directory }) {
   const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
-  await buildStyles(dist, { outline: icons, solid: solidIcons }, buildQwikEntry);
+  await buildStyles(dist, iconsByStyle, buildQwikEntry);
 }
 
 async function buildQwikEntry(dist, icons, style) {

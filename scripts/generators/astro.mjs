@@ -40,11 +40,11 @@ const indexExports = (icons) => [
 /** Every name the root entry exports besides the icons; DynamicIcon is its own .astro module. */
 export const apiExports = exportedNames(indexExports([]));
 
-export async function buildAstroPackage({ icons, solidIcons, directory }) {
+export async function build({ iconsByStyle, directory }) {
   const dist = path.join(directory, "dist");
   await prepareDist(dist);
   await writeRuntimePolicy(dist);
-  await buildStyles(dist, { outline: icons, solid: solidIcons }, buildAstroEntry);
+  await buildStyles(dist, iconsByStyle, buildAstroEntry);
 }
 
 async function buildAstroEntry(dist, icons, style) {

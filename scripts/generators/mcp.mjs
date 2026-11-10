@@ -1,14 +1,18 @@
 import { chmod, copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { iconCategories, root } from "../icon-source.mjs";
+import { styleIds } from "../icon-styles.mjs";
+import { iconCategories, lucideRankings } from "../icon-source.mjs";
+import { root } from "../lib/paths.mjs";
 
-// The browser-safe modules the server shares with the docs site: the copy
-// formats and the two modules they read.
-const sharedModules = ["snippets.mjs", "packages.mjs", "icon-styles.mjs"];
+/**
+ * The browser-safe modules the server shares with the docs site: the copy
+ * formats and the modules they read.
+ */
+export const sharedModules = ["snippets.mjs", "packages.mjs", "package-names.mjs", "icon-styles.mjs"];
 
 // The MCP server's hand-written modules live in packages/vadivam-mcp/src and
 // import `./data.js` and the shared modules, which only exist in dist.
-export async function buildMcpPackage({ icons, solidIcons, directory }) {
+export async function build({ iconsByStyle, directory }) {
   const dist = path.join(directory, "dist");
   const source = path.join(directory, "src");
   await rm(dist, { recursive: true, force: true });
@@ -21,18 +25,19 @@ export async function buildMcpPackage({ icons, solidIcons, directory }) {
   for (const file of sharedModules) {
     await copyFile(path.join(root, "scripts", file), path.join(dist, file));
   }
-  const solidSvgs = new Map(solidIcons.map(({ name, svg }) => [name, svg.trim()]));
-  const data = icons.map(({ name, componentName, tags, categories, svg }) => ({
+  const svgsByStyle = Object.fromEntries(
+    styleIds.map((id) => [id, new Map(iconsByStyle[id].map(({ name, svg }) => [name, svg.trim()]))]),
+  );
+  const data = iconsByStyle.outline.map(({ name, componentName, tags, categories }) => ({
     name,
     componentName,
     tags,
     categories,
-    svg: svg.trim(),
-    ...(solidSvgs.has(name) ? { solidSvg: solidSvgs.get(name) } : {}),
+    svgs: Object.fromEntries(styleIds.filter((id) => svgsByStyle[id].has(name)).map((id) => [id, svgsByStyle[id].get(name)])),
   }));
   // Lucide's popularity ranks break ties when suggest_icons ranks matches.
-  const { icons: rankings } = JSON.parse(await readFile(path.join(root, "metadata/lucide-rankings.json"), "utf8"));
-  const names = new Set(icons.map((icon) => icon.name));
+  const { icons: rankings } = await lucideRankings();
+  const names = new Set(data.map((icon) => icon.name));
   const ranks = Object.fromEntries(
     rankings.filter(({ name }) => names.has(name)).map(({ name, rank }) => [name, rank]),
   );

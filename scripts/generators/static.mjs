@@ -9,18 +9,21 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { iconNamePattern, styles, svgInner } from "../icon-styles.mjs";
-import { root } from "../icon-source.mjs";
+import { canvasAttributes, iconNamePattern, styles, svgInner } from "../icon-styles.mjs";
+import { root } from "../lib/paths.mjs";
+import { siteUrl } from "../packages.mjs";
 
 // Append-only: each icon keeps its font codepoint for good once published.
-export const fontCodepointsPath = path.join(root, "scripts/font-codepoints.json");
+const fontCodepointsFile = "scripts/font-codepoints.json";
+export const fontCodepointsPath = path.join(root, fontCodepointsFile);
+
+/** Data files the build reads here, for scripts/release-changes.mjs. */
+export const buildInputs = [fontCodepointsFile];
 
 export const privateUseStart = 0xe000;
 export const privateUseEnd = 0xf8ff;
 
-// One font per style (its `font` in icon-styles.mjs). The solid font reuses
-// the outline font's codepoints and per-icon classes, so only its family and
-// base class differ.
+// One font per style (its `font` in icon-styles.mjs).
 const fontCacheVersion = "2";
 
 function codepointHex(codepoint) {
@@ -109,7 +112,7 @@ async function buildStrings(icons, outputDirectory) {
       ),
       writeFile(
         path.join(outputDirectory, `${icon.name}.d.ts`),
-        `/** @name ${icon.name}\n * @description Vadivam SVG markup string.\n * @see https://vadivam.praveenjuge.com/icons/${icon.name}\n */\ndeclare const svg: string;\nexport default svg;\n`,
+        `/** @name ${icon.name}\n * @description Vadivam SVG markup string.\n * @see ${siteUrl}/icons/${icon.name}\n */\ndeclare const svg: string;\nexport default svg;\n`,
       ),
     ]),
   );
@@ -121,20 +124,20 @@ export async function buildSprite(icons, outputPath, style = styles.outline) {
   const symbols = icons
     .map(
       (icon) =>
-        `  <symbol id="${style.spriteIdPrefix}${icon.name}" viewBox="0 0 24 24">\n    ${svgInner(icon.svg).replaceAll("\n", "\n    ")}\n  </symbol>`,
+        `  <symbol id="${style.spriteIdPrefix}${icon.name}" viewBox="${canvasAttributes.viewBox}">\n    ${svgInner(icon.svg).replaceAll("\n", "\n    ")}\n  </symbol>`,
     )
     .join("\n");
   await writeFile(
     outputPath,
-    `<svg xmlns="http://www.w3.org/2000/svg">\n${symbols}\n</svg>\n`,
+    `<svg xmlns="${canvasAttributes.xmlns}">\n${symbols}\n</svg>\n`,
   );
 }
 
-function fontCss(icons, registry, { fontName, fontFamily, baseClass }) {
+function fontCss(icons, registry, { fontName, fontFamily, baseClass, glyphClassPrefix }) {
   const classes = icons
     .map(
       ({ name }) =>
-        `.vadivam-icon-${name}::before { content: "\\${codepointHex(registry[name])}"; }`,
+        `.${glyphClassPrefix}${name}::before { content: "\\${codepointHex(registry[name])}"; }`,
     )
     .join("\n");
   return `@font-face {

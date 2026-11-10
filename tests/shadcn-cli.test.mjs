@@ -72,7 +72,7 @@ beforeAll(async () => {
     },
   });
   registryUrl = `http://127.0.0.1:${server.port}`;
-  await buildShadcnRegistry(picked, path.join(publicDir, "r"), { baseUrl: registryUrl, solidIcons: pickedSolid });
+  await buildShadcnRegistry({ outline: picked, solid: pickedSolid }, path.join(publicDir, "r"), { baseUrl: registryUrl });
   await mkdir(path.join(publicDir, "shadcn/r/colors"), { recursive: true });
   await writeFile(
     path.join(publicDir, "shadcn/r/colors/neutral.json"),

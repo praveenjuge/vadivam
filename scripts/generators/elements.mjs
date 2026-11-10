@@ -1,5 +1,5 @@
-import { styles } from "../icon-styles.mjs";
-import { defaultSize, defaultStrokeWidth, dynamicEntries, mergeClassesSource, paintAttribute, write } from "./shared.mjs";
+import { paintAttribute, styles } from "../icon-styles.mjs";
+import { defaultSize, defaultStrokeWidth, dynamicEntries, mergeClassesSource, write } from "./shared.mjs";
 
 // <vadivam-icon> for plain HTML, htmx, Alpine, and any framework that renders
 // custom elements. It ships inside the core package as `vadivam/elements` and

@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { optimize } from "svgo";
 import { reattachEnds, smoothCorners } from "./corner-smoothing.mjs";
-import { iconSvg, svgInner } from "./icon-styles.mjs";
+import { iconSvg, svgInner, svgPathData } from "./icon-styles.mjs";
 import {
   asArray,
   iconCategories,
@@ -14,7 +14,6 @@ import {
   lucideMetadata,
   parseSvg,
   readIcons,
-  root,
   sourceDirectory,
   styles,
   subpathWithoutMove,
@@ -24,46 +23,16 @@ import {
   validateStyleTwins,
   validateSvgContent,
 } from "./icon-source.mjs";
-import { targets } from "./packages.mjs";
+import { root, shadcnRegistryDirectory } from "./lib/paths.mjs";
+import { registryUrl, targets } from "./packages.mjs";
 import { cleanPaths } from "./path-cleanup.mjs";
 import { evenOddPathData, loadPathKit } from "./skia-path.mjs";
-import { buildAngularPackage } from "./generators/angular.mjs";
-import { buildAstroPackage } from "./generators/astro.mjs";
-import { buildComposePackage } from "./generators/compose.mjs";
-import { buildFlutterPackage } from "./generators/flutter.mjs";
+import { assertGeneratorsMatchPackages, generators, packageApis } from "./generators/index.mjs";
 import { buildOg, buildPreview, ogPath, previewPath } from "./generators/images.mjs";
-import { buildLitPackage } from "./generators/lit.mjs";
-import { buildMcpPackage } from "./generators/mcp.mjs";
-import { buildPreactPackage } from "./generators/preact.mjs";
-import { buildQwikPackage } from "./generators/qwik.mjs";
-import { buildReactPackage } from "./generators/react.mjs";
-import { buildReactNativePackage } from "./generators/react-native.mjs";
 import { assertIconNodesPassRuntimePolicy } from "./generators/runtime-policy.mjs";
 import { buildShadcnRegistry } from "./generators/shadcn.mjs";
-import { buildSolidPackage } from "./generators/solid.mjs";
 import { allocateFontCodepoints, fontCodepointsPath } from "./generators/static.mjs";
-import { buildSveltePackage } from "./generators/svelte.mjs";
-import { buildVadivamPackage } from "./generators/vadivam.mjs";
-import { buildVuePackage } from "./generators/vue.mjs";
 import { buildWebAssets } from "./generators/web.mjs";
-
-// One generator per package in scripts/packages.mjs, keyed by its id.
-const generators = new Map([
-  ["core", buildVadivamPackage],
-  ["react", buildReactPackage],
-  ["react-native", buildReactNativePackage],
-  ["vue", buildVuePackage],
-  ["svelte", buildSveltePackage],
-  ["solid", buildSolidPackage],
-  ["preact", buildPreactPackage],
-  ["astro", buildAstroPackage],
-  ["angular", buildAngularPackage],
-  ["qwik", buildQwikPackage],
-  ["lit", buildLitPackage],
-  ["flutter", buildFlutterPackage],
-  ["compose", buildComposePackage],
-  ["mcp", buildMcpPackage],
-]);
 
 const iconCountFiles = [path.join(root, "README.md"), path.join(root, "apps/docs/docs/index.mdx")];
 const iconCountPattern =
@@ -129,7 +98,6 @@ function optimizeSvg(svg, file, config = svgoConfig) {
 }
 
 const pathPattern = /(<path\b[^>]*\sd=")([^"]*)("[^>]*>)/g;
-const pathData = (svg) => [...svg.matchAll(pathPattern)].map((match) => match[2]);
 const mapPathData = (svg, map) => svg.replace(pathPattern, (_match, prefix, d, suffix) => `${prefix}${map(d)}${suffix}`);
 
 // SVGO drops the move after a closepath when the next subpath starts where
@@ -193,8 +161,8 @@ function normalizeStrokedSvg(svg, file, style) {
     });
   };
   const first = optimizeSvg(svg, file);
-  const cleaned = optimizeSvg(replacePaths(first, cleanPaths(pathData(first)).paths), file);
-  const original = pathData(cleaned);
+  const cleaned = optimizeSvg(replacePaths(first, cleanPaths(svgPathData(first)).paths), file);
+  const original = svgPathData(cleaned);
   const smoothed = replacePaths(cleaned, reattachEnds(original, original.map((d) => smoothCorners(d))));
   return withStyleRoot(
     optimizeSvg(smoothed, file),
@@ -259,12 +227,6 @@ export function updateCategoryTableMarkers(content, names) {
   );
 }
 
-function registryUrl({ registry, packageName }) {
-  if (registry === "pub") return `https://pub.dev/packages/${packageName}`;
-  if (registry === "maven") return `https://central.sonatype.com/artifact/${packageName.replace(":", "/")}`;
-  return `https://www.npmjs.com/package/${packageName}`;
-}
-
 // Each package README links every other package in scripts/packages.mjs.
 export function updatePackageFamilyMarkers(content, target) {
   assert(packageFamilyPattern.test(content), `missing vadivam-packages markers in the ${target.packageName} README`);
@@ -309,8 +271,8 @@ async function checkIcons() {
     namesByStyle[style.id] = await iconNames(style);
     for (const name of namesByStyle[style.id]) {
       validateIconName(name, `${name}.svg`);
-      const file = `${style.sourceDirectory}/${name}.svg`;
-      validateSvgContent(await readFile(path.join(root, file), "utf8"), file, style);
+      const file = path.join(sourceDirectory(style), `${name}.svg`);
+      validateSvgContent(await readFile(file, "utf8"), path.relative(root, file), style);
     }
   }
   validateStyleTwins(namesByStyle);
@@ -323,21 +285,21 @@ async function checkIcons() {
 }
 
 async function build() {
-  const icons = await readIcons();
-  const solidIcons = await readIcons(styles.solid);
-  validateStyleTwins({ outline: icons.map((icon) => icon.name), solid: solidIcons.map((icon) => icon.name) });
+  assertGeneratorsMatchPackages();
+  const iconsByStyle = {};
+  for (const style of Object.values(styles)) iconsByStyle[style.id] = await readIcons(style);
+  const names = iconsByStyle.outline.map((icon) => icon.name);
+  validateStyleTwins(Object.fromEntries(Object.entries(iconsByStyle).map(([id, icons]) => [id, icons.map((icon) => icon.name)])));
   // The MCP data ranks icons by the Lucide rankings, so they must be for the pinned release.
-  await validateLucidePins(icons.map((icon) => icon.name));
-  await assertIconNodesPassRuntimePolicy([...icons, ...solidIcons]);
-  await synchronizeDocCounts(icons.map((icon) => icon.name));
-  const missing = targets.filter((target) => !generators.has(target.id)).map((target) => target.id);
-  assert(missing.length === 0, `No generator for: ${missing.join(", ")}`);
+  await validateLucidePins(names);
+  await assertIconNodesPassRuntimePolicy(Object.values(iconsByStyle).flat());
+  await synchronizeDocCounts(names);
   for (const target of targets) {
-    await generators.get(target.id)({ icons, solidIcons, directory: path.join(root, target.directory) });
+    await generators[target.id].build({ iconsByStyle, directory: path.join(root, target.directory), packageApis });
   }
-  await buildWebAssets({ icons, solidIcons });
-  await buildShadcnRegistry(icons, path.join(root, "apps/docs/public/r"), { solidIcons });
-  console.log(`Built packages and web assets for ${icons.length} icons.`);
+  await buildWebAssets(iconsByStyle);
+  await buildShadcnRegistry(iconsByStyle, shadcnRegistryDirectory);
+  console.log(`Built packages and web assets for ${names.length} icons.`);
 }
 
 const commands = new Map([

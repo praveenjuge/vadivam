@@ -1,8 +1,7 @@
 // The setup prompt the homepage copies for coding agents. It names every way
 // to use Vadivam so an agent can pick the one that fits the project, and points
 // at the skill and MCP server so it searches icons instead of guessing names.
-import { registryNames } from "../../../../scripts/packages.mjs";
-import { frameworks, siteUrl } from "../../../../scripts/snippets.mjs";
+import { frameworks, registryNames, siteUrl } from "../../../../scripts/packages.mjs";
 import { mcpRoute } from "../../worker/routes.mjs";
 
 const packageLines = frameworks.map(({ label, title, packageName, peers = [], registry }) => {
