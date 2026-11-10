@@ -7,7 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // Blume's browser search client is built from this module, so exercising it
 // here covers the code patched in patches/blume@*.patch.
 const { buildOramaIndex, queryOramaIndex } = await import(
-  path.join(root, "apps/docs/node_modules/blume/src/search/orama-index.ts")
+  Bun.resolveSync("blume/search/orama-index.ts", path.join(root, "apps/docs"))
 );
 const records = JSON.parse(
   readFileSync(path.join(root, "apps/docs/dist/client/blume-search.json"), "utf8"),

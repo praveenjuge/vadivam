@@ -8,6 +8,7 @@ import {
   createIcon,
   createVadivamIcon,
 } from "vadivam-react";
+import { expectSafeIconMarkup, unsafeIconNode } from "../helpers.mjs";
 
 // Render an icon and return its root <svg> element.
 function renderIcon(props, children) {
@@ -157,18 +158,7 @@ describe("createIcon rendering (client)", () => {
   test("Icon strips executable custom nodes while preserving safe geometry", () => {
     const { container } = render(
       createElement(Icon, {
-        iconNode: [
-          ["script", { href: "https://example.com/x.js", key: "script" }],
-          ["animate", { attributeName: "href", values: "javascript:alert(1)", key: "animate" }],
-          ["image", { href: "javascript:alert(1)", key: "image" }],
-          ["path", {
-            d: "M4 12h16",
-            stroke: "navy",
-            onclick: "alert(1)",
-            dangerouslySetInnerHTML: { __html: "<script>alert(1)</script>" },
-            key: "safe",
-          }],
-        ],
+        iconNode: unsafeIconNode,
         onLoad: "alert(1)",
         dangerouslySetInnerHTML: { __html: "<script>alert(1)</script>" },
         href: "javascript:alert(1)",
@@ -182,19 +172,13 @@ describe("createIcon rendering (client)", () => {
       }),
     );
     const svg = container.querySelector("svg");
-    const path = svg.querySelector("path");
-    expect(path).not.toBeNull();
-    expect(path.getAttribute("d")).toBe("M4 12h16");
-    expect(path.getAttribute("stroke")).toBe("navy");
-    expect(path.getAttribute("onclick")).toBeNull();
-    expect(svg.querySelector("script, animate, image")).toBeNull();
-    expect(svg.getAttribute("href")).toBeNull();
+    expectSafeIconMarkup(svg.outerHTML);
+    expect(svg.querySelectorAll("path")).toHaveLength(2);
     expect(svg.getAttribute("fill")).toBe("none");
     expect(svg.getAttribute("stroke")).toBe("currentColor");
     expect(svg.style.color).toBe("red");
     expect(svg.style.backgroundImage).toBe("");
     expect(svg.style.borderImage).toBe("");
-    expect(svg.innerHTML).not.toContain("alert(1)");
   });
 
   test("preserves genuine function event handlers", () => {

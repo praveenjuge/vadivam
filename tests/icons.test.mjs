@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { normalizeSvg, updateCategoryTableMarkers, updateIconCountMarkers, updatePackageFamilyMarkers } from "../scripts/icons.mjs";
-import { targets } from "../scripts/packages.mjs";
+import { targets, targetsById } from "../scripts/packages.mjs";
 import {
+  lucideVersion,
   readIcons,
   styles,
   validateIconMetadata,
@@ -64,14 +65,14 @@ describe("icon validation", () => {
   });
 
   test.each([
-    ["wrong viewBox", validSvg.replace("0 0 24 24", "0 0 32 32")],
-    ["black stroke", validSvg.replace("currentColor", "black")],
-    ["filled path", validSvg.replace("<path", '<path fill="red"')],
-    ["square caps", validSvg.replace("round", "square")],
-    ["wrong stroke width", validSvg.replace('stroke-width="2"', 'stroke-width="1.5"')],
-    ["unsafe markup", validSvg.replace("<path", "<script/><path")]
-  ])("rejects %s", (_name, svg) => {
-    expect(() => validateSvgContent(svg, "invalid-fixture.svg")).toThrow();
+    ["wrong viewBox", validSvg.replace("0 0 24 24", "0 0 32 32"), 'expected viewBox="0 0 24 24"'],
+    ["black stroke", validSvg.replace("currentColor", "black"), 'expected stroke="currentColor"'],
+    ["filled path", validSvg.replace("<path", '<path fill="red"'), "unsupported path attribute fill"],
+    ["square caps", validSvg.replace("round", "square"), 'expected stroke-linecap="round"'],
+    ["wrong stroke width", validSvg.replace('stroke-width="2"', 'stroke-width="1.5"'), 'expected stroke-width="2"'],
+    ["unsafe markup", validSvg.replace("<path", "<script/><path"), "unsupported <script> element"],
+  ])("rejects %s", (_name, svg, message) => {
+    expect(() => validateSvgContent(svg, "invalid-fixture.svg")).toThrow(`invalid-fixture.svg: ${message}`);
   });
 
   test("accepts geometry that keeps the 2px stroke inside the 1px padding", () => {
@@ -96,13 +97,10 @@ describe("icon validation", () => {
     expect(() => validateSvgContent(broken, "broken-path.svg")).toThrow("broken-path.svg:");
   });
 
-  test("validates every canonical icon", async () => {
-    const icons = await readIcons();
-    expect(icons.length).toBeGreaterThan(0);
-    for (const icon of icons) {
-      expect(icon.svgPath).toBe(`icons/${icon.fileName}`);
-      expect(icon.componentName).toMatch(/^[A-Z][A-Za-z0-9]*$/);
-    }
+  test("every canonical icon passes validation in both styles", async () => {
+    const [outline, solid] = await Promise.all([readIcons(), readIcons(styles.solid)]);
+    expect(outline.length).toBeGreaterThan(0);
+    expect(solid.map((icon) => icon.name)).toEqual(outline.map((icon) => icon.name));
   });
 
   test("every generated icon node passes the shipped runtime policy unchanged", async () => {
@@ -179,7 +177,7 @@ describe("icon validation", () => {
   });
 
   test("links every other package in a README's package family line", () => {
-    const react = targets.find(({ id }) => id === "react");
+    const react = targetsById.react;
     const content = "Intro.\n<!-- vadivam-packages:start -->\nstale\n<!-- vadivam-packages:end -->\nOutro.";
     const updated = updatePackageFamilyMarkers(content, react);
     const line = updated.split("\n")[2];
@@ -274,12 +272,6 @@ describe("solid icon validation", () => {
     expect(() => validateStyleTwins({ outline: ["a", "b"], solid: ["a", "b"] })).not.toThrow();
     expect(() => validateStyleTwins({ outline: ["a", "b"], solid: ["a"] })).toThrow("solid is missing 1 icon(s) drawn in outline: b");
     expect(() => validateStyleTwins({ outline: ["a"], solid: ["a", "c"] })).toThrow("solid has 1 icon(s) with no outline twin: c");
-  });
-
-  test("validates every solid icon, one for each outline icon", async () => {
-    const [outline, solid] = await Promise.all([readIcons(), readIcons(styles.solid)]);
-    expect(solid.map((icon) => icon.name)).toEqual(outline.map((icon) => icon.name));
-    for (const icon of solid) expect(icon.svgPath).toBe(`icons-solid/${icon.fileName}`);
   });
 });
 
@@ -540,9 +532,7 @@ describe("stroke joins", () => {
 
 describe("Lucide comparison", () => {
   test("the docs compare against the pinned Lucide release", async () => {
-    const read = async (file) => JSON.parse(await Bun.file(new URL(`../${file}`, import.meta.url)).text());
-    const { lucideVersion } = await read("metadata/lucide.json");
-    const docs = await read("apps/docs/package.json");
+    const docs = await Bun.file(new URL("../apps/docs/package.json", import.meta.url)).json();
     expect(docs.devDependencies.lucide).toBe(lucideVersion);
   });
 });

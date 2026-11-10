@@ -3,10 +3,11 @@ import { createElement, createRef } from "react";
 import { render, waitFor } from "@testing-library/react";
 import { VadivamProvider } from "vadivam-react";
 import { DynamicIcon, iconNames } from "vadivam-react/dynamic";
+import { iconNames as sourceIconNames } from "../../scripts/icon-source.mjs";
 
 describe("DynamicIcon (client)", () => {
-  test("exports all valid icon names", () => {
-    expect(iconNames).toContain("activity");
+  test("exports every icon name", async () => {
+    expect(iconNames).toEqual(await sourceIconNames());
   });
 
   test("shows the fallback, then resolves the icon", async () => {
@@ -29,16 +30,23 @@ describe("DynamicIcon (client)", () => {
   });
 
   test("renders the fallback for an unknown name and never an svg", async () => {
+    // A valid icon beside it shows when lazy loads have had time to finish.
     const { container } = render(
-      createElement(DynamicIcon, {
-        name: "definitely-not-an-icon",
-        fallback: createElement("span", { "data-testid": "fb" }, "missing"),
-      })
+      createElement(
+        "div",
+        null,
+        createElement(DynamicIcon, {
+          name: "definitely-not-an-icon",
+          fallback: createElement("span", { "data-testid": "fb" }, "missing"),
+        }),
+        createElement(DynamicIcon, { name: "activity", fallback: null }),
+      )
     );
+    await waitFor(() => {
+      expect(container.querySelector("svg")).not.toBeNull();
+    });
     expect(container.querySelector('[data-testid="fb"]')).not.toBeNull();
-    // Give any pending microtasks a chance to flush; still no svg.
-    await Promise.resolve();
-    expect(container.querySelector("svg")).toBeNull();
+    expect(container.querySelectorAll("svg")).toHaveLength(1);
   });
 
   test("forwards props to the resolved icon", async () => {

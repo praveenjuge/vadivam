@@ -13,14 +13,15 @@ const NON_ICON_EXPORTS = new Set([
   "useVadivamContext",
 ]);
 
+const iconAliases = (icon) => [icon.componentName, `${icon.componentName}Icon`, `Vadivam${icon.componentName}`];
+
 describe("vadivam-react exports", () => {
-  test("exposes one named export per icon", () => {
-    const iconExports = Object.keys(named).filter((key) => !NON_ICON_EXPORTS.has(key));
-    expect(iconExports.length).toBe(icons.length * 3);
+  test("exports each icon under its three names and nothing unexpected", () => {
+    expect(Object.keys(named).sort()).toEqual([...NON_ICON_EXPORTS, ...icons.flatMap(iconAliases)].sort());
   });
 
   test("exposes one dynamic import per icon", () => {
-    expect(Object.keys(dynamicIconImports).length).toBe(icons.length);
+    expect(Object.keys(dynamicIconImports)).toEqual(icons.map((icon) => icon.name));
   });
 
   test.each(icons.map((icon) => [icon.name, icon]))(

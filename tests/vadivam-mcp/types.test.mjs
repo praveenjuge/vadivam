@@ -1,18 +1,20 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { styleIds } from "../../packages/vadivam-mcp/dist/icon-styles.mjs";
-import { copyFormats, frameworks } from "../../packages/vadivam-mcp/dist/snippets.mjs";
+import { styleIds } from "../../scripts/icon-styles.mjs";
+import { copyFormats, frameworks } from "../../scripts/snippets.mjs";
 
-const declarations = readFileSync(new URL("../../packages/vadivam-mcp/dist/index.d.ts", import.meta.url), "utf8");
+const declarations = readFileSync(new URL("../../packages/vadivam-mcp/src/index.d.ts", import.meta.url), "utf8");
 
 /** The string literals of one exported union type. */
 function union(name) {
-  const body = declarations.match(new RegExp(`export type ${name} =([^;]*);`))?.[1] ?? "";
+  const start = declarations.indexOf(`export type ${name} =`);
+  if (start < 0) throw new Error(`index.d.ts has no ${name} type`);
+  const body = declarations.slice(start, declarations.indexOf(";", start));
   return [...body.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
 }
 
 // index.d.ts is hand-written, so its unions must follow the registries the
-// server reads at runtime.
+// server copies from scripts/ at build time and reads at runtime.
 describe("vadivam-mcp type declarations", () => {
   test("IconFormat lists every copy format", () => {
     expect(union("IconFormat")).toEqual(copyFormats.map((format) => format.id));

@@ -1,8 +1,17 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { createElement } from "react";
-import { renderToStaticMarkup, renderToString } from "react-dom/server";
+import { renderToReadableStream, renderToStaticMarkup, renderToString } from "react-dom/server";
 import { Activity, Icon } from "vadivam-react";
 import { DynamicIcon } from "vadivam-react/dynamic";
+import { expectSafeIconMarkup, svgAttributes, unsafeIconNode } from "../helpers.mjs";
+
+// Streams the page and waits for every Suspense boundary, as a server that
+// awaits lazy components would.
+async function renderComplete(element) {
+  const stream = await renderToReadableStream(element);
+  await stream.allReady;
+  return new Response(stream).text();
+}
 
 describe("createIcon server rendering", () => {
   test("renders valid svg markup with defaults", () => {
@@ -49,24 +58,14 @@ describe("createIcon server rendering", () => {
 
   test("does not serialize executable custom icon data or root props", () => {
     const html = renderToStaticMarkup(createElement(Icon, {
-      iconNode: [
-        ["script", { href: "https://example.com/x.js", key: "script" }],
-        ["animate", { attributeName: "href", values: "javascript:alert(1)", key: "animate" }],
-        ["path", { d: "M4 12h16", onclick: "alert(1)", key: "safe" }],
-      ],
+      iconNode: unsafeIconNode,
       onLoad: "alert(1)",
       dangerouslySetInnerHTML: { __html: "<script>alert(1)</script>" },
       href: "javascript:alert(1)",
       color: "url(https://example.com/stroke.svg#x)",
     }));
-    expect(html).toContain('<path d="M4 12h16"></path>');
-    expect(html).not.toContain("<script");
-    expect(html).not.toContain("<animate");
-    expect(html).not.toContain("onclick");
-    expect(html).not.toContain("onload");
-    expect(html).not.toContain("href=");
-    expect(html).not.toContain("alert(1)");
-    expect(html).toContain('stroke="currentColor"');
+    expectSafeIconMarkup(html);
+    expect(svgAttributes(html).stroke).toBe("currentColor");
   });
 
   test("generated icons ignore an iconNode prop override during SSR", () => {
@@ -77,27 +76,19 @@ describe("createIcon server rendering", () => {
     expect(html).not.toContain("M0 0h1");
   });
 
-  test("DynamicIcon renders its fallback for a valid name during sync SSR", () => {
-    // React.lazy does not resolve synchronously, so renderToStaticMarkup emits
-    // the Suspense fallback rather than the resolved icon.
-    const html = renderToStaticMarkup(
-      createElement(DynamicIcon, {
-        name: "activity",
-        fallback: createElement("span", { "data-fallback": "true" }, "loading"),
-      })
+  test("DynamicIcon renders the icon once its module loads", async () => {
+    const html = await renderComplete(
+      createElement(DynamicIcon, { name: "activity", size: 20, fallback: createElement("span", null, "loading") }),
     );
-    expect(html).toContain('data-fallback="true"');
-    expect(html).toContain("loading");
+    expect(svgAttributes(html)).toMatchObject({ class: "vadivam vadivam-activity", width: "20" });
+    expect(html).not.toContain("loading");
   });
 
-  test("DynamicIcon renders its fallback for an unknown name", () => {
-    const html = renderToStaticMarkup(
-      createElement(DynamicIcon, {
-        name: "definitely-not-an-icon",
-        fallback: createElement("span", { "data-fallback": "true" }, "missing"),
-      })
+  test("DynamicIcon renders its fallback for an unknown name", async () => {
+    const html = await renderComplete(
+      createElement(DynamicIcon, { name: "definitely-not-an-icon", fallback: createElement("span", null, "missing") }),
     );
-    expect(html).toContain('data-fallback="true"');
     expect(html).toContain("missing");
+    expect(html).not.toContain("<svg");
   });
 });

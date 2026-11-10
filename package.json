@@ -49,7 +49,7 @@
     "test:frameworks:unit": "bun test tests/frameworks/*.test.mjs",
     "test:shadcn:built": "bun test tests/shadcn-registry.test.mjs tests/shadcn-cli.test.mjs",
     "test:shadcn": "bun run icons:build && bun run test:shadcn:built",
-    "test:seo:built": "bun run docs:build:built && bun run --cwd apps/docs audit && bun test tests/seo.test.mjs tests/docs-search.test.mjs tests/wrangler-config.test.mjs tests/docs-404-twins.test.mjs",
+    "test:seo:built": "bun run docs:build:built && bun run --cwd apps/docs audit && bun test tests/seo.test.mjs tests/docs-search.test.mjs tests/wrangler-config.test.mjs tests/docs-worker.test.mjs",
     "packages:validate": "bun scripts/packages-check.mjs",
     "release:validate": "bun scripts/validate-versions.mjs",
     "release:publish": "bun scripts/publish-packages.mjs",

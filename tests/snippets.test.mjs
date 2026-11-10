@@ -25,11 +25,9 @@ const custom = { size: 32, strokeWidth: 1.5, color: "#e11d48", absoluteStrokeWid
 
 describe("copy formats", () => {
   test("default settings render a bare component for every framework", () => {
-    for (const { id, packageName, registry } of frameworks.filter((framework) => framework.registry === "npm")) {
-      const snippet = componentSnippet(id, "ArrowRight");
-      expect(snippet).toContain(`from "${packageName}"`);
+    for (const { id, packageName } of frameworks.filter((framework) => framework.registry === "npm")) {
+      expect(componentSnippet(id, "ArrowRight")).toContain(`from "${packageName}"`);
       expect(propsSource(id, {})).toBe("");
-      expect(registry).toBe("npm");
     }
     expect(componentSnippet("lit", "ArrowRight")).toContain("html`${ArrowRight()}`");
     expect(componentSnippet("flutter", "ArrowRight")).toBe("import 'package:vadivam/vadivam.dart';\n\nVadivamIcon(VadivamIcons.arrowRight)");
