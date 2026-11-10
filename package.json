@@ -15,7 +15,7 @@
     "dev": "bun run icons:build && bun run --cwd apps/docs dev",
     "docs:build:built": "bun run --cwd apps/docs build",
     "docs:build": "bun run icons:build && bun run docs:build:built",
-        "icons:optimize": "bun scripts/icons.mjs optimize",
+    "icons:optimize": "bun scripts/icons.mjs optimize",
     "icons:check": "bun scripts/icons.mjs check",
     "icons:draft-solid": "bun scripts/solid-draft.mjs",
     "icons:build": "bun scripts/icons.mjs build",

@@ -1,3 +1,4 @@
+import { mcpRoute } from "../apps/docs/worker/routes.mjs";
 import { existsSync, readFileSync } from "node:fs";
 import { performance } from "node:perf_hooks";
 import path from "node:path";
@@ -69,7 +70,6 @@ async function validatePackage({
       throw new Error(`${name}: README is missing ${expected}`);
     }
   }
-  // bun run icons:check keeps each README's package family line in step with scripts/packages.mjs.
   // publint opens every file its export globs match at once. Under Node, a
   // package with more matches than the open-file limit reports the files it
   // could not open as missing; Bun's runtime does not, so run it there.
@@ -157,7 +157,7 @@ function validateMcpPackage(manifest, files) {
   if (npmEntry?.identifier !== name || npmEntry.transport?.type !== "stdio") {
     throw new Error(`${mcpServerManifest}: missing the stdio npm package entry for ${name}`);
   }
-  const remote = `${packageMetadata.homepage}/mcp`;
+  const remote = `${packageMetadata.homepage}${mcpRoute}`;
   if (!server.remotes?.some((entry) => entry.type === "streamable-http" && entry.url === remote)) {
     throw new Error(`${mcpServerManifest}: missing the streamable-http remote ${remote}`);
   }

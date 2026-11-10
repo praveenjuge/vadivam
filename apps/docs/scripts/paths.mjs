@@ -1,7 +1,7 @@
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { root as repoRoot } from "../../../scripts/lib/paths.mjs";
 
-export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+export { repoRoot };
 
 // Where the docs build reads and writes, relative to the repository root.
 // Blume builds into dist/; the steps in build.mjs finish that output.
