@@ -1,6 +1,6 @@
 import { chmod, copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { styleIds } from "../icon-styles.mjs";
+import { styleIds, styles, svgField } from "../icon-styles.mjs";
 import { iconCategories, lucideRankings } from "../icon-source.mjs";
 import { root } from "../lib/paths.mjs";
 
@@ -33,7 +33,7 @@ export async function build({ iconsByStyle, directory }) {
     componentName,
     tags,
     categories,
-    svgs: Object.fromEntries(styleIds.filter((id) => svgsByStyle[id].has(name)).map((id) => [id, svgsByStyle[id].get(name)])),
+    ...Object.fromEntries(styleIds.filter((id) => svgsByStyle[id].has(name)).map((id) => [svgField(styles[id]), svgsByStyle[id].get(name)])),
   }));
   // Lucide's popularity ranks break ties when suggest_icons ranks matches.
   const { icons: rankings } = await lucideRankings();

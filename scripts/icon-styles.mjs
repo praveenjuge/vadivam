@@ -103,6 +103,11 @@ export function svgInner(svg) {
   return svg.slice(open.index + open[0].length, close).trim();
 }
 
+/** The field that holds a style's SVG on a published icon record: `svg`, then `solidSvg`. */
+export function svgField(style) {
+  return style.entryDirectory ? `${style.id}Svg` : "svg";
+}
+
 /** The `d` of every path in an SVG, in document order. */
 export function svgPathData(svg) {
   return [...svg.matchAll(/<path\b[^>]*\sd="([^"]*)"/g)].map((match) => match[1]);

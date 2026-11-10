@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import { categories, icons, version } from "./data.js";
-import { styleIds, styles } from "./icon-styles.mjs";
+import { styleIds, styles, svgField } from "./icon-styles.mjs";
 import { styleEntry } from "./package-names.mjs";
 import { frameworks, siteUrl, targetsById } from "./packages.mjs";
 import {
@@ -65,7 +65,7 @@ function errorResult(text) {
 /** Code for one icon in one format and style, with any customization applied. */
 export function renderIcon(icon, format = "svg", options = {}) {
   const style = options.style ?? "outline";
-  const svg = icon.svgs[style];
+  const svg = Object.hasOwn(styles, style) ? icon[svgField(styles[style])] : undefined;
   if (!svg) throw new Error(`"${icon.name}" has no ${style} style.`);
   return renderCopyFormat(format, { ...icon, svg }, options, version);
 }
@@ -91,6 +91,7 @@ export function usageFor(frameworkId) {
     docs: `${siteUrl}${documentation}`,
   };
 }
+
 /** A fresh MCP server with the Vadivam tools. Shared by the stdio CLI and the remote endpoint. */
 export function createVadivamServer() {
   const server = new McpServer(

@@ -47,8 +47,9 @@ export interface VadivamMcpIcon {
   componentName: string;
   tags: readonly string[];
   categories: readonly string[];
-  /** The icon's SVG in each style it is drawn in. */
-  svgs: Partial<Record<IconStyle, string>>;
+  svg: string;
+  /** The solid twin's SVG. */
+  solidSvg?: string;
 }
 
 export interface VadivamMcpCategory {

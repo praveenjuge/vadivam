@@ -25,8 +25,8 @@ describe("vadivam-mcp data", () => {
   test("bundles every icon in both styles and every category from the release", async () => {
     const [outline, solid] = await Promise.all([readIcons(), readIcons(styles.solid)]);
     expect(icons.map((icon) => icon.name)).toEqual(outline.map((icon) => icon.name));
-    expect(icons.map((icon) => icon.svgs.outline)).toEqual(outline.map((icon) => icon.svg.trim()));
-    expect(icons.map((icon) => icon.svgs.solid)).toEqual(solid.map((icon) => icon.svg.trim()));
+    expect(icons.map((icon) => icon.svg)).toEqual(outline.map((icon) => icon.svg.trim()));
+    expect(icons.map((icon) => icon.solidSvg)).toEqual(solid.map((icon) => icon.svg.trim()));
     expect(categories).toEqual(iconCategories);
     expect(version).toBe(packageVersion);
   });
@@ -166,7 +166,7 @@ describe("get_icon formats", () => {
   const activity = findIcon("activity");
 
   test("svg applies size, color, and stroke settings", () => {
-    expect(renderIcon(activity)).toBe(activity.svgs.outline);
+    expect(renderIcon(activity)).toBe(activity.svg);
     const svg = renderIcon(activity, "svg", { size: 32, color: "#f00", strokeWidth: 1.5 });
     expect(svg).toContain('width="32"');
     expect(svg).toContain('height="32"');
@@ -182,7 +182,7 @@ describe("get_icon formats", () => {
     expect(renderIcon(activity, "data-uri")).toMatch(/^data:image\/svg\+xml,/);
     const base64 = renderIcon(activity, "base64");
     expect(base64).toMatch(/^data:image\/svg\+xml;base64,/);
-    expect(atob(base64.split(",")[1])).toBe(activity.svgs.outline);
+    expect(atob(base64.split(",")[1])).toBe(activity.svg);
     expect(renderIcon(activity, "css-mask")).toContain(".icon-activity");
     const mask = renderIcon(activity, "css-mask", { size: 48, strokeWidth: 1.5 });
     expect(mask).toContain("width: 48px;");
@@ -217,7 +217,7 @@ describe("get_icon solid style", () => {
   const activity = findIcon("activity");
 
   test("svg paints the fill and ignores stroke options", () => {
-    expect(renderIcon(activity, "svg", { style: "solid" })).toBe(activity.svgs.solid);
+    expect(renderIcon(activity, "svg", { style: "solid" })).toBe(activity.solidSvg);
     const svg = renderIcon(activity, "svg", { style: "solid", size: 32, color: "#f00", strokeWidth: 1.5 });
     expect(svg).toContain('width="32"');
     expect(svg).toContain('fill="#f00"');
