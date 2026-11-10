@@ -1,11 +1,11 @@
 // Client helpers shared by the homepage drawer and the icon pages: customizer
 // settings, highlighted snippets, copy formats, downloads, and menus.
 import { resizeSvg, styleIds, styles, svgPathData } from "../../../../scripts/icon-styles.mjs";
+import { dartIconName } from "../../../../scripts/package-names.mjs";
 import {
   componentSnippet,
   copyFormats,
   customizeSvg,
-  dartIconName,
   effectiveStrokeWidth,
   iconDefaults,
   propsSource,

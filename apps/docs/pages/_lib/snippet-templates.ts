@@ -1,7 +1,9 @@
 import { highlightCode } from "blume/markdown";
 import { icons } from "vadivam/manifest";
 import { attributeString, iconSvg, rootAttributes, rootTag, styleIds, styles, svgPathData } from "../../../../scripts/icon-styles.mjs";
-import { componentSource, dartIconName, frameworks } from "../../../../scripts/snippets.mjs";
+import { dartIconName } from "../../../../scripts/package-names.mjs";
+import { frameworks } from "../../../../scripts/packages.mjs";
+import { componentSource } from "../../../../scripts/snippets.mjs";
 import { defaultStyle, type IconStyle } from "./site";
 
 // Shiki-highlighted snippet templates, rendered once at build time. The client

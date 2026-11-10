@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { targets } from "../scripts/packages.mjs";
+import { frameworks, targets } from "../scripts/packages.mjs";
 import {
   componentSnippet,
   copyFormats,
@@ -8,7 +8,6 @@ import {
   cssMaskSnippet,
   customizeSvg,
   effectiveStrokeWidth,
-  frameworks,
   installCommand,
   propsSource,
   renderCopyFormat,

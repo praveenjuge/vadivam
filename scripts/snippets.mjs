@@ -5,8 +5,6 @@ import { attributeString, canvasSize, entryPath, packagePath, paintAttribute, re
 import { angularSelectorPrefix, composePackage, dartIconName, iconsOwner, shadcnItemPath, styleEntry } from "./package-names.mjs";
 import { frameworks, siteUrl, targetsById } from "./packages.mjs";
 
-export { dartIconName, frameworks };
-
 export const iconDefaults = Object.freeze({
   size: canvasSize,
   strokeWidth: styles.outline.paint["stroke-width"],

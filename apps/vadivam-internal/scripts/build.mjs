@@ -3,7 +3,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPlugin } from "../../figma-shared/build.mjs";
-import { root as repositoryRoot, sourceDirectory } from "../../../scripts/icon-source.mjs";
+import { sourceDirectory } from "../../../scripts/icon-source.mjs";
+import { root as repositoryRoot } from "../../../scripts/lib/paths.mjs";
 import { isIconName, styles } from "../../../scripts/icon-styles.mjs";
 
 const logo = path.join(repositoryRoot, "apps/docs/public/favicon.svg");

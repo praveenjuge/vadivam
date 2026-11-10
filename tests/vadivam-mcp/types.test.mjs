@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { styleIds } from "../../scripts/icon-styles.mjs";
-import { copyFormats, frameworks } from "../../scripts/snippets.mjs";
+import { frameworks } from "../../scripts/packages.mjs";
+import { copyFormats } from "../../scripts/snippets.mjs";
 
 const declarations = readFileSync(new URL("../../packages/vadivam-mcp/src/index.d.ts", import.meta.url), "utf8");
 
