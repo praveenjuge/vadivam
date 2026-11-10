@@ -1,6 +1,15 @@
 import icons, { lucideAliases } from "vadivam:catalog";
+import { styles } from "../../../scripts/icon-styles.mjs";
 import { messageFromError, postToUi } from "../../figma-shared/channel";
-import { catalogSvg, describeIconComponent, isIconStyle, type CatalogIcon, type IconStyle } from "../../figma-shared/icons";
+import {
+  catalogSvg,
+  createIconComponent,
+  describeIconComponent,
+  isIconStyle,
+  swapArtwork,
+  type CatalogIcon,
+  type IconStyle,
+} from "../../figma-shared/icons";
 import { iconNames } from "../../figma-shared/names";
 import type { PluginToUiMessage, UiToPluginMessage } from "./protocol";
 
@@ -73,15 +82,7 @@ function tagComponent(component: ComponentNode, icon: CatalogIcon, style: IconSt
 }
 
 function createComponent(icon: CatalogIcon, style: IconStyle): ComponentNode {
-  const frame = figma.createNodeFromSvg(catalogSvg(icon, style));
-  try {
-    const component = figma.createComponentFromNode(frame);
-    tagComponent(component, icon, style);
-    return component;
-  } catch (error) {
-    if (!frame.removed) frame.remove();
-    throw error;
-  }
+  return createIconComponent(icon, style, (component) => tagComponent(component, icon, style));
 }
 
 function geometryNodes(node: ChildrenMixin): Array<SceneNode & GeometryMixin> {
@@ -125,8 +126,8 @@ function iconPaint(node: ChildrenMixin): Paint[] | null {
 function applyIconPaint(node: ChildrenMixin, paints: readonly Paint[] | null, style: IconStyle): void {
   if (!paints) return;
   for (const child of geometryNodes(node)) {
-    if (style === "solid") child.fills = clonePaints(paints);
-    else child.strokes = clonePaints(paints);
+    if (styles[style].stroked) child.strokes = clonePaints(paints);
+    else child.fills = clonePaints(paints);
   }
 }
 
@@ -205,26 +206,10 @@ figma.on("selectionchange", () => {
 
 function replaceComponentGlyph(component: ComponentNode, icon: CatalogIcon, style: IconStyle): void {
   const paint = iconPaint(component);
-  const oldChildren = [...component.children];
   const source = figma.createNodeFromSvg(catalogSvg(icon, style));
-  const sourceWidth = source.width;
-  const sourceHeight = source.height;
-  const newChildren = [...source.children];
-  scaleChildren(newChildren, sourceWidth, sourceHeight, component.width, component.height);
+  scaleChildren(source.children, source.width, source.height, component.width, component.height);
   applyIconPaint(source, paint, style);
-  const moved: SceneNode[] = [];
-  try {
-    for (const child of newChildren) {
-      component.appendChild(child);
-      moved.push(child);
-    }
-  } catch (error) {
-    for (const child of moved) source.appendChild(child);
-    source.remove();
-    throw error;
-  }
-  for (const child of oldChildren) child.remove();
-  source.remove();
+  swapArtwork(component, source);
   tagComponent(component, icon, style);
   figma.currentPage.selection = [component];
 }
@@ -269,11 +254,6 @@ function applyStrokeWeight(node: ChildrenMixin, weight: number | null): void {
   for (const child of geometryNodes(node)) {
     if ("strokeWeight" in child) child.strokeWeight = weight;
   }
-}
-
-// Deprecated Lucide names, such as `home`, still name icons in older designs.
-function lucideIconName(layerName: string): string | null {
-  return names.current(layerName) ?? names.replacement(layerName);
 }
 
 const visiblePaints = (node: BaseNode, key: "fills" | "strokes"): boolean => {
@@ -339,7 +319,8 @@ async function findLucideIcons(roots: readonly SceneNode[]): Promise<LucideMatch
     seen.add(node.id);
     visited += 1;
     if (ICON_LAYER_TYPES.has(node.type) && "children" in node) {
-      const iconName = lucideIconName(node.name);
+      // Deprecated Lucide names, such as `home`, still name icons in older designs.
+      const iconName = names.icon(node.name);
       if (iconName && isOutlineIcon(node) && !insideInstance(node) && !(await isVadivamIcon(node))) {
         matches.push({ node, iconName });
         continue;

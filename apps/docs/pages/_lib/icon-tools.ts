@@ -1,6 +1,6 @@
 // Client helpers shared by the homepage drawer and the icon pages: customizer
 // settings, highlighted snippets, copy formats, downloads, and menus.
-import { resizeSvg, svgPathData } from "../../../../scripts/icon-styles.mjs";
+import { resizeSvg, styleIds, styles, svgPathData } from "../../../../scripts/icon-styles.mjs";
 import {
   componentSnippet,
   copyFormats,
@@ -12,7 +12,7 @@ import {
   resolveOptions,
   unsupportedStyle,
 } from "../../../../scripts/snippets.mjs";
-import { recall, remember, storageKeys, type IconStyle } from "./site";
+import { defaultStyle, recall, remember, storageKeys, type IconStyle } from "./site";
 import type { SnippetTemplates } from "./snippet-templates";
 
 export interface IconSettings {
@@ -27,12 +27,14 @@ export interface IconRef {
   componentName: string;
   /** The canonical, uncustomized SVG markup. */
   svg: string;
-  /** Default "outline". A solid icon is filled, so stroke settings don't apply. */
+  /** Default outline. A solid icon is filled, so stroke settings don't apply. */
   style?: IconStyle;
 }
 
+const styleOfIcon = (icon: IconRef) => icon.style ?? defaultStyle;
+
 /** The settings as snippet options for this icon's style. */
-const optionsFor = (icon: IconRef, settings: IconSettings) => ({ ...settings, style: icon.style ?? "outline" });
+const optionsFor = (icon: IconRef, settings: IconSettings) => ({ ...settings, style: styleOfIcon(icon) });
 
 const urlKeys = { size: "size", strokeWidth: "stroke", color: "color", absoluteStrokeWidth: "absolute" } as const;
 
@@ -123,7 +125,7 @@ export function snippetText(tab: string, icon: IconRef, settings: IconSettings) 
 export function snippetHtml(templates: SnippetTemplates | null, tab: string, icon: IconRef, settings: IconSettings) {
   const fallback = () => `<pre class="astro-code"><code>${escapeHtml(snippetText(tab, icon, settings))}</code></pre>`;
   if (!templates) return fallback();
-  const styleTemplates = templates.styles[icon.style ?? "outline"];
+  const styleTemplates = templates.styles[styleOfIcon(icon)];
   if (tab === "svg") {
     const paths = svgPathData(icon.svg);
     const template = styleTemplates.svg[String(paths.length)];
@@ -147,8 +149,8 @@ export function snippetHtml(templates: SnippetTemplates | null, tab: string, ico
 /** The Copy as menu: the shared copy formats the framework tabs don't cover, then the names. */
 export const menuFormats = [
   ...copyFormats.filter((format) => !format.framework),
-  { id: "name", label: "Icon name", styles: ["outline", "solid"], render: (icon: { name: string }) => icon.name },
-  { id: "component", label: "Component name", styles: ["outline", "solid"], render: (icon: { componentName: string }) => icon.componentName },
+  { id: "name", label: "Icon name", styles: styleIds, render: (icon: { name: string }) => icon.name },
+  { id: "component", label: "Component name", styles: styleIds, render: (icon: { componentName: string }) => icon.componentName },
 ];
 
 const styled = (icon: IconRef, settings: IconSettings) => customizeSvg(icon.svg, optionsFor(icon, settings));
@@ -191,7 +193,8 @@ export const copyText = (value: string) => navigator.clipboard.writeText(value);
 
 /** Run a Copy as / Download menu action. Returns a status message. */
 export async function runAction(action: string, icon: IconRef, settings: IconSettings, version: string, element: Element) {
-  const baseName = `${icon.name}${icon.style === "solid" ? "-solid" : ""}`;
+  const style = styleOfIcon(icon);
+  const baseName = style === defaultStyle ? icon.name : `${icon.name}-${style}`;
   if (action === "download-svg") {
     downloadBlob(new Blob([styled(icon, settings)], { type: "image/svg+xml" }), `${baseName}.svg`);
     return `Downloaded ${baseName}.svg`;
@@ -208,7 +211,6 @@ export async function runAction(action: string, icon: IconRef, settings: IconSet
   }
   const format = menuFormats.find((item) => `copy-${item.id}` === action);
   if (!format) return "";
-  const style = icon.style ?? "outline";
   const unsupported = unsupportedStyle(format, style);
   if (unsupported) return unsupported;
   await copyText(format.render(icon, optionsFor(icon, settings), version));
@@ -293,9 +295,9 @@ export function bindCustomizer(element: HTMLElement, store: SettingsStore) {
   });
 }
 
-/** Hide the stroke controls under `root` while a solid icon is shown. */
-export function showStrokeSettings(root: ParentNode, style: IconStyle = "outline") {
-  for (const control of root.querySelectorAll<HTMLElement>("[data-stroke-setting]")) control.hidden = style === "solid";
+/** Hide the stroke controls under `root` while a filled (solid) icon is shown. */
+export function showStrokeSettings(root: ParentNode, style: IconStyle = defaultStyle) {
+  for (const control of root.querySelectorAll<HTMLElement>("[data-stroke-setting]")) control.hidden = !styles[style].stroked;
 }
 
 /**

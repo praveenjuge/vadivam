@@ -7,6 +7,7 @@ export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 // Blume builds into dist/; the steps in build.mjs finish that output.
 export const docsPaths = Object.freeze({
   docs: "apps/docs",
+  blume: "apps/docs/node_modules/.bin/blume",
   public: "apps/docs/public",
   client: "apps/docs/dist/client",
   server: "apps/docs/dist/server",

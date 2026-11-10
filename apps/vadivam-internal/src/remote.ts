@@ -11,6 +11,7 @@ import {
   rootTag,
   styles,
 } from "../../../scripts/icon-styles.mjs";
+import { repositoryUrl, targetsById } from "../../../scripts/packages.mjs";
 import type { IconStyle } from "../../figma-shared/icons";
 import { messageFromError } from "../../figma-shared/channel";
 
@@ -46,9 +47,9 @@ export type FetchLike = (
   init?: { headers?: Record<string, string> },
 ) => Promise<{ ok: boolean; status: number; text(): Promise<string> }>;
 
-const OWNER = "praveenjuge";
-const REPO = "vadivam";
-const PACKAGE = "vadivam";
+// `owner/name`, as GitHub's API and raw file URLs spell the repository.
+const REPOSITORY = repositoryUrl.replace(/^https:\/\/github\.com\//, "");
+const PACKAGE = targetsById.core.packageName;
 const MAX_ICONS = 10_000;
 const MAX_SVG_LENGTH = 100_000;
 const FETCH_CONCURRENCY = 8;
@@ -157,7 +158,7 @@ function treeEntries(tree: Record<string, unknown>): Array<{ path: string; type:
  */
 async function loadGitHub(fetchImpl: FetchLike, style: IconStyle): Promise<RemoteCatalog> {
   const folder = styles[style].sourceDirectory;
-  const api = `https://api.github.com/repos/${OWNER}/${REPO}`;
+  const api = `https://api.github.com/repos/${REPOSITORY}`;
   const commit = await fetchJson(fetchImpl, `${api}/commits/main`);
   const sha = commit.sha;
   if (typeof sha !== "string" || !/^[0-9a-f]{40}$/.test(sha)) throw new Error("GitHub returned no commit for main");
@@ -183,7 +184,7 @@ async function loadGitHub(fetchImpl: FetchLike, style: IconStyle): Promise<Remot
           return null;
         }
         try {
-          const svg = await fetchText(fetchImpl, `https://raw.githubusercontent.com/${OWNER}/${REPO}/${sha}/${folder}/${name}.svg`);
+          const svg = await fetchText(fetchImpl, `https://raw.githubusercontent.com/${REPOSITORY}/${sha}/${folder}/${name}.svg`);
           const problem = validateRemoteSvg(svg, style);
           if (problem) {
             failed.push({ name, reason: problem });

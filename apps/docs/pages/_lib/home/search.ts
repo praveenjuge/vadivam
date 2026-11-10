@@ -3,35 +3,11 @@
 // rendering state) and only the matches render into a results grid, in chunks
 // sized like the grid's. More matches render as the reader scrolls near the
 // end, so a keystroke lays out tens of tiles instead of all of them.
+import { searchIcons, searchTerms } from "../../../../figma-shared/search";
 import { setUrlParams } from "../site";
 import type { Entry, Grid } from "./grid";
 
 type SearchIndex = { categories: Record<string, string>; icons: [string, string[], string][] };
-
-// Lower rank sorts first: exact name, name prefix, name word, tag, category.
-function termRank(entry: Entry, term: string, categoryTitles: Record<string, string>) {
-  if (entry.name === term || entry.compact === term) return 0;
-  if (entry.name.startsWith(term) || entry.compact.startsWith(term)) return 1;
-  if (entry.words.includes(term) || entry.compact.includes(term)) return 2;
-  if (entry.tags.some((tag) => tag.startsWith(term))) return 3;
-  if (entry.tags.some((tag) => tag.includes(term))) return 4;
-  if (entry.categories.some((id) => (categoryTitles[id] ?? id).toLowerCase().includes(term))) return 5;
-  return -1;
-}
-
-function rankEntry(entry: Entry, terms: string[], category: string, categoryTitles: Record<string, string>) {
-  if (category && !entry.categories.includes(category)) return -1;
-  if (terms.length === 0) return 0;
-  const joined = terms.join("-");
-  if (terms.length > 1 && entry.name.includes(joined)) return entry.name === joined ? 0 : 1;
-  let rank = 0;
-  for (const term of terms) {
-    const termRanked = termRank(entry, term, categoryTitles);
-    if (termRanked < 0) return -1;
-    rank = Math.max(rank, termRanked);
-  }
-  return rank;
-}
 
 export function createSearch(grid: Grid, chunkSize: number, signal: AbortSignal) {
   const search = document.querySelector<HTMLInputElement>("#iconSearch")!;
@@ -54,6 +30,7 @@ export function createSearch(grid: Grid, chunkSize: number, signal: AbortSignal)
           if (!entry) continue;
           entry.tags = tags;
           entry.categories = categories ? categories.split(" ") : [];
+          entry.categoryTitles = entry.categories.map((id) => (categoryTitles[id] ?? id).toLowerCase());
         }
       })
       .catch(() => {
@@ -110,9 +87,8 @@ export function createSearch(grid: Grid, chunkSize: number, signal: AbortSignal)
   const applyFilter = () => {
     cancelAnimationFrame(filterFrame);
     filterFrame = requestAnimationFrame(() => {
-      const terms = search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
       const category = categorySelect.value;
-      if (terms.length === 0 && !category) {
+      if (searchTerms(search.value).length === 0 && !category) {
         matches = null;
         results.hidden = true;
         results.replaceChildren();
@@ -121,11 +97,7 @@ export function createSearch(grid: Grid, chunkSize: number, signal: AbortSignal)
         emptyState.hidden = true;
         resultCount.textContent = `${grid.entries.length} icons`;
       } else {
-        matches = grid.entries
-          .map((entry, index) => ({ entry, index, rank: rankEntry(entry, terms, category, categoryTitles) }))
-          .filter(({ rank }) => rank >= 0)
-          .sort((left, right) => left.rank - right.rank || left.index - right.index)
-          .map(({ entry }) => entry);
+        matches = searchIcons(grid.entries, search.value, { category });
         grid.element.classList.add("is-dormant");
         results.replaceChildren();
         renderedCount = 0;

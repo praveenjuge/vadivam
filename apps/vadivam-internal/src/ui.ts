@@ -1,5 +1,6 @@
+import { canvasSize } from "../../../scripts/icon-styles.mjs";
 import { element, onPluginMessage, postToPlugin } from "../../figma-shared/channel";
-import { COLUMN_STEP, ICON_SIZE, LIBRARY_COLUMNS, ROW_STEP } from "./layout";
+import { COLUMN_STEP, LIBRARY_COLUMNS, ROW_STEP } from "./layout";
 import type { LucideIconRanking } from "./lucide";
 import {
   EXACT_RENAME_REASONS,
@@ -378,7 +379,7 @@ function renderPreview(): void {
 
   preview.style.gridTemplateColumns = `repeat(${columns}, ${cell}px)`;
   preview.style.gridAutoRows = `${rowHeight}px`;
-  preview.style.setProperty("--frame", `${(cell * ICON_SIZE) / COLUMN_STEP}px`);
+  preview.style.setProperty("--frame", `${(cell * canvasSize) / COLUMN_STEP}px`);
   const fragment = document.createDocumentFragment();
   for (let index = 0; index < shownCells; index += 1) {
     const dot = document.createElement("i");

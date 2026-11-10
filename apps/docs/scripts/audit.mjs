@@ -1,13 +1,9 @@
 // `blume audit`, failing on every error and warning except the ones Blume
 // raises for the changelog pages it generates from GitHub releases.
-import path from "node:path";
 import { docsPaths, fromRoot } from "./paths.mjs";
 
-const docs = fromRoot(docsPaths.docs);
-const blume = path.join(docs, "node_modules/.bin/blume");
-
-const child = Bun.spawn([blume, "audit", "--json"], {
-  cwd: docs,
+const child = Bun.spawn([fromRoot(docsPaths.blume), "audit", "--json"], {
+  cwd: fromRoot(docsPaths.docs),
   stderr: "pipe",
   stdout: "pipe",
 });
