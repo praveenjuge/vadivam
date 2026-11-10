@@ -179,7 +179,7 @@ function replaceElement(element, { nameAttr, icons, attrs }) {
     return;
   }
   const elementAttrs = attributes(element);
-  const iconAttrs = { ...defaultAttributes, [nameAttr]: name, ...(isLabelled(null, Object.keys(elementAttrs)) ? {} : { "aria-hidden": "true" }), ...attrs, ...elementAttrs };
+  const iconAttrs = { ...defaultAttributes, [nameAttr]: name, ...(isLabelled(null, Object.keys({ ...attrs, ...elementAttrs })) ? {} : { "aria-hidden": "true" }), ...attrs, ...elementAttrs };
   iconAttrs.class = mergeClasses("vadivam", \`vadivam-\${name}\`, elementAttrs.class, ...[attrs.class].flat());
   element.parentNode?.replaceChild(createElement(iconNode, iconAttrs), element);
 }
@@ -188,7 +188,8 @@ export function createIcons({ icons = {}, nameAttr = "data-vadivam", attrs = {},
   if (!Object.keys(icons).length) throw new Error("Please provide an icons object to createIcons().");
   if (!root) throw new Error("createIcons() only works in a browser environment.");
   if (!/^[A-Za-z_:][A-Za-z0-9_.:-]*$/.test(nameAttr)) throw new Error("createIcons() received an invalid nameAttr.");
-  for (const element of root.querySelectorAll(\`[\${nameAttr}]\`)) replaceElement(element, { nameAttr, icons, attrs });
+  // A valid attribute name may hold "." or ":", which a selector must escape.
+  for (const element of root.querySelectorAll(\`[\${nameAttr.replace(/[.:]/g, "\\\\$&")}]\`)) replaceElement(element, { nameAttr, icons, attrs });
   if (inTemplates) {
     for (const template of root.querySelectorAll("template")) createIcons({ icons, nameAttr, attrs, root: template.content, inTemplates });
   }

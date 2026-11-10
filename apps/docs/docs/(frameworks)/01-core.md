@@ -144,7 +144,7 @@ createIcons({
 });
 ```
 
-The default marker is `data-vadivam`. The helper converts its kebab-case value to the matching PascalCase key in the supplied `icons` object. Replaced SVGs receive `vadivam` and `vadivam-{name}` classes. If the placeholder has no accessible attribute, role, or title, the helper adds `aria-hidden="true"`.
+The default marker is `data-vadivam`. The helper converts its kebab-case value to the matching PascalCase key in the supplied `icons` object. Replaced SVGs receive `vadivam` and `vadivam-{name}` classes. If neither the placeholder nor `attrs` has an accessible attribute, role, or title, the helper adds `aria-hidden="true"`.
 
 Pass the complete icon-node registry when bundle size is not a concern:
 

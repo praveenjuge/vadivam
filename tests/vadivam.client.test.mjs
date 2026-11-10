@@ -73,6 +73,26 @@ describe("vadivam browser API", () => {
     expect(svg.getAttribute("aria-hidden")).toBeNull();
   });
 
+  test("createIcons hides only unlabelled icons, wherever the label comes from", () => {
+    const root = document.createElement("div");
+    root.innerHTML = '<i data-vadivam="activity"></i>';
+    createIcons({ icons: { Activity }, root });
+    expect(root.querySelector("svg").getAttribute("aria-hidden")).toBe("true");
+
+    root.innerHTML = '<i data-vadivam="activity"></i>';
+    createIcons({ icons: { Activity }, root, attrs: { "aria-label": "Activity" } });
+    expect(root.querySelector("svg").getAttribute("aria-label")).toBe("Activity");
+    expect(root.querySelector("svg").getAttribute("aria-hidden")).toBeNull();
+  });
+
+  test("createIcons finds attribute names that need escaping in a selector", () => {
+    const root = document.createElement("div");
+    root.innerHTML = '<i data.icon="activity"></i><i xml:icon="activity"></i>';
+    createIcons({ icons: { Activity }, root, nameAttr: "data.icon" });
+    createIcons({ icons: { Activity }, root, nameAttr: "xml:icon" });
+    expect(root.querySelectorAll("svg")).toHaveLength(2);
+  });
+
   test("createIcons sanitizes poisoned registry entries and root attributes", () => {
     const root = document.createElement("div");
     root.innerHTML = '<i data-vadivam="poisoned" onload="alert(1)" href="javascript:alert(1)"></i>';
