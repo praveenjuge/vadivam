@@ -1,13 +1,13 @@
 // Builds real framework applications against materialized local packages and
 // verifies the browser packages from their production output.
-// Usage: bun scripts/integration.mjs [app...], or --matrix for the CI shards.
+// Usage: bun scripts/integration.mjs [app...], --matrix for the CI shards, or
+// --cache-paths for every path CI caches.
 import { cpSync, existsSync, readFileSync, rmSync } from "node:fs";
 import { performance } from "node:perf_hooks";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { root } from "./lib/paths.mjs";
 import { forEachConcurrently, run } from "./lib/process.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const integrationDir = path.join(root, "tests", "integration");
 const commandTimeoutMs = 5 * 60 * 1000;
 const browserLaunchTimeoutMs = 60 * 1000;
@@ -46,16 +46,26 @@ const allApps = [
   { name: "lit", shard: "compiled-web", packages: ["vadivam-lit"], output: "dist", verifiesFunctionEvents: true, wrapped: true },
 ];
 
+// What CI caches for a set of apps, one path per line.
+const cachePaths = (cachedApps) =>
+  cachedApps
+    .flatMap((app) => ["node_modules", ...(app.cache ?? [])].map((cache) => `tests/integration/${app.name}/${cache}`))
+    .join("\n");
+
 // The GitHub Actions matrix: one entry per shard with its apps and cache paths.
 if (process.argv[2] === "--matrix") {
   const include = Object.entries(Object.groupBy(allApps, (app) => app.shard)).map(([shard, shardApps]) => ({
     shard,
     apps: shardApps.map((app) => app.name).join(" "),
-    cache_paths: shardApps
-      .flatMap((app) => ["node_modules", ...(app.cache ?? [])].map((cache) => `tests/integration/${app.name}/${cache}`))
-      .join("\n"),
+    cache_paths: cachePaths(shardApps),
   }));
   console.log(JSON.stringify({ include }));
+  process.exit(0);
+}
+
+// The push job runs every app in one job, so it caches them all.
+if (process.argv[2] === "--cache-paths") {
+  console.log(cachePaths(allApps));
   process.exit(0);
 }
 

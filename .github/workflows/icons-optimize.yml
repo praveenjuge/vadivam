@@ -70,13 +70,22 @@ jobs:
         if: github.event_name == 'push'
         run: bunx playwright install --with-deps --only-shell chromium
 
+      # The cache paths come from scripts/integration.mjs, as the shards' do.
+      - name: List integration cache paths
+        if: github.event_name == 'push'
+        id: integration-cache
+        run: |
+          {
+            echo "paths<<EOF"
+            bun scripts/integration.mjs --cache-paths
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Cache integration app dependencies
         if: github.event_name == 'push'
         uses: actions/cache@v6
         with:
-          path: |
-            tests/integration/*/node_modules
-            tests/integration/nextjs/.next/cache
+          path: ${{ steps.integration-cache.outputs.paths }}
           key: integration-${{ runner.os }}-${{ hashFiles('tests/integration/*/bun.lock') }}
           restore-keys: |
             integration-${{ runner.os }}-
