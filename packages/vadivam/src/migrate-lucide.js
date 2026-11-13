@@ -219,9 +219,10 @@ function isShorthandProperty(text, start, end) {
   if (!entries || entries.length === 0) return false;
   const before = text.slice(0, open);
   // A JSX expression holds one expression, so a lone `{LucideBell}` must end
-  // where a statement or an argument can, not before JSX (`{LucideBell}</p>`).
+  // where a statement, an argument, or a TypeScript `as`/`satisfies` can, not
+  // before JSX (`{LucideBell}</p>`).
   const single = entries.length === 1 && !/=/.test(entries[0]);
-  if (single && !/^[ \t]*(?:[;)\]},]|\r?\n|$)/.test(text.slice(close + 1))) return false;
+  if (single && !/^[ \t]*(?:[;)\]},]|\r?\n|$|(?:as|satisfies)\b)/.test(text.slice(close + 1))) return false;
   // After `=`, only a declaration (`const r: Record<string, Icon> = {`) or a
   // property or index target takes an object; a bare `name = {` could be a
   // JSX attribute. A declaration's type may hold `<` and `>`, so only the
