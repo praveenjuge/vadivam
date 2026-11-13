@@ -685,8 +685,8 @@ onPluginMessage<PluginToUiMessage>((message) => {
           ? `All ${numberFormat.format(progress.drawn)} Lucide icons are drawn`
           : `${plural(left, "Lucide icon")} left to draw`;
       // Other actions recount the catalog before they report, and a new frame
-      // count only resends it, so only a scan ends here.
-      if (scanning) finishAction(status, "idle");
+      // count only resends it, so only the scan this UI is waiting on ends here.
+      if (scanning && message.scan) finishAction(status, "idle");
       else if (!busy) setStatus(status, "idle");
       return;
     }

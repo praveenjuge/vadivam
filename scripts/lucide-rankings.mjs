@@ -68,6 +68,7 @@ export function decodeStringLiteral(source, quoteIndex) {
     if (escaped === "u") {
       const braced = source[index + 1] === "{";
       const end = braced ? source.indexOf("}", index + 2) : index + 5;
+      if (end < 0) throw new Error("Invalid Unicode escape in Lucide data");
       const hex = source.slice(index + (braced ? 2 : 1), end);
       if (!(braced ? /^[0-9a-f]{1,6}$/i : /^[0-9a-f]{4}$/i).test(hex)) {
         throw new Error("Invalid Unicode escape in Lucide data");

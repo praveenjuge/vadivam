@@ -184,6 +184,7 @@ describe("migrate-lucide", () => {
       `export const B = () => <X icon = {LucideBell} />;`,
       `config.icons = { LucideBell };`,
       `export default { LucideBell };`,
+      `const { LucideBell = Fallback } = registry;`,
     ].join("\n");
     expect(migrateSource(source).text).toBe(
       [
@@ -196,6 +197,7 @@ describe("migrate-lucide", () => {
         `export const B = () => <X icon = {VadivamBell} />;`,
         `config.icons = { LucideBell: VadivamBell };`,
         `export default { LucideBell: VadivamBell };`,
+        `const { LucideBell: VadivamBell = Fallback } = registry;`,
       ].join("\n"),
     );
   });

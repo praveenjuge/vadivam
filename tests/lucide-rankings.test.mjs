@@ -33,6 +33,7 @@ describe("decodeStringLiteral", () => {
   test("rejects malformed Unicode escapes", () => {
     expect(() => decodeStringLiteral(String.raw`'\u41'`, 0)).toThrow("Invalid Unicode escape in Lucide data");
     expect(() => decodeStringLiteral(String.raw`'\u{}'`, 0)).toThrow("Invalid Unicode escape in Lucide data");
+    expect(() => decodeStringLiteral(String.raw`'\u{41'`, 0)).toThrow("Invalid Unicode escape in Lucide data");
   });
 });
 

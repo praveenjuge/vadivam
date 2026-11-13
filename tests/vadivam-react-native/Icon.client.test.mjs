@@ -72,6 +72,8 @@ describe("vadivam-react-native Icon", () => {
   test("an explicit accessibilityLabel wins over the title", () => {
     const { svg } = renderActivity({ title: "Pulse", accessibilityLabel: "Heartbeat" });
     expect(svg.getAttribute("data-rn-label")).toBe("Heartbeat");
+    const unset = renderActivity({ title: "Pulse", accessibilityLabel: undefined }).svg;
+    expect(unset.getAttribute("data-rn-label")).toBe("Pulse");
   });
 
   test("calculates absolute stroke width only for valid numeric sizes", () => {

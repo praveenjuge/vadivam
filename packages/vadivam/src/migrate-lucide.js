@@ -110,7 +110,8 @@ const previousNonSpace = (text, index) => text.slice(0, index).match(/(\S)\s*$/)
  * `<p>{LucideBell}</p>`) is not.
  */
 function isShorthandProperty(text, start, end) {
-  if (!/^[{,]$/.test(previousNonSpace(text, start) ?? "") || !/^\s*[},]/.test(text.slice(end))) return false;
+  // A destructuring default (`{ LucideBell = Fallback }`) is shorthand too.
+  if (!/^[{,]$/.test(previousNonSpace(text, start) ?? "") || !/^\s*(?:[},]|=(?![=>]))/.test(text.slice(end))) return false;
   const open = enclosingBracket(text, start);
   if (open < 0 || text[open] !== "{") return false;
   const before = text.slice(0, open);
