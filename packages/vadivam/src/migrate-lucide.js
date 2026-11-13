@@ -127,7 +127,7 @@ const regexCanStart = (previous, output) =>
   previous === "" ||
   /[(,=:[!&|?{;+\-*%~^]/.test(previous) ||
   (/[\w$]/.test(previous) &&
-    /(?:^|[^\w$.])(?:return|typeof|case|do|else|in|of|void|yield|await|delete|new|instanceof)$/.test(output.slice(-16)));
+    /(?:^|[^\w$.])(?:return|typeof|case|do|else|in|of|void|yield|await|delete|new|instanceof)\s*$/.test(output.slice(-64)));
 
 // Scans code from `position`, blanking strings, regular expressions, and
 // comments. Inside a template's `${...}` (`expression`), it stops after the
