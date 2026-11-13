@@ -179,6 +179,8 @@ describe("migrate-lucide", () => {
       `const registry = { LucideBell };`,
       `call({ a, LucideBell = Fallback });`,
       `const list = [LucideBell, LucideBell, LucideBell];`,
+      `const noted = { /* icon */ LucideBell, face: ":)" };`,
+      `const face = { face: ":)", LucideBell };`,
       `export const A = () => <div icon={LucideBell}>{\`\${LucideBell}\`}</div>;`,
     ].join("\n");
     const { text, warnings } = migrateSource(source);
@@ -188,12 +190,16 @@ describe("migrate-lucide", () => {
         `const registry = { VadivamBell };`,
         `call({ a, VadivamBell = Fallback });`,
         `const list = [VadivamBell, VadivamBell, VadivamBell];`,
+      `const noted = { /* icon */ VadivamBell, face: ":)" };`,
+      `const face = { face: ":)", VadivamBell };`,
         `export const A = () => <div icon={VadivamBell}>{\`\${VadivamBell}\`}</div>;`,
       ].join("\n"),
     );
     expect(warnings).toEqual([
       "line 2: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
       "line 3: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 5: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 6: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
     ]);
   });
 

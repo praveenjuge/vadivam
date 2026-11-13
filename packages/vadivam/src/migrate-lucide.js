@@ -87,12 +87,23 @@ const renameIdentifier = (identifier) =>
     ? identifier.replace(/Lucide/g, "Vadivam").replace(/LUCIDE/g, "VADIVAM")
     : identifier;
 
+// The text with strings, template literals, and comments blanked out, at the
+// same offsets, so their brackets and commas don't count as code.
+const blankQuoted = (text) =>
+  text.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g, (span) =>
+    span.replace(/[^\n]/g, " "),
+  );
+
 // Whether the identifier at text[start, end) sits where a shorthand property
 // would (`{ LucideBell }`, `{ a, LucideBell = X }`), where renaming it also
 // renames the key. Telling an object from JSX or a template expression needs a
 // parser, so this only flags it; a JSX attribute (`icon={LucideBell}`) and a
-// template expression (`${LucideBell}`) are left out.
+// template expression (`${LucideBell}`) are left out. `text` has its strings
+// and comments blanked (blankQuoted), so `{ /* icon */ LucideBell }` and
+// `{ face: ":)", LucideBell }` still count.
 function looksLikeShorthand(text, start, end) {
+  // A name inside a blanked template literal (`${LucideBell}`) isn't a property.
+  if (text.slice(start, end).trim() === "") return false;
   const before = text.slice(0, start).match(/([{,])\s*$/);
   if (!before || !/^\s*(?:[},]|=(?![=>]))/.test(text.slice(end))) return false;
   if (before[1] === ",") {
@@ -162,6 +173,7 @@ export function migrateSource(text, { styles = false } = {}) {
     }
     if (renames.size > 0) {
       const shorthands = new Set();
+      const code = blankQuoted(output);
       // Rewritten import and export statements, quoted strings, and object or
       // destructuring keys (`{ LucideBell: x }`) stay as they are. A local
       // `export { LucideBell }` keeps its public name (`VadivamBell as
@@ -169,7 +181,7 @@ export function migrateSource(text, { styles = false } = {}) {
       // new name.
       output = output.replace(
         /\bimport\s+(?:type\s+)?(?:[\w$]+\s*,?\s*)?(?:\*\s+as\s+[\w$]+|\{[^}]*\})?\s*from\s*["'][^"']*["']|\bexport\s+(?:type\s+)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})\s*from\s*["'][^"']*["']|\bexport\s*(?:type\s*)?\{([^}]*)\}|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|(?<=[{,]\s*)[A-Za-z_$][\w$]*(?=\s*:(?!:))|(?<![\w$.])([A-Za-z_$][\w$]*)/g,
-        (match, exportList, identifier, offset, source) => {
+        (match, exportList, identifier, offset) => {
           if (exportList !== undefined) {
             return match.replace(exportList, (list) =>
               list.replace(/([\w$]+)(\s+as\s+[\w$]+)?/g, (entry, name, alias) => {
@@ -183,8 +195,8 @@ export function migrateSource(text, { styles = false } = {}) {
           const renamed = identifier && renames.get(identifier);
           if (!renamed) return match;
           changes += 1;
-          if (looksLikeShorthand(source, offset, offset + match.length)) {
-            const line = source.slice(0, offset).split("\n").length;
+          if (looksLikeShorthand(code, offset, offset + match.length)) {
+            const line = code.slice(0, offset).split("\n").length;
             shorthands.add(`line ${line}: { ${match} } is now { ${renamed} }; if ${match} is an object key, write { ${match}: ${renamed} }`);
           }
           return renamed;
