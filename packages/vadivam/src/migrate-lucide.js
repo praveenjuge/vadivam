@@ -103,23 +103,38 @@ function enclosingBracket(text, index) {
 
 const previousNonSpace = (text, index) => text.slice(0, index).match(/(\S)\s*$/)?.[1];
 
+// Whether the bracket at text[open] is closed by a `}`, skipping nested
+// groups; a `{` inside a string usually isn't.
+function closesWithBrace(text, open) {
+  let depth = 0;
+  for (let position = open + 1; position < text.length; position += 1) {
+    const character = text[position];
+    if (character === "(" || character === "[" || character === "{") depth += 1;
+    else if (character === ")" || character === "]" || character === "}") {
+      if (depth === 0) return character === "}";
+      depth -= 1;
+    }
+  }
+  return false;
+}
+
 /**
  * Whether the identifier at text[start, end) is a shorthand property of an
  * object literal or destructuring pattern (`{ a, LucideBell }`), where it is
  * also the key. A JSX or template expression (`icon={LucideBell}`,
- * `<p>{LucideBell}</p>`) is not.
+ * `<p>Icon: {LucideBell}</p>`) is not. When unsure, it says no: renaming a
+ * key keeps the code valid, but misreading JSX would break it.
  */
 function isShorthandProperty(text, start, end) {
   // A destructuring default (`{ LucideBell = Fallback }`) is shorthand too.
   if (!/^[{,]$/.test(previousNonSpace(text, start) ?? "") || !/^\s*(?:[},]|=(?![=>]))/.test(text.slice(end))) return false;
   const open = enclosingBracket(text, start);
-  if (open < 0 || text[open] !== "{") return false;
+  if (open < 0 || text[open] !== "{" || !closesWithBrace(text, open)) return false;
+  // Any JSX tag since the statement or group began (`<X icon = {`, `<p>Icon: {`) means a JSX expression.
+  const segmentStart = Math.max(enclosingBracket(text, open), text.lastIndexOf(";", open));
+  if (/<[A-Za-z]|(?<![=>-])>(?![=>])/.test(text.slice(segmentStart + 1, open))) return false;
   const before = text.slice(0, open);
-  // After `=`, only a declaration or a property assignment takes an object:
-  // `icon={...}` and `icon = {...}` are JSX attribute expressions.
-  if (/(?<![=!<>])=\s*$/.test(before)) {
-    return /(?:\b(?:const|let|var)\s+[\w$]+|\.[\w$]+|\])\s*=\s*$/.test(before);
-  }
+  if (/(?<![=!<>])=\s*$/.test(before)) return /[\w$)\]]\s*=\s*$/.test(before);
   return /(?:^|[([,:?&|!]|\b(?:return|const|let|var|default|yield|await))\s*$/.test(before) && !/=>\s*$/.test(before);
 }
 

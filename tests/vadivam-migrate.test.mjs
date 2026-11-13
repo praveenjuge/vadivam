@@ -185,6 +185,10 @@ describe("migrate-lucide", () => {
       `config.icons = { LucideBell };`,
       `export default { LucideBell };`,
       `const { LucideBell = Fallback } = registry;`,
+      `registry = { LucideBell };`,
+      `const typed: Icons = { LucideBell };`,
+      `export const C = () => <p>Icon: {LucideBell}, again: {LucideBell}</p>;`,
+      `call("example: {", LucideBell, other);`,
     ].join("\n");
     expect(migrateSource(source).text).toBe(
       [
@@ -198,6 +202,10 @@ describe("migrate-lucide", () => {
         `config.icons = { LucideBell: VadivamBell };`,
         `export default { LucideBell: VadivamBell };`,
         `const { LucideBell: VadivamBell = Fallback } = registry;`,
+        `registry = { LucideBell: VadivamBell };`,
+        `const typed: Icons = { LucideBell: VadivamBell };`,
+        `export const C = () => <p>Icon: {VadivamBell}, again: {VadivamBell}</p>;`,
+        `call("example: {", VadivamBell, other);`,
       ].join("\n"),
     );
   });
