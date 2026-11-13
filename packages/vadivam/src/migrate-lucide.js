@@ -87,12 +87,66 @@ const renameIdentifier = (identifier) =>
     ? identifier.replace(/Lucide/g, "Vadivam").replace(/LUCIDE/g, "VADIVAM")
     : identifier;
 
-// The text with strings, template literals, and comments blanked out, at the
-// same offsets, so their brackets and commas don't count as code.
-const blankQuoted = (text) =>
-  text.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g, (span) =>
-    span.replace(/[^\n]/g, " "),
-  );
+const blank = (span) => span.replace(/[^\n]/g, " ");
+
+// The text with strings, template-literal text, and comments blanked out, at
+// the same offsets, so their brackets and commas don't count as code. Code in
+// a template's `${...}` stays, so an object there is still checked.
+function blankQuoted(text) {
+  let output = "";
+  let position = 0;
+  while (position < text.length) {
+    const character = text[position];
+    const next = text[position + 1];
+    let stop = -1;
+    if (character === "/" && next === "*") {
+      const close = text.indexOf("*/", position + 2);
+      stop = close < 0 ? text.length : close + 2;
+    } else if (character === "/" && next === "/") {
+      const close = text.indexOf("\n", position);
+      stop = close < 0 ? text.length : close;
+    } else if (character === '"' || character === "'") {
+      stop = position + 1;
+      while (stop < text.length && text[stop] !== character && text[stop] !== "\n") stop += text[stop] === "\\" ? 2 : 1;
+      stop = Math.min(stop + 1, text.length);
+    }
+    if (stop >= 0) {
+      output += blank(text.slice(position, stop));
+      position = stop;
+      continue;
+    }
+    if (character !== "`") {
+      output += character;
+      position += 1;
+      continue;
+    }
+    output += " ";
+    position += 1;
+    while (position < text.length && text[position] !== "`") {
+      if (text[position] === "\\") {
+        output += blank(text.slice(position, position + 2));
+        position += 2;
+      } else if (text[position] === "$" && text[position + 1] === "{") {
+        let depth = 0;
+        let close = position + 1;
+        for (; close < text.length; close += 1) {
+          if (text[close] === "{") depth += 1;
+          else if (text[close] === "}" && (depth -= 1) === 0) break;
+        }
+        output += text.slice(position, close + 1);
+        position = close + 1;
+      } else {
+        output += blank(text[position]);
+        position += 1;
+      }
+    }
+    if (position < text.length) {
+      output += " ";
+      position += 1;
+    }
+  }
+  return output;
+}
 
 // Whether the identifier at text[start, end) sits where a shorthand property
 // would (`{ LucideBell }`, `{ a, LucideBell = X }`), where renaming it also
@@ -102,7 +156,7 @@ const blankQuoted = (text) =>
 // and comments blanked (blankQuoted), so `{ /* icon */ LucideBell }` and
 // `{ face: ":)", LucideBell }` still count.
 function looksLikeShorthand(text, start, end) {
-  // A name inside a blanked template literal (`${LucideBell}`) isn't a property.
+  // A name inside a blanked string or comment isn't code.
   if (text.slice(start, end).trim() === "") return false;
   const before = text.slice(0, start).match(/([{,])\s*$/);
   if (!before || !/^\s*(?:[},]|=(?![=>]))/.test(text.slice(end))) return false;

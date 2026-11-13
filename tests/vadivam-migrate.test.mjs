@@ -181,6 +181,7 @@ describe("migrate-lucide", () => {
       `const list = [LucideBell, LucideBell, LucideBell];`,
       `const noted = { /* icon */ LucideBell, face: ":)" };`,
       `const face = { face: ":)", LucideBell };`,
+      `const names = \`\${Object.keys({ LucideBell }).join()}\`;`,
       `export const A = () => <div icon={LucideBell}>{\`\${LucideBell}\`}</div>;`,
     ].join("\n");
     const { text, warnings } = migrateSource(source);
@@ -192,6 +193,7 @@ describe("migrate-lucide", () => {
         `const list = [VadivamBell, VadivamBell, VadivamBell];`,
       `const noted = { /* icon */ VadivamBell, face: ":)" };`,
       `const face = { face: ":)", VadivamBell };`,
+      `const names = \`\${Object.keys({ VadivamBell }).join()}\`;`,
         `export const A = () => <div icon={VadivamBell}>{\`\${VadivamBell}\`}</div>;`,
       ].join("\n"),
     );
@@ -200,6 +202,7 @@ describe("migrate-lucide", () => {
       "line 3: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
       "line 5: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
       "line 6: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 7: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
     ]);
   });
 
