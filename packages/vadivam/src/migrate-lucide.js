@@ -214,14 +214,16 @@ function isShorthandProperty(text, start, end) {
   if (open < 0 || text[open] !== "{") return false;
   const close = closingBrace(text, open);
   if (close < end || !isObjectBody(text.slice(open + 1, close))) return false;
-  // Any JSX tag since the statement or group began (`<X icon = {`, `<p>Icon: {`) means a JSX expression.
-  if (/<[A-Za-z]|(?<![=>-])>(?![=>])/.test(text.slice(statementStart(text, open), open))) return false;
   const before = text.slice(0, open);
-  // After `=`, only a declaration (`const r: Icons = {`) or a property or
-  // index target takes an object: a bare `name = {` could be a JSX attribute.
+  // After `=`, only a declaration (`const r: Record<string, Icon> = {`) or a
+  // property or index target takes an object, and neither can be JSX; a bare
+  // `name = {` could be a JSX attribute.
   if (/(?<![=!<>])=\s*$/.test(before)) {
     return /(?:\b(?:const|let|var)\s+[\w$]+(?:\s*:[^=;{}]+)?|\.[\w$]+|\])\s*=\s*$/.test(before);
   }
+  // Any JSX tag since the statement or group began (`<p>Icon: {`) means a JSX
+  // expression. A `>` with space on both sides is a comparison, not a tag end.
+  if (/<[A-Za-z]|(?<![=>\s-])>(?![=>])|(?<![=>-])>(?![=>\s])/.test(text.slice(statementStart(text, open), open))) return false;
   return /(?:^|[([,:?&|!]|\b(?:return|const|let|var|default|yield|await))\s*$/.test(before) && !/=>\s*$/.test(before);
 }
 
