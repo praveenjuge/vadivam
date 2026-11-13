@@ -190,6 +190,7 @@ describe("migrate-lucide", () => {
       `const linked = \`\${/\\/\\//.test(url) ? Object.keys({ LucideBell }).join() : ""}\`;`,
       `const linkish = (s) => { return /\\/\\//.test(s) ? { LucideBell } : null; };`,
       `const share = count++ / getSize({ LucideBell }) / 2;`,
+      `const width = available! / getSize({ LucideBell }) / 2;`,
     ].join("\n");
     const { text, warnings } = migrateSource(source);
     expect(text).toBe(
@@ -209,6 +210,7 @@ describe("migrate-lucide", () => {
         `const linked = \`\${/\\/\\//.test(url) ? Object.keys({ VadivamBell }).join() : ""}\`;`,
         `const linkish = (s) => { return /\\/\\//.test(s) ? { VadivamBell } : null; };`,
         `const share = count++ / getSize({ VadivamBell }) / 2;`,
+        `const width = available! / getSize({ VadivamBell }) / 2;`,
       ].join("\n"),
     );
     expect(warnings).toEqual([
@@ -223,6 +225,7 @@ describe("migrate-lucide", () => {
       "line 13: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
       "line 14: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
       "line 15: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 16: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
     ]);
   });
 

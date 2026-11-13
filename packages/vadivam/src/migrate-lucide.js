@@ -122,11 +122,11 @@ function regexEnd(text, position) {
 
 // Whether a `/` after `previous`, the last code character, opens a regular
 // expression: at the start, after an operator or opening bracket, or after a
-// keyword such as `return`, but not after a value (`total / 2`, `count++ / 2`)
-// or JSX `<`.
+// keyword such as `return`, but not after a value (`total / 2`, `count++ / 2`,
+// TypeScript's `size! / 2`) or JSX `<`.
 const regexCanStart = (previous, output) =>
   previous === "" ||
-  (/[(,=:[!&|?{;+\-*%~^]/.test(previous) && !/(?:\+\+|--)\s*$/.test(output.slice(-64))) ||
+  (/[(,=:[!&|?{;+\-*%~^]/.test(previous) && !/(?:\+\+|--|[\w$)\]]!)\s*$/.test(output.slice(-64))) ||
   (/[\w$]/.test(previous) &&
     /(?:^|[^\w$.])(?:return|typeof|case|do|else|in|of|void|yield|await|delete|new|instanceof)\s*$/.test(output.slice(-64)));
 
