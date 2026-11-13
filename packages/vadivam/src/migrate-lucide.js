@@ -199,6 +199,9 @@ function objectEntries(body) {
   return trimmed.every((entry) => objectEntry.test(entry)) ? trimmed : null;
 }
 
+// A JSX tag start or end. A `>` with space on both sides is a comparison.
+const jsxTag = /<[A-Za-z]|(?<![=>\s-])>(?![=>])|(?<![=>-])>(?![=>\s])/;
+
 /**
  * Whether the identifier at text[start, end) is a shorthand property of an
  * object literal or destructuring pattern (`{ a, LucideBell }`), where it is
@@ -221,15 +224,15 @@ function isShorthandProperty(text, start, end) {
   if (single && !/^[ \t]*(?:[;)\]},]|\r?\n|$)/.test(text.slice(close + 1))) return false;
   // After `=`, only a declaration (`const r: Record<string, Icon> = {`) or a
   // property or index target takes an object; a bare `name = {` could be a
-  // JSX attribute. A declaration's type may hold `<` and `>`, and JSX text
-  // can't start one, so only the other forms go through the JSX check below.
+  // JSX attribute. A declaration's type may hold `<` and `>`, so only the
+  // text before its keyword is checked for JSX (`<p>const icons = {`).
   if (/(?<![=!<>])=\s*$/.test(before)) {
-    if (/\b(?:const|let|var)\s+[\w$]+(?:\s*:[^=;{}]+)?\s*=\s*$/.test(before)) return true;
+    const declaration = before.match(/\b(?:const|let|var)\s+[\w$]+(?:\s*:[^=;{}]+)?\s*=\s*$/);
+    if (declaration) return !jsxTag.test(text.slice(statementStart(text, open), declaration.index));
     if (!/(?:\.[\w$]+|\])\s*=\s*$/.test(before)) return false;
   }
-  // Any JSX tag since the statement or group began (`<p>Icon: {`) means a JSX
-  // expression. A `>` with space on both sides is a comparison, not a tag end.
-  if (/<[A-Za-z]|(?<![=>\s-])>(?![=>])|(?<![=>-])>(?![=>\s])/.test(text.slice(statementStart(text, open), open))) return false;
+  // Any JSX tag since the statement or group began (`<p>Icon: {`) means a JSX expression.
+  if (jsxTag.test(text.slice(statementStart(text, open), open))) return false;
   if (/(?<![=!<>])=\s*$/.test(before)) return true;
   // A lone shorthand after punctuation could be JSX text (`<p>(Icon: {LucideBell})</p>`),
   // so it only counts after a keyword that starts an expression; elsewhere
