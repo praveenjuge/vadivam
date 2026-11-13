@@ -103,6 +103,21 @@ function enclosingBracket(text, index) {
 
 const previousNonSpace = (text, index) => text.slice(0, index).match(/(\S)\s*$/)?.[1];
 
+// Where the statement or group holding text[index] starts: just after the
+// nearest `;` or open bracket at the same depth.
+function statementStart(text, index) {
+  let depth = 0;
+  for (let position = index - 1; position >= 0; position -= 1) {
+    const character = text[position];
+    if (character === ")" || character === "]" || character === "}") depth += 1;
+    else if (character === "(" || character === "[" || character === "{") {
+      if (depth === 0) return position + 1;
+      depth -= 1;
+    } else if (character === ";" && depth === 0) return position + 1;
+  }
+  return 0;
+}
+
 // Whether the bracket at text[open] is closed by a `}`, skipping nested
 // groups; a `{` inside a string usually isn't.
 function closesWithBrace(text, open) {
@@ -131,10 +146,13 @@ function isShorthandProperty(text, start, end) {
   const open = enclosingBracket(text, start);
   if (open < 0 || text[open] !== "{" || !closesWithBrace(text, open)) return false;
   // Any JSX tag since the statement or group began (`<X icon = {`, `<p>Icon: {`) means a JSX expression.
-  const segmentStart = Math.max(enclosingBracket(text, open), text.lastIndexOf(";", open));
-  if (/<[A-Za-z]|(?<![=>-])>(?![=>])/.test(text.slice(segmentStart + 1, open))) return false;
+  if (/<[A-Za-z]|(?<![=>-])>(?![=>])/.test(text.slice(statementStart(text, open), open))) return false;
   const before = text.slice(0, open);
-  if (/(?<![=!<>])=\s*$/.test(before)) return /[\w$)\]]\s*=\s*$/.test(before);
+  // After `=`, only a declaration (`const r: Icons = {`) or a property or
+  // index target takes an object: a bare `name = {` could be a JSX attribute.
+  if (/(?<![=!<>])=\s*$/.test(before)) {
+    return /(?:\b(?:const|let|var)\s+[\w$]+(?:\s*:[^=;{}]+)?|\.[\w$]+|\])\s*=\s*$/.test(before);
+  }
   return /(?:^|[([,:?&|!]|\b(?:return|const|let|var|default|yield|await))\s*$/.test(before) && !/=>\s*$/.test(before);
 }
 

@@ -185,10 +185,12 @@ describe("migrate-lucide", () => {
       `config.icons = { LucideBell };`,
       `export default { LucideBell };`,
       `const { LucideBell = Fallback } = registry;`,
-      `registry = { LucideBell };`,
       `const typed: Icons = { LucideBell };`,
       `export const C = () => <p>Icon: {LucideBell}, again: {LucideBell}</p>;`,
       `call("example: {", LucideBell, other);`,
+      `export const D = () => <Item onClick={() => { go(); }} icon={LucideBell} />;`,
+      `export const E = () => <Item className="a;b" icon={LucideBell} />;`,
+      `export const F = () => (\n  <Item\n    label="x;y"\n    icon={LucideBell}\n    other = {LucideBell}\n  />\n);`,
     ].join("\n");
     expect(migrateSource(source).text).toBe(
       [
@@ -202,10 +204,12 @@ describe("migrate-lucide", () => {
         `config.icons = { LucideBell: VadivamBell };`,
         `export default { LucideBell: VadivamBell };`,
         `const { LucideBell: VadivamBell = Fallback } = registry;`,
-        `registry = { LucideBell: VadivamBell };`,
         `const typed: Icons = { LucideBell: VadivamBell };`,
         `export const C = () => <p>Icon: {VadivamBell}, again: {VadivamBell}</p>;`,
         `call("example: {", VadivamBell, other);`,
+        `export const D = () => <Item onClick={() => { go(); }} icon={VadivamBell} />;`,
+        `export const E = () => <Item className="a;b" icon={VadivamBell} />;`,
+        `export const F = () => (\n  <Item\n    label="x;y"\n    icon={VadivamBell}\n    other = {VadivamBell}\n  />\n);`,
       ].join("\n"),
     );
   });
