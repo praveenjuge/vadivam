@@ -1,6 +1,6 @@
 {
   "name": "vadivam-angular",
-  "version": "0.0.81",
+  "version": "0.0.82",
   "description": "Pixel-perfect 24px outline and solid icon directives for Angular with tree-shakeable imports.",
   "license": "MIT",
   "author": "Praveen Juge",
