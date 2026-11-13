@@ -93,8 +93,25 @@ const blank = (span) => span.replace(/[^\n]/g, " ");
 // the same offsets, so their brackets and commas don't count as code. Code in
 // a template's `${...}` stays, so an object there is still checked.
 function blankQuoted(text) {
+  return scanCode(text, 0, false).output;
+}
+
+// Where the ' or " string opening at text[position] ends, or -1 when that
+// quote can't open one: a string never follows a name (`Don't` in JSX text),
+// and one without a closing quote on its line is JSX text too.
+function stringEnd(text, position) {
+  if (position > 0 && /[\w$]/.test(text[position - 1])) return -1;
+  const quote = text[position];
+  let stop = position + 1;
+  while (stop < text.length && text[stop] !== quote && text[stop] !== "\n") stop += text[stop] === "\\" ? 2 : 1;
+  return stop < text.length && text[stop] === quote ? stop + 1 : -1;
+}
+
+// Scans code from `position`, blanking strings and comments. Inside a
+// template's `${...}` (`expression`), it stops after the `}` that closes it.
+function scanCode(text, position, expression) {
   let output = "";
-  let position = 0;
+  let depth = 0;
   while (position < text.length) {
     const character = text[position];
     const next = text[position + 1];
@@ -106,46 +123,48 @@ function blankQuoted(text) {
       const close = text.indexOf("\n", position);
       stop = close < 0 ? text.length : close;
     } else if (character === '"' || character === "'") {
-      stop = position + 1;
-      while (stop < text.length && text[stop] !== character && text[stop] !== "\n") stop += text[stop] === "\\" ? 2 : 1;
-      stop = Math.min(stop + 1, text.length);
+      stop = stringEnd(text, position);
     }
     if (stop >= 0) {
       output += blank(text.slice(position, stop));
       position = stop;
-      continue;
-    }
-    if (character !== "`") {
+    } else if (character === "`") {
+      const template = scanTemplate(text, position);
+      output += template.output;
+      position = template.position;
+    } else {
       output += character;
       position += 1;
-      continue;
+      if (expression && character === "{") depth += 1;
+      else if (expression && character === "}" && (depth -= 1) < 0) break;
     }
-    output += " ";
-    position += 1;
-    while (position < text.length && text[position] !== "`") {
-      if (text[position] === "\\") {
-        output += blank(text.slice(position, position + 2));
-        position += 2;
-      } else if (text[position] === "$" && text[position + 1] === "{") {
-        let depth = 0;
-        let close = position + 1;
-        for (; close < text.length; close += 1) {
-          if (text[close] === "{") depth += 1;
-          else if (text[close] === "}" && (depth -= 1) === 0) break;
-        }
-        output += text.slice(position, close + 1);
-        position = close + 1;
-      } else {
-        output += blank(text[position]);
-        position += 1;
-      }
-    }
-    if (position < text.length) {
-      output += " ";
+  }
+  return { output, position };
+}
+
+// Blanks the template literal opening at text[position], keeping the code in
+// its `${...}` expressions.
+function scanTemplate(text, position) {
+  let output = " ";
+  position += 1;
+  while (position < text.length && text[position] !== "`") {
+    if (text[position] === "\\") {
+      output += blank(text.slice(position, position + 2));
+      position += 2;
+    } else if (text[position] === "$" && text[position + 1] === "{") {
+      const expression = scanCode(text, position + 2, true);
+      output += `\${${expression.output}`;
+      position = expression.position;
+    } else {
+      output += blank(text[position]);
       position += 1;
     }
   }
-  return output;
+  if (position < text.length) {
+    output += " ";
+    position += 1;
+  }
+  return { output, position };
 }
 
 // Whether the identifier at text[start, end) sits where a shorthand property

@@ -183,6 +183,9 @@ describe("migrate-lucide", () => {
       `const face = { face: ":)", LucideBell };`,
       `const names = \`\${Object.keys({ LucideBell }).join()}\`;`,
       `export const A = () => <div icon={LucideBell}>{\`\${LucideBell}\`}</div>;`,
+      `const view = <p>Don't</p>; const byName = { LucideBell };`,
+      `const brace = \`\${"}" + Object.keys({ LucideBell })}\`;`,
+      `const shown = \`\${"{"}{ LucideBell }\`;`,
     ].join("\n");
     const { text, warnings } = migrateSource(source);
     expect(text).toBe(
@@ -191,10 +194,13 @@ describe("migrate-lucide", () => {
         `const registry = { VadivamBell };`,
         `call({ a, VadivamBell = Fallback });`,
         `const list = [VadivamBell, VadivamBell, VadivamBell];`,
-      `const noted = { /* icon */ VadivamBell, face: ":)" };`,
-      `const face = { face: ":)", VadivamBell };`,
-      `const names = \`\${Object.keys({ VadivamBell }).join()}\`;`,
+        `const noted = { /* icon */ VadivamBell, face: ":)" };`,
+        `const face = { face: ":)", VadivamBell };`,
+        `const names = \`\${Object.keys({ VadivamBell }).join()}\`;`,
         `export const A = () => <div icon={VadivamBell}>{\`\${VadivamBell}\`}</div>;`,
+        `const view = <p>Don't</p>; const byName = { VadivamBell };`,
+        `const brace = \`\${"}" + Object.keys({ VadivamBell })}\`;`,
+        `const shown = \`\${"{"}{ VadivamBell }\`;`,
       ].join("\n"),
     );
     expect(warnings).toEqual([
@@ -203,6 +209,8 @@ describe("migrate-lucide", () => {
       "line 5: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
       "line 6: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
       "line 7: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 9: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 10: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
     ]);
   });
 
