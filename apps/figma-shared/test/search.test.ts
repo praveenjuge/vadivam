@@ -22,6 +22,22 @@ describe("searchIcons", () => {
     expect(names("serch", { typos: true })).toEqual(["search"]);
   });
 
+  test("finds a hyphenated piece from the middle of a name", () => {
+    expect(names("down-0")).toEqual(["arrow-down-0-1"]);
+  });
+
+  test("ranks a joined multi-word query inside a name below a name prefix", () => {
+    const arrows = ["a-arrow-down", "arrow-down-0-1", "arrow-down"].map((name) => ({
+      ...nameFields(name),
+      tags: [],
+      categories: [],
+      categoryTitles: [],
+    }));
+    const ranked = (query: string) => searchIcons(arrows, query).map((entry) => entry.name);
+    expect(ranked("arrow down")).toEqual(["arrow-down", "arrow-down-0-1", "a-arrow-down"]);
+    expect(ranked("arrow-down")).toEqual(["arrow-down", "arrow-down-0-1", "a-arrow-down"]);
+  });
+
   test("filters by category id", () => {
     expect(names("", { category: "text" })).toEqual(["search"]);
     expect(names("cog", { category: "text" })).toEqual([]);

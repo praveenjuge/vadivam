@@ -52,7 +52,7 @@ function termRank(entry: SearchEntry, term: string, options: SearchOptions): num
   if (compactTerm) {
     if (entry.name === name || entry.compact === compactTerm) return 0;
     if (entry.name.startsWith(name) || entry.compact.startsWith(compactTerm)) return 1;
-    if (entry.words.includes(name) || entry.compact.includes(compactTerm)) return 2;
+    if (entry.name.includes(name) || entry.words.includes(name) || entry.compact.includes(compactTerm)) return 2;
   }
   // The raw word keeps symbol tags like `$`; the name word drops stray punctuation like `sort,`.
   const words = name && name !== term ? [term, name] : [term];
@@ -72,7 +72,7 @@ export function rankEntry(entry: SearchEntry, terms: readonly string[], options:
   const nameTerms = terms.map((term) => nameTerm(term, options));
   const joined = nameTerms.join("-");
   if (terms.length > 1 && nameTerms.every(Boolean) && entry.name.includes(joined)) {
-    return entry.name === joined ? 0 : 1;
+    return entry.name === joined ? 0 : entry.name.startsWith(joined) ? 1 : 2;
   }
   let rank = 0;
   for (const term of terms) {

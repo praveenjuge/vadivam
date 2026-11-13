@@ -61,6 +61,8 @@ let candidates: LucideIconRanking[] = [];
 let progress: CatalogProgress | null = null;
 let page: PageStatus | null = null;
 let busy = true;
+// Whether a catalog scan is the running action; the plugin starts with one.
+let scanning = true;
 let remoteSource: RemoteSource = "github";
 const sourceLabels: Record<RemoteSource, string> = { github: "GitHub main", npm: "npm latest" };
 
@@ -119,6 +121,7 @@ function startAction(text: string, message: UiToPluginMessage): void {
 
 function finishAction(text: string, tone: Tone): void {
   busy = false;
+  scanning = false;
   updateActions();
   setStatus(text, tone);
 }
@@ -466,6 +469,8 @@ function renderRenameIdeas(icons: RenameSuggestion[]): void {
 }
 
 function renameTo(renames: Array<{ id: string; name: string }>): void {
+  // Idea buttons stay enabled while busy, so don't start a second action.
+  if (busy) return;
   startAction(`Renaming ${plural(renames.length, "icon")}…`, { type: "rename", renames });
 }
 
@@ -611,6 +616,7 @@ function renderRemoteAdded(version: string, added: string[], failed: RemoteFailu
 // Actions
 
 refreshButton.addEventListener("click", () => {
+  scanning = true;
   startAction("Scanning every page…", { type: "refresh" });
 });
 generateButton.addEventListener("click", () => {
@@ -660,7 +666,10 @@ onPluginMessage<PluginToUiMessage>((message) => {
       renderLibrary();
       return;
     case "loading":
+      // A page change rescans on its own; during another action, that action finishes the status.
+      if (busy) return;
       busy = true;
+      scanning = true;
       updateActions();
       setStatus("Scanning every page…", "busy");
       return;
@@ -671,12 +680,14 @@ onPluginMessage<PluginToUiMessage>((message) => {
       renderCandidates();
       updateGenerateLabel();
       const left = progress.remaining;
-      finishAction(
+      const status =
         left === 0
           ? `All ${numberFormat.format(progress.drawn)} Lucide icons are drawn`
-          : `${plural(left, "Lucide icon")} left to draw`,
-        "idle",
-      );
+          : `${plural(left, "Lucide icon")} left to draw`;
+      // Other actions recount the catalog before they report, and a new frame
+      // count only resends it, so only a scan ends here.
+      if (scanning) finishAction(status, "idle");
+      else if (!busy) setStatus(status, "idle");
       return;
     }
     case "generated":
