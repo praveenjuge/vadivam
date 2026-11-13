@@ -101,7 +101,17 @@ function enclosingBracket(text, index) {
   return -1;
 }
 
-const previousNonSpace = (text, index) => text.slice(0, index).match(/(\S)\s*$/)?.[1];
+// The last character before text[index] that isn't space or a block comment.
+function previousNonSpace(text, index) {
+  let position = index - 1;
+  for (;;) {
+    while (position >= 0 && /\s/.test(text[position])) position -= 1;
+    if (position < 1 || text[position] !== "/" || text[position - 1] !== "*") return text[position];
+    const open = text.lastIndexOf("/*", position - 2);
+    if (open < 0) return text[position];
+    position = open - 1;
+  }
+}
 
 // Where the statement or group holding text[index] starts: just after the
 // nearest `;` or open bracket at the same depth.
@@ -118,11 +128,38 @@ function statementStart(text, index) {
   return 0;
 }
 
+// Where a string, template literal, or comment starting at text[position]
+// ends (the index of its last character), or -1 when none starts there.
+function quotedEnd(text, position) {
+  const character = text[position];
+  if (character === '"' || character === "'" || character === "`") {
+    for (let index = position + 1; index < text.length; index += 1) {
+      if (text[index] === "\\") index += 1;
+      else if (text[index] === character) return index;
+    }
+    return text.length - 1;
+  }
+  if (character === "/" && text[position + 1] === "*") {
+    const close = text.indexOf("*/", position + 2);
+    return close < 0 ? text.length - 1 : close + 1;
+  }
+  if (character === "/" && text[position + 1] === "/") {
+    const close = text.indexOf("\n", position + 2);
+    return close < 0 ? text.length - 1 : close - 1;
+  }
+  return -1;
+}
+
 // The index of the `}` that closes the bracket at text[open], skipping nested
-// groups, or -1 when another bracket closes it first.
+// groups, strings, and comments, or -1 when another bracket closes it first.
 function closingBrace(text, open) {
   let depth = 0;
   for (let position = open + 1; position < text.length; position += 1) {
+    const skipTo = quotedEnd(text, position);
+    if (skipTo >= 0) {
+      position = skipTo;
+      continue;
+    }
     const character = text[position];
     if (character === "(" || character === "[" || character === "{") depth += 1;
     else if (character === ")" || character === "]" || character === "}") {
@@ -136,13 +173,18 @@ function closingBrace(text, open) {
 const objectEntry = /^(?:\.\.\.|[\w$]+\s*(?:[:=(]|$)|(["'])(?:(?!\1)[^\\\n]|\\.)*\1\s*:|\[|\*|(?:get|set|async)\s+[\w$*["'[])/;
 
 // Whether every top-level, comma-separated entry of a brace group's body
-// starts like an object or pattern entry. Braces in strings
+// (its strings and comments skipped) starts like an object or pattern entry. Braces in strings
 // (`call("a: {", LucideBell, "}")`) leave stray quotes that don't.
 function isObjectBody(body) {
   const entries = [];
   let depth = 0;
   let entryStart = 0;
   for (let position = 0; position < body.length; position += 1) {
+    const skipTo = quotedEnd(body, position);
+    if (skipTo >= 0) {
+      position = skipTo;
+      continue;
+    }
     const character = body[position];
     if (character === "(" || character === "[" || character === "{") depth += 1;
     else if (character === ")" || character === "]" || character === "}") depth -= 1;
@@ -153,7 +195,7 @@ function isObjectBody(body) {
   }
   entries.push(body.slice(entryStart));
   return entries.every((entry, index) => {
-    const trimmed = entry.trim();
+    const trimmed = entry.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "").trim();
     return trimmed === "" ? index === entries.length - 1 : objectEntry.test(trimmed);
   });
 }
@@ -171,7 +213,7 @@ function isShorthandProperty(text, start, end) {
   const open = enclosingBracket(text, start);
   if (open < 0 || text[open] !== "{") return false;
   const close = closingBrace(text, open);
-  if (close < 0 || !isObjectBody(text.slice(open + 1, close))) return false;
+  if (close < end || !isObjectBody(text.slice(open + 1, close))) return false;
   // Any JSX tag since the statement or group began (`<X icon = {`, `<p>Icon: {`) means a JSX expression.
   if (/<[A-Za-z]|(?<![=>-])>(?![=>])/.test(text.slice(statementStart(text, open), open))) return false;
   const before = text.slice(0, open);
