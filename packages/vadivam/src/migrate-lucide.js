@@ -95,7 +95,19 @@ const renameIdentifier = (identifier) =>
 function looksLikeShorthand(text, start, end) {
   const before = text.slice(0, start).match(/([{,])\s*$/);
   if (!before || !/^\s*(?:[},]|=(?![=>]))/.test(text.slice(end))) return false;
-  if (before[1] === ",") return true;
+  if (before[1] === ",") {
+    // Only inside braces: `[LucideBell, LucideHome]` and call arguments aren't objects.
+    let depth = 0;
+    for (let position = start - 1; position >= 0; position -= 1) {
+      const character = text[position];
+      if (character === ")" || character === "]" || character === "}") depth += 1;
+      else if (character === "(" || character === "[" || character === "{") {
+        if (depth === 0) return character === "{";
+        depth -= 1;
+      }
+    }
+    return false;
+  }
   return !/(?:[\w$-]=|\$)$/.test(text.slice(0, start - before[0].length));
 }
 

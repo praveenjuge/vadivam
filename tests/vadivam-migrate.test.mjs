@@ -178,6 +178,7 @@ describe("migrate-lucide", () => {
       `import { LucideBell } from "lucide-react";`,
       `const registry = { LucideBell };`,
       `call({ a, LucideBell = Fallback });`,
+      `const list = [LucideBell, LucideBell, LucideBell];`,
       `export const A = () => <div icon={LucideBell}>{\`\${LucideBell}\`}</div>;`,
     ].join("\n");
     const { text, warnings } = migrateSource(source);
@@ -186,6 +187,7 @@ describe("migrate-lucide", () => {
         `import { VadivamBell } from "vadivam-react";`,
         `const registry = { VadivamBell };`,
         `call({ a, VadivamBell = Fallback });`,
+        `const list = [VadivamBell, VadivamBell, VadivamBell];`,
         `export const A = () => <div icon={VadivamBell}>{\`\${VadivamBell}\`}</div>;`,
       ].join("\n"),
     );
