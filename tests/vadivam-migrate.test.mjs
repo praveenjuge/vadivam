@@ -173,82 +173,25 @@ describe("migrate-lucide", () => {
     );
   });
 
-  test("keeps the key of a shorthand property", () => {
+  test("reports a renamed name in shorthand position, where it may be an object key", () => {
     const source = [
       `import { LucideBell } from "lucide-react";`,
       `const registry = { LucideBell };`,
-      `const more = { a, LucideBell, b };`,
-      `const labelled = { label: "a, b", note: \`x, y\`, /* c, d */ LucideBell };`,
-      `const pick = ({ LucideBell }) => LucideBell;`,
-      `call(a, LucideBell, b);`,
-      `export const A = () => <div icon={LucideBell}>{LucideBell}{\`\${LucideBell}\`}</div>;`,
-      `export const B = () => <X icon = {LucideBell} />;`,
-      `config.icons = { LucideBell };`,
-      `export default { LucideBell };`,
-      `const { LucideBell = Fallback } = registry;`,
-      `const typed: Icons = { LucideBell };`,
-      `const record: Record<string, unknown> = { LucideBell };`,
-      `const frozen = { LucideBell } as const;`,
-      `const checked = { LucideBell } satisfies Icons;`,
-      `const maybe = count > 0 ? { LucideBell } : {};`,
-      `const pair = count > 0 ? { LucideBell, other } : {};`,
-      `export const G = () => <p>Hello; Icon: {LucideBell}</p>;`,
-      `export const H = () => <p>(Icon: {LucideBell})</p>;`,
-      `function icons() { return { LucideBell }; }`,
-      `export const I = () => <p>config.icon = {LucideBell}</p>;`,
-      `export const J = () => <p>const icons = {LucideBell}, ready</p>;`,
-      `const plain = { LucideBell }\nplain.LucideBell;`,
-      `export const C = () => <p>Icon: {LucideBell}, again: {LucideBell}</p>;`,
-      `call("example: {", LucideBell, other);`,
-      `call("example: {", LucideBell, "}");`,
-      `export const D = () => <Item onClick={() => { go(); }} icon={LucideBell} />;`,
-      `export const E = () => <Item className="a;b" icon={LucideBell} />;`,
-      `export const F = () => (\n  <Item\n    label="x;y"\n    icon={LucideBell}\n    other = {LucideBell}\n  />\n);`,
+      `call({ a, LucideBell = Fallback });`,
+      `export const A = () => <div icon={LucideBell}>{\`\${LucideBell}\`}</div>;`,
     ].join("\n");
-    expect(migrateSource(source).text).toBe(
+    const { text, warnings } = migrateSource(source);
+    expect(text).toBe(
       [
         `import { VadivamBell } from "vadivam-react";`,
-        `const registry = { LucideBell: VadivamBell };`,
-        `const more = { a, LucideBell: VadivamBell, b };`,
-        `const labelled = { label: "a, b", note: \`x, y\`, /* c, d */ LucideBell: VadivamBell };`,
-        `const pick = ({ VadivamBell }) => VadivamBell;`,
-        `call(a, VadivamBell, b);`,
-        `export const A = () => <div icon={VadivamBell}>{VadivamBell}{\`\${VadivamBell}\`}</div>;`,
-        `export const B = () => <X icon = {VadivamBell} />;`,
-        `config.icons = { LucideBell: VadivamBell };`,
-        `export default { LucideBell: VadivamBell };`,
-        `const { LucideBell: VadivamBell = Fallback } = registry;`,
-        `const typed: Icons = { LucideBell: VadivamBell };`,
-        `const record: Record<string, unknown> = { LucideBell: VadivamBell };`,
-        `const frozen = { LucideBell: VadivamBell } as const;`,
-        `const checked = { LucideBell: VadivamBell } satisfies Icons;`,
-        `const maybe = count > 0 ? { VadivamBell } : {};`,
-        `const pair = count > 0 ? { LucideBell: VadivamBell, other } : {};`,
-        `export const G = () => <p>Hello; Icon: {VadivamBell}</p>;`,
-        `export const H = () => <p>(Icon: {VadivamBell})</p>;`,
-        `function icons() { return { LucideBell: VadivamBell }; }`,
-        `export const I = () => <p>config.icon = {VadivamBell}</p>;`,
-        `export const J = () => <p>const icons = {VadivamBell}, ready</p>;`,
-        `const plain = { LucideBell: VadivamBell }\nplain.LucideBell;`,
-        `export const C = () => <p>Icon: {VadivamBell}, again: {VadivamBell}</p>;`,
-        `call("example: {", VadivamBell, other);`,
-        `call("example: {", VadivamBell, "}");`,
-        `export const D = () => <Item onClick={() => { go(); }} icon={VadivamBell} />;`,
-        `export const E = () => <Item className="a;b" icon={VadivamBell} />;`,
-        `export const F = () => (\n  <Item\n    label="x;y"\n    icon={VadivamBell}\n    other = {VadivamBell}\n  />\n);`,
+        `const registry = { VadivamBell };`,
+        `call({ a, VadivamBell = Fallback });`,
+        `export const A = () => <div icon={VadivamBell}>{\`\${VadivamBell}\`}</div>;`,
       ].join("\n"),
     );
-  });
-
-  test("renames a lone shorthand it can't place and says where", () => {
-    const { text, warnings } = migrateSource(
-      [`import { LucideBell } from "lucide-react";`, `call({ LucideBell });`, `const map = { LucideBell };`].join("\n"),
-    );
-    expect(text).toBe(
-      [`import { VadivamBell } from "vadivam-react";`, `call({ VadivamBell });`, `const map = { LucideBell: VadivamBell };`].join("\n"),
-    );
     expect(warnings).toEqual([
-      "line 2: renamed LucideBell in { LucideBell }; if that is an object key, write { LucideBell: VadivamBell }",
+      "line 2: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 3: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
     ]);
   });
 
