@@ -119,7 +119,7 @@ function isShorthandProperty(text, start, end) {
   if (/(?<![=!<>])=\s*$/.test(before)) {
     return /(?:\b(?:const|let|var)\s+[\w$]+|\.[\w$]+|\])\s*=\s*$/.test(before);
   }
-  return /(?:^|[([,:?&|!]|\b(?:return|const|let|var))\s*$/.test(before) && !/=>\s*$/.test(before);
+  return /(?:^|[([,:?&|!]|\b(?:return|const|let|var|default|yield|await))\s*$/.test(before) && !/=>\s*$/.test(before);
 }
 
 /**

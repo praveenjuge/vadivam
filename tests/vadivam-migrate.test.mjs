@@ -183,6 +183,7 @@ describe("migrate-lucide", () => {
       `export const A = () => <div icon={LucideBell}>{LucideBell}{\`\${LucideBell}\`}</div>;`,
       `export const B = () => <X icon = {LucideBell} />;`,
       `config.icons = { LucideBell };`,
+      `export default { LucideBell };`,
     ].join("\n");
     expect(migrateSource(source).text).toBe(
       [
@@ -194,6 +195,7 @@ describe("migrate-lucide", () => {
         `export const A = () => <div icon={VadivamBell}>{VadivamBell}{\`\${VadivamBell}\`}</div>;`,
         `export const B = () => <X icon = {VadivamBell} />;`,
         `config.icons = { LucideBell: VadivamBell };`,
+        `export default { LucideBell: VadivamBell };`,
       ].join("\n"),
     );
   });
