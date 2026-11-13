@@ -1,3 +1,6 @@
+// Flutter 3.50 deprecates this import in favour of the material_ui package;
+// the example keeps it so it runs on every Flutter version the package supports.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:vadivam/vadivam.dart';
 
