@@ -172,10 +172,10 @@ function closingBrace(text, open) {
 
 const objectEntry = /^(?:\.\.\.|[\w$]+\s*(?:[:=(]|$)|(["'])(?:(?!\1)[^\\\n]|\\.)*\1\s*:|\[|\*|(?:get|set|async)\s+[\w$*["'[])/;
 
-// Whether every top-level, comma-separated entry of a brace group's body
-// (its strings and comments skipped) starts like an object or pattern entry. Braces in strings
+// A brace group body's top-level, comma-separated entries (its strings and
+// comments skipped), or null unless each starts like an object or pattern entry. Braces in strings
 // (`call("a: {", LucideBell, "}")`) leave stray quotes that don't.
-function isObjectBody(body) {
+function objectEntries(body) {
   const entries = [];
   let depth = 0;
   let entryStart = 0;
@@ -194,10 +194,9 @@ function isObjectBody(body) {
     }
   }
   entries.push(body.slice(entryStart));
-  return entries.every((entry, index) => {
-    const trimmed = entry.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "").trim();
-    return trimmed === "" ? index === entries.length - 1 : objectEntry.test(trimmed);
-  });
+  const trimmed = entries.map((entry) => entry.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "").trim());
+  if (trimmed.at(-1) === "") trimmed.pop();
+  return trimmed.every((entry) => objectEntry.test(entry)) ? trimmed : null;
 }
 
 /**
@@ -213,7 +212,8 @@ function isShorthandProperty(text, start, end) {
   const open = enclosingBracket(text, start);
   if (open < 0 || text[open] !== "{") return false;
   const close = closingBrace(text, open);
-  if (close < end || !isObjectBody(text.slice(open + 1, close))) return false;
+  const entries = close < end ? null : objectEntries(text.slice(open + 1, close));
+  if (!entries || entries.length === 0) return false;
   const before = text.slice(0, open);
   // After `=`, only a declaration (`const r: Record<string, Icon> = {`) or a
   // property or index target takes an object, and neither can be JSX; a bare
@@ -224,6 +224,12 @@ function isShorthandProperty(text, start, end) {
   // Any JSX tag since the statement or group began (`<p>Icon: {`) means a JSX
   // expression. A `>` with space on both sides is a comparison, not a tag end.
   if (/<[A-Za-z]|(?<![=>\s-])>(?![=>])|(?<![=>-])>(?![=>\s])/.test(text.slice(statementStart(text, open), open))) return false;
+  // A JSX expression holds one expression, so a lone `{LucideBell}` after
+  // punctuation could be JSX text (`<p>(Icon: {LucideBell})</p>`); it only
+  // counts after a keyword that starts an expression, and before an end.
+  if (entries.length === 1 && !/=/.test(entries[0])) {
+    return /\b(?:return|default|yield|await)\s*$/.test(before) && /^\s*(?:[;)\]},]|$)/.test(text.slice(close + 1));
+  }
   return /(?:^|[([,:?&|!]|\b(?:return|const|let|var|default|yield|await))\s*$/.test(before) && !/=>\s*$/.test(before);
 }
 
