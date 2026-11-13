@@ -181,6 +181,8 @@ describe("migrate-lucide", () => {
       `const pick = ({ LucideBell }) => LucideBell;`,
       `call(a, LucideBell, b);`,
       `export const A = () => <div icon={LucideBell}>{LucideBell}{\`\${LucideBell}\`}</div>;`,
+      `export const B = () => <X icon = {LucideBell} />;`,
+      `config.icons = { LucideBell };`,
     ].join("\n");
     expect(migrateSource(source).text).toBe(
       [
@@ -190,6 +192,8 @@ describe("migrate-lucide", () => {
         `const pick = ({ LucideBell: VadivamBell }) => VadivamBell;`,
         `call(a, VadivamBell, b);`,
         `export const A = () => <div icon={VadivamBell}>{VadivamBell}{\`\${VadivamBell}\`}</div>;`,
+        `export const B = () => <X icon = {VadivamBell} />;`,
+        `config.icons = { LucideBell: VadivamBell };`,
       ].join("\n"),
     );
   });

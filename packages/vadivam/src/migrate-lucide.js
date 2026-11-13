@@ -114,9 +114,12 @@ function isShorthandProperty(text, start, end) {
   const open = enclosingBracket(text, start);
   if (open < 0 || text[open] !== "{") return false;
   const before = text.slice(0, open);
-  // An attribute expression (`icon={...}`) follows its `=` with no space.
-  if (/[\w$-]=$/.test(before)) return false;
-  return /(?:^|[([,:?=&|!]|\b(?:return|const|let|var))\s*$/.test(before) && !/=>\s*$/.test(before);
+  // After `=`, only a declaration or a property assignment takes an object:
+  // `icon={...}` and `icon = {...}` are JSX attribute expressions.
+  if (/(?<![=!<>])=\s*$/.test(before)) {
+    return /(?:\b(?:const|let|var)\s+[\w$]+|\.[\w$]+|\])\s*=\s*$/.test(before);
+  }
+  return /(?:^|[([,:?&|!]|\b(?:return|const|let|var))\s*$/.test(before) && !/=>\s*$/.test(before);
 }
 
 /**
