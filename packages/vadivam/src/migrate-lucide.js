@@ -215,21 +215,25 @@ function isShorthandProperty(text, start, end) {
   const entries = close < end ? null : objectEntries(text.slice(open + 1, close));
   if (!entries || entries.length === 0) return false;
   const before = text.slice(0, open);
+  // A JSX expression holds one expression, so a lone `{LucideBell}` must end
+  // where a statement or an argument can, not before JSX (`{LucideBell}</p>`).
+  const single = entries.length === 1 && !/=/.test(entries[0]);
+  if (single && !/^[ \t]*(?:[;)\]},]|\r?\n|$)/.test(text.slice(close + 1))) return false;
   // After `=`, only a declaration (`const r: Record<string, Icon> = {`) or a
-  // property or index target takes an object, and neither can be JSX; a bare
-  // `name = {` could be a JSX attribute.
+  // property or index target takes an object; a bare `name = {` could be a
+  // JSX attribute. A declaration's type may hold `<` and `>`, and JSX text
+  // can't start one, so only the other forms go through the JSX check below.
   if (/(?<![=!<>])=\s*$/.test(before)) {
-    return /(?:\b(?:const|let|var)\s+[\w$]+(?:\s*:[^=;{}]+)?|\.[\w$]+|\])\s*=\s*$/.test(before);
+    if (/\b(?:const|let|var)\s+[\w$]+(?:\s*:[^=;{}]+)?\s*=\s*$/.test(before)) return true;
+    if (!/(?:\.[\w$]+|\])\s*=\s*$/.test(before)) return false;
   }
   // Any JSX tag since the statement or group began (`<p>Icon: {`) means a JSX
   // expression. A `>` with space on both sides is a comparison, not a tag end.
   if (/<[A-Za-z]|(?<![=>\s-])>(?![=>])|(?<![=>-])>(?![=>\s])/.test(text.slice(statementStart(text, open), open))) return false;
-  // A JSX expression holds one expression, so a lone `{LucideBell}` after
-  // punctuation could be JSX text (`<p>(Icon: {LucideBell})</p>`); it only
-  // counts after a keyword that starts an expression, and before an end.
-  if (entries.length === 1 && !/=/.test(entries[0])) {
-    return /\b(?:return|default|yield|await)\s*$/.test(before) && /^\s*(?:[;)\]},]|$)/.test(text.slice(close + 1));
-  }
+  if (/(?<![=!<>])=\s*$/.test(before)) return true;
+  // A lone shorthand after punctuation could be JSX text (`<p>(Icon: {LucideBell})</p>`),
+  // so it only counts after a keyword that starts an expression.
+  if (single) return /\b(?:return|default|yield|await)\s*$/.test(before);
   return /(?:^|[([,:?&|!]|\b(?:return|const|let|var|default|yield|await))\s*$/.test(before) && !/=>\s*$/.test(before);
 }
 
