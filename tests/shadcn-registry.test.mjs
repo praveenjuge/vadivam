@@ -106,6 +106,15 @@ describe("shadcn registry", () => {
     }
   });
 
+  test("an undefined aria-label leaves the icon decorative", async () => {
+    const load = await installItems("", ["bell"]);
+    const { default: Bell } = await load("bell");
+    expect(svgAttributes(renderToStaticMarkup(createElement(Bell, { "aria-label": undefined })))["aria-hidden"]).toBe("true");
+    const labelled = svgAttributes(renderToStaticMarkup(createElement(Bell, { "aria-label": "Alerts" })));
+    expect(labelled["aria-hidden"]).toBeUndefined();
+    expect(labelled["aria-label"]).toBe("Alerts");
+  });
+
   test("the base item is self-contained React with no npm dependency", () => {
     const item = readJson(`${baseItemName}.json`);
     expect(item).not.toHaveProperty("registryDependencies");

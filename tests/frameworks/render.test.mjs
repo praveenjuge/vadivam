@@ -56,6 +56,14 @@ describe("framework-native server rendering", () => {
     assertSafeFallback(await renderVue(app));
   });
 
+  test("Vue casts a bare absolute-stroke-width attribute to true", async () => {
+    // A template's bare `absolute-stroke-width` compiles to an empty string.
+    const app = createSSRApp({
+      render: () => vueH(VueActivity, { "absolute-stroke-width": "", size: 48 }),
+    });
+    expect(svgAttributes(await renderVue(app))["stroke-width"]).toBe("1");
+  });
+
   test("Vue strips executable custom icon data during SSR", async () => {
     const app = createSSRApp({
       render: () => vueH(VueIcon, {

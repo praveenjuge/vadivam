@@ -51,7 +51,8 @@ ${style.stroked ? `  strokeWidth = ${defaultStrokeWidth},\n  absoluteStrokeWidth
   children,
   ...props
 }: VadivamIconProps & { name: string }) {
-  const labelled = isLabelled(title, Object.keys(props));
+  // Props passed as undefined, like aria-label={maybeLabel} with no label, don't label the icon.
+  const labelled = isLabelled(title, Object.entries(props).flatMap(([key, value]) => (value == null ? [] : [key])));
   return (
     <svg
       ${rootAttributeMarkup(style, bindings, { camel: true, separator: "\n      " })}
