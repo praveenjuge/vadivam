@@ -118,19 +118,44 @@ function statementStart(text, index) {
   return 0;
 }
 
-// Whether the bracket at text[open] is closed by a `}`, skipping nested
-// groups; a `{` inside a string usually isn't.
-function closesWithBrace(text, open) {
+// The index of the `}` that closes the bracket at text[open], skipping nested
+// groups, or -1 when another bracket closes it first.
+function closingBrace(text, open) {
   let depth = 0;
   for (let position = open + 1; position < text.length; position += 1) {
     const character = text[position];
     if (character === "(" || character === "[" || character === "{") depth += 1;
     else if (character === ")" || character === "]" || character === "}") {
-      if (depth === 0) return character === "}";
+      if (depth === 0) return character === "}" ? position : -1;
       depth -= 1;
     }
   }
-  return false;
+  return -1;
+}
+
+const objectEntry = /^(?:\.\.\.|[\w$]+\s*(?:[:=(]|$)|(["'])(?:(?!\1)[^\\\n]|\\.)*\1\s*:|\[|\*|(?:get|set|async)\s+[\w$*["'[])/;
+
+// Whether every top-level, comma-separated entry of a brace group's body
+// starts like an object or pattern entry. Braces in strings
+// (`call("a: {", LucideBell, "}")`) leave stray quotes that don't.
+function isObjectBody(body) {
+  const entries = [];
+  let depth = 0;
+  let entryStart = 0;
+  for (let position = 0; position < body.length; position += 1) {
+    const character = body[position];
+    if (character === "(" || character === "[" || character === "{") depth += 1;
+    else if (character === ")" || character === "]" || character === "}") depth -= 1;
+    else if (character === "," && depth === 0) {
+      entries.push(body.slice(entryStart, position));
+      entryStart = position + 1;
+    }
+  }
+  entries.push(body.slice(entryStart));
+  return entries.every((entry, index) => {
+    const trimmed = entry.trim();
+    return trimmed === "" ? index === entries.length - 1 : objectEntry.test(trimmed);
+  });
 }
 
 /**
@@ -144,7 +169,9 @@ function isShorthandProperty(text, start, end) {
   // A destructuring default (`{ LucideBell = Fallback }`) is shorthand too.
   if (!/^[{,]$/.test(previousNonSpace(text, start) ?? "") || !/^\s*(?:[},]|=(?![=>]))/.test(text.slice(end))) return false;
   const open = enclosingBracket(text, start);
-  if (open < 0 || text[open] !== "{" || !closesWithBrace(text, open)) return false;
+  if (open < 0 || text[open] !== "{") return false;
+  const close = closingBrace(text, open);
+  if (close < 0 || !isObjectBody(text.slice(open + 1, close))) return false;
   // Any JSX tag since the statement or group began (`<X icon = {`, `<p>Icon: {`) means a JSX expression.
   if (/<[A-Za-z]|(?<![=>-])>(?![=>])/.test(text.slice(statementStart(text, open), open))) return false;
   const before = text.slice(0, open);
