@@ -173,6 +173,27 @@ describe("migrate-lucide", () => {
     );
   });
 
+  test("keeps the key of a shorthand property", () => {
+    const source = [
+      `import { LucideBell } from "lucide-react";`,
+      `const registry = { LucideBell };`,
+      `const more = { a, LucideBell, b };`,
+      `const pick = ({ LucideBell }) => LucideBell;`,
+      `call(a, LucideBell, b);`,
+      `export const A = () => <div icon={LucideBell}>{LucideBell}{\`\${LucideBell}\`}</div>;`,
+    ].join("\n");
+    expect(migrateSource(source).text).toBe(
+      [
+        `import { VadivamBell } from "vadivam-react";`,
+        `const registry = { LucideBell: VadivamBell };`,
+        `const more = { a, LucideBell: VadivamBell, b };`,
+        `const pick = ({ LucideBell: VadivamBell }) => VadivamBell;`,
+        `call(a, VadivamBell, b);`,
+        `export const A = () => <div icon={VadivamBell}>{VadivamBell}{\`\${VadivamBell}\`}</div>;`,
+      ].join("\n"),
+    );
+  });
+
   test("warns about mock factories, whose keys it cannot rewrite", () => {
     const { text, warnings } = migrateSource(`vi.mock("lucide-react", () => ({ LucideBell: () => null }));`);
     expect(text).toBe(`vi.mock("vadivam-react", () => ({ LucideBell: () => null }));`);

@@ -87,6 +87,38 @@ const renameIdentifier = (identifier) =>
     ? identifier.replace(/Lucide/g, "Vadivam").replace(/LUCIDE/g, "VADIVAM")
     : identifier;
 
+// The bracket that opens the innermost group around `index`, or -1.
+function enclosingBracket(text, index) {
+  let depth = 0;
+  for (let position = index - 1; position >= 0; position -= 1) {
+    const character = text[position];
+    if (character === ")" || character === "]" || character === "}") depth += 1;
+    else if (character === "(" || character === "[" || character === "{") {
+      if (depth === 0) return position;
+      depth -= 1;
+    }
+  }
+  return -1;
+}
+
+const previousNonSpace = (text, index) => text.slice(0, index).match(/(\S)\s*$/)?.[1];
+
+/**
+ * Whether the identifier at text[start, end) is a shorthand property of an
+ * object literal or destructuring pattern (`{ a, LucideBell }`), where it is
+ * also the key. A JSX or template expression (`icon={LucideBell}`,
+ * `<p>{LucideBell}</p>`) is not.
+ */
+function isShorthandProperty(text, start, end) {
+  if (!/^[{,]$/.test(previousNonSpace(text, start) ?? "") || !/^\s*[},]/.test(text.slice(end))) return false;
+  const open = enclosingBracket(text, start);
+  if (open < 0 || text[open] !== "{") return false;
+  const before = text.slice(0, open);
+  // An attribute expression (`icon={...}`) follows its `=` with no space.
+  if (/[\w$-]=$/.test(before)) return false;
+  return /(?:^|[([,:?=&|!]|\b(?:return|const|let|var))\s*$/.test(before) && !/=>\s*$/.test(before);
+}
+
 /**
  * Rewrite one source file. Returns the new text, how many edits it made, and
  * warnings for anything left to migrate by hand.
@@ -144,7 +176,7 @@ export function migrateSource(text, { styles = false } = {}) {
       // new name.
       output = output.replace(
         /\bimport\s+(?:type\s+)?(?:[\w$]+\s*,?\s*)?(?:\*\s+as\s+[\w$]+|\{[^}]*\})?\s*from\s*["'][^"']*["']|\bexport\s+(?:type\s+)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})\s*from\s*["'][^"']*["']|\bexport\s*(?:type\s*)?\{([^}]*)\}|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|(?<=[{,]\s*)[A-Za-z_$][\w$]*(?=\s*:(?!:))|(?<![\w$.])([A-Za-z_$][\w$]*)/g,
-        (match, exportList, identifier) => {
+        (match, exportList, identifier, offset, source) => {
           if (exportList !== undefined) {
             return match.replace(exportList, (list) =>
               list.replace(/([\w$]+)(\s+as\s+[\w$]+)?/g, (entry, name, alias) => {
@@ -158,7 +190,8 @@ export function migrateSource(text, { styles = false } = {}) {
           const renamed = identifier && renames.get(identifier);
           if (!renamed) return match;
           changes += 1;
-          return renamed;
+          // `{ LucideBell }` keeps its key: `{ LucideBell: VadivamBell }`.
+          return isShorthandProperty(source, offset, offset + match.length) ? `${match}: ${renamed}` : renamed;
         },
       );
     }
