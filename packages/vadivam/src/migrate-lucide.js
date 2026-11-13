@@ -203,8 +203,8 @@ function objectEntries(body) {
  * Whether the identifier at text[start, end) is a shorthand property of an
  * object literal or destructuring pattern (`{ a, LucideBell }`), where it is
  * also the key. A JSX or template expression (`icon={LucideBell}`,
- * `<p>Icon: {LucideBell}</p>`) is not. When unsure, it says no: renaming a
- * key keeps the code valid, but misreading JSX would break it.
+ * `<p>Icon: {LucideBell}</p>`) is not. When unsure it says "unsure": renaming
+ * a key keeps the code valid, but misreading JSX would break it.
  */
 function isShorthandProperty(text, start, end) {
   // A destructuring default (`{ LucideBell = Fallback }`) is shorthand too.
@@ -232,8 +232,12 @@ function isShorthandProperty(text, start, end) {
   if (/<[A-Za-z]|(?<![=>\s-])>(?![=>])|(?<![=>-])>(?![=>\s])/.test(text.slice(statementStart(text, open), open))) return false;
   if (/(?<![=!<>])=\s*$/.test(before)) return true;
   // A lone shorthand after punctuation could be JSX text (`<p>(Icon: {LucideBell})</p>`),
-  // so it only counts after a keyword that starts an expression.
-  if (single) return /\b(?:return|default|yield|await)\s*$/.test(before);
+  // so it only counts after a keyword that starts an expression; elsewhere
+  // (`call({ LucideBell })`) it is renamed as before and reported to check.
+  if (single) {
+    if (/\b(?:return|default|yield|await)\s*$/.test(before)) return true;
+    return /[([,:?&|!]\s*$/.test(before) && !/=>\s*$/.test(before) ? "unsure" : false;
+  }
   return /(?:^|[([,:?&|!]|\b(?:return|const|let|var|default|yield|await))\s*$/.test(before) && !/=>\s*$/.test(before);
 }
 
@@ -309,7 +313,12 @@ export function migrateSource(text, { styles = false } = {}) {
           if (!renamed) return match;
           changes += 1;
           // `{ LucideBell }` keeps its key: `{ LucideBell: VadivamBell }`.
-          return isShorthandProperty(source, offset, offset + match.length) ? `${match}: ${renamed}` : renamed;
+          const shorthand = isShorthandProperty(source, offset, offset + match.length);
+          if (shorthand === "unsure") {
+            const line = source.slice(0, offset).split("\n").length;
+            warnings.push(`line ${line}: renamed ${match} in { ${match} }; if that is an object key, write { ${match}: ${renamed} }`);
+          }
+          return shorthand === true ? `${match}: ${renamed}` : renamed;
         },
       );
     }

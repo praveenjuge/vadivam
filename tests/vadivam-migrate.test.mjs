@@ -234,6 +234,18 @@ describe("migrate-lucide", () => {
     );
   });
 
+  test("renames a lone shorthand it can't place and says where", () => {
+    const { text, warnings } = migrateSource(
+      [`import { LucideBell } from "lucide-react";`, `call({ LucideBell });`, `const map = { LucideBell };`].join("\n"),
+    );
+    expect(text).toBe(
+      [`import { VadivamBell } from "vadivam-react";`, `call({ VadivamBell });`, `const map = { LucideBell: VadivamBell };`].join("\n"),
+    );
+    expect(warnings).toEqual([
+      "line 2: renamed LucideBell in { LucideBell }; if that is an object key, write { LucideBell: VadivamBell }",
+    ]);
+  });
+
   test("warns about mock factories, whose keys it cannot rewrite", () => {
     const { text, warnings } = migrateSource(`vi.mock("lucide-react", () => ({ LucideBell: () => null }));`);
     expect(text).toBe(`vi.mock("vadivam-react", () => ({ LucideBell: () => null }));`);
