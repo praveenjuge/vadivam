@@ -171,9 +171,10 @@ function isOwnedByAnother(frames: ReadonlyMap<string, SceneNode[]>, name: string
   return (frames.get(name) ?? []).some((owner) => owner !== node);
 }
 
-function postCatalog(): void {
+function postCatalog(scan = false): void {
   post({
     type: "catalog",
+    scan,
     progress: { lucideVersion, drawn: rankedLucideIcons.length - candidates.length, remaining: candidates.length },
     candidates: candidates.slice(0, settings.batchSize),
   });
@@ -185,16 +186,16 @@ function missingIcons(pages: LoadedPages): LucideIconRanking[] {
 }
 
 // Recounts the drawn icons after anything that adds or renames frames.
-function publishCatalog(pages: LoadedPages): void {
+function publishCatalog(pages: LoadedPages, scan = false): void {
   candidates = missingIcons(pages);
-  postCatalog();
+  postCatalog(scan);
   publishPageStatus();
 }
 
 async function refreshCatalog(): Promise<void> {
   post({ type: "loading" });
   scannedStyle = pageStyle(figma.currentPage);
-  publishCatalog(await loadStylePages());
+  publishCatalog(await loadStylePages(), true);
 }
 
 function createIconFrame(name: string, position: IconPosition): FrameNode {

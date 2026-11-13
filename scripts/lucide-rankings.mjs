@@ -68,12 +68,14 @@ export function decodeStringLiteral(source, quoteIndex) {
     if (escaped === "u") {
       const braced = source[index + 1] === "{";
       const end = braced ? source.indexOf("}", index + 2) : index + 5;
+      if (end < 0) throw new Error("Invalid Unicode escape in Lucide data");
       const hex = source.slice(index + (braced ? 2 : 1), end);
-      if (!/^[0-9a-f]{4,6}$/i.test(hex)) {
+      if (!(braced ? /^[0-9a-f]{1,6}$/i : /^[0-9a-f]{4}$/i).test(hex)) {
         throw new Error("Invalid Unicode escape in Lucide data");
       }
       result += String.fromCodePoint(Number.parseInt(hex, 16));
-      index = end;
+      // Leave index on the escape's last character; the loop steps past it.
+      index = braced ? end : end - 1;
       continue;
     }
     if (escaped === "\n" || escaped === "\r") continue;

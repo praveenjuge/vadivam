@@ -58,11 +58,22 @@ describe("vadivam-react-native Icon", () => {
     expect(svg.getAttribute("data-testid")).toBe("activity");
   });
 
-  test("a title renders a native Title and gives the icon the image role", () => {
+  test("a title labels the icon as an accessible image", () => {
     const { svg } = renderActivity({ title: "Pulse" });
-    expect(svg.querySelector("title").textContent).toBe("Pulse");
+    expect(svg.getAttribute("data-rn-label")).toBe("Pulse");
     expect(svg.getAttribute("data-rn-role")).toBe("image");
-    expect(renderActivity().svg.querySelector("title")).toBeNull();
+    expect(svg.getAttribute("data-rn-accessible")).toBe("true");
+    expect(svg.querySelector("title")).toBeNull();
+    const plain = renderActivity().svg;
+    expect(plain.getAttribute("data-rn-label")).toBeNull();
+    expect(plain.getAttribute("data-rn-role")).toBeNull();
+  });
+
+  test("an explicit accessibilityLabel wins over the title", () => {
+    const { svg } = renderActivity({ title: "Pulse", accessibilityLabel: "Heartbeat" });
+    expect(svg.getAttribute("data-rn-label")).toBe("Heartbeat");
+    const unset = renderActivity({ title: "Pulse", accessibilityLabel: undefined }).svg;
+    expect(unset.getAttribute("data-rn-label")).toBe("Pulse");
   });
 
   test("calculates absolute stroke width only for valid numeric sizes", () => {

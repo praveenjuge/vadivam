@@ -66,7 +66,7 @@ export type PluginToUiMessage =
   | { type: "settings"; settings: PluginSettings }
   | { type: "page"; page: PageStatus }
   | { type: "library-synced"; count: number; created: boolean; added: number; retained: number }
-  | { type: "catalog"; progress: CatalogProgress; candidates: LucideIconRanking[] }
+  | { type: "catalog"; progress: CatalogProgress; candidates: LucideIconRanking[]; /** Sent at the end of a scan. */ scan: boolean }
   | { type: "generated"; names: string[] }
   | { type: "arranged"; count: number; columns: number; rows: number }
   | { type: "replaced"; replaced: ReplacedIcon[]; added: ReplacedIcon[]; skipped: SkippedSvg[] }

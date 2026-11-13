@@ -87,6 +87,146 @@ const renameIdentifier = (identifier) =>
     ? identifier.replace(/Lucide/g, "Vadivam").replace(/LUCIDE/g, "VADIVAM")
     : identifier;
 
+const blank = (span) => span.replace(/[^\n]/g, " ");
+
+// The text with strings, template-literal text, and comments blanked out, at
+// the same offsets, so their brackets and commas don't count as code. Code in
+// a template's `${...}` stays, so an object there is still checked.
+function blankQuoted(text) {
+  return scanCode(text, 0, false).output;
+}
+
+// Where the ' or " string opening at text[position] ends, or -1 when that
+// quote can't open one: a string never follows a name (`Don't` in JSX text),
+// and one without a closing quote on its line is JSX text too.
+function stringEnd(text, position) {
+  if (position > 0 && /[\w$]/.test(text[position - 1])) return -1;
+  const quote = text[position];
+  let stop = position + 1;
+  while (stop < text.length && text[stop] !== quote && text[stop] !== "\n") stop += text[stop] === "\\" ? 2 : 1;
+  return stop < text.length && text[stop] === quote ? stop + 1 : -1;
+}
+
+// Where the regular expression opening at text[position] ends, or -1 when
+// it doesn't close on its line (so the `/` is division or JSX text).
+function regexEnd(text, position) {
+  let inClass = false;
+  for (let stop = position + 1; stop < text.length && text[stop] !== "\n"; stop += 1) {
+    if (text[stop] === "\\") stop += 1;
+    else if (text[stop] === "[") inClass = true;
+    else if (text[stop] === "]") inClass = false;
+    else if (text[stop] === "/" && !inClass) return stop + 1;
+  }
+  return -1;
+}
+
+// Whether a `/` after `previous`, the last code character, opens a regular
+// expression: at the start, after an operator or opening bracket, or after a
+// keyword such as `return`, but not after a value (`total / 2`, `count++ / 2`,
+// TypeScript's `size! / 2`) or JSX `<`.
+const regexCanStart = (previous, output) =>
+  previous === "" ||
+  (/[(,=:[!&|?{;+\-*%~^]/.test(previous) && !/(?:\+\+|--|[\w$)\]]!)\s*$/.test(output.slice(-64))) ||
+  (/[\w$]/.test(previous) &&
+    /(?:^|[^\w$.])(?:return|typeof|case|do|else|in|of|void|yield|await|delete|new|instanceof)\s*$/.test(output.slice(-64)));
+
+// Scans code from `position`, blanking strings, regular expressions, and
+// comments. Inside a template's `${...}` (`expression`), it stops after the
+// `}` that closes it.
+function scanCode(text, position, expression) {
+  let output = "";
+  let depth = 0;
+  // The last code character, "" at the start; a string or regex is a value.
+  let previous = "";
+  while (position < text.length) {
+    const character = text[position];
+    const next = text[position + 1];
+    let stop = -1;
+    if (character === "/" && next === "*") {
+      const close = text.indexOf("*/", position + 2);
+      stop = close < 0 ? text.length : close + 2;
+    } else if (character === "/" && next === "/") {
+      const close = text.indexOf("\n", position);
+      stop = close < 0 ? text.length : close;
+    } else if (character === '"' || character === "'") {
+      stop = stringEnd(text, position);
+      if (stop >= 0) previous = "a";
+    } else if (character === "/" && regexCanStart(previous, output)) {
+      stop = regexEnd(text, position);
+      if (stop >= 0) previous = "a";
+    }
+    if (stop >= 0) {
+      output += blank(text.slice(position, stop));
+      position = stop;
+    } else if (character === "`") {
+      const template = scanTemplate(text, position);
+      output += template.output;
+      position = template.position;
+      previous = "a";
+    } else {
+      output += character;
+      position += 1;
+      if (!/\s/.test(character)) previous = character;
+      if (expression && character === "{") depth += 1;
+      else if (expression && character === "}" && (depth -= 1) < 0) break;
+    }
+  }
+  return { output, position };
+}
+
+// Blanks the template literal opening at text[position], keeping the code in
+// its `${...}` expressions.
+function scanTemplate(text, position) {
+  let output = " ";
+  position += 1;
+  while (position < text.length && text[position] !== "`") {
+    if (text[position] === "\\") {
+      output += blank(text.slice(position, position + 2));
+      position += 2;
+    } else if (text[position] === "$" && text[position + 1] === "{") {
+      const expression = scanCode(text, position + 2, true);
+      output += `\${${expression.output}`;
+      position = expression.position;
+    } else {
+      output += blank(text[position]);
+      position += 1;
+    }
+  }
+  if (position < text.length) {
+    output += " ";
+    position += 1;
+  }
+  return { output, position };
+}
+
+// Whether the identifier at text[start, end) sits where a shorthand property
+// would (`{ LucideBell }`, `{ a, LucideBell = X }`), where renaming it also
+// renames the key. Telling an object from JSX or a template expression needs a
+// parser, so this only flags it; a JSX attribute (`icon={LucideBell}`) and a
+// template expression (`${LucideBell}`) are left out. `text` has its strings
+// and comments blanked (blankQuoted), so `{ /* icon */ LucideBell }` and
+// `{ face: ":)", LucideBell }` still count.
+function looksLikeShorthand(text, start, end) {
+  // A name inside a blanked string or comment isn't code.
+  if (text.slice(start, end).trim() === "") return false;
+  const before = text.slice(0, start).match(/([{,])\s*$/);
+  if (!before || !/^\s*(?:[},]|=(?![=>]))/.test(text.slice(end))) return false;
+  if (before[1] === ",") {
+    // Only inside braces: `[LucideBell, LucideHome]` and call arguments aren't objects.
+    let depth = 0;
+    for (let position = start - 1; position >= 0; position -= 1) {
+      const character = text[position];
+      if (character === ")" || character === "]" || character === "}") depth += 1;
+      else if (character === "(" || character === "[" || character === "{") {
+        if (depth === 0) return character === "{";
+        depth -= 1;
+      }
+    }
+    return false;
+  }
+  return !/(?:[\w$-]=|\$)$/.test(text.slice(0, start - before[0].length));
+}
+
 /**
  * Rewrite one source file. Returns the new text, how many edits it made, and
  * warnings for anything left to migrate by hand.
@@ -137,6 +277,8 @@ export function migrateSource(text, { styles = false } = {}) {
       );
     }
     if (renames.size > 0) {
+      const shorthands = new Set();
+      const code = blankQuoted(output);
       // Rewritten import and export statements, quoted strings, and object or
       // destructuring keys (`{ LucideBell: x }`) stay as they are. A local
       // `export { LucideBell }` keeps its public name (`VadivamBell as
@@ -144,7 +286,7 @@ export function migrateSource(text, { styles = false } = {}) {
       // new name.
       output = output.replace(
         /\bimport\s+(?:type\s+)?(?:[\w$]+\s*,?\s*)?(?:\*\s+as\s+[\w$]+|\{[^}]*\})?\s*from\s*["'][^"']*["']|\bexport\s+(?:type\s+)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})\s*from\s*["'][^"']*["']|\bexport\s*(?:type\s*)?\{([^}]*)\}|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|(?<=[{,]\s*)[A-Za-z_$][\w$]*(?=\s*:(?!:))|(?<![\w$.])([A-Za-z_$][\w$]*)/g,
-        (match, exportList, identifier) => {
+        (match, exportList, identifier, offset) => {
           if (exportList !== undefined) {
             return match.replace(exportList, (list) =>
               list.replace(/([\w$]+)(\s+as\s+[\w$]+)?/g, (entry, name, alias) => {
@@ -158,9 +300,14 @@ export function migrateSource(text, { styles = false } = {}) {
           const renamed = identifier && renames.get(identifier);
           if (!renamed) return match;
           changes += 1;
+          if (looksLikeShorthand(code, offset, offset + match.length)) {
+            const line = code.slice(0, offset).split("\n").length;
+            shorthands.add(`line ${line}: { ${match} } is now { ${renamed} }; if ${match} is an object key, write { ${match}: ${renamed} }`);
+          }
           return renamed;
         },
       );
+      warnings.push(...shorthands);
     }
     // A mock factory lists the module's export names, which this can't safely rewrite.
     if (/\.mock\s*\(\s*["']vadivam[^"']*["']\s*,/.test(output)) {

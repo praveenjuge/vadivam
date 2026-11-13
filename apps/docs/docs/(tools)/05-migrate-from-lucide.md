@@ -31,7 +31,7 @@ Pass paths to limit the run, such as `npx vadivam migrate-lucide src --write`. I
 
 Without `--write` the codemod only lists what would change. Afterwards, reinstall dependencies so your lockfile drops Lucide.
 
-The codemod also lists what it left for you to check: imports Vadivam does not export, test mock factories whose keys name Lucide exports, and packages that need a hand migration. Icon names held in strings, such as a `DynamicIcon` name from data, are not renamed; check old aliases there against [Dynamic icons](/docs/dynamic-icons).
+The codemod also lists what it left for you to check: imports Vadivam does not export, test mock factories whose keys name Lucide exports, each renamed name written as a shorthand property, such as `{ LucideBell }`, which also renames the key (write `{ LucideBell: VadivamBell }` where code reads `.LucideBell`), and packages that need a hand migration. Icon names held in strings, such as a `DynamicIcon` name from data, are not renamed; check old aliases there against [Dynamic icons](/docs/dynamic-icons).
 
 ## Package map
 

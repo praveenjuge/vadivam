@@ -42,7 +42,7 @@ export function Status() {
 }
 ```
 
-Icons accept `react-native-svg`'s `SvgProps` plus `size`, `absoluteStrokeWidth`, `title`, and `data-testid`. A forwarded ref targets the root `Svg` instance.
+Icons accept `react-native-svg`'s `SvgProps` plus `size`, `absoluteStrokeWidth`, `title`, and `data-testid`. A `title` makes the icon an accessible image and becomes its `accessibilityLabel` unless you pass one. A forwarded ref targets the root `Svg` instance.
 
 ## Shared defaults
 

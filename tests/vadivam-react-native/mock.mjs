@@ -3,14 +3,16 @@ import React, { forwardRef } from "react";
 
 // Renders each react-native-svg primitive as its DOM element. Props that only
 // React Native understands become attributes of their own, so tests see what
-// the package passed rather than anything the mock filled in.
+// the package passed rather than anything the mock filled in. Only the
+// components react-native-svg really exports are mocked.
 function primitive(tag) {
-  const Component = forwardRef(({ children, testID, accessibilityLabel, accessibilityRole, ...props }, ref) =>
+  const Component = forwardRef(({ children, testID, accessible, accessibilityLabel, accessibilityRole, ...props }, ref) =>
     React.createElement(
       tag,
       {
         ...props,
         "data-rn-test-id": testID,
+        "data-rn-accessible": accessible,
         "data-rn-label": accessibilityLabel,
         "data-rn-role": accessibilityRole,
         ref,
@@ -31,5 +33,4 @@ mock.module("react-native-svg", () => ({
   Polygon: primitive("polygon"),
   Polyline: primitive("polyline"),
   Rect: primitive("rect"),
-  Title: primitive("title"),
 }));

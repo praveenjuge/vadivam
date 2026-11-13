@@ -24,6 +24,17 @@ describe("decodeStringLiteral", () => {
     const decoded = decodeStringLiteral(source, source.indexOf("'"));
     expect(JSON.parse(decoded)).toEqual({ name: "it's x!" });
   });
+
+  test("decodes Unicode escapes without skipping the next character", () => {
+    const source = String.raw`'a\u0041bc\u00e9\"x\u{1F600}\u{41}z'`;
+    expect(decodeStringLiteral(source, 0)).toBe('aAbcé"x\u{1F600}Az');
+  });
+
+  test("rejects malformed Unicode escapes", () => {
+    expect(() => decodeStringLiteral(String.raw`'\u41'`, 0)).toThrow("Invalid Unicode escape in Lucide data");
+    expect(() => decodeStringLiteral(String.raw`'\u{}'`, 0)).toThrow("Invalid Unicode escape in Lucide data");
+    expect(() => decodeStringLiteral(String.raw`'\u{41'`, 0)).toThrow("Invalid Unicode escape in Lucide data");
+  });
 });
 
 describe("rankLucideIcons", () => {

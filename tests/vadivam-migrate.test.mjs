@@ -173,6 +173,62 @@ describe("migrate-lucide", () => {
     );
   });
 
+  test("reports a renamed name in shorthand position, where it may be an object key", () => {
+    const source = [
+      `import { LucideBell } from "lucide-react";`,
+      `const registry = { LucideBell };`,
+      `call({ a, LucideBell = Fallback });`,
+      `const list = [LucideBell, LucideBell, LucideBell];`,
+      `const noted = { /* icon */ LucideBell, face: ":)" };`,
+      `const face = { face: ":)", LucideBell };`,
+      `const names = \`\${Object.keys({ LucideBell }).join()}\`;`,
+      `export const A = () => <div icon={LucideBell}>{\`\${LucideBell}\`}</div>;`,
+      `const view = <p>Don't</p>; const byName = { LucideBell };`,
+      `const brace = \`\${"}" + Object.keys({ LucideBell })}\`;`,
+      `const shown = \`\${"{"}{ LucideBell }\`;`,
+      `const url = /^https?:\\/\\//; const byUrl = { LucideBell }; const half = total / 2;`,
+      `const linked = \`\${/\\/\\//.test(url) ? Object.keys({ LucideBell }).join() : ""}\`;`,
+      `const linkish = (s) => { return /\\/\\//.test(s) ? { LucideBell } : null; };`,
+      `const share = count++ / getSize({ LucideBell }) / 2;`,
+      `const width = available! / getSize({ LucideBell }) / 2;`,
+    ].join("\n");
+    const { text, warnings } = migrateSource(source);
+    expect(text).toBe(
+      [
+        `import { VadivamBell } from "vadivam-react";`,
+        `const registry = { VadivamBell };`,
+        `call({ a, VadivamBell = Fallback });`,
+        `const list = [VadivamBell, VadivamBell, VadivamBell];`,
+        `const noted = { /* icon */ VadivamBell, face: ":)" };`,
+        `const face = { face: ":)", VadivamBell };`,
+        `const names = \`\${Object.keys({ VadivamBell }).join()}\`;`,
+        `export const A = () => <div icon={VadivamBell}>{\`\${VadivamBell}\`}</div>;`,
+        `const view = <p>Don't</p>; const byName = { VadivamBell };`,
+        `const brace = \`\${"}" + Object.keys({ VadivamBell })}\`;`,
+        `const shown = \`\${"{"}{ VadivamBell }\`;`,
+        `const url = /^https?:\\/\\//; const byUrl = { VadivamBell }; const half = total / 2;`,
+        `const linked = \`\${/\\/\\//.test(url) ? Object.keys({ VadivamBell }).join() : ""}\`;`,
+        `const linkish = (s) => { return /\\/\\//.test(s) ? { VadivamBell } : null; };`,
+        `const share = count++ / getSize({ VadivamBell }) / 2;`,
+        `const width = available! / getSize({ VadivamBell }) / 2;`,
+      ].join("\n"),
+    );
+    expect(warnings).toEqual([
+      "line 2: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 3: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 5: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 6: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 7: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 9: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 10: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 12: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 13: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 14: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 15: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+      "line 16: { LucideBell } is now { VadivamBell }; if LucideBell is an object key, write { LucideBell: VadivamBell }",
+    ]);
+  });
+
   test("warns about mock factories, whose keys it cannot rewrite", () => {
     const { text, warnings } = migrateSource(`vi.mock("lucide-react", () => ({ LucideBell: () => null }));`);
     expect(text).toBe(`vi.mock("vadivam-react", () => ({ LucideBell: () => null }));`);
