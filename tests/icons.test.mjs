@@ -71,6 +71,7 @@ describe("icon validation", () => {
     ["square caps", validSvg.replace("round", "square"), 'expected stroke-linecap="round"'],
     ["wrong stroke width", validSvg.replace('stroke-width="2"', 'stroke-width="1.5"'), 'expected stroke-width="2"'],
     ["unsafe markup", validSvg.replace("<path", "<script/><path"), "unsupported <script> element"],
+    ["an inherited-name root attribute", validSvg.replace("<svg ", '<svg constructor="x" '), "unsupported root attribute constructor"],
   ])("rejects %s", (_name, svg, message) => {
     expect(() => validateSvgContent(svg, "invalid-fixture.svg")).toThrow(`invalid-fixture.svg: ${message}`);
   });

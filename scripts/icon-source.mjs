@@ -152,7 +152,7 @@ export function validateSvgContent(svg, file = "inline.svg", style = styles.outl
     assert(node[`@_${attr}`] === String(value), `${file}: expected ${attr}="${value}"`);
   }
   for (const attr of attributes(node)) {
-    assert(attr in expectedRoot, `${file}: unsupported root attribute ${attr}`);
+    assert(Object.hasOwn(expectedRoot, attr), `${file}: unsupported root attribute ${attr}`);
   }
 
   const shapes = [];

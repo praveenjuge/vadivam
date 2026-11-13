@@ -29,6 +29,16 @@ describe("vadivam-react-native DynamicIcon", () => {
     expect(queryByTestId("unknown")).toBeNull();
   });
 
+  test("renders the fallback for inherited object keys", () => {
+    for (const name of ["constructor", "toString", "__proto__"]) {
+      const { getByText, unmount } = render(
+        React.createElement(DynamicIcon, { name, fallback: React.createElement("span", null, "missing") }),
+      );
+      expect(getByText("missing")).toBeDefined();
+      unmount();
+    }
+  });
+
   test("loads a valid icon and forwards native props", async () => {
     const { getByTestId } = render(
       React.createElement(DynamicIcon, {
